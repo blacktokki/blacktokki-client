@@ -1,5 +1,5 @@
 {
-  "name": "@blacktokki/expo-49",
+  "name": "@blacktokki/expo-blank",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -22,8 +22,7 @@
     "@babel/core": "^7.24.0",
     "@expo/webpack-config": "^19.0.0",
     "@types/react": "~18.2.14",
-    "@types/react-native": "~0.72.0",
-    "typescript": "^5.1.3"
+    "@types/react-native": "~0.72.0"
   },
   "private": true
 }

@@ -1,9 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TextProps } from 'react-native';
 
-import { default as _SortableTree } from './SortableTree';
-
-export const SortableTree = _SortableTree;
+export * as SortableTree from './components/SortableTree';
 
 export interface ParagraphProps extends TextProps {
   children?: React.ReactNode;

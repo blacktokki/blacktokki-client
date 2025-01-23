@@ -223,7 +223,7 @@ const DragPointer = React.memo(
   }
 );
 
-const DraggableTree:(() => JSX.Element)= () => {
+const DraggableTree = () => {
   const [data, setData] = useState<DataItem[]>(initialData);
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [lastSelectedNode, setLastSelectedNode] = useState<string | null>(null);
@@ -342,7 +342,7 @@ const DraggableTree:(() => JSX.Element)= () => {
       />
       <DragPointer flatNodes={flatNodes} selectedNodes={selectedNodes} draggingRef={draggingRef} />
     </>
-  );
+  ) as JSX.Element;
 };
 
 const styles = StyleSheet.create({

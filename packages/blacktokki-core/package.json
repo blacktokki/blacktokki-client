@@ -1,0 +1,40 @@
+{
+  "private": true,
+  "name": "@blacktokki/core",
+  "version": "1.0.0",
+  "description": "Acme UI components for React Native",
+  "author": "Cedric van Putten <me@bycedric.com>",
+  "license": "MIT",
+  "main": "build/commonjs/index.js",
+  "module": "build/module/index.js",
+  "types": "build/typescript/index.d.ts",
+  "react-native": "src/index.tsx",
+  "files": [
+    "build",
+    "src"
+  ],
+  "scripts": {
+    "build": "bob build",
+    "test": "eslint --ext ts,tsx ./src"
+  },
+  "devDependencies": {
+    "@blacktokki/eslint-config": "*",
+    "@tsconfig/recommended": "^1.0.1",
+    "react-native-builder-bob": "^0.18.3"
+  },
+  "peerDependencies": {
+    "react-native": "^0.72.0"
+  },
+  "eslintConfig": {
+    "extends": "@blacktokki/eslint-config"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "build",
+    "targets": [
+      "commonjs",
+      "module",
+      "typescript"
+    ]
+  }
+}

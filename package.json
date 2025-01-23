@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "name": "blacktokki-client",
+  "scripts": {
+    "build": "yarn workspaces run build",
+    "test": "yarn workspaces run test",
+    "expo-49": "yarn workspace @blacktokki/expo-49"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

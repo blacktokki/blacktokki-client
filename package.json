@@ -4,10 +4,16 @@
   "scripts": {
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
-    "expo-blank": "yarn workspace @blacktokki/expo-blank"
+    "expo-blank": "yarn workspace @blacktokki/expo-blank",
+    "spreadocs": "yarn workspace @blacktokki/spreadocs"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  "workspaces": {
+    "packages":[
+      "apps/*",
+      "packages/*"
+    ],
+    "nohoist": [
+      "**/tinymce"
+    ]
+  }
 }

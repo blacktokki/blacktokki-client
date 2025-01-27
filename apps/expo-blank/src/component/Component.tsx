@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Strong } from '@blacktokki/core';
+import { Text } from '@blacktokki/core';
 
 const Component = () => {
-  return <Strong>hi</Strong>;
+  return <Text>hi</Text>;
 };
 
 const styles = StyleSheet.create({

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+        <style>
+            body {
+                margin: 0px
+            }
+        </style>
+        <script src="./editor-config.js"></script>
+        <script src="./tinymce/tinymce.min.js"></script>
+        <script>
+            send = async(data)=>{
+                if (window.ReactNativeWebView) 
+                    window.ReactNativeWebView.postMessage(data)
+                else
+                    window.parent.postMessage(data, undefined)
+            }
+            listener = event => {
+                if (event.data?.type== 'webpackOk'){
+                    return
+                }
+                tinymce.activeEditor.setContent(event.data)
+            }
+            tinymce.init({
+                selector: '#mytextarea',
+                setup:function(ed) {
+                    editorConfig.setup(tinymce)
+                    ed.on('change input compositionend setcontent CommentChange NewBlock', function(e) {
+                        send(ed.getContent({format: 'raw'}))
+                    });
+                    ed.on('keyup', function(evt){
+                        if (evt.key === 'Backspace' || evt.key === 'Delete') {
+                            send(ed.getContent({format: 'raw'}))
+                        }
+                    })
+                },
+                height: '320px',
+                promotion: false,
+                statusbar: false,
+                menubar: '',
+                toolbar: editorConfig.toolbar,
+                plugins: editorConfig.plugins
+            });
+            if (window.ReactNativeWebView) {
+                /** android */
+                document.addEventListener("message", listener);
+                /** ios */
+                window.addEventListener("message", listener);
+                window.innerWidth = window.outerWidth
+                window.innerHeight = window.outerHeight
+            }
+            else{
+                window.addEventListener("message", listener);
+            }
+        </script>
+    </head>
+    <body>
+        <textarea id="mytextarea" hidden></textarea>
+    </body>
+</html>

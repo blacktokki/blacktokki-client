@@ -55,3 +55,7 @@ xcuserdata
 
 # VSCode
 .history/
+
+**/web/tinymce*
+**/web/editor*
+**/template/tinymce*

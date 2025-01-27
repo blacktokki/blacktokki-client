@@ -9,8 +9,8 @@
   },
   "workspaces": {
     "packages":[
-      "apps/*",
-      "packages/*"
+      "packages/*",
+      "apps/*"
     ],
     "nohoist": [
       "**/tinymce"

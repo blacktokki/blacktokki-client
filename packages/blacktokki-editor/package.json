@@ -14,7 +14,8 @@
   "scripts": {
     "build": "bob build",
     "test": "eslint --ext ts,tsx ./src",
-    "tinymce": "copyfiles -u 1 \"node_modules/tinymce/**/*.min.*\" ../../apps/<arg>/web"
+    "pretinymce": "copyfiles -u 1 \"node_modules/tinymce/**/*.min.*\" template",
+    "tinymce": "copyfiles -u 1 \"template/**/*\""
   },
   "dependencies": {
     "react-native-render-html": "^6.3.4",

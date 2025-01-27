@@ -1,7 +1,7 @@
 import React from 'react';
 import { Editor } from '@tinymce/tinymce-react';
 import { EditorProps } from '../../types';
-const INIT = require('../../../web/editor-config')
+const INIT = require('/web/editor-config')
 const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js'
 
 export default (props:EditorProps) => {

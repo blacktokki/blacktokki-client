@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "blacktokki-wallpaper",
-    "slug": "blacktokki-wallpaper",
+    "name": "blacktokki-expo-blank",
+    "slug": "blacktokki-expo-blank",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

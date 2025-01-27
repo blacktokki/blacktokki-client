@@ -4,7 +4,7 @@
   "scripts": {
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
-    "expo-49-blank": "yarn workspace @blacktokki/expo-blank"
+    "expo-blank": "yarn workspace @blacktokki/expo-blank"
   },
   "workspaces": [
     "apps/*",

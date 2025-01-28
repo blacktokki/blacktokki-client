@@ -10,7 +10,7 @@ import { NavigationConfig } from '../types';
 import Drawer from './Drawer';
 
 
-const Main = createStackNavigator();
+const Root = createStackNavigator();
 
 function headerLeft(
   navigation: any,
@@ -58,13 +58,14 @@ export default ({ config }: { config: NavigationConfig }) => {
     return auth.user === null ? [] : config.modals;
   }, [auth]);
   const backgroundStyle = theme === 'light' ? {} : { backgroundColor: '#010409' };
+  const ExtraProvider:React.ComponentType<any> = config.ExtraProvider || ((props) => props.children);
   return auth.user !== undefined ? (
     <View style={{ flexDirection: 'row', flex: 1 }}>
       <ModalsProvider modals={modalValues}>
         {auth.user ? <Drawer auth={auth} children={config.drawer}/> : undefined}
         <View style={[{ flex: 1 }, backgroundStyle]}>
-          <config.ExtraProvider>
-            <Main.Navigator
+          <ExtraProvider>
+            <Root.Navigator
               screenOptions={({ navigation, route }) => ({
                 headerStyle: {
                   backgroundColor: Colors[theme].header,
@@ -84,20 +85,20 @@ export default ({ config }: { config: NavigationConfig }) => {
               })}
             >
               {entries.map(([key, screen]) => (
-                <Main.Screen
+                <Root.Screen
                   key={key}
                   name={key}
                   component={screen.component}
                   options={{ title: lang(screen.title) }}
                 />
               ))}
-              <Main.Screen
+              <Root.Screen
                 name="NotFound"
                 component={NotFoundScreen}
                 options={{ title: 'Oops!' }}
               />
-            </Main.Navigator>
-          </config.ExtraProvider>
+            </Root.Navigator>
+          </ExtraProvider>
         </View>
       </ModalsProvider>
     </View>

@@ -1,9 +1,9 @@
-import { ModalComponent } from '@blacktokki/core';
+import { ModalComponent } from '@blacktokki/core/build/typescript/hooks/useModalsContext';
 import { PathConfig, DocumentTitleOptions } from '@react-navigation/native';
 
 export type Screens = Record<
   string,
-  PathConfig & { title: string; component: React.ComponentType<any> }
+  PathConfig<any> & { title: string; component: React.ComponentType<any> }
 >;
 
 export type NavigationConfig = {
@@ -12,7 +12,7 @@ export type NavigationConfig = {
   prefixes: string[];
   rootPath: string;
   documentTitle: DocumentTitleOptions;
-  ExtraProvider: React.ComponentType<any>;
+  ExtraProvider?: React.ComponentType<any>;
   rootScreen: {
     main: string;
     login: string;

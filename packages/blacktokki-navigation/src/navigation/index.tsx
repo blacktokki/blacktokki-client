@@ -8,7 +8,7 @@ import {
   NavigationContainer,
   DefaultTheme,
   DarkTheme,
-  NavigationContainerRef,
+  createNavigationContainerRef,
 } from '@react-navigation/native';
 import * as React from 'react';
 import { enableScreens } from 'react-native-screens';
@@ -19,11 +19,11 @@ import linkingConfiguration from './linkingConfiguration';
 
 enableScreens();
 
-const navigationRef = React.createRef<NavigationContainerRef>();
+const navigationRef = createNavigationContainerRef<any>();
 
 export function navigate(name: string, params?: any) {
   if (params) navigationRef.current?.navigate(name, params);
-  navigationRef.current?.navigate(name);
+  else navigationRef.current?.navigate(name);
 }
 
 let electronVersion: string | undefined;
@@ -48,21 +48,3 @@ export default function Navigation({ config }: { config: NavigationConfig }) {
     </NavigationContainer>
   );
 }
-
-const IGNORE_WERNINGS: string[] = ['setNativeProps', 'useNativeDriver'];
-
-const warnLogger = console.warn;
-
-console.warn = (message: string | object) => {
-  let warn = true;
-  if (message instanceof Object) {
-    warn = false;
-  } else if (IGNORE_WERNINGS.some((log) => message.includes(log))) {
-    warn = false;
-  }
-  if (warn) {
-    warnLogger(message);
-  } else {
-    // console.log(message)
-  }
-};

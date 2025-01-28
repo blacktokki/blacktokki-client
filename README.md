@@ -1,4 +1,4 @@
-[Original repository(expo-monorepo-example)](https://github.com/byCedric/expo-monorepo-example)
+[Original repository(expo-monorepo-example)](https://github.com/byCedric/expo-monorepo-example/tree/3bd9342fce291501dd4cf44cfaa8fe046f8b5002)
 
 ## 🚀 How to use it
 

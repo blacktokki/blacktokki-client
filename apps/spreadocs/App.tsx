@@ -1,24 +1,35 @@
-// import { SortableTree } from '@blacktokki/core';
-import { Editor } from '@blacktokki/editor';
+import {AccountService, AuthProvider, UserMembership} from '@blacktokki/account';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, SafeAreaView } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import SortableTree from './src/component/SortableTree';
+import React, { Suspense } from 'react';
+
+
+const service:AccountService = {
+  checkLogin: function (): Promise<UserMembership | null> {
+    return new Promise(()=>{
+      throw new Error('Function not implemented.');
+    });
+  },
+  login: function (username: string, password: string): Promise<UserMembership | null | undefined> {
+    throw new Error('Function not implemented.');
+  },
+  logout: function (): Promise<any> {
+    throw new Error('Function not implemented.');
+  }
+}
 
 export default function App() {
-  return (
-    <View style={styles.container}>
+  const Navigation = React.lazy(()=> import('./src/navigation'))
+  return <SafeAreaProvider>
       <StatusBar style="auto" />
-      <SafeAreaView style={[styles.container, { width: '100%', flexDirection: 'row' }]}>
-        <View style={{ flex: 1, height: '100%' }}>
-          <SortableTree />
-        </View>
-        <View style={{ flex: 512 / 81, height: '100%' }}>
-          <Editor theme={'light'} value={''} setValue={() => {}} active={true} />
-        </View>
-      </SafeAreaView>
-    </View>
-  );
+      <AuthProvider service={service}>
+        <Suspense fallback={<></>}>
+          <Navigation/>
+        </Suspense>
+      </AuthProvider>
+    </SafeAreaProvider>
 }
 
 const styles = StyleSheet.create({

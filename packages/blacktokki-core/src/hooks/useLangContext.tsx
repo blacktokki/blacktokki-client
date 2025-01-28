@@ -33,7 +33,8 @@ export default () => {
     lang: (key: string) => {
       if (locale === 'en' || key.length === 0) return key;
       if (locale !== undefined && locale !== 'auto') return translations[locale][key];
-      return translations['ko'][key];
+      if (translations['ko']) return translations['ko'][key];
+      return key;
     },
     locale,
     setLocale: (locale: string) => {

@@ -8,19 +8,19 @@ import React, {
   useState,
 } from 'react';
 
-import { UserMembership, AccountService } from '../types';
+import { User, AccountService } from '../types';
 
 type AuthAction = {
   type: string;
   username?: string;
   password?: string;
-  user?: UserMembership | null;
+  user?: User | null;
 };
 
-export type Auth = { user?: UserMembership | null; groupId?: number };
+export type Auth = { user?: User | null };
 
 type AuthState = {
-  user?: UserMembership | null;
+  user?: User | null;
   request?: { username: string; password: string } | null;
 };
 
@@ -85,7 +85,6 @@ export const AuthProvider = ({
   const auth = useMemo(
     () => ({
       user: authState.user,
-      groupId: authState.user?.membership_set.find((g) => g.root_group_id == null)?.group,
     }),
     [authState]
   );

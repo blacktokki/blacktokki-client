@@ -1,30 +1,16 @@
-import {AccountService, AuthProvider, UserMembership} from '@blacktokki/account';
+import {AccountService, AuthProvider } from '@blacktokki/account';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import React, { Suspense } from 'react';
-
-
-const service:AccountService = {
-  checkLogin: function (): Promise<UserMembership | null> {
-    return new Promise(()=>{
-      throw new Error('Function not implemented.');
-    });
-  },
-  login: function (username: string, password: string): Promise<UserMembership | null | undefined> {
-    throw new Error('Function not implemented.');
-  },
-  logout: function (): Promise<any> {
-    throw new Error('Function not implemented.');
-  }
-}
+import { accountService } from './src/services/account';
 
 export default function App() {
   const Navigation = React.lazy(()=> import('./src/navigation'))
   return <SafeAreaProvider>
       <StatusBar style="auto" />
-      <AuthProvider service={service}>
+      <AuthProvider service={accountService}>
         <Suspense fallback={<></>}>
           <Navigation/>
         </Suspense>

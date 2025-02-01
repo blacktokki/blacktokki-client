@@ -23,12 +23,8 @@ export type Membership = {
   group: number;
 };
 
-export type UserMembership = User & {
-  membership_set: Membership[];
-};
-
 export type AccountService = {
-  checkLogin: () => Promise<UserMembership | null>;
-  login: (username: string, password: string) => Promise<UserMembership | null | undefined>;
+  checkLogin: () => Promise<User | null>;
+  login: (username: string, password: string) => Promise<User | null | undefined>;
   logout: () => Promise<any>;
 };

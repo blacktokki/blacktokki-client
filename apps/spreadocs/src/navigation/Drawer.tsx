@@ -8,7 +8,7 @@ export default ()=>{
     const list = useContentList(0);
     const {create} = useContentMutation()
     return <>
-        <CommonButton onPress={()=>auth.user && create({userId:auth.user?.id, parentId:0, type:'NOTE', input:'hello'})} title='create'/>
-        {list?.map(v=><Text key={v.id}>{v.id}</Text>)}
+        <CommonButton onPress={()=>auth.user && create({userId:auth.user?.id, parentId:0, type:'NOTE', order: (list?.length || 0) + 1, input:'hello', content:'world'})} title='create'/>
+        {list?.map(v=><Text key={v.id}>{v.title}</Text>)}
     </>   
 }

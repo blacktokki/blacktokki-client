@@ -2,11 +2,12 @@ export type PostContent = {
     userId: number,
     parentId: number,
     type: 'SCRAP'|'NOTE'|'FEEDCONTENT'|'FEED'|'FEEDGROUP'|'LIBRARY',
-    input: string
+    order: number,
+    input: string,
+    content?: string
 }
 
 export type Content = PostContent & {
     id: number,
-    title: string, 
-    content: string
+    title: string
 }

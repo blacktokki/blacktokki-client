@@ -5,15 +5,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import React, { Suspense } from 'react';
 import { accountService } from './src/services/account';
+import { QueryClient, QueryClientProvider } from 'react-query';
+
+
+const queryClient = new QueryClient();
 
 export default function App() {
   const Navigation = React.lazy(()=> import('./src/navigation'))
   return <SafeAreaProvider>
       <StatusBar style="auto" />
       <AuthProvider service={accountService}>
-        <Suspense fallback={<></>}>
-          <Navigation/>
-        </Suspense>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<></>}>
+            <Navigation/>
+          </Suspense>
+        </QueryClientProvider>
       </AuthProvider>
     </SafeAreaProvider>
 }

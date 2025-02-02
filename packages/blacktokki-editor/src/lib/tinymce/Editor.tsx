@@ -18,6 +18,7 @@ const CustomComponent = () => {
 
 export default (props: EditorProps) => {
   const customDiv = document.createElement('div');
+  const root = createRoot(customDiv);
   return (
     <Editor
       tinymceScriptSrc={PATH}
@@ -28,9 +29,8 @@ export default (props: EditorProps) => {
         if (editorContainer && toolbar) {
           // Insert customDiv after the toolbar
           toolbar.parentNode?.insertBefore(customDiv, toolbar.nextSibling);
-          const root = createRoot(customDiv);
           root.render(<CustomComponent />);
-          editor.on('remove', () => root.unmount());
+          editor.on('remove', () => {});
         }
       }}
       onEditorChange={props.setValue}

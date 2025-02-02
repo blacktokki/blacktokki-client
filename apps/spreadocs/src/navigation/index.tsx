@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking';
 import { login, Navigation } from "@blacktokki/navigation"
 import { NavigationConfig } from '@blacktokki/navigation/build/typescript/types';
 import { main } from '../screens';
+import Drawer from './Drawer';
 
 const config:NavigationConfig = {
     main,
@@ -21,7 +22,7 @@ const config:NavigationConfig = {
     headerLeftIcon: <></>,
     headerRight: <></>,
     modals: [],
-    drawer: undefined
+    drawer: <Drawer/>
 }
 
 export default () => {

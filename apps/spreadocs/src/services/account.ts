@@ -3,9 +3,9 @@ import { getToken, setToken, account } from "./axios";
 
 
 const checkLoginToken = async ()=>{
-    const value = (await account.get("/api/v1/user/?self=true"))?.data
-    if (value && value['value']){
-        return value['value'][0] as User
+    const value = (await account.get("/api/v1/user/?self=true"))?.data?.value
+    if (value){
+        return value[0] as User
     }
     return null
 }

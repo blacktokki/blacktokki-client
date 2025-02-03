@@ -16,7 +16,7 @@ const config:NavigationConfig = {
         }
     },
     rootScreen: {
-        main: 'EditorScreen',
+        main: 'HomeScreen',
         login: 'LoginScreen'
     },
     headerLeftIcon: <></>,

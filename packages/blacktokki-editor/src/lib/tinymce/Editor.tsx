@@ -7,14 +7,14 @@ import { EditorProps } from '../../types';
 const INIT = require('/web/editor-config');
 const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 
-const CustomComponent = () => {
-  return (
-    <div style={{ padding: '10px', backgroundColor: '#f9f9f9' }}>
-      <h4>Custom React Component</h4>
-      <button onClick={() => alert('Button clicked!')}>Click Me</button>
-    </div>
-  );
-};
+// const CustomComponent = () => {
+//   return (
+//     <div style={{ padding: '10px', backgroundColor: '#f9f9f9' }}>
+//       <h4>Custom React Component</h4>
+//       <button onClick={() => alert('Button clicked!')}>Click Me</button>
+//     </div>
+//   );
+// };
 
 export default (props: EditorProps) => {
   const customDiv = document.createElement('div');
@@ -29,7 +29,7 @@ export default (props: EditorProps) => {
         if (editorContainer && toolbar) {
           // Insert customDiv after the toolbar
           toolbar.parentNode?.insertBefore(customDiv, toolbar.nextSibling);
-          root.render(<CustomComponent />);
+          root.render(<></>);
           editor.on('remove', () => {});
         }
       }}

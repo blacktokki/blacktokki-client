@@ -6,5 +6,9 @@ export const getContentList = async (parentId:number)=>{
 }
 
 export const postContent = async (postContent:PostContent)=>{
-    return (await axios.post(`/api/v1/content`, postContent) ).data as Content
+    await axios.post(`/api/v1/content`, postContent)
+}
+
+export const patchContent = async ({id, updated}:{id:number, updated:PostContent})=>{
+    await axios.patch(`/api/v1/content`,{ids: [id], updated})
 }

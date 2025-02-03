@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "react-query";
-import { getContentList, postContent } from "../services/spreadocs";
+import { getContentList, patchContent, postContent } from "../services/spreadocs";
 
 export default function useContentList(parentId:number){
   const { data } = useQuery(["ContentList", parentId] , async()=>await getContentList(parentId))
@@ -14,5 +14,10 @@ export function useContentMutation(){
       queryClient.invalidateQueries("ContentList")
     }
   })
-  return {create:create.mutateAsync}
+  const update = useMutation(patchContent, {
+    onSuccess: () => {
+      queryClient.invalidateQueries("ContentList")
+    }
+  })
+  return {create:create.mutateAsync, update:update.mutateAsync}
 }

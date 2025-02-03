@@ -6,13 +6,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import React, { Suspense } from 'react';
 import { accountService } from './src/services/account';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { useInitColorScheme } from '@blacktokki/core';
 
 
 const queryClient = new QueryClient();
 
 export default function App() {
   const Navigation = React.lazy(()=> import('./src/navigation'))
-  return <SafeAreaProvider>
+  const isAppearenceComplete = useInitColorScheme()
+  return isAppearenceComplete?
+    <SafeAreaProvider>
       <StatusBar style="auto" />
       <AuthProvider service={accountService}>
         <QueryClientProvider client={queryClient}>
@@ -21,7 +24,8 @@ export default function App() {
           </Suspense>
         </QueryClientProvider>
       </AuthProvider>
-    </SafeAreaProvider>
+    </SafeAreaProvider>:
+    <></>
 }
 
 const styles = StyleSheet.create({

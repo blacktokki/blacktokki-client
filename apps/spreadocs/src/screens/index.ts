@@ -1,3 +1,4 @@
+import ContentListScreen from "./main/ContentListScreen";
 import EditorScreen from "./main/EditorScreen";
 import HomeScreen from "./main/HomeScreen";
 
@@ -12,5 +13,10 @@ export const main = {
       title: 'editor',
       component: EditorScreen
     },
+    ContentListScreen: {
+      path: 'contents',
+      title: 'contents',
+      component: ContentListScreen
+    }
   };
   

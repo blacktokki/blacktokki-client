@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export type Translations = Record<string, Record<string, string>>;
 
@@ -29,13 +29,17 @@ export const IntlProvider = (props: { children: React.ReactNode; translations: T
 
 export default () => {
   const { locale, setLocale, translations } = useContext(IntlContext);
-  return {
-    lang: (key: string) => {
+  const lang = useCallback(
+    (key: string) => {
       if (locale === 'en' || key.length === 0) return key;
       if (locale !== undefined && locale !== 'auto') return translations[locale][key];
       if (translations['ko']) return translations['ko'][key];
       return key;
     },
+    [locale, translations]
+  );
+  return {
+    lang,
     locale,
     setLocale: (locale: string) => {
       AsyncStorage.setItem('locale', locale).then(() => setLocale(locale));

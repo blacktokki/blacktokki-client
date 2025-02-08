@@ -1,12 +1,24 @@
 import React, {} from 'react';
 import { StackScreenProps } from '@react-navigation/stack';
-import { View} from 'react-native';
+import { ScrollView, View} from 'react-native';
 import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
-import HomeSection, { TabViewOption } from '@blacktokki/navigation/build/typescript/screens/main/HomeScreen/HomeSection';
-import { ConfigSections } from '@blacktokki/navigation/build/typescript/screens';
+import { HomeSection, ConfigSections } from '@blacktokki/navigation';
+import { TabViewOption } from '@blacktokki/navigation/build/typescript/screens/main/HomeScreen/HomeSection';
+import ContentGroupList from '../../components/ContentGroupList';
 
 const ContentTabView = ()=>{
-  return <></>;
+  const theme = useColorScheme()
+  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
+      <ContentGroupList type={'TIMELINE'} />
+      <ContentGroupList type={'LIBRARY'} />
+    </ScrollView>
+}
+
+const ConfigTabView = ()=>{
+  const theme = useColorScheme()
+  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
+    <ConfigSections/>
+  </ScrollView>
 }
 
 export default function HomeScreen({navigation, route}: StackScreenProps<any, 'Home'>) {
@@ -14,7 +26,8 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   const theme = useColorScheme()
   const color = Colors[theme].text
   const tabViews:TabViewOption[] = [
-    {title: lang('contents'), component:ContentTabView, icon:<></>, headerRight:()=><></>}
+    {title: lang('Contents'), component:ContentTabView, icon:<></>, headerRight:()=><></>},
+    {title: lang('Config'), component:ConfigTabView, icon:<></>, headerRight:()=><></>}
   ]
   return <HomeSection tabViews={tabViews} title={lang('home')}>
     <View style={{flexGrow:1, width:'80%', marginTop:72}}>

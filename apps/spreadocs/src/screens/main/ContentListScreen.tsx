@@ -1,7 +1,6 @@
 import { StackScreenProps } from '@react-navigation/stack';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
-import { Editor, EditorHtml } from '@blacktokki/editor';
-import  { Colors, CommonButton, View as ThemedView, useColorScheme, useLangContext } from '@blacktokki/core'
+import { ScrollView,  View } from 'react-native';
+import  { CommonButton, View as ThemedView, useLangContext } from '@blacktokki/core'
 
 import React, { useLayoutEffect,useState } from 'react';
 import useContentList, { useContentMutation } from '../../hooks/useContentList';
@@ -9,42 +8,37 @@ import { TextInput } from 'react-native-paper';
 import { useAuthContext } from '@blacktokki/account';
 import { navigate } from '@blacktokki/navigation';
 import { Content } from '../../types';
+import ContentList from '../../components/ContentList';
 
-export default function EditorScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
+export default function ContentListScreen({ navigation, route }: StackScreenProps<any, 'ContentList'>) {
   const params = {
     created: route?.params?.id === undefined,
     id: parseInt(route?.params?.id),
-    parentId: route?.params?.parentId!==undefined?parseInt(route?.params?.parentId):0
-  } as { created:true, parentId:number } | { created:false, id:number }
-  const theme = useColorScheme()
+    type: route?.params?.type
+  } as { created:true, type:'LIBRARY'|'TIMELINE' } | { created:false, id:number }
   const { lang } = useLangContext()
   const { auth } = useAuthContext()
 
-  const root = useContentList(undefined, 'LIBRARY');
-  const note = useContentList(undefined, 'NOTE');
-  const scrap = useContentList(undefined, 'SCRAP');
-  const list = note!==undefined && scrap!==undefined ? [...note, ...scrap]: undefined
-
+  const list = useContentList(0);
   const contentMutation = useContentMutation()
   const content = params.created?undefined:list?.find(v=>v.id===params.id)
-  const parentContent = root?.find(v=>v.id===(params.created?params.parentId:content?.parentId))
   const [input, setInput] = useState<string>()
-  const [description, setDescription] = useState<string>()
   const [type, setType] = useState<Content['type']>()
   const [editable, setEditable] = useState(false)
   const onSave = ()=>{
-    if (!auth.user || (content?.input == input && content?.description == description) || type===undefined){
+    if (!auth.user || (content?.input == input) || type===undefined){
         setEditable(false)
         return;
     }
     let promise
     if (params.created){
-        promise = contentMutation.create({userId:auth.user.id, parentId:params.parentId, type, order: (list?.length || 0) + 1, input:input || '', description}).then(v=>{
-            navigate("EditorScreen", {id:v})
+        const typedList = list?.filter(v=>v.type == params.type)
+        promise = contentMutation.create({userId:auth.user.id, parentId:0, type, order: (typedList?.length || 0) + 1, input:input || ''}).then(v=>{
+            navigate("ContentListScreen", {id:v})
         })
     }
     else if (content!==undefined){
-        promise = contentMutation.update({id: content.id, updated: {...content, type, input:input || '', description}})
+        promise = contentMutation.update({id: content.id, updated: {...content, type, input:input || ''}})
     }
     promise?.then(()=>{
         setEditable(false)
@@ -52,23 +46,21 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
   }
 
   const defaultTitle = {
-    'NOTE': lang('New Note')
+    'LIBRARY': lang('New Library'),
+    'TIMELINE': lang('New Timelines')
   } as Record<Content['type'], string>
 
   const onEdit = ()=>{setEditable(true)}
   useLayoutEffect(()=>{
     if(params.created){
-      const _type = 'NOTE'
       setEditable(false)
-      setInput(defaultTitle[_type])
-      setDescription('')
-      setType(_type)
+      setInput(defaultTitle[params.type])
+      setType(params.type)
     }
     else if (content){
       setEditable(false)
       setInput(content.input)
-      setDescription(content.description)
-      setType(content.type)
+      setType(type)
     }
   }, [content])
 
@@ -78,10 +70,11 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
         headerShown:false,
       })
     }
-    else if (content && parentContent){
+    else if (content){
         navigation.setOptions({
-            title: parentContent.title + ' / ' + content.title,
+            title: content.title,
             headerRight: () => <View style={{flexDirection: 'row'}}>
+              {content.type==='LIBRARY' && <CommonButton title={'⊕'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>navigate('EditorScreen', {parentId:content.id})}/>}
               <CommonButton title={'✏️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={onEdit}/>
               <CommonButton title={'🗑️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>
             </View>,
@@ -98,16 +91,15 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
       }
   }
   const editableExact = (params.created || editable)
-  console.log(type)
+
   return <ThemedView style={{width:"100%", height:"100%"}}>
-    {editableExact && input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
-    {type === 'NOTE' && <Editor theme={theme} active={editableExact} value={description || ''} setValue={editableExact?setDescription:()=>{}}/>}
     {editableExact?
-      <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>:
+      <>
+        {input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
+        <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>
+      </>:
       <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
-        <TouchableOpacity style={{flex:1, borderColor:Colors[theme].headerBottomColor, borderBottomWidth:1}} onPress={onEdit} onLongPress={onEdit}>
-          {description!== undefined && <EditorHtml content={description}/>}
-        </TouchableOpacity>
+        {content && <ContentList parentContent={content}/>}
       </ScrollView>}
     </ThemedView>
 }

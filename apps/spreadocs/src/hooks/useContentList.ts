@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "react-query";
-import { getContentList, patchContent, postContent } from "../services/spreadocs";
+import { deleteContent, getContentList, patchContent, postContent } from "../services/spreadocs";
+import { Content } from "../types";
 
-export default function useContentList(parentId:number){
-  const { data } = useQuery(["ContentList", parentId] , async()=>await getContentList(parentId))
+export default function useContentList(parentId?:number, type?: Content['type']){
+  const { data } = useQuery(["ContentList", parentId, type] , async()=> (parentId!==undefined || type!==undefined?await getContentList(parentId, type):undefined))
   return data
 }
 
@@ -19,5 +20,10 @@ export function useContentMutation(){
       queryClient.invalidateQueries("ContentList")
     }
   })
-  return {create:create.mutateAsync, update:update.mutateAsync}
+  const _delete = useMutation(deleteContent, {
+    onSuccess: () => {
+      queryClient.invalidateQueries("ContentList")
+    }
+  })
+  return {create:create.mutateAsync, update:update.mutateAsync, delete:_delete.mutateAsync}
 }

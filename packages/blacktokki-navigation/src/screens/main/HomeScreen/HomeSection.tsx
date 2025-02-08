@@ -60,14 +60,16 @@ export default function HomeSection({
   const [home, setHome] = useState(windowType === 'landscape');
   useLayoutEffect(() => {
     const index = route?.params?.tab | 0;
-    navigation.setOptions(
-      windowType === 'portrait'
-        ? tabViews[index]
-        : {
-            title,
-            headerRight: () => <></>,
-          }
-    );
+    setTimeout(() => {
+      navigation.setOptions(
+        windowType === 'portrait'
+          ? tabViews[index]
+          : {
+              title,
+              headerRight: () => <></>,
+            }
+      );
+    }, 1);
   }, [navigation, route, windowType]);
   useEffect(() => {
     setHome(windowType === 'landscape');

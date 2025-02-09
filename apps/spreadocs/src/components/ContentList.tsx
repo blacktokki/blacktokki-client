@@ -10,7 +10,12 @@ const regexForStripHTML = /<\/?[^>]*>/gi;
 const headerWidth = 14 * 2
 
 const ContentList = ({ parentContent } : { parentContent:Content }) => {
-  const data = useContentList(parentContent.id)
+  const isTimeline = parentContent.type === 'TIMELINE'
+  const feedContentData = useContentList(undefined, isTimeline?"FEEDCONTENT":undefined)
+  const childrenData = useContentList(parentContent.id)
+  const childIds = childrenData? new Set(childrenData.map(v=>v.id)):undefined
+  const data = isTimeline? feedContentData?.filter(v=>childIds?.has(v.parentId)) :childrenData
+
   const window  = useResizeContext()
   const theme = useColorScheme()
   const headerColor = Colors[theme].headerBottomColor

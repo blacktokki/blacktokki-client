@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = 'https://blacktokki.com'
@@ -13,38 +13,40 @@ const defaultOption:AxiosRequestConfig = {
 const _axios = axios.create(defaultOption);
 export const account = axios.create({...defaultOption, baseURL:accountURL})
 
-_axios.interceptors.request.use(
-    config => {
-        return config;
-    },
-    error => {
-        return Promise.reject(error);
-    }
-)
 
-_axios.interceptors.response.use(
-    response => {
-        // if((response.request.responseURL as string).indexOf('/task/login')>=0 && response.data.length != 0){
-        //     // redirect login
-        // }
-        return response;
-    },
-    error => {
-        if (error.response.status === 401) {
-            return getToken().then(async(token)=>{
-                if (token){
-                    const r = await account.post("/api/v1/user/sso/refresh/", {token}, {headers:{'Authorization':''}})
-                    if (r.status == 200 && r.data !== ''){
-                        setToken(r.data)
-                    }
-                }
-            }).finally(()=>{
-                return Promise.reject(error)
-            })
+const needRefresh = (response:AxiosResponse<any, any>) => {
+    return response.config.url == '/api/v1/user/?self=true' && response.request.responseURL.endsWith("account/login") || response.status === 401
+}
+
+const refreshToken = async()=>{
+    return getToken().then(async(token)=>{
+        if (token){
+            const r = await account.post("/api/v1/user/sso/refresh/", {token}, {headers:{'Authorization':''}})
+            if (r.status == 200 && r.data !== ''){
+                await setToken(r.data)
+            }
         }
-        return Promise.reject(error)
+    })
+}
+
+const responseInterceptor = async(response:AxiosResponse<any, any>) => {
+    if (needRefresh(response)){
+        await refreshToken();
+        throw { response };
     }
-)
+    return response;
+}
+
+const responseErrorInterceptor = async (error:any) => {
+    if (needRefresh(error.response)) {
+        await refreshToken()
+    }
+    return Promise.reject(error)
+}
+
+_axios.interceptors.response.use(responseInterceptor, responseErrorInterceptor)
+account.interceptors.response.use(responseInterceptor, responseErrorInterceptor)
+
 
 export const setToken = async (token:string|null)=>{
     _axios.defaults.headers['Authorization'] = `JWT ${token}`

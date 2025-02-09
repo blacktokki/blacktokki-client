@@ -21,13 +21,11 @@ export const accountService:AccountService = {
     }
     catch(e:any){
         let error = e
-        if(e.response !== undefined && e.response.status==401){
-            try{
-                return await checkLoginToken()
-            }
-            catch(e2){
-                error = e2
-            }
+        try{
+            return await checkLoginToken()
+        }
+        catch(e2){
+            error = e2
         }
         const isOffline = ((error as any).code == "ERR_NETWORK" || (error as any).message && ((error as any).message as string).startsWith("Cannot read"))
         throw {error, isOffline}

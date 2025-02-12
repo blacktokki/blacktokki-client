@@ -3,49 +3,56 @@ import { Content } from '../types';
 import { navigate } from '@blacktokki/navigation';
 import { Colors, Text, useColorScheme, useResizeContext, View } from '@blacktokki/core';
 import useContentList from '../hooks/useContentList';
-import { TouchableOpacity } from 'react-native';
+import { ScrollView, TouchableOpacity } from 'react-native';
+import TimeLine from './TimeLine';
+import { Card } from 'react-native-paper';
 
 const regexForStripHTML = /<\/?[^>]*>/gi;
 
-const headerWidth = 14 * 2
+const updatedFormat = (_updated:string) => {
+  const updated = _updated.slice(0, 16)
+    const date = updated.slice(0, 10)
+    const today = new Date().toISOString().slice(0, 10)
+    return date==today?updated.slice(11):date;
+}
 
 const ContentList = ({ parentContent } : { parentContent:Content }) => {
   const isTimeline = parentContent.type === 'TIMELINE'
   const feedContentData = useContentList(undefined, isTimeline?"FEEDCONTENT":undefined)
   const childrenData = useContentList(parentContent.id)
   const childIds = childrenData? new Set(childrenData.map(v=>v.id)):undefined
-  const data = isTimeline? feedContentData?.filter(v=>childIds?.has(v.parentId)) :childrenData
+  const data = (isTimeline? feedContentData?.filter(v=>childIds?.has(v.parentId)) :(childrenData?[...childrenData]:undefined))?.reverse()
 
   const window  = useResizeContext()
   const theme = useColorScheme()
-  const headerColor = Colors[theme].headerBottomColor
-  return <View style={{borderLeftWidth:window=='landscape'?0:1, borderTopWidth:1, borderColor:Colors.borderColor}}>
-    <View style={{flexDirection:'row', borderRightWidth:1, borderBottomWidth:1, borderColor:Colors.borderColor}}>
-      <View style={{alignItems:'center', justifyContent:'center', width:headerWidth, height:headerWidth, borderRightWidth:1, borderColor:Colors.borderColor, backgroundColor:headerColor}}>
-        <View style={{borderWidth:headerWidth/2 -4, width:headerWidth-8, height:headerWidth-8, borderColor:headerColor, borderRightColor:'gray', borderBottomColor:'gray'}}/>
+  const cardPadding = 20
+  const cardMaxWidth = 270
+  return data && (
+    parentContent.type!=='LIBRARY'?//<></>:
+    <TimeLine data={data.map(v=>({...v, time:{content:updatedFormat(v.updated)}, pressAction: ()=>navigate('EditorScreen', {id:v.id})}))}/>:
+    <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}} contentContainerStyle={{alignItems:'center'}}>
+      <View style={{flexWrap:'wrap', flexDirection:'row', paddingRight:cardPadding,justifyContent:'center', maxWidth:1280, width:'100%'}}>
+      {[...data, null, null, null]?.map((item, index)=>{
+          if (item === null){
+            return <View key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
+          }
+          const content = item.description?.replaceAll(/\n/g, "").replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')
+          const onPress = ()=>navigate('EditorScreen', {id:item.id})
+          return <TouchableOpacity key={index} style={{flexBasis:window==='landscape'?'33%':'50%', padding:cardPadding, paddingRight:0, maxWidth:cardMaxWidth}} onPress={onPress}>
+              <Card onPress={onPress} style={{aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8}}>
+                <Card.Content style={{overflow:'hidden'}}>
+                <Text style={{fontSize:16, opacity: 0.4}}>{content}</Text>
+                </Card.Content>
+              </Card>
+              <View style={{flexDirection:'row', marginTop:10, justifyContent:'space-between', alignItems:'center', width:'100%'}}>
+                <Text style={{fontSize:18}}>{item.title}</Text>
+                <Text style={{fontSize:14, opacity: 0.4, textAlign:'right'}}>{updatedFormat(item.updated)}</Text>
+                  
+              </View>
+          </TouchableOpacity>
+      })}
       </View>
-      <TouchableOpacity style={{flex:1, justifyContent:'center', alignItems:'center', backgroundColor:headerColor}}>
-        <Text style={{fontSize:14}}>A</Text>
-      </TouchableOpacity>
-    </View>
-    {data && data.map(v=>{
-      const updated = v.updated.slice(0, 16)
-      const date = updated.slice(0, 10)
-      const today = new Date().toISOString().slice(0, 10)
-      return <View key={v.id} style={{flexDirection:'row', borderRightWidth:1, borderBottomWidth:1, borderColor:Colors.borderColor}}>
-        <View style={{justifyContent:'center', alignItems:'center', width:headerWidth, borderRightWidth:1, borderColor:Colors.borderColor, backgroundColor:headerColor}}>
-          <Text style={{fontSize:14}}>{v.order}</Text>
-        </View>
-        <TouchableOpacity onPress={()=>navigate('EditorScreen', {id:v.id})} style={{flex:1}}>
-          <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-            <Text style={{fontSize:20}}>{v.title}</Text>
-            <Text style={{fontSize:14}}>{date==today?updated.slice(11):date}</Text>
-          </View>
-          <Text>{v.description?.replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')}</Text>
-        </TouchableOpacity>
-      </View>
-    })}
-  </View>
+    </ScrollView>)
 };
 
 export default ContentList;

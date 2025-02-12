@@ -16,13 +16,14 @@ const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 //   );
 // };
 
-export default (props: EditorProps) => {
+export default (props: EditorProps & { readonly?: boolean }) => {
   const customDiv = document.createElement('div');
   const root = createRoot(customDiv);
   return (
     <Editor
       tinymceScriptSrc={PATH}
       onInit={(_e, editor) => {
+        (editor as any).setMode(props.readonly ? 'readonly' : 'design');
         props.onReady?.();
         const editorContainer = document.querySelector('.tox-editor-container');
         const toolbar = document.querySelector('.tox-editor-header');
@@ -35,9 +36,12 @@ export default (props: EditorProps) => {
       }}
       onEditorChange={props.setValue}
       init={{
+        readonly: props.readonly,
+        disabled: props.readonly,
+        disable_nodechange: props.readonly,
         setup: INIT.setup,
-        plugins: INIT.plugins,
-        toolbar: INIT.toolbar,
+        plugins: props.readonly ? '' : INIT.plugins,
+        toolbar: props.readonly ? '' : INIT.toolbar + ' previewLink',
         height: '100%',
         skin: props.theme === 'light' ? 'oxide' : 'oxide-dark',
         content_css: props.theme === 'light' ? 'default' : 'dark',
@@ -47,6 +51,7 @@ export default (props: EditorProps) => {
         block_formats: '제목1=h2;제목2=h3;제목3=h4;본문=p;',
         fontsize_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt',
         forced_root_block_attrs: { style: 'font-size: 14pt' },
+        content_style: props.readonly ? 'body { caret-color: transparent; }' : undefined,
       }}
       value={props.value}
     />

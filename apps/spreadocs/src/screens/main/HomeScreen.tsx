@@ -5,6 +5,7 @@ import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation/build/typescript/screens/main/HomeScreen/HomeSection';
 import ContentGroupList from '../../components/ContentGroupList';
+import { List } from 'react-native-paper';
 
 const ContentTabView = ()=>{
   const theme = useColorScheme()
@@ -26,8 +27,8 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   const theme = useColorScheme()
   const color = Colors[theme].text
   const tabViews:TabViewOption[] = [
-    {title: lang('Contents'), component:ContentTabView, icon:<></>, headerRight:()=><></>},
-    {title: lang('Config'), component:ConfigTabView, icon:<></>, headerRight:()=><></>}
+    {title: lang('Contents'), component:ContentTabView, icon:<List.Icon icon={'table-of-contents'}/>, headerRight:()=><></>},
+    {title: lang('Config'), component:ConfigTabView, icon:<List.Icon icon={'dots-horizontal'}/>, headerRight:()=><></>}
   ]
   return <HomeSection tabViews={tabViews} title={lang('home')}>
     <View style={{flexGrow:1, width:'80%', marginTop:72}}>

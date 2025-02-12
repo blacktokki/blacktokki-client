@@ -1,5 +1,11 @@
-import { Content, PostContent } from '../types';
+import { Content, PostContent, PreviewRequest, ScrapPreview, FeedPreview } from '../types';
 import axios from './axios';
+
+
+export const getContentOne = async (id:number)=>{
+    return (await axios.get(`/api/v1/content/${id}`)).data as Content
+}
+
 
 export const getContentList = async (parentId?:number, type?: Content['type'])=>{
     const parentIdParam = parentId !== undefined?`&parentId=${parentId}`: ''
@@ -21,4 +27,14 @@ export const deleteContent = async (id: number) =>{
 
 export const pullFeed = async () =>{
     await axios.get('/api/v1/feed/pull')
+}
+
+export const previewScrap = async (preview: PreviewRequest) => {
+    const data = (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data
+    return {type:"SCRAP", ...data} as ScrapPreview
+}
+
+export const previewFeed = async (preview: PreviewRequest) => {
+    const data =  (await axios.get(`/api/v1/feed/autocomplete?query=${preview.query}`)).data
+    return {type:"FEED", ...data} as FeedPreview
 }

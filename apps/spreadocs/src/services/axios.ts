@@ -38,7 +38,7 @@ const responseInterceptor = async(response:AxiosResponse<any, any>) => {
 }
 
 const responseErrorInterceptor = async (error:any) => {
-    if (needRefresh(error.response)) {
+    if (needRefresh(error.response) || error.response.status === 403) {
         await refreshToken()
     }
     return Promise.reject(error)
@@ -62,5 +62,10 @@ export const getToken = async ()=>{
     account.defaults.headers['Authorization'] = _axios.defaults.headers['Authorization']
     return token
 }
+
+//TODO testing
+setTimeout(()=>{
+    setToken("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5ZGgwNTE1NDFAbWFpbHBsdWcuY28ua3IiLCJvcmlnX2lhdCI6MTczODkwMzY4OTg3NSwiaWF0IjoxNzM5MTY2NTY2LCJleHAiOjE3MzkxNjgzNjZ9.81hbUOVS5hr_ko_HJjGDVexvutoYvQDwSMcriFo1Xrs")
+}, 3000)
 
 export default _axios

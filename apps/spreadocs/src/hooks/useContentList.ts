@@ -1,22 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "react-query";
+import { QueryKey, useMutation, useQuery, useQueryClient } from "react-query";
 import { deleteContent, getContentList, patchContent, postContent, pullFeed } from "../services/spreadocs";
 import { Content } from "../types";
 import { useEffect } from "react";
 
-let isPullFeed = false
-
 export default function useContentList(parentId?:number, type?: Content['type']){
-  const queryClient = useQueryClient()
   const { data } = useQuery(["ContentList", parentId, type] , async()=> (parentId!==undefined || type!==undefined)?await getContentList(parentId, type):undefined)
-  useEffect(()=>{
-    if (!isPullFeed){
-      isPullFeed = true;
-      pullFeed().catch(()=>{isPullFeed=false}).then(()=>queryClient.invalidateQueries("ContentList"))
-    }
-  }, [])
   return data
 }
 
+let isPullFeed = false
 
 export function useContentMutation(){
   const queryClient = useQueryClient()
@@ -35,11 +27,23 @@ export function useContentMutation(){
       queryClient.invalidateQueries("ContentList")
     }
   })
-  const _pullFeed = useMutation(pullFeed, {
-    onSuccess: ()=>{
-      queryClient.invalidateQueries("ContentList")
+  const _pullFeed = useMutation(async (key:QueryKey)=>{
+    const querykey = ["ContentList", ...key]
+    await queryClient.setQueryData(querykey, undefined)
+    await pullFeed()
+    return querykey
+  }, {
+    onSuccess: (key)=>{
+      queryClient.invalidateQueries(key)
     }
   })
+
+  useEffect(()=>{
+    if (!isPullFeed){
+      isPullFeed = true;
+      _pullFeed.mutateAsync([])
+    }
+  }, [])
 
   return {create:create.mutateAsync, update:update.mutateAsync, delete:_delete.mutateAsync, pullFeed:_pullFeed.mutateAsync}
 }

@@ -9,6 +9,8 @@ import { useAuthContext } from '@blacktokki/account';
 import { navigate } from '@blacktokki/navigation';
 import { Content } from '../../types';
 import ContentList from '../../components/ContentList';
+import usePreview from '../../hooks/usePreview';
+import { EditorHtml } from '@blacktokki/editor';
 
 export default function ContentListScreen({ navigation, route }: StackScreenProps<any, 'ContentList'>) {
   const params = {
@@ -28,6 +30,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
   const [input, setInput] = useState<string>()
   const [type, setType] = useState<Content['type']>()
   const [editable, setEditable] = useState(false)
+  const preview = params.created &&params.type==='FEED'?usePreview('FEED', input || ''):undefined
   const back = ()=>{
     if(navigation.canGoBack())
         navigation.goBack()
@@ -46,7 +49,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
     let promise
     if (params.created){
         const typedList = list?.filter(v=>v.type == params.type)
-        promise = contentMutation.create({userId:auth.user.id, parentId:params.type==='FEED'?params.parentId as number:0, type, order: (typedList?.length || 0) + 1, input:input || ''}).then(v=>{
+        promise = contentMutation.create({userId:auth.user.id, parentId:params.type==='FEED'?params.parentId as number:0, type, order: (typedList?.length || 0) + 1, input:input || '', title:input || ''}).then(v=>{
             navigate("ContentListScreen", {id:v})
         })
     }
@@ -61,7 +64,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
   const defaultTitle = {
     'LIBRARY': lang('New Library'),
     'TIMELINE': lang('New Timelines'),
-    'FEED': "https://..."
+    'FEED': "https://"
   } as Record<Content['type'], string>
 
   const onEdit = ()=>{setEditable(true)}
@@ -90,6 +93,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
             headerRight: () => <View style={{flexDirection: 'row'}}>
               {content.type==='LIBRARY' && <CommonButton title={'⊕'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>navigate('EditorScreen', {parentId:content.id})}/>}
               {content.type==='TIMELINE' && <CommonButton title={'⊕'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>navigate('ContentListScreen', {type:"FEED", parentId:content.id})}/>}
+              {content.type!=='LIBRARY' && <CommonButton title={'🔄'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>contentMutation.pullFeed(content.type==="TIMELINE"?[undefined, 'FEEDCONTENT']:[content.id, undefined])}/>}
               <CommonButton title={'✏️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={onEdit}/>
               <CommonButton title={'🗑️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>
             </View>,
@@ -100,10 +104,13 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
 
   const editableExact = (params.created || editable)
 
-  return <ThemedView style={{width:"100%", height:"100%"}}>
+  return <ThemedView style={{width:"100%", height:"100%", backgroundColor:'transparent'}}>
     {editableExact?
       <>
         {input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
+        {preview && <>
+          {preview.description && <EditorHtml content={preview.description}/>}
+        </>}
         <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>
         <CommonButton title={lang('cancel')} onPress={params.created?back:()=>setEditable(false)} style={{height:65, paddingVertical:20}}/>
       </>:

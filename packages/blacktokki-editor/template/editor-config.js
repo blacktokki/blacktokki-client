@@ -1,5 +1,5 @@
 editorConfig = {
-    plugins: 'image link charmap advlist lists paste hr', //autoresize textcolor imagetools,
+    plugins: 'image link charmap advlist lists paste hr noneditable', //autoresize textcolor imagetools,
     toolbar: 'fontsizeselect | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link', // charmap removeformat
     setup: (editor)=>{
     }

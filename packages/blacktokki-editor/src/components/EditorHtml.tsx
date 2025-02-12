@@ -1,16 +1,26 @@
-import React, { Suspense } from 'react'
-import {Colors,  useColorScheme} from "@blacktokki/core";
-import { ScrollView, Text } from 'react-native';
+import { useColorScheme } from '@blacktokki/core';
+import React, { useState } from 'react';
+import { View } from 'react-native';
 
-const RenderHTML = React.lazy(()=> import('react-native-render-html'))
+import Editor from '../lib/tinymce/Editor';
 
-export const regexForStripHTML = /<\/?[^>]*>/gi;
-
-export default React.memo(({content}:{content:string})=>{
-    const theme = useColorScheme()
-    return <ScrollView contentContainerStyle={{paddingHorizontal:15, backgroundColor:Colors[theme].background}}>
-        <Suspense fallback={<Text>{content.replaceAll(regexForStripHTML, '')}</Text>}>
-            <RenderHTML defaultTextProps={{selectable:true}} contentWidth={320} source={{'html':content}} baseStyle={{color:Colors[theme].text}}/>
-        </Suspense>
-    </ScrollView>
-})
+export default React.memo((props: { content: string; onReady?: () => void }) => {
+  const theme = useColorScheme();
+  const [ready, setReady] = useState<boolean>(false);
+  return (
+    <View style={{ flex: 1, height: '100%' }}>
+      <Editor
+        readonly
+        theme={theme}
+        value={`<div class="mceNonEditable"">${props.content}</div>`}
+        setValue={() => {}}
+        onReady={() => {
+          if (!ready) {
+            setReady(true);
+            props.onReady?.();
+          }
+        }}
+      />
+    </View>
+  );
+});

@@ -12,7 +12,11 @@ export default (config: NavigationConfig) => {
   const screens = Object.fromEntries(
     Object.entries({ ...config.main, ...config.login }).map((entry) => {
       const { initialRouteName, exact, parse, path, screens, stringify } = entry[1];
-      return [entry[0], { initialRouteName, exact, parse, path, screens, stringify }];
+      const newEntry = [
+        entry[0],
+        { initialRouteName, exact, parse, path: config.rootPath + '/' + path, screens, stringify },
+      ];
+      return newEntry;
     })
   );
   return {

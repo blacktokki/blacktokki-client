@@ -83,7 +83,7 @@ const Row = ({
     <OriginalDescription styles={styles.description} />
   ) : (
     <View style={{flexDirection:'row'}}>
-      {imageUrl?<Image source={{uri:imageUrl}} resizeMode="cover" style={{ width:'100%', maxWidth:120, maxHeight:120, borderWidth:1}}/>:undefined}
+      {imageUrl?<Image source={{uri:imageUrl}} resizeMode="cover" style={{ width:'25%', minWidth:120, minHeight:120, borderWidth:1}}/>:undefined}
       <Text style={[styles.description, {fontSize:12}]}>
         {OriginalDescription}
       </Text>

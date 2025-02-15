@@ -37,3 +37,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+
+(function(l) {  // for github-page
+  if (l !== undefined && l.search[1] === '/' ) {
+      var decoded = l.search.slice(1).split('&').map(function(s) { 
+      return s.replace(/~and~/g, '&')
+      }).join('?');
+      window.history.replaceState(null, '',
+          l.pathname.slice(0, -1) + decoded + l.hash
+      );
+  }
+  if (l.pathname.substring(10).replaceAll('/', '').length === 0){
+    window.history.replaceState(null, '', l.pathname.substring(0, 10) + '/home')
+  }
+}(window.location))

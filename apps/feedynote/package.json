@@ -2,12 +2,14 @@
   "name": "@blacktokki/feedynote",
   "version": "1.0.0",
   "main": "index.js",
+  "homepage": "http://blacktokki.github.io/feedynote",
   "scripts": {
     "build": "yarn --cwd ../../ workspace @blacktokki/editor tinymce ../../apps/feedynote/web",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "github": "npx expo export:web && replace-in-file --configFile=scripts/seo.js && gh-pages -d web-build -r https://github.com/blacktokki/feedynote"
   },
   "dependencies": {
     "@blacktokki/core": "*",
@@ -28,7 +30,9 @@
     "@babel/core": "^7.24.0",
     "@expo/webpack-config": "^19.0.0",
     "@types/react": "~18.2.14",
-    "@types/react-native": "~0.72.0"
+    "@types/react-native": "~0.72.0",
+    "gh-pages": "^3.2.2",
+    "replace-in-file": "^7.0.1"
   },
   "private": true
 }

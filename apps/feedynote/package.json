@@ -1,9 +1,9 @@
 {
-  "name": "@blacktokki/spreadocs",
+  "name": "@blacktokki/feedynote",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "yarn --cwd ../../ workspace @blacktokki/editor tinymce ../../apps/spreadocs/web",
+    "build": "yarn --cwd ../../ workspace @blacktokki/editor tinymce ../../apps/feedynote/web",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",

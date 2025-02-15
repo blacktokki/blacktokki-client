@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = 'https://blacktokki.com'
 const accountURL =  `${API_URL}/account/`
-export const baseURL = `${API_URL}/spreadocs/`
+export const baseURL = `${API_URL}/feedynote/`
 
 const defaultOption:AxiosRequestConfig = {
     baseURL,

@@ -1,5 +1,5 @@
 import { useQuery } from "react-query";
-import { previewFeed, previewScrap } from "../services/spreadocs";
+import { previewFeed, previewScrap } from "../services/feedynote";
 import { ScrapPreview, FeedPreview } from "../types";
 import { useEffect, useState } from "react";
 

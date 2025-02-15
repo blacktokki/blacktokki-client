@@ -11,10 +11,10 @@ const config:NavigationConfig = {
     main,
     login,
     prefixes: [ Linking.makeUrl('/') ],
-    rootPath: 'spreadocs',
+    rootPath: 'feedynote',
     documentTitle: {
         formatter: ()=>{
-            return 'Spreadocs'
+            return 'feedynote'
         }
     },
     rootScreen: {

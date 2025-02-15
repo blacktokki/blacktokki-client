@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "blacktokki-spreadocs",
-    "slug": "blacktokki-spreadocs",
+    "name": "blacktokki-feedynote",
+    "slug": "blacktokki-feedynote",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

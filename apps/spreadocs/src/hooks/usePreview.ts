@@ -3,7 +3,19 @@ import { previewFeed, previewScrap } from "../services/spreadocs";
 import { ScrapPreview, FeedPreview } from "../types";
 import { useEffect, useState } from "react";
 
-let _cache:Record<string, string> = {}
+let _cache:Record<string, { title:string, description:string }> = {}
+
+
+export const renderDescription = (preview:{title:string, url:string, description?:string, imageUrl?:string})=>{
+  return `<div class="scrap mceNonEditable" style="border:1px solid #ddd; padding:10px; display:flex; align-items:center;">
+  ${preview.imageUrl!==undefined?`<img src="${preview.imageUrl}" alt="preview" style="width:80px; height:80px; margin-right:10px;">`:''}
+  <div>
+    <strong>${preview.title}</strong><br>
+    <a href="${preview.url}" target="_blank">${preview.url}</a>
+    ${preview.description ? `<p>${preview.description}</p>`: ""}
+  </div>
+</div>`
+}
 
 const callback = async(type:(ScrapPreview|FeedPreview)['type'], query:string)=> {
   try {
@@ -13,21 +25,15 @@ const callback = async(type:(ScrapPreview|FeedPreview)['type'], query:string)=> 
     return undefined;
   }
   if (_cache[query]){
-    return { description : _cache[query] }
+    return _cache[query]
   }
   else{
     const preview = type==='FEED'?await previewFeed({query}):await previewScrap({query})
-    if (preview){
-      const description = `<div class="scrap mceNonEditable" style="border:1px solid #ddd; padding:10px; display:flex; align-items:center;">
-          ${preview.type==='SCRAP' && preview.imageUrl!==undefined?`<img src="${preview.imageUrl}" alt="preview" style="width:80px; height:80px; margin-right:10px;">`:''}
-          <div>
-            <strong>${preview.title}</strong><br>
-            <a href="${query}" target="_blank">${query}</a>
-            <p>${preview.description}</p>
-          </div>
-        </div><p></p>`
-        _cache[query] = description
-        return { description };
+    if (preview && preview.title !==null){
+      const description =  renderDescription({...preview, url:query});
+        const _preview = {title:preview.title, description}
+        _cache[query] = _preview
+        return _preview;
     }
     else {
       return undefined

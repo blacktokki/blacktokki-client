@@ -44,7 +44,7 @@ const ContentSubGroupList = (props:ContentSubGroupProps) => {
         left={(_props)=><List.Icon {..._props} icon={expanded?'chevron-down' : 'chevron-right'} />}
         right={()=>undefined}
       >
-        {data && data.map(v=><List.Item key={v.id} left={(_props)=><List.Icon {..._props} icon={"timeline"} />} title={v.title} onPress={()=>navigate('ContentListScreen', {id:v.id})} style={{padding:itemPadding}} />)}
+        {data && data.map(v=><List.Item key={v.id} left={(_props)=><List.Icon {..._props} icon={"rss"} />} title={v.title} onPress={()=>navigate('ContentListScreen', {id:v.id})} style={{padding:itemPadding}} />)}
       </List.Accordion>
       <TouchableRipple style={{position:'absolute', justifyContent:'center', paddingLeft: 8 + itemPadding, width:40 + itemPadding * 2, height:40 + itemPadding*2 }} onPress={handlePress}>
           <Left isExpanded={expanded}/>

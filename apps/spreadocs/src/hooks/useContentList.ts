@@ -8,7 +8,7 @@ export default function useContentList(parentId?:number, type?: Content['type'])
   return data
 }
 
-let isPullFeed = false
+let feedInterval:NodeJS.Timer
 
 export function useContentMutation(){
   const queryClient = useQueryClient()
@@ -20,6 +20,7 @@ export function useContentMutation(){
   const update = useMutation(patchContent, {
     onSuccess: () => {
       queryClient.invalidateQueries("ContentList")
+      queryClient.invalidateQueries("Content")
     }
   })
   const _delete = useMutation(deleteContent, {
@@ -28,6 +29,7 @@ export function useContentMutation(){
     }
   })
   const _pullFeed = useMutation(async (key:QueryKey)=>{
+    console.log('pulling feed: ' + key)
     const querykey = ["ContentList", ...key]
     await queryClient.setQueryData(querykey, undefined)
     await pullFeed()
@@ -39,9 +41,9 @@ export function useContentMutation(){
   })
 
   useEffect(()=>{
-    if (!isPullFeed){
-      isPullFeed = true;
+    if(feedInterval===undefined){
       _pullFeed.mutateAsync([])
+      feedInterval = setInterval(()=>_pullFeed.mutateAsync([]), 20 * 60 * 1000)
     }
   }, [])
 

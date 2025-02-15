@@ -6,6 +6,7 @@ export type PostContent = {
     input: string,
     title: string,
     description?: string
+    imageUrl?: string
 }
 
 export type Content = PostContent & {

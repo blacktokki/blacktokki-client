@@ -1,6 +1,6 @@
 import { StackScreenProps } from '@react-navigation/stack';
 import { ScrollView,  View } from 'react-native';
-import  { CommonButton, View as ThemedView, useLangContext } from '@blacktokki/core'
+import  { CommonButton, Text, View as ThemedView, useLangContext } from '@blacktokki/core'
 
 import React, { useLayoutEffect,useState } from 'react';
 import useContentList, { useContentMutation } from '../../hooks/useContentList';
@@ -10,7 +10,6 @@ import { navigate } from '@blacktokki/navigation';
 import { Content } from '../../types';
 import ContentList from '../../components/ContentList';
 import usePreview from '../../hooks/usePreview';
-import { EditorHtml } from '@blacktokki/editor';
 
 export default function ContentListScreen({ navigation, route }: StackScreenProps<any, 'ContentList'>) {
   const params = {
@@ -30,7 +29,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
   const [input, setInput] = useState<string>()
   const [type, setType] = useState<Content['type']>()
   const [editable, setEditable] = useState(false)
-  const preview = params.created &&params.type==='FEED'?usePreview('FEED', input || ''):undefined
+  const preview = usePreview('FEED', params.created && params.type==='FEED'?input:undefined)
   const back = ()=>{
     if(navigation.canGoBack())
         navigation.goBack()
@@ -47,14 +46,15 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
         return;
     }
     let promise
+    const title = preview?.title?preview.title:input || ''
     if (params.created){
         const typedList = list?.filter(v=>v.type == params.type)
-        promise = contentMutation.create({userId:auth.user.id, parentId:params.type==='FEED'?params.parentId as number:0, type, order: (typedList?.length || 0) + 1, input:input || '', title:input || ''}).then(v=>{
+        promise = contentMutation.create({userId:auth.user.id, parentId:params.type==='FEED'?params.parentId as number:0, type, order: (typedList?.length || 0) + 1, input:input || '', title}).then(v=>{
             navigate("ContentListScreen", {id:v})
         })
     }
     else if (content!==undefined){
-        promise = contentMutation.update({id: content.id, updated: {...content, type, input:input || ''}})
+        promise = contentMutation.update({id: content.id, updated: {...content, type, input:input || '', title}})
     }
     promise?.then(()=>{
         setEditable(false)
@@ -108,10 +108,8 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
     {editableExact?
       <>
         {input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
-        {preview && <>
-          {preview.description && <EditorHtml content={preview.description}/>}
-        </>}
-        <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>
+        {preview?.description &&<Text>{preview.description}</Text>}
+        {(type!=='FEED' || preview!==undefined) &&<CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>}
         <CommonButton title={lang('cancel')} onPress={params.created?back:()=>setEditable(false)} style={{height:65, paddingVertical:20}}/>
       </>:
       <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>

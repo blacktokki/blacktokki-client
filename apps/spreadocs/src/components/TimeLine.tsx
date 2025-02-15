@@ -1,5 +1,5 @@
 import React from "react";
-import { FlatList, TouchableOpacity, StyleSheet, I18nManager, Platform } from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, I18nManager, Platform, Image } from "react-native";
 import { View, Text } from '@blacktokki/core';
 import { List } from "react-native-paper";
 
@@ -57,6 +57,7 @@ const Row = ({
   const {
     title: OriginalTitle = {},
     description: OriginalDescription = {},
+    imageUrl,
     time,
     icon,
     pressAction
@@ -81,9 +82,12 @@ const Row = ({
   const description = descriptionIsComponent ? (
     <OriginalDescription styles={styles.description} />
   ) : (
+    <View style={{flexDirection:'row'}}>
+      {imageUrl?<Image source={{uri:imageUrl}} resizeMode="cover" style={{ width:'100%', maxWidth:120, maxHeight:120, borderWidth:1}}/>:undefined}
       <Text style={[styles.description, {fontSize:12}]}>
         {OriginalDescription}
       </Text>
+    </View>
   );
 
   return (

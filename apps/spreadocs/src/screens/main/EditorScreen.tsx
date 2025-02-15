@@ -1,8 +1,7 @@
 import { StackScreenProps } from '@react-navigation/stack';
-import { Linking, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { Editor, EditorHtml } from '@blacktokki/editor';
-import  { Colors, CommonButton, Text, View as ThemedView, useColorScheme, useLangContext } from '@blacktokki/core'
-import Hyperlink from "react-native-hyperlink";
+import  { CommonButton, View as ThemedView, useColorScheme, useLangContext } from '@blacktokki/core'
 
 import React, { useLayoutEffect,useState } from 'react';
 import useContentList, { useContentMutation } from '../../hooks/useContentList';
@@ -11,7 +10,60 @@ import { useAuthContext } from '@blacktokki/account';
 import { navigate } from '@blacktokki/navigation';
 import { Content } from '../../types';
 import useContent from '../../hooks/useContent';
-import usePreview from '../../hooks/usePreview';
+import usePreview, { renderDescription } from '../../hooks/usePreview';
+
+
+const Scrap = React.memo((props:{url:string, replacer:(template:string)=>void})=>{
+  const preview = usePreview('SCRAP', props.url)
+  return preview?.description && <View style={{height:155, flexDirection:'row'}}>
+    <EditorHtml content={preview.description}/>
+    <CommonButton title={'✨'} onPress={()=>props.replacer(preview.description)} style={{height:155, paddingTop:65}}/>
+  </View>
+})
+
+
+const _tmp = (re:RegExp, description :string)=>{
+  let str = description;
+  let index = 0;
+  let match;
+  let arr = []
+  while ((match = new RegExp(re).exec(str)) != null) {
+    arr.push({index, str:str.substring(0, match.index)})
+    const end = match.index + match[0].length
+    arr.push({index:index + match.index, str:str.substring(match.index, end)})
+    index += end;
+    str = str.substring(end)
+  }
+  arr.push({index, str})
+  return arr
+}
+
+
+const _extractUrl = (description:string)=>{
+  const arr:{pos:number, url:string}[] = []
+  const re = /https?:\/\/(?:www\\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)/gi
+  _tmp(/(<a .*?href="(.*?)".*?>(.*)<\/a>|<img .*?src="(.*?)".*?\/>)/, description).forEach((v, i)=>{
+    if (i % 2 == 1){
+      return;
+    }
+    _tmp(re, v.str).forEach((v2, i2)=>{
+      if( i2 % 2 == 1){
+        arr.push({pos:v.index + v2.index, url:v2.str})
+      }
+    })
+  })
+  return arr
+}
+
+const renderScrap = (setDescription:(d:string)=>void, description?:string) => {
+  if (description === undefined){
+    return undefined
+  }
+  return _extractUrl(description).map((v, k)=><Scrap key={k} url={v.url} replacer={(template)=>{
+    setDescription(description.substring(0, v.pos) + template + description.substring(v.pos + v.url.length))
+  }}/>)
+}
+
 
 export default function EditorScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -31,7 +83,6 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
   const [description, setDescription] = useState<string>()
   const [type, setType] = useState<Content['type']>()
   const [editable, setEditable] = useState(false)
-  const preview = usePreview('SCRAP', input|| '')
   const onSave = ()=>{
     if (!auth.user || (content?.input == input && content?.description == description) || type===undefined){
         setEditable(false)
@@ -104,20 +155,13 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
   const editableExact = (params.created || editable)
   return <ThemedView style={{width:"100%", height:"100%"}}>
     {editableExact && input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
-    {editableExact && preview?.description && <View style={{height:200}}>
-      <EditorHtml content={preview.description}/>
-    </View>}
     {type === 'NOTE' && <Editor theme={theme} active={editableExact} value={description || ''} setValue={editableExact?setDescription:()=>{}}/>}
-    {editableExact?
-      <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>:
-      <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
-        <TouchableOpacity style={{flex:1, borderColor:Colors[theme].headerBottomColor, borderBottomWidth:1}} disabled={content?.type==='FEEDCONTENT'} onPress={onEdit} onLongPress={onEdit}>
-          {/* @ts-ignore */}
-          {content?.type==='FEEDCONTENT' && <Hyperlink linkDefault={ true } style={{wordBreak:"break-word", padding:15}} linkStyle={{color: '#12b886'}}>
-            <Text selectable>{content.input}</Text>
-          </Hyperlink>}
-          <EditorHtml content={description || ''}/>
-        </TouchableOpacity>
-      </ScrollView>}
+    {editableExact && <>
+      {renderScrap(setDescription, description)}
+      <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>
+    </>}
+    <ScrollView style={{flex:editableExact?0:1}} contentContainerStyle={{flexGrow:1}}>
+      <EditorHtml content={content?.type==='FEEDCONTENT'?renderDescription({...content, url:content.input}): description || ''} onPress={content?.type==='FEEDCONTENT'?undefined:onEdit}/>
+    </ScrollView>
     </ThemedView>
 }

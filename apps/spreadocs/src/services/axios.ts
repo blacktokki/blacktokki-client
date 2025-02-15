@@ -63,9 +63,4 @@ export const getToken = async ()=>{
     return token
 }
 
-//TODO testing
-setTimeout(()=>{
-    setToken("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5ZGgwNTE1NDFAbWFpbHBsdWcuY28ua3IiLCJvcmlnX2lhdCI6MTczODkwMzY4OTg3NSwiaWF0IjoxNzM5MTY2NTY2LCJleHAiOjE3MzkxNjgzNjZ9.81hbUOVS5hr_ko_HJjGDVexvutoYvQDwSMcriFo1Xrs")
-}, 3000)
-
 export default _axios

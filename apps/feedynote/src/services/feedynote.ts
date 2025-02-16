@@ -6,13 +6,16 @@ export const getContentOne = async (id:number)=>{
     return (await axios.get(`/api/v1/content/${id}`)).data as Content
 }
 
-
-export const getContentList = async (parentId?:number, type?: Content['type'], page?:number)=>{
-    const size = page !== undefined ? "20": "256"
+export const getContentList = async (parentId?:number, type?: Content['type'])=>{
     const parentIdParam = parentId !== undefined?`&parentId=${parentId}`: ''
     const typeParam = type !== undefined?`&type=${type}` : ''
-    const pageParam = page !== undefined?`&page=${page}`:''
-    return (await axios.get(`/api/v1/content?self=true&size=${size}${parentIdParam}${typeParam}${pageParam}`) ).data.value as Content[]
+    return (await axios.get(`/api/v1/content?self=true&size=256${parentIdParam}${typeParam}`) ).data.value as Content[]
+}
+
+export const getInfiniteContentList = async (parentId:number, type:'TIMELINE'|'LIBRARY'|'FEED', page:number)=>{
+    const parentIdParam = type==='TIMELINE' ? `&grandParentId=${parentId}`: `&parentId=${parentId}`
+    const size = type ==="LIBRARY"?"256":"20"
+    return { current: (await axios.get(`/api/v1/content?self=true&sort=id,DESC&size=${size}&page=${page}${parentIdParam}`) ).data.value as Content[] }
 }
 
 export const postContent = async (postContent:PostContent)=>{

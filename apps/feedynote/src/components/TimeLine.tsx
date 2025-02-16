@@ -46,7 +46,7 @@ const Event = ({ children, style }:any) => {
 Row component, is the component that combines all the sub-components (EventIcon, Event, EventTime) and
 gets each 'event' as an argument of type object
 */
-const Row = ({
+export const TimeLineRow = ({
   event = {},
   eventStyle,
   timeContainerStyle,
@@ -123,7 +123,7 @@ export default ({
     <FlatList
       data={data}
       renderItem={({ item }) => (
-        <Row
+        <TimeLineRow
           event={item}
           eventStyle={eventStyle}
           timeContainerStyle={timeContainerStyle}

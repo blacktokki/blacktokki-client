@@ -20,7 +20,7 @@ const ConfigSection = ({ title, children }: { title: string; children?: React.Re
 };
 
 export default () => {
-  const { lang, locale, setLocale } = useLangContext();
+  const { lang, locale, setLocale, localeActived } = useLangContext();
   const theme = useColorScheme();
   const configTheme = useColorConfigScheme();
   // const {enable:noti, setEnable:setNoti} = useFirebaseContext()
@@ -33,27 +33,29 @@ export default () => {
           key={title} title={title || ''} textStyle={{fontSize:16, color, textDecorationLine:noti==n?'underline':'none'}} style={{borderRadius:20}} onPress={()=>{setNoti(n)}}/>)}
       </View>
     </ConfigSection> */}
-      <ConfigSection title={lang('* Language Settings')}>
-        <View style={{ flexDirection: 'row' }}>
-          {[
-            [lang('Auto'), 'auto'],
-            ['한국어', 'ko'],
-            ['English', 'en'],
-          ].map(([title, l]) => (
-            <TextButton
-              key={title}
-              title={title || ''}
-              textStyle={{
-                fontSize: 16,
-                color,
-                textDecorationLine: locale === l ? 'underline' : 'none',
-              }}
-              style={{ borderRadius: 20 }}
-              onPress={() => setLocale(l)}
-            />
-          ))}
-        </View>
-      </ConfigSection>
+      {localeActived && (
+        <ConfigSection title={lang('* Language Settings')}>
+          <View style={{ flexDirection: 'row' }}>
+            {[
+              [lang('Auto'), 'auto'],
+              ['한국어', 'ko'],
+              ['English', 'en'],
+            ].map(([title, l]) => (
+              <TextButton
+                key={title}
+                title={title || ''}
+                textStyle={{
+                  fontSize: 16,
+                  color,
+                  textDecorationLine: locale === l ? 'underline' : 'none',
+                }}
+                style={{ borderRadius: 20 }}
+                onPress={() => setLocale(l)}
+              />
+            ))}
+          </View>
+        </ConfigSection>
+      )}
       <ConfigSection title={lang('* Skin Settings')}>
         <View style={{ flexDirection: 'row' }}>
           {[

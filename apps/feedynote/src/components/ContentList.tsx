@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Content } from '../types';
 import { navigate } from '@blacktokki/navigation';
-import { Colors, Text, useColorScheme, useResizeContext, View } from '@blacktokki/core';
-import { FlatList, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, useColorScheme, useResizeContext, View as ThemedView } from '@blacktokki/core';
+import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { TimeLineRow } from './TimeLine';
 import { Card } from 'react-native-paper';
 import useInfiniteContentList from '../hooks/useInfiniteContentList';
@@ -38,7 +38,7 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
 
   return [...data]?.map((item, index)=>{
     if (item === null){
-      return <View key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
+      return <ThemedView key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
     }
     const content = item.description?.replaceAll(/\n/g, "").replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')
     const onPress = ()=>navigate('EditorScreen', {id:item.id})
@@ -72,13 +72,13 @@ const ContentList = ({ parentContent } : { parentContent:Content }) => {
       }}
     />:
     <ScrollView 
-      style={{backgroundColor:Colors[theme].background, height:0}} 
+      style={{ height:0}} 
       contentContainerStyle={{flexDirection:'row', justifyContent:'center'}}
     >
-      <View style={{flexBasis:'100%', maxWidth:1280, flexWrap:'wrap', flexDirection:'row', paddingRight:cardPadding(window==='landscape')}}>
+      <View style={{backgroundColor:'transparent', flexBasis:'100%', maxWidth:1280, flexWrap:'wrap', flexDirection:'row', paddingRight:cardPadding(window==='landscape')}}>
         {data.pages.map((item, index)=><CardPage key={index} data={item.current}/>)}
       </View>
-      {window === 'landscape' && <View style={{flexBasis:'0%', flexGrow:1, maxWidth:240}}></View>}
+      {window === 'landscape' && <View style={{backgroundColor:'transparent', flexBasis:'0%', flexGrow:1, maxWidth:240}}></View>}
     </ScrollView>)
 };
 

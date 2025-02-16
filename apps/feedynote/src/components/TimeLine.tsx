@@ -1,6 +1,6 @@
 import React from "react";
-import { FlatList, TouchableOpacity, StyleSheet, I18nManager, Platform, Image } from "react-native";
-import { View, Text } from '@blacktokki/core';
+import { View, FlatList, TouchableOpacity, StyleSheet, I18nManager, Platform, Image } from "react-native";
+import { Text } from "@blacktokki/core"
 import { List } from "react-native-paper";
 
 const EventTime = ({ time: { content, style: timeStyle } = {}, style }:any) => {
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     },
     time: {
       fontSize: 12,
-      color: "#aaa",
+      color: "#888",
       fontStyle: "italic",
       textAlign: 'center'
     },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     verticalLine: {
       flex: 1,
       width: 1,
-      backgroundColor: "#ededed"
+      backgroundColor: "#ccc"
     },
     eventContainer: {
       flexBasis: "65%",

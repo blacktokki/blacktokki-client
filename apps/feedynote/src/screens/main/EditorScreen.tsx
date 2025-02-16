@@ -108,6 +108,7 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
 
   const onEdit = ()=>{setEditable(true)}
   useLayoutEffect(()=>{
+    console.log(content?.id)
     if(params.created){
       const _type = 'NOTE'
       setEditable(false)
@@ -121,7 +122,7 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
       setDescription(content.description)
       setType(content.type)
     }
-  }, [content])
+  }, [content?.id])
 
   useLayoutEffect(() => {
     if (params.created){

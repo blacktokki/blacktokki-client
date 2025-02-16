@@ -83,7 +83,7 @@ const Row = ({
     <OriginalDescription styles={styles.description} />
   ) : (
     <View style={{flexDirection:'row'}}>
-      {imageUrl?<Image source={{uri:imageUrl}} resizeMode="cover" style={{ width:'25%', minWidth:120, minHeight:120, borderWidth:1}}/>:undefined}
+      {imageUrl?<Image source={{uri:imageUrl}} resizeMode="cover" style={{ width:'33%', maxWidth:150, minHeight:120, borderWidth:1}}/>:undefined}
       <Text style={[styles.description, {fontSize:12}]}>
         {OriginalDescription}
       </Text>
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
       marginVertical: 5
     },
     timeContainer: {
-      flexBasis: "25%",
+      flexBasis: "15%",
       paddingTop:10,
     },
     time: {
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
       textAlign: 'center'
     },
     iconContainer: {
-      flexBasis: "6%",
+      flexBasis: "5%",
       alignItems: "center",
       alignSelf: "stretch",
       marginHorizontal: "5%"
@@ -176,7 +176,8 @@ const styles = StyleSheet.create({
       backgroundColor: "#ededed"
     },
     eventContainer: {
-      flexBasis: "55%",
+      flexBasis: "65%",
+      flexGrow:1,
       alignItems: "flex-start",
       padding: 16,
       borderRadius: 15,

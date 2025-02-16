@@ -9,7 +9,7 @@ let _cache:Record<string, { title:string, description:string }> = {}
 export const renderDescription = (preview:{title:string, url:string, description?:string, imageUrl?:string})=>{
   return `<div class="scrap mceNonEditable" style="border:1px solid #ddd; padding:10px; display:flex; align-items:center;">
   ${preview.imageUrl!==undefined?`<img src="${preview.imageUrl}" alt="preview" style="width:80px; height:80px; margin-right:10px;">`:''}
-  <div>
+  <div style="word-break:break-word;">
     <strong>${preview.title}</strong><br>
     <a href="${preview.url}" target="_blank">${preview.url}</a>
     ${preview.description ? `<p>${preview.description}</p>`: ""}

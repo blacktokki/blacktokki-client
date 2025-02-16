@@ -12,14 +12,14 @@ import Drawer from './Drawer';
 
 const Root = createStackNavigator();
 
-function headerLeft(
+function HeaderLeft({navigation, route, config}:{
   navigation: any,
   route: any,
-  windowType: string,
-  theme: 'light' | 'dark',
-  isMobile: boolean,
   config: NavigationConfig
-) {
+}) {
+  const isMobile = useIsMobile();
+  const theme = useColorScheme();
+  const windowType = useResizeContext();
   const canGOBackScreen = [config.rootScreen.login, config.rootScreen.main].findIndex((v) => v === route.name) === -1;
   const goBack = () => {
     if (navigation.canGoBack()) navigation.goBack();
@@ -43,7 +43,6 @@ function headerLeft(
 }
 
 export default ({ config }: { config: NavigationConfig }) => {
-  const windowType = useResizeContext();
   const isMobile = useIsMobile();
   const { auth } = useAuthContext();
   const theme = useColorScheme();
@@ -72,7 +71,7 @@ export default ({ config }: { config: NavigationConfig }) => {
                   height: isMobile ? 50 : undefined,
                 },
                 headerTitleStyle: { color: Colors[theme].text },
-                headerLeft: () => headerLeft(navigation, route, windowType, theme, isMobile, config),
+                headerLeft: () => <HeaderLeft {...{navigation, route, config}}/>,
                 headerRight: () => config.headerRight,
                 headerLeftContainerStyle: {
                   backgroundColor: Colors[theme].header,
@@ -80,7 +79,7 @@ export default ({ config }: { config: NavigationConfig }) => {
                   borderColor: Colors[theme].headerBottomColor,
                 },
                 cardStyle: [{ flexShrink: 1 }, backgroundStyle],
-                animationEnabled: windowType === 'portrait',
+                animationEnabled: isMobile,
                 cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
               })}
             >

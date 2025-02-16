@@ -9,7 +9,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "github": "npx expo export:web && replace-in-file --configFile=scripts/seo.js && gh-pages -d web-build -r https://github.com/blacktokki/feedynote"
+    "github": "npx expo export:web && replace-in-file --configFile=scripts/seo.js && gh-pages -d web-build -r https://github.com/blacktokki/feedynote",
+    "pwa": "npx expo-pwa"
   },
   "dependencies": {
     "@blacktokki/core": "*",

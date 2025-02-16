@@ -29,8 +29,8 @@ const ContentList = ({ parentContent } : { parentContent:Content }) => {
 
   const window  = useResizeContext()
   const theme = useColorScheme()
-  const cardPadding = 20
-  const cardMaxWidth = 230
+  const cardPadding = window==="landscape"?20:0
+  const cardMaxWidth = window==="landscape"? 230:205
   return data && (
     parentContent.type!=='LIBRARY'?//<></>:
     <TimeLine data={data.map(v=>({...v, time:{content:updatedFormat(v.updated)}, pressAction: ()=>navigate('EditorScreen', {id:v.id})}))}/>:

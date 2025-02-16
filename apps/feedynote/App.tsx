@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
           l.pathname.slice(0, -1) + decoded + l.hash
       );
   }
-  if (l.pathname.substring(10).replaceAll('/', '').length === 0){
+  if (l.pathname.length >= 10 && l.pathname.substring(10).replaceAll('/', '').length === 0){
     window.history.replaceState(null, '', l.pathname.substring(0, 10) + '/home')
   }
 }(window.location))

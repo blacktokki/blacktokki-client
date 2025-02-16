@@ -7,10 +7,12 @@ export const getContentOne = async (id:number)=>{
 }
 
 
-export const getContentList = async (parentId?:number, type?: Content['type'])=>{
+export const getContentList = async (parentId?:number, type?: Content['type'], page?:number)=>{
+    const size = page !== undefined ? "20": "256"
     const parentIdParam = parentId !== undefined?`&parentId=${parentId}`: ''
     const typeParam = type !== undefined?`&type=${type}` : ''
-    return (await axios.get(`/api/v1/content?self=true&size=1000&${parentIdParam}${typeParam}`) ).data.value as Content[]
+    const pageParam = page !== undefined?`&page=${page}`:''
+    return (await axios.get(`/api/v1/content?self=true&size=${size}${parentIdParam}${typeParam}${pageParam}`) ).data.value as Content[]
 }
 
 export const postContent = async (postContent:PostContent)=>{

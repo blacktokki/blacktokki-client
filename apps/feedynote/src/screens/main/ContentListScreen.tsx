@@ -77,7 +77,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
     else if (content){
       setEditable(false)
       setInput(content.input)
-      setType(type)
+      setType(content.type)
     }
   }, [content])
 

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Content } from '../types';
 import { navigate } from '@blacktokki/navigation';
-import { Text, useResizeContext, View as ThemedView } from '@blacktokki/core';
+import { Text, useResizeContext } from '@blacktokki/core';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { TimeLineRow } from './TimeLine';
 import { Card } from 'react-native-paper';
@@ -30,29 +30,30 @@ const TimelinePage = React.memo(({data}: {data:Content[]})=>{
   })
 })
 
-const _cardPadding = (isLandscape:boolean) => isLandscape?20:5
-const _cardMaxWidth = (isLandscape:boolean) => isLandscape?230:205
+const _cardPadding = (isLandscape:boolean) => isLandscape?20:4
+const _cardMaxWidth = (isLandscape:boolean) => isLandscape?230:190
 
 
 const CardPage = React.memo(({data}: {data:Content[]})=>{
   const window  = useResizeContext()
   const cardMaxWidth = _cardMaxWidth(window==="landscape")
+  const fSize = window==='landscape'?2:0
 
   return [...data.sort((a, b)=>a.updated < b.updated?1:-1), null, null]?.map((item, index)=>{
     if (item === null){
-      return <ThemedView key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
+      return <View key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
     }
     const content = item.description?.replaceAll(/\n/g, "").replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')
     const onPress = ()=>navigate('EditorScreen', {id:item.id})
     return <TouchableOpacity key={index} style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==='landscape'), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
         <Card onPress={onPress} style={{aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}}>
           <Card.Content>
-          <Text style={{fontSize:16, opacity: 0.4}}>{content}</Text>
+          <Text style={{fontSize:12+fSize, opacity: 0.4}}>{content}</Text>
           </Card.Content>
         </Card>
         <View style={{flexDirection:'row', marginTop:10, justifyContent:'space-between', alignItems:'center', width:'100%'}}>
-          <Text style={{fontSize:18}}>{item.title}</Text>
-          <Text style={{fontSize:14, opacity: 0.4, textAlign:'right'}}>{updatedFormat(item.updated)}</Text>
+          <Text style={{fontSize:14+fSize}}>{item.title}</Text>
+          <Text style={{fontSize:12+fSize, opacity: 0.4, textAlign:'right'}}>{updatedFormat(item.updated)}</Text>
             
         </View>
     </TouchableOpacity>

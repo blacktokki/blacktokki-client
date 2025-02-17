@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Content } from '../types';
 import { navigate } from '@blacktokki/navigation';
-import { Text, useColorScheme, useResizeContext, View as ThemedView } from '@blacktokki/core';
+import { Text, useResizeContext, View as ThemedView } from '@blacktokki/core';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { TimeLineRow } from './TimeLine';
 import { Card } from 'react-native-paper';
@@ -30,19 +30,21 @@ const TimelinePage = React.memo(({data}: {data:Content[]})=>{
   })
 })
 
-const cardPadding = (isLandscape:boolean) => isLandscape?20:0
+const _cardPadding = (isLandscape:boolean) => isLandscape?20:5
+const _cardMaxWidth = (isLandscape:boolean) => isLandscape?230:205
+
 
 const CardPage = React.memo(({data}: {data:Content[]})=>{
   const window  = useResizeContext()
-  const cardMaxWidth = window==="landscape"? 230:205
+  const cardMaxWidth = _cardMaxWidth(window==="landscape")
 
-  return [...data]?.map((item, index)=>{
+  return [...data.sort((a, b)=>a.updated < b.updated?1:-1), null, null]?.map((item, index)=>{
     if (item === null){
       return <ThemedView key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
     }
     const content = item.description?.replaceAll(/\n/g, "").replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')
     const onPress = ()=>navigate('EditorScreen', {id:item.id})
-    return <TouchableOpacity key={index} style={{flexBasis:window==='landscape'?'33%':'50%', padding:cardPadding(window==='landscape'), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
+    return <TouchableOpacity key={index} style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==='landscape'), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
         <Card onPress={onPress} style={{aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}}>
           <Card.Content>
           <Text style={{fontSize:16, opacity: 0.4}}>{content}</Text>
@@ -60,7 +62,6 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
 const ContentList = ({ parentContent } : { parentContent:Content }) => {
   const {data, fetchNextPage} = useInfiniteContentList(parentContent.id, parentContent.type as "TIMELINE" |"LIBRARY"| "FEED" )
   const window  = useResizeContext()
-  const theme = useColorScheme()
   return data && (
     parentContent.type!=='LIBRARY'?
     <FlatList
@@ -75,10 +76,10 @@ const ContentList = ({ parentContent } : { parentContent:Content }) => {
       style={{ height:0}} 
       contentContainerStyle={{flexDirection:'row', justifyContent:'center'}}
     >
-      <View style={{backgroundColor:'transparent', flexBasis:'100%', maxWidth:1280, flexWrap:'wrap', flexDirection:'row', paddingRight:cardPadding(window==='landscape')}}>
+      <View style={{backgroundColor:'transparent', flexBasis:'100%', maxWidth:(_cardMaxWidth(window==='landscape') + 5)  * (window==='landscape'?5:3), flexWrap:'wrap', flexDirection:'row', paddingRight:_cardPadding(window==='landscape'), justifyContent:window==='landscape'?undefined:'center'}}>
         {data.pages.map((item, index)=><CardPage key={index} data={item.current}/>)}
       </View>
-      {window === 'landscape' && <View style={{backgroundColor:'transparent', flexBasis:'0%', flexGrow:1, maxWidth:240}}></View>}
+      {/* {window === 'landscape' && <View style={{backgroundColor:'transparent', flexBasis:'0%', flexGrow:1, maxWidth:240}}></View>} */}
     </ScrollView>)
 };
 

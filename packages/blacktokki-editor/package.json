@@ -18,7 +18,6 @@
     "tinymce": "copyfiles -u 1 \"template/**/*\""
   },
   "dependencies": {
-    "react-native-webview": "^11.26.0",
     "tinymce": "^5.10.7",
     "@tinymce/tinymce-react": "^4.3.0"
   },

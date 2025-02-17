@@ -1,6 +1,6 @@
 import { StackScreenProps } from '@react-navigation/stack';
 import { Linking, ScrollView, View } from 'react-native';
-import { Editor, EditorHtml } from '@blacktokki/editor';
+import { Editor, EditorViewer } from '@blacktokki/editor';
 import  { CommonButton, View as ThemedView, useColorScheme, useLangContext } from '@blacktokki/core'
 
 import React, { useLayoutEffect,useState } from 'react';
@@ -16,7 +16,7 @@ import usePreview, { renderDescription } from '../../hooks/usePreview';
 const Scrap = React.memo((props:{url:string, replacer:(template:string)=>void})=>{
   const preview = usePreview('SCRAP', props.url)
   return preview?.description && <View style={{height:155, flexDirection:'row'}}>
-    <EditorHtml content={preview.description}/>
+    <EditorViewer content={preview.description}/>
     <CommonButton title={'✨'} onPress={()=>props.replacer(preview.description)} style={{height:155, paddingTop:65}}/>
   </View>
 })
@@ -162,7 +162,7 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
       <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>
     </>}
     <ScrollView style={{flex:editableExact?0:1}} contentContainerStyle={{flexGrow:1}}>
-      <EditorHtml content={content?.type==='FEEDCONTENT'?renderDescription({...content, url:content.input}): description || ''} onPress={content?.type==='FEEDCONTENT'?undefined:onEdit}/>
+      <EditorViewer content={content?.type==='FEEDCONTENT'?renderDescription({...content, url:content.input}): description || ''} onPress={content?.type==='FEEDCONTENT'?undefined:onEdit}/>
     </ScrollView>
     </ThemedView>
 }

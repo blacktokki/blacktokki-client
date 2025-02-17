@@ -1,12 +1,17 @@
+import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Editor } from '@tinymce/tinymce-react';
-
-import { EditorProps } from '../../types';
-
 import { EditorEvent } from 'tinymce';
 
-const INIT = require('/web/editor-config');
+import { EditorProps } from '../types';
+
+const INIT: IAllProps['init'] = {
+  plugins: 'image link charmap advlist lists paste hr noneditable', //autoresize textcolor imagetools,
+  toolbar:
+    'fontsizeselect | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link', // charmap removeformat
+  setup: () => {},
+};
+
 const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 
 // const CustomComponent = () => {

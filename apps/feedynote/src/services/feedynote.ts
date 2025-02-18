@@ -1,6 +1,7 @@
 import { Content, PostContent, PreviewRequest, ScrapPreview, FeedPreview } from '../types';
-import axios from './axios';
+import { axiosCreate } from '@blacktokki/account';
 
+const axios = axiosCreate("feedynote")
 
 export const getContentOne = async (id:number)=>{
     return (await axios.get(`/api/v1/content/${id}`)).data as Content

@@ -8,7 +8,8 @@ import React, {
   useState,
 } from 'react';
 
-import { User, AccountService } from '../types';
+import { checkLogin, login, logout } from '../services/account';
+import { User } from '../types';
 
 type AuthAction = {
   type: string;
@@ -73,13 +74,7 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
   }
 };
 
-export const AuthProvider = ({
-  children,
-  service,
-}: {
-  children: React.ReactNode;
-  service: AccountService;
-}) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [authState, dispatch] = useReducer(authReducer, {} as Auth);
   const [error, setError] = useState<string>();
   const auth = useMemo(
@@ -90,8 +85,7 @@ export const AuthProvider = ({
   );
   useEffect(() => {
     if (authState.user === undefined) {
-      service
-        .checkLogin()
+      checkLogin()
         .then((user) => {
           dispatch({ type: 'LOGIN_SUCCESS', user });
         })
@@ -100,8 +94,7 @@ export const AuthProvider = ({
           dispatch({ type: 'LOGOUT_SUCCESS' });
         });
     } else if (authState.user !== undefined && authState.request) {
-      service
-        .login(authState.request.username, authState.request.password)
+      login(authState.request.username, authState.request.password)
         .then((user) => {
           dispatch({ type: 'LOGIN_SUCCESS', user });
         })
@@ -110,7 +103,7 @@ export const AuthProvider = ({
           setError(data.response?.data?.message);
         });
     } else if (authState.user && authState.request === null) {
-      service.logout().then(() => dispatch({ type: 'LOGOUT_SUCCESS' }));
+      logout().then(() => dispatch({ type: 'LOGOUT_SUCCESS' }));
     }
   }, [authState]);
   return <AuthContext.Provider value={{ auth, error, dispatch }}>{children}</AuthContext.Provider>;

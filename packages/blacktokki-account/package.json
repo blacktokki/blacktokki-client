@@ -16,6 +16,8 @@
     "test": "eslint --ext ts,tsx ./src"
   },
   "devDependencies": {
+    "axios": "*",
+    "@react-native-async-storage/async-storage": "*",
     "@blacktokki/eslint-config": "*",
     "@tsconfig/recommended": "^1.0.1",
     "react-native-builder-bob": "^0.18.3",

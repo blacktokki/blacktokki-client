@@ -22,9 +22,3 @@ export type Membership = {
   groupname: string;
   group: number;
 };
-
-export type AccountService = {
-  checkLogin: () => Promise<User | null>;
-  login: (username: string, password: string) => Promise<User | null | undefined>;
-  logout: () => Promise<any>;
-};

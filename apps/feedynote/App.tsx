@@ -1,10 +1,9 @@
-import {AccountService, AuthProvider } from '@blacktokki/account';
+import { AuthProvider } from '@blacktokki/account';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import React, { Suspense } from 'react';
-import { accountService } from './src/services/account';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { useInitColorScheme } from '@blacktokki/core';
 
@@ -17,7 +16,7 @@ export default function App() {
   return isAppearenceComplete?
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      <AuthProvider service={accountService}>
+      <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <Suspense fallback={<></>}>
             <Navigation/>

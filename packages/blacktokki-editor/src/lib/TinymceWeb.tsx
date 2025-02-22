@@ -1,6 +1,6 @@
 import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+// import { createRoot } from 'react-dom/client';
 import { EditorEvent } from 'tinymce';
 
 import { EditorProps } from '../types';
@@ -25,7 +25,7 @@ const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 
 export default (props: EditorProps & { readonly?: boolean; onPress?: () => void }) => {
   const customDiv = document.createElement('div');
-  const root = createRoot(customDiv);
+  // const root = createRoot(customDiv);
   return (
     <Editor
       tinymceScriptSrc={PATH}
@@ -67,7 +67,7 @@ export default (props: EditorProps & { readonly?: boolean; onPress?: () => void 
         if (editorContainer && toolbar) {
           // Insert customDiv after the toolbar
           toolbar.parentNode?.insertBefore(customDiv, toolbar.nextSibling);
-          root.render(<></>);
+          // root.render(<></>);
           editor.on('remove', () => {});
         }
       }}

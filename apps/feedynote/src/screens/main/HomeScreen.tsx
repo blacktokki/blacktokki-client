@@ -3,7 +3,7 @@ import { StackScreenProps } from '@react-navigation/stack';
 import { ScrollView, View} from 'react-native';
 import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections } from '@blacktokki/navigation';
-import { TabViewOption } from '@blacktokki/navigation/build/typescript/screens/main/HomeScreen/HomeSection';
+import { TabViewOption } from '@blacktokki/navigation';
 import ContentGroupList from '../../components/ContentGroupList';
 import { List } from 'react-native-paper';
 

@@ -1,28 +1,28 @@
-import { AuthProvider } from '@blacktokki/account';
-import { StatusBar } from 'expo-status-bar';
+import { useInitColorScheme } from '@blacktokki/core';
+import React, { Suspense } from 'react';
 import { StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import React, { Suspense } from 'react';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { useInitColorScheme } from '@blacktokki/core';
-
-
-const queryClient = new QueryClient();
-
 export default function App() {
+  const AuthProvider = React.lazy(()=> import('@blacktokki/account').then(m=>({"default": m.AuthProvider})))
+  const QueryClientProvider = React.lazy(()=> import('react-query').then(({QueryClient, QueryClientProvider})=>{
+    const queryClient = new QueryClient();
+    return {"default": (props:{children:React.ReactNode})=><QueryClientProvider client={queryClient}>{props.children}</QueryClientProvider>}
+  }))
   const Navigation = React.lazy(()=> import('./src/navigation'))
   const isAppearenceComplete = useInitColorScheme()
+
   return isAppearenceComplete?
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <Suspense fallback={<></>}>
-            <Navigation/>
-          </Suspense>
-        </QueryClientProvider>
-      </AuthProvider>
+      <Suspense fallback={<></>}>
+        <AuthProvider>
+          <QueryClientProvider>
+              <Navigation/>
+          </QueryClientProvider>
+        </AuthProvider>
+      </Suspense>
     </SafeAreaProvider>:
     <></>
 }

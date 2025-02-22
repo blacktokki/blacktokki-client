@@ -1,16 +1,12 @@
-import { TabView, useResizeContext } from '@blacktokki/core';
-import { TabViewData } from '@blacktokki/core/build/typescript/components/TabView';
+import { TabView, useResizeContext, TabViewData } from '@blacktokki/core';
 import { useNavigation, useRoute } from '@react-navigation/core';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { View, ScrollView, useWindowDimensions } from 'react-native';
 
-export type TabViewOption = TabViewData & {
-  headerRight: () => React.JSX.Element;
-  onPress?: () => void;
-};
+import { TabViewOption } from '../../../types';
 
 const useHeaderSetter = (tabViews: TabViewData[]) => {
-  const tempref = useRef<NodeJS.Timer>();
+  const tempref = useRef<NodeJS.Timeout>();
   const indexRef = useRef<number>();
   const { width } = useWindowDimensions();
   const navigation = useNavigation();

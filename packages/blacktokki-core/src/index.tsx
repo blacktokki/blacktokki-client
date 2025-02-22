@@ -13,3 +13,6 @@ export { default as useResizeContext, ResizeContextProvider } from './hooks/useR
 export { default as useLangContext, IntlProvider } from './hooks/useLangContext';
 export { default as useIsMobile } from './hooks/useIsMobile';
 export { default as useModalsContext, ModalsProvider } from './hooks/useModalsContext';
+
+export type { TabViewData } from './components/TabView';
+export type { ModalComponent } from './hooks/useModalsContext';

@@ -1,10 +1,15 @@
-import { ModalComponent } from '@blacktokki/core/build/typescript/hooks/useModalsContext';
+import { TabViewData, ModalComponent } from '@blacktokki/core';
 import { PathConfig, DocumentTitleOptions } from '@react-navigation/native';
 
 export type Screens = Record<
   string,
   PathConfig<any> & { title: string; component: React.ComponentType<any> }
 >;
+
+export type TabViewOption = TabViewData & {
+  headerRight: () => React.JSX.Element;
+  onPress?: () => void;
+};
 
 export type NavigationConfig = {
   main: Screens;

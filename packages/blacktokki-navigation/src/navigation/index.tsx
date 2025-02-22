@@ -26,20 +26,13 @@ export function navigate(name: string, params?: any) {
   else navigationRef.current?.navigate(name);
 }
 
-let electronVersion: string | undefined;
-try {
-  electronVersion = process?.versions?.['electron'];
-} catch (e) {
-  electronVersion = undefined;
-}
-
 export default function Navigation({ config }: { config: NavigationConfig }) {
   const colorScheme = useColorScheme();
   return (
     <NavigationContainer
       ref={navigationRef}
       documentTitle={config.documentTitle}
-      linking={electronVersion ? undefined : linkingConfiguration(config)}
+      linking={linkingConfiguration(config)}
       theme={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
     >
       <ResizeContextProvider>

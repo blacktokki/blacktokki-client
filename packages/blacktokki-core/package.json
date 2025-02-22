@@ -15,18 +15,21 @@
     "build": "bob build",
     "test": "eslint --ext ts,tsx ./src"
   },
-  "dependencies": {
-    "use-mobile-detect-hook": "^1.0.5",
-    "@react-native-async-storage/async-storage": "^1.17.11"
-  },
   "devDependencies": {
+    "@babel/core": "*",
     "@blacktokki/eslint-config": "*",
+    "@babel/preset-env": "*",
     "@tsconfig/recommended": "^1.0.1",
+    "@react-native-async-storage/async-storage": "^1.17.11",
+    "react": "*",
+    "react-native": "*",
+    "use-mobile-detect-hook": "^1.0.5",
     "react-native-builder-bob": "^0.18.3",
     "typescript": "^5.1.3"
   },
   "peerDependencies": {
-    "react-native": "^0.72.0"
+    "react": "*",
+    "react-native": "*"
   },
   "eslintConfig": {
     "extends": "@blacktokki/eslint-config"

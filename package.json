@@ -15,5 +15,11 @@
     "nohoist": [
       "**/tinymce"
     ]
+  },
+  "resolutions": {
+    "@babel/preset-env": "^7.1.6",
+    "@babel/core": "*",
+    "react": "18.2.0",
+    "react-native": "0.72.10"
   }
 }

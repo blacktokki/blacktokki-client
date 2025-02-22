@@ -1,4 +1,4 @@
-import { Auth } from '@blacktokki/account/build/typescript/hooks/useAuthContext';
+import { Auth } from '@blacktokki/account';
 import { Colors, useColorScheme, useResizeContext } from '@blacktokki/core';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';

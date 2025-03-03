@@ -32,6 +32,7 @@ export default (props: EditorProps & { readonly?: boolean; onPress?: () => void 
       onInit={(_e, editor) => {
         props.onReady?.();
         (editor as any).setMode(props.readonly ? 'readonly' : 'design');
+        console.log('@@', props.onPress);
         if (props.onPress) {
           let pressed = false;
           let moved = false;

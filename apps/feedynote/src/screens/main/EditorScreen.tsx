@@ -108,7 +108,6 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
 
   const onEdit = ()=>{setEditable(true)}
   useLayoutEffect(()=>{
-    console.log(content?.id)
     if(params.created){
       const _type = 'NOTE'
       setEditable(false)
@@ -162,7 +161,7 @@ export default function EditorScreen({ navigation, route }: StackScreenProps<any
       <CommonButton title={lang('save')} onPress={onSave} style={{height:65, paddingVertical:20}}/>
     </>}
     <ScrollView style={{flex:editableExact?0:1}} contentContainerStyle={{flexGrow:1}}>
-      <EditorViewer content={content?.type==='FEEDCONTENT'?renderDescription({...content, url:content.input}): description || ''} onPress={content?.type==='FEEDCONTENT'?undefined:onEdit}/>
+      <EditorViewer content={content?.type==='FEEDCONTENT'?renderDescription({...content, url:content.input}): description || ''} onPress={content?.type==='FEEDCONTENT'?()=>{}:onEdit}/>
     </ScrollView>
     </ThemedView>
 }

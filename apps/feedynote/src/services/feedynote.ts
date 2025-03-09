@@ -33,12 +33,12 @@ export const deleteContent = async (id: number) =>{
     await axios.delete(`/api/v1/content/${id}`)
 }
 
-export const postCells = async (contents:(PostContent & {type:CellType})[]) => {
-    await axios.post(`/api/v1/cell`, contents)
+export const postCells = async (contents:{created:(PostContent & {type:CellType})[], deleteIds:number[]}) => {
+    await axios.post(`/api/v1/content/bulk`, contents)
 }
 
-export const executeMultiTurn = async (cells:({type: CellType |'OUTPUT'} & ({query:string} | {id:number}))[]) => {
-    return (await axios.post(`/api/v1/cell/multiturn`, cells)).data
+export const executeCells = async (cells:({type: CellType |'OUTPUT'} & ({query:string} | {id:number}))[]) => { // TBA
+    return (await axios.post(`/api/v1/cell/`, cells)).data
 }
 
 export const previewScrap = async (preview: {query:string}) => {

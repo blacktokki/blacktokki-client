@@ -22,7 +22,7 @@ const updatedFormat = (_updated:string) => {
 
 
 const TimelinePage = React.memo(({data}: {data:Content[]})=>{
-  return data.map(v=>({...v, time:{content:updatedFormat(v.updated)}, pressAction: ()=>navigate('EditorScreen', {id:v.id})})).map((item, index)=>{
+  return data.map(v=>({...v, time:{content:updatedFormat(v.updated)}, pressAction: ()=>navigate('NoteScreen', {id:v.id})})).map((item, index)=>{
     return <TimeLineRow 
       key={index}
       event={item}
@@ -44,7 +44,7 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
       return <View key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
     }
     const content = item.description?.replaceAll(/\n/g, "").replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')
-    const onPress = ()=>navigate('EditorScreen', {id:item.id})
+    const onPress = ()=>navigate('NoteScreen', {id:item.id})
     return <TouchableOpacity key={index} style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==='landscape'), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
         <Card onPress={onPress} style={{aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}}>
           <Card.Content>
@@ -61,10 +61,10 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
 })
 
 const ContentList = ({ parentContent } : { parentContent:Content }) => {
-  const {data, fetchNextPage} = useInfiniteContentList(parentContent.id, parentContent.type as "TIMELINE" |"LIBRARY"| "FEED" )
+  const {data, fetchNextPage} = useInfiniteContentList(parentContent.id, parentContent.type as "TIMELINEV2"| "NOTEV2" )
   const window  = useResizeContext()
   return data && (
-    parentContent.type!=='LIBRARY'?
+    parentContent.type!=='NOTEV2'?
     <FlatList
       data={data.pages}
       renderItem={({item})=><TimelinePage data={item.current}/>}

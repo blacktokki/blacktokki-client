@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import Tinymce from '../lib/TinymceWeb';
 import { EditorProps } from '../types';
 
-export default (props: EditorProps & { active: boolean }) => {
+export default (props: EditorProps & { active: boolean; setValue: (v: string) => void }) => {
   const [ready, setReady] = useState<boolean>(false);
   useEffect(() => {
     if (!props.active) setReady(false);

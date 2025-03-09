@@ -1,5 +1,5 @@
 import ContentListScreen from "./main/ContentListScreen";
-import EditorScreen from "./main/EditorScreen";
+import NoteScreen from "./main/NoteScreen";
 import HomeScreen from "./main/HomeScreen";
 
 export const main = {
@@ -8,10 +8,10 @@ export const main = {
       component:HomeScreen,
       path:'home',
     },
-    EditorScreen: {
-      path: 'editor',
-      title: 'editor',
-      component: EditorScreen
+    NoteScreen: {
+      path: 'notes',
+      title: 'notes',
+      component: NoteScreen
     },
     ContentListScreen: {
       path: 'contents',

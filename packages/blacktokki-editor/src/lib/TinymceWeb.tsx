@@ -6,7 +6,7 @@ import { EditorEvent } from 'tinymce';
 import { EditorProps } from '../types';
 
 const INIT: IAllProps['init'] = {
-  plugins: 'image link charmap advlist lists paste hr noneditable', //autoresize textcolor imagetools,
+  plugins: 'image link charmap advlist lists paste hr noneditable', // textcolor imagetools,
   toolbar:
     'fontsizeselect | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link', // charmap removeformat
   setup: () => {},
@@ -23,7 +23,9 @@ const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 //   );
 // };
 
-export default (props: EditorProps & { readonly?: boolean; onPress?: () => void }) => {
+export default (
+  props: EditorProps & { readonly?: boolean; onPress?: () => void; setValue: (v: string) => void }
+) => {
   const customDiv = document.createElement('div');
   // const root = createRoot(customDiv);
   return (
@@ -32,7 +34,6 @@ export default (props: EditorProps & { readonly?: boolean; onPress?: () => void 
       onInit={(_e, editor) => {
         props.onReady?.();
         (editor as any).setMode(props.readonly ? 'readonly' : 'design');
-        console.log('@@', props.onPress);
         if (props.onPress) {
           let pressed = false;
           let moved = false;
@@ -78,7 +79,8 @@ export default (props: EditorProps & { readonly?: boolean; onPress?: () => void 
         disabled: props.readonly,
         disable_nodechange: props.readonly,
         setup: INIT.setup,
-        plugins: props.readonly ? 'link' : INIT.plugins,
+        plugins:
+          (props.readonly ? 'link' : INIT.plugins) + (props?.autoResize ? ' autoresize' : ''),
         toolbar: props.readonly ? '' : INIT.toolbar,
         height: '100%',
         skin: props.theme === 'light' ? 'oxide' : 'oxide-dark',
@@ -90,6 +92,7 @@ export default (props: EditorProps & { readonly?: boolean; onPress?: () => void 
         fontsize_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt',
         forced_root_block_attrs: { style: 'font-size: 14pt' },
         content_style: props.readonly ? 'body { caret-color: transparent; }' : undefined,
+        autoresize_bottom_margin: 10,
       }}
       value={props.value}
     />

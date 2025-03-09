@@ -1,4 +1,5 @@
-import { Content, PostContent, PreviewRequest, ScrapPreview, FeedPreview } from '../types';
+import { toUrls } from '../components/LinkPreview';
+import { Content, PostContent, CellType, Link } from '../types';
 import { axiosCreate } from '@blacktokki/account';
 
 const axios = axiosCreate("feedynote")
@@ -13,9 +14,10 @@ export const getContentList = async (parentId?:number, type?: Content['type'])=>
     return (await axios.get(`/api/v1/content?self=true&size=256${parentIdParam}${typeParam}`) ).data.value as Content[]
 }
 
-export const getInfiniteContentList = async (parentId:number, type:'TIMELINE'|'LIBRARY'|'FEED', page:number)=>{
-    const parentIdParam = type==='TIMELINE' ? `&grandParentId=${parentId}`: `&parentId=${parentId}`
-    const size = type ==="LIBRARY"?"256":"20"
+export const getInfiniteContentList = async (parentId:number, type:'TIMELINEV2'|'NOTEV2', page:number)=>{
+    //const parentIdParam = parentId ? `&grandParentId=${parentId}`: `&parentId=${parentId}`
+    const parentIdParam = parentId < 1 ? ``: `&parentId=${parentId}`
+    const size = type ==="NOTEV2"?"256":"20"
     return { current: (await axios.get(`/api/v1/content?self=true&sort=id,DESC&size=${size}&page=${page}${parentIdParam}`) ).data.value as Content[] }
 }
 
@@ -31,16 +33,15 @@ export const deleteContent = async (id: number) =>{
     await axios.delete(`/api/v1/content/${id}`)
 }
 
-export const pullFeed = async () =>{
-    await axios.get('/api/v1/feed/pull')
+export const postCells = async (contents:(PostContent & {type:CellType})[]) => {
+    await axios.post(`/api/v1/cell`, contents)
 }
 
-export const previewScrap = async (preview: PreviewRequest) => {
-    const data = (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data
-    return {type:"SCRAP", ...data} as ScrapPreview
+export const executeMultiTurn = async (cells:({type: CellType |'OUTPUT'} & ({query:string} | {id:number}))[]) => {
+    return (await axios.post(`/api/v1/cell/multiturn`, cells)).data
 }
 
-export const previewFeed = async (preview: PreviewRequest) => {
-    const data =  (await axios.get(`/api/v1/feed/autocomplete?query=${preview.query}`)).data
-    return {type:"FEED", ...data} as FeedPreview
+export const previewScrap = async (preview: {query:string}) => {
+    return (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data as Link
 }
+

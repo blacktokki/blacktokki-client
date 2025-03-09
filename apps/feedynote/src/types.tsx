@@ -1,7 +1,9 @@
+export type CellType = 'EDITOR'|'LINK'
+
 export type PostContent = {
     userId: number,
     parentId: number,
-    type: 'NOTE'|'FEEDCONTENT'|'FEED'|'SEARCH'|'SEARCHCONTENT'|'TIMELINE'|'LIBRARY',
+    type: 'TIMELINEV2'|'NOTEV2'|'PAGE'| CellType,
     order: number,
     input: string,
     title: string,
@@ -14,20 +16,9 @@ export type Content = PostContent & {
     updated: string
 }
 
-export type PreviewRequest = {
-    query:string
-}
-
-export type ScrapPreview = {
-    type: 'SCRAP'
+export type Link = {
     title:string,
     description?:string,
     url:string,
     imageUrl?:string
-}
-
-export type FeedPreview = {
-    type: 'FEED'
-    title:string,
-    description?:string
 }

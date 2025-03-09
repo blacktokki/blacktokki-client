@@ -1,5 +1,5 @@
-import { QueryKey, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "react-query";
-import { deleteContent, getInfiniteContentList, patchContent, postContent, pullFeed } from "../services/feedynote";
+import { useInfiniteQuery } from "react-query";
+import { getInfiniteContentList } from "../services/feedynote";
 import { Content } from "../types";
 
 export type ContentPage = {
@@ -7,7 +7,7 @@ export type ContentPage = {
   current:Content[]
 }
 
-export default function useInfiniteContentList(parentId:number, type:'TIMELINE'|'LIBRARY'|'FEED'){
+export default function useInfiniteContentList(parentId:number, type:'TIMELINEV2'|'NOTEV2'){
   const { data, fetchNextPage } = useInfiniteQuery<ContentPage>(
     ["ContentList", parentId], 
     async({pageParam})=>await getInfiniteContentList(parentId, type,  pageParam), 

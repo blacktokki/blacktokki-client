@@ -1,50 +1,24 @@
 // App.tsx
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, MutableRefObject, useEffect } from 'react';
 import { 
   SafeAreaView, 
   StyleSheet, 
   View, 
   Text, 
   TouchableOpacity, 
-  TextInput,
-  ScrollView,
   Platform,
-  FlatList,
 } from 'react-native';
 // @ts-ignore
 import {MaterialIcons as Icon} from 'react-native-vector-icons';
+import { CellType, Link } from '../../types';
+import { previewScrap } from '../../services/feedynote';
+import { Editor, EditorViewer } from '@blacktokki/editor';
+import { useColorScheme, useLangContext } from '@blacktokki/core';
+import LinkPreview from '../../components/LinkPreview';
+import DynamicTextInput from '../../components/DynamicTextInput';
+import { DraggableFlatList, ScaleDecorator, SortableCellsList } from '../../components/Draggable';
 
-// Import platform-specific components
-let DraggableFlatList: any;
-let ScaleDecorator: any;
-let ReactDnd: any;
-let DraggableFlatListRenderItemParams: any;
-
-// Handle platform-specific imports
-if (Platform.OS === 'android' || Platform.OS === 'ios') {
-  // For native platforms, import react-native-draggable-flatlist
-  const DraggableImport = require('react-native-draggable-flatlist');
-  DraggableFlatList = DraggableImport.default;
-  ScaleDecorator = DraggableImport.ScaleDecorator;
-  DraggableFlatListRenderItemParams = DraggableImport.RenderItemParams;
-} else {
-  // For web, import react-dnd
-  const DndImport = require('react-dnd');
-  const DndHtml5Backend = require('react-dnd-html5-backend');
-  ReactDnd = {
-    DndProvider: DndImport.DndProvider,
-    useDrag: DndImport.useDrag,
-    useDrop: DndImport.useDrop,
-    HTML5Backend: DndHtml5Backend.HTML5Backend
-  };
-}
-
-// Cell types as in Jupyter
-enum CellType {
-  CODE = 'code',
-  MARKDOWN = 'markdown',
-}
-
+ 
 // Cell execution status
 enum ExecutionStatus {
   IDLE = 'idle',
@@ -63,165 +37,47 @@ interface Cell {
   status: ExecutionStatus;
 }
 
-// Simple JS execution environment
-const executeCode = (code: string): Promise<string> => {
+const execute = (type:CellType, query: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     try {
-      // This is a simple way to evaluate JS code
-      // In a real implementation, you'd use a proper JS interpreter
-      // or connect to a backend kernel
-      const result = eval(`
-        try {
-          (function() { 
-            const console = {
-              log: function(...args) {
-                return args.map(arg => 
-                  typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-                ).join(' ');
-              }
-            };
-            return (function() {
-              ${code}
-            })();
-          })();
-        } catch(e) {
-          "Error: " + e.message;
-        }
-      `);
-      
-      resolve(String(result));
+      if (type==='LINK'){
+        resolve(JSON.stringify(previewScrap({query})))
+      }
+      else {
+        resolve("")
+      }
     } catch (error) {
       reject(`Error: ${error}`);
     }
   });
 };
 
-// For web - Draggable Cell Item Component
-const DraggableCellItem = ({ 
-  item, 
-  index, 
-  moveItem, 
-  renderCellContent 
-}: { 
-  item: Cell, 
-  index: number, 
-  moveItem: (dragIndex: number, hoverIndex: number) => void,
-  renderCellContent: (item: Cell, isDragging: boolean) => React.ReactNode
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  
-  const [{ isDragging }, drag] = ReactDnd.useDrag({
-    type: 'CELL',
-    item: { index },
-    collect: (monitor: any) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  const [, drop] = ReactDnd.useDrop({
-    accept: 'CELL',
-    hover(item: { index: number }, monitor: any) {
-      if (!ref.current) {
-        return;
-      }
-      
-      const dragIndex = item.index;
-      const hoverIndex = index;
-      
-      // Don't replace items with themselves
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-      
-      moveItem(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
-  
-  drag(drop(ref));
-  
-  return (
-    <div 
-      ref={ref} 
-      style={{ 
-        opacity: isDragging ? 0.5 : 1,
-        cursor: 'move',
-      }}
-    >
-      {renderCellContent(item, isDragging)}
-    </div>
-  );
-};
-
-// For web - Sortable List Component
-const SortableCellsList = ({ 
-  items, 
-  onSortEnd, 
-  renderCellContent 
-}: { 
-  items: Cell[], 
-  onSortEnd: (items: Cell[]) => void,
-  renderCellContent: (item: Cell, isDragging: boolean) => React.ReactNode
-}) => {
-  const moveItem = (dragIndex: number, hoverIndex: number) => {
-    const draggedItem = items[dragIndex];
-    const newItems = [...items];
-    
-    // Remove dragged item from original position
-    newItems.splice(dragIndex, 1);
-    
-    // Insert dragged item at new position
-    newItems.splice(hoverIndex, 0, draggedItem);
-    
-    onSortEnd(newItems);
-  };
-
-  return (
-    <ReactDnd.DndProvider backend={ReactDnd.HTML5Backend}>
-      <View style={styles.cellsList}>
-        {items.map((item, index) => (
-          <DraggableCellItem
-            key={item.id}
-            item={item}
-            index={index}
-            moveItem={moveItem}
-            renderCellContent={renderCellContent}
-          />
-        ))}
-      </View>
-    </ReactDnd.DndProvider>
-  );
-};
-
-const App = () => {
-  const [cells, setCells] = useState<Cell[]>([
-    {
-      id: '1',
-      type: CellType.MARKDOWN,
-      content: '# Welcome to Jupyter Notebook in React Native\n\nThis is a basic implementation of Jupyter Notebook using React Native and TypeScript. You can:\n\n- Write and edit markdown cells\n- Write and execute JavaScript code\n- Reorder cells by dragging them',
-      output: '',
-      executionCount: null,
-      status: ExecutionStatus.IDLE,
-    },
-    {
-      id: '2',
-      type: CellType.CODE,
-      content: '// Try running this cell\nconst greeting = "Hello, Jupyter!";\nconsole.log(greeting);\n\n// You can also return values\ngreeting.toUpperCase();',
-      output: '',
-      executionCount: null,
-      status: ExecutionStatus.IDLE,
-    },
-  ]);
+const App = (props: {init:{type:CellType, content:string, output:string, executionCount:number|null}[], cellRef:MutableRefObject<{cells:Cell[], executeAllCells:()=>Promise<void>}|undefined>}) => {
+  const theme = useColorScheme()
+  const { lang } = useLangContext()
+  const [cells, setCells] = useState<Cell[]>(props.init.map((v, i)=>({...v, id:`${i}` , status: ExecutionStatus.IDLE})));
   
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [nextExecutionCount, setNextExecutionCount] = useState(1);
+  useEffect(()=>{
+    props.cellRef.current = {
+      cells:cells,
+      executeAllCells: async () => {
+        for (const cell of cells) {
+          if (cell.type === 'LINK') {
+            await executeCell(cell.id);
+          }
+        }
+      }
+    }
+  }, [cells])
   
   // Add a new cell
   const addCell = (type: CellType) => {
     const newCell: Cell = {
       id: Date.now().toString(),
       type,
-      content: type === CellType.MARKDOWN ? '*Edit this markdown*' : '// Write your code here',
+      content: type === 'EDITOR' ? '' : 'https://',
       output: '',
       executionCount: null,
       status: ExecutionStatus.IDLE,
@@ -242,7 +98,7 @@ const App = () => {
         cell.id === id 
           ? { 
               ...cell, 
-              type: cell.type === CellType.CODE ? CellType.MARKDOWN : CellType.CODE,
+              type: cell.type === 'LINK' ? 'EDITOR' : 'LINK',
               output: '',
               executionCount: null,
             } 
@@ -271,10 +127,10 @@ const App = () => {
     );
     
     const cell = cells.find(c => c.id === id);
-    if (!cell || cell.type !== CellType.CODE) return;
+    if (!cell || cell.type !== 'LINK') return;
     
     try {
-      const result = await executeCode(cell.content);
+      const result = await execute(cell.type, cell.content);
       setCells(prevCells => 
         prevCells.map(cell => 
           cell.id === id 
@@ -305,15 +161,6 @@ const App = () => {
     }
   };
   
-  // Execute all cells
-  const executeAllCells = async () => {
-    for (const cell of cells) {
-      if (cell.type === CellType.CODE) {
-        await executeCell(cell.id);
-      }
-    }
-  };
-  
   // Render a single cell (shared between platform implementations)
   const renderCellContent = useCallback((item: Cell, isDragging: boolean = false) => {
     const isSelected = selectedCellId === item.id;
@@ -326,7 +173,7 @@ const App = () => {
       ]}>
         {/* Cell sidebar with execution count and drag handle */}
         <View style={styles.cellHandle}>
-          {item.type === CellType.CODE && (
+          {item.type === 'LINK' && (
             <View style={styles.executionCount}>
               <Text style={styles.executionCountText}>
                 {item.executionCount ? `[${item.executionCount}]` : '[ ]'}
@@ -342,12 +189,12 @@ const App = () => {
             <TouchableOpacity 
               style={styles.toolbarButton}
               onPress={() => executeCell(item.id)}
-              disabled={item.type !== CellType.CODE}
+              disabled={item.type !== 'LINK'}
             >
               <Icon 
                 name="play-arrow" 
                 size={20} 
-                color={item.type === CellType.CODE ? "#4CAF50" : "#ccc"} 
+                color={item.type === 'LINK' ? "#4CAF50" : "#ccc"} 
               />
             </TouchableOpacity>
             
@@ -356,7 +203,7 @@ const App = () => {
               onPress={() => changeCellType(item.id)}
             >
               <Icon 
-                name={item.type === CellType.CODE ? "code" : "text-fields"} 
+                name={item.type === 'LINK' ? "code" : "text-fields"} 
                 size={20} 
                 color="#2196F3" 
               />
@@ -376,24 +223,13 @@ const App = () => {
             onPress={() => setSelectedCellId(item.id)}
             style={styles.cellInputContainer}
           >
-            {item.type === CellType.MARKDOWN ? (
-              isSelected ? (
-                <TextInput
-                  style={styles.markdownInput}
-                  multiline
-                  value={item.content}
-                  onChangeText={(text) => updateCellContent(item.id, text)}
-                  autoFocus
-                />
-              ) : (
-                <Text>
-                  {item.content}
-                </Text>
-              )
-            ) : (
-              <TextInput
+            {item.type === 'EDITOR' ? <View>
+              <EditorViewer theme={theme} value={item.content} autoResize active={!isSelected} onPress={()=>setSelectedCellId(item.id)}/>
+              <Editor       theme={theme} value={item.content} autoResize active={isSelected} setValue={(text) => updateCellContent(item.id, text)}/>
+            </View>
+            : (
+              <DynamicTextInput
                 style={styles.codeInput}
-                multiline
                 value={item.content}
                 onChangeText={(text) => updateCellContent(item.id, text)}
                 autoCapitalize="none"
@@ -403,30 +239,40 @@ const App = () => {
           </TouchableOpacity>
           
           {/* Output area for code cells */}
-          {item.type === CellType.CODE && item.output && (
-            <View style={[
-              styles.outputContainer,
-              item.status === ExecutionStatus.ERROR && styles.errorOutput
-            ]}>
+          {item.status === ExecutionStatus.COMPLETED  ? <>
+              {item.type === 'LINK' && (JSON.parse(item.output) as Link[]).map((link, i)=><LinkPreview key={i} link={link} isMobile={false} />)}
+            </>:
+            item.status === ExecutionStatus.ERROR && <View style={[styles.outputContainer, styles.errorOutput]}>
               <Text style={styles.outputText}>{item.output}</Text>
-            </View>
-          )}
+            </View>}
         </View>
       </View>
     );
   }, [selectedCellId, executeCell, changeCellType, deleteCell, updateCellContent]);
   
-  // Render item for native platforms
+  // 네이티브 환경용 드래그 핸들 컴포넌트 수정
   const renderCellForNative = useCallback(({ item, drag, isActive }: any) => {
     return (
       <ScaleDecorator>
-        <TouchableOpacity onLongPress={drag} activeOpacity={1}>
-          {renderCellContent(item, isActive)}
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity 
+            onLongPress={drag} 
+            style={{ 
+              width: 40,  // 드래그 핸들 너비 
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Icon name="drag-handle" size={20} color="#888" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            {renderCellContent(item, isActive)}
+          </View>
+        </View>
       </ScaleDecorator>
     );
   }, [renderCellContent]);
-  
+
   // Handle cell reordering for native
   const onDragEndNative = useCallback(({ data }: { data: Cell[] }) => {
     setCells(data);
@@ -446,7 +292,7 @@ const App = () => {
           onDragEnd={onDragEndNative}
           keyExtractor={(item:any) => item.id}
           renderItem={renderCellForNative}
-          contentContainerStyle={styles.cellsList}
+          contentContainerStyle={commonStyles.cellsList}
         />
       );
     } else {
@@ -459,84 +305,36 @@ const App = () => {
       );
     }
   };
-  
+  const styles = theme==='light'?lightStyles:darkStyles
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Jupyter Notebook</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={executeAllCells}
-          >
-            <Icon name="play-arrow" size={24} color="#fff" />
-            <Text style={styles.headerButtonText}>Run All</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
       {renderCellList()}
       
       <View style={styles.addCellContainer}>
         <TouchableOpacity 
           style={[styles.addCellButton, styles.codeButton]}
-          onPress={() => addCell(CellType.CODE)}
+          onPress={() => addCell('LINK')}
         >
-          <Icon name="code" size={20} color="#fff" />
-          <Text style={styles.addCellButtonText}>Code</Text>
+          <Icon name="link" size={20} color="#fff" />
+          <Text style={styles.addCellButtonText}>{lang('Link')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.addCellButton, styles.markdownButton]}
-          onPress={() => addCell(CellType.MARKDOWN)}
+          onPress={() => addCell('EDITOR')}
         >
           <Icon name="text-fields" size={20} color="#fff" />
-          <Text style={styles.addCellButtonText}>Markdown</Text>
+          <Text style={styles.addCellButtonText}>{lang('Editor')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
-// Styles for the Markdown content
-const markdownStyles = {
-  body: {
-    fontSize: 14,
-    color: '#333',
-  },
-  heading1: {
-    fontSize: 24,
-    marginTop: 10,
-    marginBottom: 10,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  heading2: {
-    fontSize: 20,
-    marginTop: 10,
-    marginBottom: 10,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  code_inline: {
-    backgroundColor: '#f5f5f5',
-    padding: 2,
-    borderRadius: 3,
-    fontFamily: 'monospace',
-  },
-  code_block: {
-    backgroundColor: '#f5f5f5',
-    padding: 10,
-    borderRadius: 3,
-    fontFamily: 'monospace',
-  },
-};
-
 // Main application styles
-const styles = StyleSheet.create({
+const lightStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     backgroundColor: '#3F51B5',
@@ -566,10 +364,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 5,
     fontWeight: '500',
-  },
-  cellsList: {
-    paddingVertical: 10,
-    paddingHorizontal: 5,
   },
   cellContainer: {
     flexDirection: 'row',
@@ -664,6 +458,147 @@ const styles = StyleSheet.create({
   },
   addCellButtonText: {
     color: '#fff',
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+});
+const commonStyles = StyleSheet.create({
+  cellsList:{
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+  }
+})
+
+const darkStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#121212', // 다크 모드 배경색
+  },
+  header: {
+    backgroundColor: '#1E1E1E', // 어두운 헤더 배경
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    ...(Platform.OS !== 'web' && { elevation: 4 }),
+  },
+  title: {
+    color: '#E0E0E0', // 연한 회색 텍스트
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+  },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', // 투명한 어두운 버튼
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  headerButtonText: {
+    color: '#B0B0B0', // 회색 텍스트
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+  cellContainer: {
+    flexDirection: 'row',
+    marginVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#1E1E1E', // 어두운 셀 배경
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333333', // 어두운 테두리
+  },
+  selectedCell: {
+    borderColor: '#4A90E2', // 밝은 블루 선택 강조
+    borderWidth: 2,
+  },
+  draggingCell: {
+    opacity: 0.7,
+    backgroundColor: '#2C2C2C', // 어두운 드래그 색상
+  },
+  cellHandle: {
+    width: 40,
+    backgroundColor: '#2A2A2A', // 어두운 핸들 배경
+    alignItems: 'center',
+    paddingTop: 15,
+  },
+  executionCount: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  executionCountText: {
+    color: '#888888', // 어두운 실행 카운트 텍스트
+    fontSize: 12,
+  },
+  cellContent: {
+    flex: 1,
+  },
+  cellToolbar: {
+    flexDirection: 'row',
+    backgroundColor: '#2A2A2A', // 어두운 툴바 배경
+    padding: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3A3A3A', // 어두운 구분선
+  },
+  toolbarButton: {
+    padding: 5,
+    marginRight: 10,
+  },
+  cellInputContainer: {
+    padding: 10,
+  },
+  codeInput: {
+    fontFamily: 'monospace',
+    minHeight: 40,
+    color: '#E0E0E0', // 연한 회색 텍스트
+    backgroundColor: '#1E1E1E', // 입력 배경
+  },
+  markdownInput: {
+    minHeight: 40,
+    color: '#E0E0E0', // 연한 회색 텍스트
+    backgroundColor: '#1E1E1E', // 입력 배경
+  },
+  outputContainer: {
+    backgroundColor: '#2A2A2A', // 어두운 출력 배경
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#3A3A3A', // 어두운 구분선
+  },
+  errorOutput: {
+    backgroundColor: 'rgba(244, 67, 54, 0.2)', // 오류 출력 배경 (반투명 레드)
+  },
+  outputText: {
+    fontFamily: 'monospace',
+    color: '#B0B0B0', // 회색 텍스트
+  },
+  addCellContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#333333', // 어두운 구분선
+    backgroundColor: '#121212', // 컨테이너 배경
+  },
+  addCellButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4,
+    marginHorizontal: 5,
+  },
+  codeButton: {
+    backgroundColor: '#2E7D32', // 어두운 녹색
+  },
+  markdownButton: {
+    backgroundColor: '#1565C0', // 어두운 블루
+  },
+  addCellButtonText: {
+    color: '#E0E0E0', // 연한 회색 텍스트
     marginLeft: 5,
     fontWeight: '500',
   },

@@ -18,7 +18,6 @@
     "tinymce": "copyfiles -u 1 \"template/**/*\""
   },
   "devDependencies": {
-    "@blacktokki/core": "*",
     "@blacktokki/eslint-config": "*",
     "@tsconfig/recommended": "^1.0.1",
     "@tinymce/tinymce-react": "^4.3.0",

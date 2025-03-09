@@ -1,21 +1,26 @@
-import { useColorScheme } from '@blacktokki/core';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import Tinymce from '../lib/TinymceWeb';
+import { EditorProps } from '../types';
 
-export default React.memo(
-  (props: { content: string; onReady?: () => void; onPress?: () => void }) => {
-    const theme = useColorScheme();
-    const [ready, setReady] = useState<boolean>(false);
-    return (
+const emptyFunction = () => {};
+
+export default React.memo((props: EditorProps & { active: boolean; onPress?: () => void }) => {
+  const [ready, setReady] = useState<boolean>(false);
+  useEffect(() => {
+    if (!props.active) setReady(false);
+  }, [props.active]);
+  return (
+    <View style={props.active ? { flex: 1 } : { flex: 0 }}>
       <View style={{ flex: 1, height: '100%' }}>
         <Tinymce
           readonly
-          theme={theme}
-          value={`<div class="mceNonEditable"">${props.content}</div>`}
-          setValue={() => {}}
-          onPress={props.onPress}
+          theme={props.theme}
+          value={`<div class="mceNonEditable" style="width:100%;height:100%">${props.value}</div>`}
+          setValue={emptyFunction}
+          autoResize={props?.autoResize}
+          onPress={props.onPress || emptyFunction}
           onReady={() => {
             if (!ready) {
               setReady(true);
@@ -24,6 +29,6 @@ export default React.memo(
           }}
         />
       </View>
-    );
-  }
-);
+    </View>
+  );
+});

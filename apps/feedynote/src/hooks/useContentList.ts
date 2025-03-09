@@ -1,5 +1,5 @@
-import { QueryKey, useMutation, useQuery, useQueryClient } from "react-query";
-import { deleteContent, getContentList, patchContent, postContent, pullFeed } from "../services/feedynote";
+import { useMutation, useQuery, useQueryClient } from "react-query";
+import { deleteContent, getContentList, patchContent, postCells, postContent } from "../services/feedynote";
 import { Content } from "../types";
 import { useEffect } from "react";
 
@@ -8,7 +8,6 @@ export default function useContentList(parentId?:number, type?: Content['type'])
   return data
 }
 
-let feedInterval:NodeJS.Timer
 
 export function useContentMutation(){
   const queryClient = useQueryClient()
@@ -28,24 +27,14 @@ export function useContentMutation(){
       queryClient.invalidateQueries("ContentList")
     }
   })
-  const _pullFeed = useMutation(async (key:QueryKey)=>{
-    console.log('pulling feed: ' + key)
-    const querykey = ["ContentList", ...key]
-    await queryClient.setQueryData(querykey, undefined)
-    await pullFeed()
-    return querykey
-  }, {
-    onSuccess: (key)=>{
-      queryClient.invalidateQueries(key)
+  const updateCells = useMutation(postCells, {
+    onSuccess: () =>{
+      queryClient.invalidateQueries("ContentList")
     }
   })
 
   useEffect(()=>{
-    if(feedInterval===undefined){
-      _pullFeed.mutateAsync([])
-      feedInterval = setInterval(()=>_pullFeed.mutateAsync([]), 20 * 60 * 1000)
-    }
   }, [])
 
-  return {create:create.mutateAsync, update:update.mutateAsync, delete:_delete.mutateAsync, pullFeed:_pullFeed.mutateAsync}
+  return {create:create.mutateAsync, update:update.mutateAsync, delete:_delete.mutateAsync, updateCells:updateCells.mutateAsync}
 }

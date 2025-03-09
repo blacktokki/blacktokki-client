@@ -1,167 +1,208 @@
-import { View } from '@blacktokki/core';
-import React, { useRef } from 'react';
-import { Platform, StyleSheet } from "react-native";
+import React, { useEffect, useState } from 'react';
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+// @ts-ignore
+import { MaterialIcons as Icon } from 'react-native-vector-icons';
 
 // Import platform-specific components
-export let DraggableFlatList: any;
-export let ScaleDecorator: any;
-let ReactDnd: any;
-let DraggableFlatListRenderItemParams: any;
+let DraggableFlatList: any;
+let ScaleDecorator: any;
 
-type Cell = any
+// For web, import specific versions of dnd-kit components
+// @dnd-kit/core@3.0.3, @dnd-kit/sortable@3.0.1, @dnd-kit/utilities@2.0.0
+let DndCore: any;
+let DndSortable: any;
+let DndUtilities: any;
+
+type Cell = any;
 
 // Handle platform-specific imports
 if (Platform.OS === 'android' || Platform.OS === 'ios') {
   // For native platforms, import react-native-draggable-flatlist
-  const DraggableImport = {} as any // require('react-native-draggable-flatlist');
+  const DraggableImport = {} as any; // require('react-native-draggable-flatlist');
   DraggableFlatList = DraggableImport.default;
   ScaleDecorator = DraggableImport.ScaleDecorator;
-  DraggableFlatListRenderItemParams = DraggableImport.RenderItemParams;
 } else {
-  // For web, import react-dnd
-  const DndImport = require('react-dnd');
-  const DndHtml5Backend = require('react-dnd-html5-backend');
-  ReactDnd = {
-    DndProvider: DndImport.DndProvider,
-    useDrag: DndImport.useDrag,
-    useDrop: DndImport.useDrop,
-    HTML5Backend: DndHtml5Backend.HTML5Backend
-  };
+  // For web, import dnd-kit with specific versions
+  DndCore = require('@dnd-kit/core');
+  DndSortable = require('@dnd-kit/sortable');
+  DndUtilities = require('@dnd-kit/utilities');
 }
 
-// 웹 환경용 Draggable Cell Item 수정
+// Web environment Draggable Cell Item using dnd-kit
 const DraggableCellItem = ({ 
-    item, 
-    index, 
-    moveItem, 
-    renderCellContent, 
-    draggingItemIndexRef
-  }: { 
-    item: Cell, 
-    index: number, 
-    moveItem: (dragIndex: number, hoverIndex: number) => void, 
-    renderCellContent: (item: Cell, isDragging: boolean) => React.ReactNode,
-    draggingItemIndexRef: React.MutableRefObject<number | null>
-  }) => {
-    const ref = useRef<HTMLDivElement>(null);
-    const dragHandleRef = useRef<HTMLDivElement>(null);
-  
-    const isDraggable = draggingItemIndexRef.current === null;
-  
-    const [{ isDragging }, drag, preview] = ReactDnd.useDrag({
-      type: 'CELL',
-      item: () => {
-        if (!isDraggable) {
-          return { index: -1 };
-        }
-        draggingItemIndexRef.current = index; // 드래그 시작 시 인덱스 설정
-        return { index };
-      },
-      collect: (monitor: any) => ({ 
-        isDragging: monitor.isDragging() && isDraggable
-      }),
-      canDrag: () => isDraggable,
-      end: () => {
-        draggingItemIndexRef.current = null; // 드래그 종료 시 인덱스 초기화
-      }
-    });
-  
-    const [, drop] = ReactDnd.useDrop({
-      accept: 'CELL',
-      hover(item: { index: number }, monitor: any) {
-        if (!ref.current || !isDraggable) {
-          return;
-        }
-        const dragIndex = item.index;
-        const hoverIndex = index;
-  
-        if (dragIndex === hoverIndex || dragIndex === -1) {
-          return;
-        }
-  
-        moveItem(dragIndex, hoverIndex);
-        item.index = hoverIndex;
-      },
-    });
-  
-    const dragHandle = () => {
-      if (dragHandleRef.current && isDraggable) {
-        drag(dragHandleRef);
-      }
-    };
-  
-    preview(drop(ref));
-  
-    return (
+  item, 
+  code,
+  renderCellContent,
+}: { 
+  item: Cell, 
+  code: string,
+  renderCellContent: (item: Cell) => React.ReactNode,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = DndSortable.useSortable({ id:code });
+
+  const style = {
+    transform: DndUtilities.CSS.Transform.toString(transform ? {
+      x: transform.x,
+      y: transform.y,
+      scaleX: 1,
+      scaleY: 1
+    } : null),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+    flex: 1,
+    zIndex: isDragging ? 1 : 0
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+    >
       <div 
-        ref={ref} 
+        {...attributes}
+        {...listeners}
         style={{ 
-          opacity: isDragging ? 0.5 : 1,
-          position: 'relative'
+          cursor: 'move', 
+          width: 40, 
+          position: 'absolute', 
+          height: '100%', 
+          zIndex: 10,
+          left: 0,
+          top: 0
         }}
-      >
-        {isDraggable && (
-          <div 
-            ref={dragHandleRef} 
-            style={{ 
-              cursor: 'move', 
-              width: 40, 
-              position: 'absolute', 
-              height: '100%', 
-              zIndex: 10,
-              left: 0,
-              top: 0
-            }} 
-            onMouseDown={dragHandle} 
-          />
-        )}
-        {renderCellContent(item, isDragging)}
-      </div>
-    );
-  };
-  
-  // 웹용 Sortable List 수정
-  export const SortableCellsList = ({ 
-    items, 
-    onSortEnd, 
-    renderCellContent
-  }: { 
-    items: Cell[], 
-    onSortEnd: (items: Cell[]) => void, 
-    renderCellContent: (item: Cell, isDragging: boolean) => React.ReactNode
-  }) => {
-    const draggingItemIndexRef = useRef<number | null>(null);
-  
-    const moveItem = (dragIndex: number, hoverIndex: number) => {
-      const draggedItem = items[dragIndex];
-      const newItems = [...items];
-      newItems.splice(dragIndex, 1);
-      newItems.splice(hoverIndex, 0, draggedItem);
-      onSortEnd(newItems);
-    };
-  
-    return (
-      <ReactDnd.DndProvider backend={ReactDnd.HTML5Backend}>
-        <View style={commonStyles.cellsList}>
-          {items.map((item, index) => (
-            <DraggableCellItem 
-              key={item.id} 
-              item={item} 
-              index={index} 
-              moveItem={moveItem} 
-              renderCellContent={renderCellContent} 
-              draggingItemIndexRef={draggingItemIndexRef}
-            />
-          ))}
-        </View>
-      </ReactDnd.DndProvider>
-    );
-  };
+      />
+      {renderCellContent(item)}
+    </div>
+  );
+};
 
-
-  const commonStyles = StyleSheet.create({
-    cellsList:{
-      paddingVertical: 10,
-      paddingHorizontal: 5,
+// Web Sortable List using dnd-kit
+const SortableCellsList = ({ 
+  items, 
+  onSortEnd, 
+  renderCellContent
+}: { 
+  items: Cell[], 
+  onSortEnd: (items: Cell[]) => void, 
+  renderCellContent: (item: Cell) => React.ReactNode
+}) => {
+  const [codes, setCodes] = useState(items.map(v=>''+v.id))
+  useEffect(()=>{
+    if (items.length !== codes.length){
+      setCodes((codes)=>{
+        return items.map((v, i)=>i<codes.length?codes[i]:''+v.id).slice(0, items.length)
+      })
     }
-  })
+  }, [items])
+  const sensors = DndCore.useSensors(
+    DndCore.useSensor(DndCore.PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    DndCore.useSensor(DndCore.KeyboardSensor, {
+      coordinateGetter: DndSortable.sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = codes.findIndex((item) => item === active.id);
+      const newIndex = codes.findIndex((item) => item === over.id);
+      const idx = DndSortable.arrayMove(Array.from(Array(items.length).keys()), oldIndex, newIndex)
+      setCodes((codes)=>{
+        return DndSortable.arrayMove(codes, oldIndex, newIndex).map((v:string, i:number)=>i>idx[i]?'@'+v:v) 
+      })
+      onSortEnd(DndSortable.arrayMove(items, oldIndex, newIndex));
+    }
+  };
+
+  return (
+    <DndCore.DndContext
+      sensors={sensors}
+      collisionDetection={DndCore.closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <DndSortable.SortableContext
+        items={codes}
+        strategy={DndSortable.verticalListSortingStrategy}
+      >
+        <View style={commonStyles.cellsList}>
+          {items.map((item, i) => {
+            const code = codes[i] || '' + item.id
+            return <DraggableCellItem
+              key={code}
+              code={code}
+              item={item}
+              renderCellContent={renderCellContent}
+            />
+})}
+        </View>
+      </DndSortable.SortableContext>
+    </DndCore.DndContext>
+  );
+};
+
+// Choose the appropriate list component based on platform
+export const renderDraggableList = <T extends { id: string | number }, >(
+  data: T[], 
+  setItems: (data: T[]) => void, 
+  renderContent: (item: T) => JSX.Element
+) => {
+  if (Platform.OS === 'android' || Platform.OS === 'ios') {
+    return (
+      <DraggableFlatList
+        data={data}
+        onDragEnd={({ data }: { data: T[] }) => setItems(data)}
+        keyExtractor={(item: any) => item.id.toString()}
+        renderItem={({ item, drag, isActive }: any) => {
+          return (
+            <ScaleDecorator>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity
+                  onLongPress={drag} 
+                  style={{ 
+                    width: 40,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Icon name="drag-handle" size={20} color="#888" />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  {renderContent(item)}
+                </View>
+              </View>
+            </ScaleDecorator>
+          );
+        }}
+        contentContainerStyle={commonStyles.cellsList}
+      />
+    );
+  } else {
+    return (
+      <SortableCellsList
+        items={data}
+        onSortEnd={setItems}
+        renderCellContent={renderContent}
+      />
+    );
+  }
+};
+
+export const commonStyles = StyleSheet.create({
+  cellsList: {
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+  }
+});

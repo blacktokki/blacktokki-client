@@ -16,7 +16,7 @@ import { Editor, EditorViewer } from '@blacktokki/editor';
 import { useColorScheme, useLangContext } from '@blacktokki/core';
 import LinkPreview from '../../components/LinkPreview';
 import DynamicTextInput from '../../components/DynamicTextInput';
-import { DraggableFlatList, ScaleDecorator, SortableCellsList } from '../../components/Draggable';
+import { renderDraggableList, commonStyles } from '../../components/Draggable';
 
  
 // Cell execution status
@@ -162,14 +162,14 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
   };
   
   // Render a single cell (shared between platform implementations)
-  const renderCellContent = useCallback((item: Cell, isDragging: boolean = false) => {
+  const renderCellContent = useCallback((item: Cell) => {
     const isSelected = selectedCellId === item.id;
     
     return (
       <View style={[
         styles.cellContainer,
         isSelected && styles.selectedCell,
-        isDragging && styles.draggingCell
+        // isDragging && styles.draggingCell
       ]}>
         {/* Cell sidebar with execution count and drag handle */}
         <View style={styles.cellHandle}>
@@ -248,67 +248,12 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
         </View>
       </View>
     );
-  }, [selectedCellId, executeCell, changeCellType, deleteCell, updateCellContent]);
+  }, [selectedCellId]);
   
-  // 네이티브 환경용 드래그 핸들 컴포넌트 수정
-  const renderCellForNative = useCallback(({ item, drag, isActive }: any) => {
-    return (
-      <ScaleDecorator>
-        <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity 
-            onLongPress={drag} 
-            style={{ 
-              width: 40,  // 드래그 핸들 너비 
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Icon name="drag-handle" size={20} color="#888" />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            {renderCellContent(item, isActive)}
-          </View>
-        </View>
-      </ScaleDecorator>
-    );
-  }, [renderCellContent]);
-
-  // Handle cell reordering for native
-  const onDragEndNative = useCallback(({ data }: { data: Cell[] }) => {
-    setCells(data);
-  }, []);
-  
-  // Handle cell reordering for web
-  const onSortEndWeb = useCallback((sortedItems: Cell[]) => {
-    setCells(sortedItems);
-  }, []);
-  
-  // Choose the appropriate list component based on platform
-  const renderCellList = () => {
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      return (
-        <DraggableFlatList
-          data={cells}
-          onDragEnd={onDragEndNative}
-          keyExtractor={(item:any) => item.id}
-          renderItem={renderCellForNative}
-          contentContainerStyle={commonStyles.cellsList}
-        />
-      );
-    } else {
-      return (
-        <SortableCellsList
-          items={cells}
-          onSortEnd={onSortEndWeb}
-          renderCellContent={renderCellContent}
-        />
-      );
-    }
-  };
   const styles = theme==='light'?lightStyles:darkStyles
   return (
     <SafeAreaView style={styles.container}>
-      {renderCellList()}
+      {renderDraggableList(cells, setCells, renderCellContent)}
       
       <View style={styles.addCellContainer}>
         <TouchableOpacity 
@@ -462,12 +407,6 @@ const lightStyles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-const commonStyles = StyleSheet.create({
-  cellsList:{
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-  }
-})
 
 const darkStyles = StyleSheet.create({
   container: {

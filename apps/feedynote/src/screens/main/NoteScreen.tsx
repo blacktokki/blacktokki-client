@@ -10,6 +10,7 @@ import { navigate } from '@blacktokki/navigation';
 import useContent from '../../hooks/useContent';
 import NoteSection from './NoteSection';
 import { CellType } from '../../types';
+import DND from '../../components/DND'
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -76,6 +77,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   
   return <ThemedView style={{width:"100%", height:"100%"}}>
     {input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
+    <DND/>
     <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
       {cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
     </ScrollView>

@@ -1,4 +1,4 @@
-export type CellType = 'EDITOR'|'LINK'
+export type CellType = 'EDITOR'|'LINK'|'TEMPLATE'
 
 export type PostContent = {
     userId: number,

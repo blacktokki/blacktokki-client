@@ -10,7 +10,6 @@ import { navigate } from '@blacktokki/navigation';
 import useContent from '../../hooks/useContent';
 import NoteSection from './NoteSection';
 import { CellType } from '../../types';
-import DND from '../../components/DND'
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -45,7 +44,8 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
     }
     promise?.then(()=>{
       const userId = auth.user?.id
-      userId && cellRef.current && contentMutation.updateCells(cellRef.current.cells.map(v=>({userId, parentId:params.created?params.parentId:params.id, type:v.type, order:0, input:v.content, description:v.output, title:v.content })))
+      const created = userId &&  cellRef.current?cellRef.current.cells.map(v=>({userId, parentId:params.created?params.parentId:params.id, type:v.type, order:0, input:v.content, description:v.output, title:v.content })):undefined
+      created && contentMutation.updateCells({created, deleteIds:[]})
     })
   }
 
@@ -77,7 +77,6 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   
   return <ThemedView style={{width:"100%", height:"100%"}}>
     {input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
-    <DND/>
     <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
       {cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
     </ScrollView>

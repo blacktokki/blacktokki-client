@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 // @ts-ignore
 import { MaterialIcons as Icon } from 'react-native-vector-icons';
+import { RenderItem, SortableListProps } from './SortableListBase';
 
 // Import platform-specific components
 let DraggableFlatList: any;
@@ -12,8 +13,6 @@ let ScaleDecorator: any;
 let DndCore: any;
 let DndSortable: any;
 let DndUtilities: any;
-
-type Cell = any;
 
 // Handle platform-specific imports
 if (Platform.OS === 'android' || Platform.OS === 'ios') {
@@ -29,14 +28,14 @@ if (Platform.OS === 'android' || Platform.OS === 'ios') {
 }
 
 // Web environment Draggable Cell Item using dnd-kit
-const DraggableCellItem = ({ 
+const DraggableCellItem = <T, >({ 
   item, 
   code,
   renderCellContent,
 }: { 
-  item: Cell, 
+  item: T, 
   code: string,
-  renderCellContent: (item: Cell) => React.ReactNode,
+  renderCellContent: RenderItem<T>,
 }) => {
   const {
     attributes,
@@ -79,26 +78,28 @@ const DraggableCellItem = ({
           top: 0
         }}
       />
-      {renderCellContent(item)}
+      {renderCellContent({item})}
     </div>
   );
 };
 
 // Web Sortable List using dnd-kit
-const SortableCellsList = ({ 
+const SortableCellsList = <T, >({ 
   items, 
   onSortEnd, 
-  renderCellContent
+  renderCellContent,
+  getId
 }: { 
-  items: Cell[], 
-  onSortEnd: (items: Cell[]) => void, 
-  renderCellContent: (item: Cell) => React.ReactNode
+  items: T[], 
+  onSortEnd: (items: T[]) => void, 
+  renderCellContent: RenderItem<T>,
+  getId:(item:T)=>string,
 }) => {
-  const [codes, setCodes] = useState(items.map(v=>''+v.id))
+  const [codes, setCodes] = useState(items.map(v=>''+ getId(v)))
   useEffect(()=>{
     if (items.length !== codes.length){
       setCodes((codes)=>{
-        return items.map((v, i)=>i<codes.length?codes[i]:''+v.id).slice(0, items.length)
+        return items.map((v, i)=>i<codes.length?codes[i]:''+getId(v)).slice(0, items.length)
       })
     }
   }, [items])
@@ -139,7 +140,7 @@ const SortableCellsList = ({
       >
         <View style={commonStyles.cellsList}>
           {items.map((item, i) => {
-            const code = codes[i] || '' + item.id
+            const code = codes[i] || '' + getId(item)
             return <DraggableCellItem
               key={code}
               code={code}
@@ -154,11 +155,7 @@ const SortableCellsList = ({
 };
 
 // Choose the appropriate list component based on platform
-export const renderDraggableList = <T extends { id: string | number }, >(
-  data: T[], 
-  setItems: (data: T[]) => void, 
-  renderContent: (item: T) => JSX.Element
-) => {
+const SortableList = <T, >({data, setData:setItems, getId, renderItem:renderContent}:SortableListProps<T>) => {
   if (Platform.OS === 'android' || Platform.OS === 'ios') {
     return (
       <DraggableFlatList
@@ -193,6 +190,7 @@ export const renderDraggableList = <T extends { id: string | number }, >(
     return (
       <SortableCellsList
         items={data}
+        getId={getId}
         onSortEnd={setItems}
         renderCellContent={renderContent}
       />
@@ -200,9 +198,11 @@ export const renderDraggableList = <T extends { id: string | number }, >(
   }
 };
 
-export const commonStyles = StyleSheet.create({
+const commonStyles = StyleSheet.create({
   cellsList: {
     paddingVertical: 10,
     paddingHorizontal: 5,
   }
 });
+
+export default SortableList;

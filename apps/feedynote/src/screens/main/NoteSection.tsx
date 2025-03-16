@@ -1,5 +1,5 @@
 // App.tsx
-import React, { useState, useCallback, useRef, MutableRefObject, useEffect } from 'react';
+import React, { useState, useCallback, MutableRefObject, useEffect } from 'react';
 import { 
   SafeAreaView, 
   StyleSheet, 
@@ -7,16 +7,18 @@ import {
   Text, 
   TouchableOpacity, 
   Platform,
+  StyleProp,
+  ViewProps,
 } from 'react-native';
 // @ts-ignore
 import {MaterialIcons as Icon} from 'react-native-vector-icons';
+import { useColorScheme, useLangContext } from '@blacktokki/core';
+import { Editor, EditorViewer } from '@blacktokki/editor';
 import { CellType, Link } from '../../types';
 import { previewScrap } from '../../services/feedynote';
-import { Editor, EditorViewer } from '@blacktokki/editor';
-import { useColorScheme, useLangContext } from '@blacktokki/core';
 import LinkPreview from '../../components/LinkPreview';
 import DynamicTextInput from '../../components/DynamicTextInput';
-import { renderDraggableList, commonStyles } from '../../components/Draggable';
+import SortableList from '../../components/DndSortableList';
 
  
 // Cell execution status
@@ -37,11 +39,39 @@ interface Cell {
   status: ExecutionStatus;
 }
 
+const typeDetail = {
+  'EDITOR':{
+    executable:false,
+    init:(cells:Cell[])=>'',
+    buttonStyleKey: 'markdownButton',
+    iconName: "edit",
+    iconSize: 18
+
+  },
+  'LINK': {
+    executable:true,
+    init:(cells:Cell[])=>'https://',
+    buttonStyleKey: 'codeButton', 
+    iconName: 'link',
+    iconSize: 20
+  },
+  'TEMPLATE':{
+    executable:true,
+    init:(cells:Cell[])=>cells[cells.length-1]?.id || '',
+    buttonStyleKey: 'templateButton', 
+    iconName: 'text-fields',
+    iconSize: 20
+  }
+}
+
 const execute = (type:CellType, query: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     try {
       if (type==='LINK'){
-        resolve(JSON.stringify(previewScrap({query})))
+        resolve(previewScrap({query}).then(v=>JSON.stringify(v)))
+      }
+      else if(type==='TEMPLATE'){
+        console.log("TEMP")
       }
       else {
         resolve("")
@@ -64,7 +94,7 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
       cells:cells,
       executeAllCells: async () => {
         for (const cell of cells) {
-          if (cell.type === 'LINK') {
+          if (typeDetail[cell.type].executable) {
             await executeCell(cell.id);
           }
         }
@@ -77,7 +107,7 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
     const newCell: Cell = {
       id: Date.now().toString(),
       type,
-      content: type === 'EDITOR' ? '' : 'https://',
+      content: typeDetail[type].init(cells),
       output: '',
       executionCount: null,
       status: ExecutionStatus.IDLE,
@@ -90,22 +120,6 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
   const deleteCell = (id: string) => {
     setCells(prevCells => prevCells.filter(cell => cell.id !== id));
   };
-  
-  // Change cell type
-  const changeCellType = (id: string) => {
-    setCells(prevCells => 
-      prevCells.map(cell => 
-        cell.id === id 
-          ? { 
-              ...cell, 
-              type: cell.type === 'LINK' ? 'EDITOR' : 'LINK',
-              output: '',
-              executionCount: null,
-            } 
-          : cell
-      )
-    );
-  };
 
   // Update cell content
   const updateCellContent = (id: string, content: string) => {
@@ -115,7 +129,6 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
       )
     );
   };
-  
   // Execute code in a cell
   const executeCell = async (id: string) => {
     setCells(prevCells => 
@@ -127,7 +140,7 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
     );
     
     const cell = cells.find(c => c.id === id);
-    if (!cell || cell.type !== 'LINK') return;
+    if (!cell || typeDetail[cell.type].executable === false) return;
     
     try {
       const result = await execute(cell.type, cell.content);
@@ -162,9 +175,8 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
   };
   
   // Render a single cell (shared between platform implementations)
-  const renderCellContent = useCallback((item: Cell) => {
+  const renderCellContent = useCallback(({item}:{item: Cell}) => {
     const isSelected = selectedCellId === item.id;
-    
     return (
       <View style={[
         styles.cellContainer,
@@ -173,7 +185,7 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
       ]}>
         {/* Cell sidebar with execution count and drag handle */}
         <View style={styles.cellHandle}>
-          {item.type === 'LINK' && (
+          {typeDetail[item.type].executable && (
             <View style={styles.executionCount}>
               <Text style={styles.executionCountText}>
                 {item.executionCount ? `[${item.executionCount}]` : '[ ]'}
@@ -186,29 +198,24 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
         <View style={styles.cellContent}>
           {/* Cell toolbar */}
           <View style={styles.cellToolbar}>
+            <View style={styles.toolbarButton}>
+              <Icon
+                name={typeDetail[item.type].iconName} 
+                size={typeDetail[item.type].iconSize} 
+                color="#2196F3" 
+              />
+            </View>
             <TouchableOpacity 
               style={styles.toolbarButton}
               onPress={() => executeCell(item.id)}
-              disabled={item.type !== 'LINK'}
+              disabled={!typeDetail[item.type].executable}
             >
               <Icon 
                 name="play-arrow" 
                 size={20} 
-                color={item.type === 'LINK' ? "#4CAF50" : "#ccc"} 
+                color={typeDetail[item.type].executable ? "#4CAF50" : "#ccc"} 
               />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.toolbarButton}
-              onPress={() => changeCellType(item.id)}
-            >
-              <Icon 
-                name={item.type === 'LINK' ? "code" : "text-fields"} 
-                size={20} 
-                color="#2196F3" 
-              />
-            </TouchableOpacity>
-            
             <TouchableOpacity 
               style={styles.toolbarButton}
               onPress={() => deleteCell(item.id)}
@@ -240,7 +247,7 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
           
           {/* Output area for code cells */}
           {item.status === ExecutionStatus.COMPLETED  ? <>
-              {item.type === 'LINK' && (JSON.parse(item.output) as Link[]).map((link, i)=><LinkPreview key={i} link={link} isMobile={false} />)}
+              {typeDetail[item.type].executable && (JSON.parse(item.output) as Link[]).map((link, i)=><LinkPreview key={i} link={link} isMobile={false} />)}
             </>:
             item.status === ExecutionStatus.ERROR && <View style={[styles.outputContainer, styles.errorOutput]}>
               <Text style={styles.outputText}>{item.output}</Text>
@@ -248,33 +255,56 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
         </View>
       </View>
     );
-  }, [selectedCellId]);
+  }, [selectedCellId, cells]);
   
-  const styles = theme==='light'?lightStyles:darkStyles
+  const styles = {...commonStyles, ...theme==='light'?lightStyles:darkStyles}
   return (
     <SafeAreaView style={styles.container}>
-      {renderDraggableList(cells, setCells, renderCellContent)}
+      <SortableList data={cells} setData={setCells} getId={v=>v.id} renderItem={renderCellContent}/>
       
       <View style={styles.addCellContainer}>
-        <TouchableOpacity 
-          style={[styles.addCellButton, styles.codeButton]}
-          onPress={() => addCell('LINK')}
+        {Object.entries(typeDetail).map(([k, v], i)=>{
+          const buttonStyle = styles[v.buttonStyleKey as keyof typeof styles] as StyleProp<ViewProps>;
+          return <TouchableOpacity
+          key={i}
+          style={[styles.addCellButton, buttonStyle]}
+          onPress={() => addCell(k as CellType)}
         >
-          <Icon name="link" size={20} color="#fff" />
-          <Text style={styles.addCellButtonText}>{lang('Link')}</Text>
+          <Icon name={v.iconName} size={v.iconSize} color="#fff" />
+          <Text style={styles.addCellButtonText}>{lang(k)}</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.addCellButton, styles.markdownButton]}
-          onPress={() => addCell('EDITOR')}
-        >
-          <Icon name="text-fields" size={20} color="#fff" />
-          <Text style={styles.addCellButtonText}>{lang('Editor')}</Text>
-        </TouchableOpacity>
+        })}
       </View>
     </SafeAreaView>
   );
 };
+
+const commonStyles = StyleSheet.create({
+  headerButtons: {
+    flexDirection: 'row',
+  },
+  executionCount: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  toolbarButton: {
+    padding: 5,
+    marginRight: 10,
+  },
+  cellInputContainer: {
+    //padding: 10,
+    padding:0,
+    paddingHorizontal:5,
+  },
+  addCellButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4,
+    marginHorizontal: 5,
+  },
+})
 
 // Main application styles
 const lightStyles = StyleSheet.create({
@@ -294,9 +324,6 @@ const lightStyles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerButtons: {
-    flexDirection: 'row',
-  },
   headerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -312,11 +339,13 @@ const lightStyles = StyleSheet.create({
   },
   cellContainer: {
     flexDirection: 'row',
-    marginVertical: 5,
-    borderRadius: 6,
+    // marginVertical: 5,
+    // borderRadius: 6,
+    borderTopLeftRadius:6,
+    borderBottomLeftRadius:6,
     backgroundColor: '#f8f8f8',
     overflow: 'hidden',
-    borderWidth: 1,
+    // borderWidth: 1,
     borderColor: '#eaeaea',
   },
   selectedCell: {
@@ -333,30 +362,25 @@ const lightStyles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 15,
   },
-  executionCount: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
   executionCountText: {
     color: '#777',
     fontSize: 12,
   },
   cellContent: {
     flex: 1,
+    borderWidth: 1,
+    margin:10,
+    marginVertical:5,
+    borderColor: '#e0e0e0',
+
   },
   cellToolbar: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
+    // backgroundColor: '#f0f0f0',
     padding: 5,
-    borderBottomWidth: 1,
+    paddingVertical:0,
+    // borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-  },
-  toolbarButton: {
-    padding: 5,
-    marginRight: 10,
-  },
-  cellInputContainer: {
-    padding: 10,
   },
   codeInput: {
     fontFamily: 'monospace',
@@ -387,19 +411,14 @@ const lightStyles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
-  addCellButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-    marginHorizontal: 5,
-  },
   codeButton: {
     backgroundColor: '#4CAF50',
   },
   markdownButton: {
     backgroundColor: '#2196F3',
+  },
+  templateButton: {
+    backgroundColor: 'lightgoldenrod'
   },
   addCellButtonText: {
     color: '#fff',
@@ -426,9 +445,6 @@ const darkStyles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerButtons: {
-    flexDirection: 'row',
-  },
   headerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -444,11 +460,13 @@ const darkStyles = StyleSheet.create({
   },
   cellContainer: {
     flexDirection: 'row',
-    marginVertical: 5,
-    borderRadius: 6,
+    // marginVertical: 5,
+    // borderRadius: 6,
+    borderTopLeftRadius:6,
+    borderBottomLeftRadius:6,
     backgroundColor: '#1E1E1E', // 어두운 셀 배경
     overflow: 'hidden',
-    borderWidth: 1,
+    // borderWidth: 1,
     borderColor: '#333333', // 어두운 테두리
   },
   selectedCell: {
@@ -465,30 +483,24 @@ const darkStyles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 15,
   },
-  executionCount: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
   executionCountText: {
     color: '#888888', // 어두운 실행 카운트 텍스트
     fontSize: 12,
   },
   cellContent: {
     flex: 1,
+    borderWidth: 1,
+    margin:10,
+    marginVertical:5,
+    borderColor: '#3A3A3A',
   },
   cellToolbar: {
     flexDirection: 'row',
-    backgroundColor: '#2A2A2A', // 어두운 툴바 배경
+    // backgroundColor: '#2A2A2A', // 어두운 툴바 배경
     padding: 5,
-    borderBottomWidth: 1,
+    paddingVertical:0,
+    // borderBottomWidth: 1,
     borderBottomColor: '#3A3A3A', // 어두운 구분선
-  },
-  toolbarButton: {
-    padding: 5,
-    marginRight: 10,
-  },
-  cellInputContainer: {
-    padding: 10,
   },
   codeInput: {
     fontFamily: 'monospace',
@@ -522,19 +534,14 @@ const darkStyles = StyleSheet.create({
     borderTopColor: '#333333', // 어두운 구분선
     backgroundColor: '#121212', // 컨테이너 배경
   },
-  addCellButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-    marginHorizontal: 5,
-  },
   codeButton: {
     backgroundColor: '#2E7D32', // 어두운 녹색
   },
   markdownButton: {
     backgroundColor: '#1565C0', // 어두운 블루
+  },
+  templateButton: {
+    backgroundColor: 'darkgoldenrod',
   },
   addCellButtonText: {
     color: '#E0E0E0', // 연한 회색 텍스트

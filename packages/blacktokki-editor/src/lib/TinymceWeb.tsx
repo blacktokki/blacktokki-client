@@ -28,6 +28,13 @@ export default (
 ) => {
   const customDiv = document.createElement('div');
   // const root = createRoot(customDiv);
+  const bodyStyle: string[] = [];
+  if (props.readonly) {
+    bodyStyle.push('caret-color: transparent');
+  }
+  if (props.theme === 'dark') {
+    bodyStyle.push('background-color: #1E1E1E');
+  }
   return (
     <Editor
       tinymceScriptSrc={PATH}
@@ -91,7 +98,7 @@ export default (
         block_formats: '제목1=h2;제목2=h3;제목3=h4;본문=p;',
         fontsize_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt',
         forced_root_block_attrs: { style: 'font-size: 14pt' },
-        content_style: props.readonly ? 'body { caret-color: transparent; }' : undefined,
+        content_style: bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : undefined,
         autoresize_bottom_margin: 10,
       }}
       value={props.value}

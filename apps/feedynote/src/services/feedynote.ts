@@ -42,6 +42,10 @@ export const executeCells = async (cells:({type: CellType |'OUTPUT'} & ({query:s
 }
 
 export const previewScrap = async (preview: {query:string}) => {
-    return (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data as Link
+    const data:Link[] = []
+    for (const query of toUrls(preview.query)){
+        data.push((await axios.get(`/api/v1/preview/autocomplete?query=${query}`)).data)
+    }
+    return data
 }
 

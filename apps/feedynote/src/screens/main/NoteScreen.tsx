@@ -10,6 +10,7 @@ import { navigate } from '@blacktokki/navigation';
 import useContent from '../../hooks/useContent';
 import NoteSection from './NoteSection';
 import { CellType } from '../../types';
+import { toRaw } from '@blacktokki/editor';
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -24,48 +25,71 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const content = useContent(params.created?undefined:params.id)
   const contents = useContentList(params.created?undefined:params.id)
   const cellContents = useMemo(()=>{
-    return (params.created?[]:contents)?.map(v=>({type:v.type as CellType, content:v.input, output:v.description || '', executionCount:null}))
+    return (params.created?[]:contents)?.map(v=>({type:v.type as CellType, content:v.title, output:v.description || '', executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, status:v.option.EXECUTION_STATUS}))
   }, [contents])
 
   const contentMutation = useContentMutation()
-  const [input, setInput] = useState<string>(lang("New Page"))
+  const [title, setTitle] = useState<string>()
+  const [editPage, setEditPage] = useState(false)
+  const onSaveTitle = () => {
+        if (!auth.user){
+          return;
+      }
+      let promise
+      const description = cellRef.current? cellRef.current.cells.map((v, i)=>{
+        let str = toRaw(v.content).replaceAll(/\r\n/g, '');
+        if(str.length > 32){
+          str = str.substring(0, 32 - 2) + '...';
+        }
+        return str
+      }).join('\r\n'):''
+      if (params.created){
+          promise = contentMutation.create({userId:auth.user.id, parentId:params.parentId, type:'PAGE', order: 0, title:title || '', description, option:{}}).then((v)=>{
+            navigate("NoteScreen", {id:v});
+            return v
+          })
+      }
+      else if (content!==undefined){
+        promise = contentMutation.update({id: content.id, updated: {...content, title:title || content.title, description}}).then(()=>params.id)
+      }
+      return promise
+  }
+
   const onSave = ()=>{
-    if (!auth.user || (content?.input == input)){
-        return;
-    }
-    let promise
-    if (params.created){
-        promise = contentMutation.create({userId:auth.user.id, parentId:params.parentId, type:'PAGE', order: 0, input:input || '', title:input || '', description: ''}).then(v=>{
-            navigate("EditorScreen", {id:v})
-        })
-    }
-    else if (content!==undefined){
-        promise = contentMutation.update({id: content.id, updated: {...content, input:input || '', title:input || ''}})
-    }
-    promise?.then(()=>{
+    const promise = onSaveTitle()
+    promise?.then((parentId)=>{
       const userId = auth.user?.id
-      const created = userId &&  cellRef.current?cellRef.current.cells.map(v=>({userId, parentId:params.created?params.parentId:params.id, type:v.type, order:0, input:v.content, description:v.output, title:v.content })):undefined
-      created && contentMutation.updateCells({created, deleteIds:[]})
+      const created = userId && cellRef.current? cellRef.current.cells.map((v, i)=>({
+        userId, parentId, type:v.type, order:i, description:v.output, title:v.content, option:{EXECUTION_COUNT:v.executionCount!==null?`${v.executionCount}`:undefined, EXECUTION_STATUS: v.status} })):[]
+      const deleteIds = contents!==undefined?contents.map(v=>v.id):[]
+      return contentMutation.updateCells({created, deleteIds})
     })
   }
 
+  useLayoutEffect(()=>{
+      if(params.created){
+        setEditPage(false)
+        setTitle(lang("New Page"))
+      }
+      else if (content){
+        setEditPage(false)
+        setTitle(content.title)
+      }
+    }, [content])
+
   useLayoutEffect(() => {
-    if (params.created){
-      navigation.setOptions({
-        headerShown:false,
-      })
-    }
-    else if (content){
+    if (params.created || content){
         navigation.setOptions({
-            title: content.title,
+            title,
             headerRight: () => <View style={{flexDirection: 'row'}}>
+              <CommonButton title={'✏️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>setEditPage(true)}/>
               <CommonButton title={lang('save')} onPress={onSave} style={{paddingTop:8, marginRight:10}}/>
-              <CommonButton title={'🗑️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>
+              {content && <CommonButton title={'🗑️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>}
             </View>,
-            headerShown: false
+            headerShown: !editPage
           });
       }
-  }, [navigation, content]);
+  }, [navigation, content, contents, title, editPage]);
 
   const back = ()=>{
     if(navigation.canGoBack())
@@ -76,7 +100,12 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   }
   
   return <ThemedView style={{width:"100%", height:"100%"}}>
-    {input!==undefined && <TextInput mode='outlined' value={input} onChangeText={setInput} style={{borderRadius:20, margin:1}}/>}
+     {editPage && <>
+        {title!==undefined && <TextInput mode='outlined' value={title} onChangeText={setTitle} style={{borderRadius:20, margin:1}}/>}
+        <CommonButton title={lang('save')} onPress={onSaveTitle} style={{height:65, paddingVertical:20}}/>
+        <CommonButton title={lang('cancel')} onPress={()=>setEditPage(false)} style={{height:65, paddingVertical:20}}/>
+        {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>}
+      </>}
     <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
       {cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
     </ScrollView>

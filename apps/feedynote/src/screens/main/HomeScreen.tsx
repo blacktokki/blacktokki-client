@@ -10,7 +10,6 @@ import { List } from 'react-native-paper';
 const ContentTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
-      <ContentGroupList type={'TIMELINEV2'} />
       <ContentGroupList type={'NOTEV2'} />
     </ScrollView>
 }

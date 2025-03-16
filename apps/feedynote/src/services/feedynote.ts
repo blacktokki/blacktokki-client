@@ -14,7 +14,7 @@ export const getContentList = async (parentId?:number, type?: Content['type'])=>
     return (await axios.get(`/api/v1/content?self=true&size=256${parentIdParam}${typeParam}`) ).data.value as Content[]
 }
 
-export const getInfiniteContentList = async (parentId:number, type:'TIMELINEV2'|'NOTEV2', page:number)=>{
+export const getInfiniteContentList = async (parentId:number, type:'NOTEV2', page:number)=>{
     //const parentIdParam = parentId ? `&grandParentId=${parentId}`: `&parentId=${parentId}`
     const parentIdParam = parentId < 1 ? ``: `&parentId=${parentId}`
     const size = type ==="NOTEV2"?"256":"20"

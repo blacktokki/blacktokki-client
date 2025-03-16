@@ -7,7 +7,7 @@ export type ContentPage = {
   current:Content[]
 }
 
-export default function useInfiniteContentList(parentId:number, type:'TIMELINEV2'|'NOTEV2'){
+export default function useInfiniteContentList(parentId:number, type:'NOTEV2'){
   const { data, fetchNextPage } = useInfiniteQuery<ContentPage>(
     ["ContentList", parentId], 
     async({pageParam})=>await getInfiniteContentList(parentId, type,  pageParam), 

@@ -1,14 +1,18 @@
-export type CellType = 'EDITOR'|'LINK'|'TEMPLATE'
+export type CellType = 'EDITOR'|'MARKDOWN'|'LINK'
 
 export type PostContent = {
     userId: number,
     parentId: number,
-    type: 'TIMELINEV2'|'NOTEV2'|'PAGE'| CellType,
+    type: 'NOTEV2'|'PAGE'| CellType,
     order: number,
-    input: string,
     title: string,
     description?: string
-    imageUrl?: string
+    option:{
+        INPUT?: string,
+        IMAGE_URL?: string,
+        EXECUTION_COUNT?: string,
+        EXECUTION_STATUS?: string 
+    }
 }
 
 export type Content = PostContent & {

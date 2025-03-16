@@ -7,8 +7,6 @@ import { TimeLineRow } from './TimeLine';
 import { Card } from 'react-native-paper';
 import useInfiniteContentList from '../hooks/useInfiniteContentList';
 
-const regexForStripHTML = /<\/?[^>]*>/gi;
-
 const updatedOffset = new Date().getTimezoneOffset()
 
 const updatedFormat = (_updated:string) => {
@@ -43,7 +41,7 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
     if (item === null){
       return <View key={index} style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
     }
-    const content = item.description?.replaceAll(/\n/g, "").replaceAll(/<hr\s*[\/]?>\n/gi, '').replaceAll(/&nbsp;/gi, ' ').replaceAll(/<br\s*[\/]?>/gi, '\r\n').replaceAll(regexForStripHTML, '')
+    const content = item.description
     const onPress = ()=>navigate('NoteScreen', {id:item.id})
     return <TouchableOpacity key={index} style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==='landscape'), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
         <Card onPress={onPress} style={{aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}}>
@@ -61,7 +59,7 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
 })
 
 const ContentList = ({ parentContent } : { parentContent:Content }) => {
-  const {data, fetchNextPage} = useInfiniteContentList(parentContent.id, parentContent.type as "TIMELINEV2"| "NOTEV2" )
+  const {data, fetchNextPage} = useInfiniteContentList(parentContent.id, parentContent.type as "NOTEV2" )
   const window  = useResizeContext()
   return data && (
     parentContent.type!=='NOTEV2'?

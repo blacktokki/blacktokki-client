@@ -23,6 +23,15 @@ const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 //   );
 // };
 
+export const toRaw = (text: string) => {
+  return text
+    .replaceAll(/\n/g, '')
+    .replaceAll(/<hr\s*[/]?>\n/gi, '')
+    .replaceAll(/&nbsp;/gi, ' ')
+    .replaceAll(/<br\s*[/]?>/gi, '\r\n')
+    .replaceAll(/<\/?[^>]*>/gi, '');
+};
+
 export default (
   props: EditorProps & { readonly?: boolean; onPress?: () => void; setValue: (v: string) => void }
 ) => {
@@ -78,6 +87,9 @@ export default (
           toolbar.parentNode?.insertBefore(customDiv, toolbar.nextSibling);
           // root.render(<></>);
           editor.on('remove', () => {});
+        }
+        if (props.readonly) {
+          editor.getContainer().style.borderWidth = '0px';
         }
       }}
       onEditorChange={props.setValue}

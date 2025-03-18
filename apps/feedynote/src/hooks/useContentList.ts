@@ -12,14 +12,16 @@ export default function useContentList(parentId?:number, type?: Content['type'])
 export function useContentMutation(){
   const queryClient = useQueryClient()
   const create = useMutation(postContent, {
-    onSuccess: ()=>{
-      queryClient.invalidateQueries("ContentList")
+    onSuccess: async()=>{
+      await queryClient.invalidateQueries("ContentList")
     }
   })
   const update = useMutation(patchContent, {
-    onSuccess: () => {
-      queryClient.invalidateQueries("ContentList")
-      queryClient.invalidateQueries("Content")
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries("ContentList"),
+        queryClient.invalidateQueries("Content")
+      ])
     }
   })
   const _delete = useMutation(deleteContent, {

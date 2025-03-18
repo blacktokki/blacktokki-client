@@ -27,7 +27,6 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const cellContents = useMemo(()=>{
     return (params.created?[]:contents)?.map(v=>({type:v.type as CellType, content:v.title, output:v.description || '', executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, status:v.option.EXECUTION_STATUS}))
   }, [contents])
-
   const contentMutation = useContentMutation()
   const [title, setTitle] = useState<string>()
   const [editPage, setEditPage] = useState(false)
@@ -100,14 +99,14 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   }
   
   return <ThemedView style={{width:"100%", height:"100%"}}>
-     {editPage && <>
+     <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
+     {editPage ? <>
         {title!==undefined && <TextInput mode='outlined' value={title} onChangeText={setTitle} style={{borderRadius:20, margin:1}}/>}
         <CommonButton title={lang('save')} onPress={onSaveTitle} style={{height:65, paddingVertical:20}}/>
         <CommonButton title={lang('cancel')} onPress={()=>setEditPage(false)} style={{height:65, paddingVertical:20}}/>
         {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>}
-      </>}
-    <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
-      {cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
+      </>:
+      cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
     </ScrollView>
   </ThemedView>
 }

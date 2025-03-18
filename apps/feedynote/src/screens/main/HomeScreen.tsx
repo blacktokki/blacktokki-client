@@ -11,6 +11,7 @@ const ContentTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
       <ContentGroupList type={'NOTEV2'} />
+      <ContentGroupList type={'PAGE'} />
     </ScrollView>
 }
 

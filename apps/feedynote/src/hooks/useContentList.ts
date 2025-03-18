@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "react-query";
-import { deleteContent, getContentList, patchContent, postCells, postContent } from "../services/feedynote";
+import { deleteContent, getContentList, patchContent, postCells, postContent } from "../services/notebook";
 import { Content } from "../types";
 import { useEffect } from "react";
 

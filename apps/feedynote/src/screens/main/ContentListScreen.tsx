@@ -28,10 +28,10 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
   const type = params.created?params.type:content?.type
   const back = ()=>{
     if(navigation.canGoBack())
-        navigation.goBack()
-      else{
-        navigation.navigate('HomeScreen', {tab:1})
-      }
+      navigation.goBack()
+    else{
+      navigation.navigate('HomeScreen', {tab:1})
+    }
   }
   const onSave = ()=>{
     if (!auth.user || (title===undefined) || (content?.title === title) || type===undefined){
@@ -57,7 +57,7 @@ export default function ContentListScreen({ navigation, route }: StackScreenProp
     'NOTEV2': lang('New Note'),
   } as Record<Content['type'], string>
 
-  const onEdit = ()=>{setEditable(true)}
+  const onEdit = ()=>{setEditable(true)}  
   useLayoutEffect(()=>{
     if(params.created){
       setEditable(false)

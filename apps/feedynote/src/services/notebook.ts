@@ -2,7 +2,7 @@ import { toUrls } from '../components/LinkPreview';
 import { Content, PostContent, CellType, Link } from '../types';
 import { axiosCreate } from '@blacktokki/account';
 
-const axios = axiosCreate("feedynote")
+const axios = axiosCreate("notebook")
 
 export const getContentOne = async (id:number)=>{
     return (await axios.get(`/api/v1/content/${id}`)).data as Content
@@ -12,13 +12,6 @@ export const getContentList = async (parentId?:number, type?: Content['type'])=>
     const parentIdParam = parentId !== undefined?`&parentId=${parentId}`: ''
     const typeParam = type !== undefined?`&type=${type}` : ''
     return (await axios.get(`/api/v1/content?self=true&size=256${parentIdParam}${typeParam}`) ).data.value as Content[]
-}
-
-export const getInfiniteContentList = async (parentId:number, type:'NOTEV2', page:number)=>{
-    //const parentIdParam = parentId ? `&grandParentId=${parentId}`: `&parentId=${parentId}`
-    const parentIdParam = parentId < 1 ? ``: `&parentId=${parentId}`
-    const size = type ==="NOTEV2"?"256":"20"
-    return { current: (await axios.get(`/api/v1/content?self=true&sort=id,DESC&size=${size}&page=${page}${parentIdParam}`) ).data.value as Content[] }
 }
 
 export const postContent = async (postContent:PostContent)=>{
@@ -33,7 +26,7 @@ export const deleteContent = async (id: number) =>{
     await axios.delete(`/api/v1/content/${id}`)
 }
 
-export const postCells = async (contents:{created:(PostContent & {type:CellType})[], deleteIds:number[]}) => {
+export const postCells = async (contents:{created:(PostContent & {type:CellType})[], deleted:{parentId:number}}) => {
     await axios.post(`/api/v1/content/bulk`, contents)
 }
 

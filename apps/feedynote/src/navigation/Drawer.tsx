@@ -9,6 +9,7 @@ export default ()=>{
     const {lang} = useLangContext()
     return <ScrollView style={{flex:1}}>
         <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>navigate('HomeScreen')} />
-        <ContentGroupList type={'NOTEV2'}/>
+        <ContentGroupList type={'PAGE'} />
+        <ContentGroupList type={'NOTEV2'} />
     </ScrollView>
 }

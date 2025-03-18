@@ -11,6 +11,7 @@ import useContent from '../../hooks/useContent';
 import NoteSection from './NoteSection';
 import { CellType } from '../../types';
 import { toRaw } from '@blacktokki/editor';
+import useNotebookContext from '../../hooks/useNotebookContext';
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -21,6 +22,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const cellRef: Parameters<typeof NoteSection>[0]['cellRef'] = useRef()
   const { lang } = useLangContext()
   const { auth } = useAuthContext()
+  const { openedIds, addOpenedIds, deleteOpenedIds } = useNotebookContext()
 
   const content = useContent(params.created?undefined:params.id)
   const contents = useContentList(params.created?undefined:params.id)
@@ -60,8 +62,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
       const userId = auth.user?.id
       const created = userId && cellRef.current? cellRef.current.cells.map((v, i)=>({
         userId, parentId, type:v.type, order:i, description:v.output, title:v.content, option:{EXECUTION_COUNT:v.executionCount!==null?`${v.executionCount}`:undefined, EXECUTION_STATUS: v.status} })):[]
-      const deleteIds = contents!==undefined?contents.map(v=>v.id):[]
-      return contentMutation.updateCells({created, deleteIds})
+      return contentMutation.updateCells({created, deleted:{parentId}})
     })
   }
 
@@ -73,6 +74,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
       else if (content){
         setEditPage(false)
         setTitle(content.title)
+        addOpenedIds(content.id)
       }
     }, [content])
 
@@ -82,8 +84,8 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
             title,
             headerRight: () => <View style={{flexDirection: 'row'}}>
               <CommonButton title={'✏️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>setEditPage(true)}/>
-              <CommonButton title={lang('save')} onPress={onSave} style={{paddingTop:8, marginRight:10}}/>
-              {content && <CommonButton title={'🗑️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>}
+              <CommonButton title={'💾'} onPress={onSave} style={{paddingTop:8, marginRight:10}}/>
+              <CommonButton title={'❌'} onPress={exit} style={{paddingTop:8, marginRight:10}}/>
             </View>,
             headerShown: !editPage
           });
@@ -92,10 +94,25 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
 
   const back = ()=>{
     if(navigation.canGoBack())
-        navigation.goBack()
+      navigation.goBack()
+    else {
+      let nextId:number|undefined = undefined;
+      if(content && openedIds.size > 0){
+        const values = [...openedIds.values()]
+        const i = values.findIndex(v=>v===content.id)
+        nextId = (i>=0?values.slice(i):values)[0]
+      }
+      if (nextId!==undefined){
+        navigation.navigate('NoteScreen', {id:nextId})
+      }
       else{
         navigation.navigate('HomeScreen', {tab:1})
       }
+    }
+  }
+  const exit = ()=> {
+    content && deleteOpenedIds(content.id)
+    back()
   }
   
   return <ThemedView style={{width:"100%", height:"100%"}}>
@@ -104,7 +121,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
         {title!==undefined && <TextInput mode='outlined' value={title} onChangeText={setTitle} style={{borderRadius:20, margin:1}}/>}
         <CommonButton title={lang('save')} onPress={onSaveTitle} style={{height:65, paddingVertical:20}}/>
         <CommonButton title={lang('cancel')} onPress={()=>setEditPage(false)} style={{height:65, paddingVertical:20}}/>
-        {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>back())}/>}
+        {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>exit())}/>}
       </>:
       cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
     </ScrollView>

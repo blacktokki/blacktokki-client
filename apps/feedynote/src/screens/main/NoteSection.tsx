@@ -13,7 +13,7 @@ import {
 import {MaterialIcons as Icon} from 'react-native-vector-icons';
 import { useColorScheme, useLangContext } from '@blacktokki/core';
 import { CellType } from '../../types';
-import { previewScrap } from '../../services/feedynote';
+import { previewScrap } from '../../services/notebook';
 import SortableList from '../../components/DndSortableList';
 import Cell, { CellItem, ExecutionStatus, typeDetail } from '../../components/Cell';
 

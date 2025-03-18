@@ -2,10 +2,9 @@ import * as React from 'react';
 import { Content } from '../types';
 import { navigate } from '@blacktokki/navigation';
 import { Text, useResizeContext } from '@blacktokki/core';
-import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
-import { TimeLineRow } from './TimeLine';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { Card } from 'react-native-paper';
-import useInfiniteContentList from '../hooks/useInfiniteContentList';
+import useContentList from '../hooks/useContentList';
 
 const updatedOffset = new Date().getTimezoneOffset()
 
@@ -17,16 +16,6 @@ const updatedFormat = (_updated:string) => {
     const today = new Date().toISOString().slice(0, 10)
     return date==today?updated.slice(11):date;
 }
-
-
-const TimelinePage = React.memo(({data}: {data:Content[]})=>{
-  return data.map(v=>({...v, time:{content:updatedFormat(v.updated)}, pressAction: ()=>navigate('NoteScreen', {id:v.id})})).map((item, index)=>{
-    return <TimeLineRow 
-      key={index}
-      event={item}
-    /> 
-  })
-})
 
 const _cardPadding = (isLandscape:boolean) => isLandscape?20:4
 const _cardMaxWidth = (isLandscape:boolean) => isLandscape?230:190
@@ -59,24 +48,15 @@ const CardPage = React.memo(({data}: {data:Content[]})=>{
 })
 
 const ContentList = ({ parentContent } : { parentContent:Content }) => {
-  const {data, fetchNextPage} = useInfiniteContentList(parentContent.id, parentContent.type as "NOTEV2" )
+  const data = useContentList(parentContent.id)
   const window  = useResizeContext()
   return data && (
-    parentContent.type!=='NOTEV2'?
-    <FlatList
-      data={data.pages}
-      renderItem={({item})=><TimelinePage data={item.current}/>}
-      style={{height:0}}
-      onEndReached={()=>{
-        fetchNextPage()
-      }}
-    />:
     <ScrollView 
       style={{ height:0}} 
       contentContainerStyle={{flexDirection:'row', justifyContent:'center'}}
     >
       <View style={{backgroundColor:'transparent', flexBasis:'100%', maxWidth:(_cardMaxWidth(window==='landscape') + 5)  * (window==='landscape'?5:3), flexWrap:'wrap', flexDirection:'row', paddingRight:_cardPadding(window==='landscape'), justifyContent:window==='landscape'?undefined:'center'}}>
-        {data.pages.map((item, index)=><CardPage key={index} data={item.current}/>)}
+        <CardPage data={data}/>
       </View>
       {/* {window === 'landscape' && <View style={{backgroundColor:'transparent', flexBasis:'0%', flexGrow:1, maxWidth:240}}></View>} */}
     </ScrollView>)

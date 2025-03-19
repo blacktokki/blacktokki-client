@@ -11,7 +11,7 @@ import useContent from '../../hooks/useContent';
 import NoteSection from './NoteSection';
 import { CellType } from '../../types';
 import { toRaw } from '@blacktokki/editor';
-import useNotebookContext from '../../hooks/useNotebookContext';
+import { useOpenedContext } from '../../hooks/useNotebookContext';
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -22,7 +22,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const cellRef: Parameters<typeof NoteSection>[0]['cellRef'] = useRef()
   const { lang } = useLangContext()
   const { auth } = useAuthContext()
-  const { openedIds, addOpenedIds, deleteOpenedIds } = useNotebookContext()
+  const { openedIds, addOpenedIds, deleteOpenedIds } = useOpenedContext()
 
   const content = useContent(params.created?undefined:params.id)
   const contents = useContentList(params.created?undefined:params.id)
@@ -70,11 +70,12 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
       if(params.created){
         setEditPage(false)
         setTitle(lang("New Page"))
+        addOpenedIds(params.parentId, true)
       }
       else if (content){
         setEditPage(false)
         setTitle(content.title)
-        addOpenedIds(content.id)
+        addOpenedIds(content.id, false)
       }
     }, [content])
 
@@ -96,14 +97,14 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
     if(navigation.canGoBack())
       navigation.goBack()
     else {
-      let nextId:number|undefined = undefined;
-      if(content && openedIds.size > 0){
+      let nextId:any = undefined;
+      if(openedIds.length > 0){
         const values = [...openedIds.values()]
-        const i = values.findIndex(v=>v===content.id)
-        nextId = (i>=0?values.slice(i):values)[0]
+        const i = values.findIndex(v=>params.created?v.parentId===params.parentId:v.id===content?.id)
+        nextId = values[i>=0?(i===values.length-1?i-1:i+1):(values.length-1)]
       }
       if (nextId!==undefined){
-        navigation.navigate('NoteScreen', {id:nextId})
+        navigation.navigate('NoteScreen', nextId.created?{parentId:nextId.parentId}:{id:nextId.id})
       }
       else{
         navigation.navigate('HomeScreen', {tab:1})
@@ -111,7 +112,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
     }
   }
   const exit = ()=> {
-    content && deleteOpenedIds(content.id)
+    deleteOpenedIds(params.created?params.parentId:params.id, params.created)
     back()
   }
   

@@ -6,7 +6,7 @@ import { EditorProps } from '../types';
 
 const emptyFunction = () => {};
 
-export default React.memo((props: EditorProps & { active: boolean; onPress?: () => void }) => {
+export default (props: EditorProps & { active: boolean; onPress?: () => void }) => {
   const [ready, setReady] = useState<boolean>(false);
   useEffect(() => {
     if (!props.active) setReady(false);
@@ -31,4 +31,4 @@ export default React.memo((props: EditorProps & { active: boolean; onPress?: () 
       </View>
     </View>
   );
-});
+};

@@ -97,9 +97,9 @@ const SortableCellsList = <T, >({
 }) => {
   const [codes, setCodes] = useState(items.map(v=>''+ getId(v)))
   useEffect(()=>{
-    if (items.length !== codes.length){
+    if (items.length !== codes.length || items.filter((v, i)=>!codes[i].startsWith(getId(v))).length>0){
       setCodes((codes)=>{
-        return items.map((v, i)=>i<codes.length?codes[i]:''+getId(v)).slice(0, items.length)
+        return items.map((v, i)=>i<codes.length && codes[i].startsWith(getId(v))?codes[i]:''+getId(v)).slice(0, items.length)
       })
     }
   }, [items])
@@ -127,7 +127,6 @@ const SortableCellsList = <T, >({
       onSortEnd(DndSortable.arrayMove(items, oldIndex, newIndex));
     }
   };
-
   return (
     <DndCore.DndContext
       sensors={sensors}
@@ -140,9 +139,9 @@ const SortableCellsList = <T, >({
       >
         <View style={commonStyles.cellsList}>
           {items.map((item, i) => {
-            const code = codes[i] || '' + getId(item)
+            const code = codes[i]
             return <DraggableCellItem
-              key={code}
+              key={code || '' + getId(item)}
               code={code}
               item={item}
               renderCellContent={renderCellContent}

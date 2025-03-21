@@ -12,6 +12,13 @@ import NoteSection from './NoteSection';
 import { CellType } from '../../types';
 import { toRaw } from '@blacktokki/editor';
 import { useOpenedContext } from '../../hooks/useNotebookContext';
+import { CellItem } from '../../components/Cell';
+
+const useIsSaved = (init:CellItem[]|undefined, cells:CellItem[]|undefined)=>{
+  const original = useMemo(()=>JSON.stringify(init?.map(v=>({...v, id:undefined}))), [init])
+  const isSaved = useMemo(()=>cells===undefined || original===JSON.stringify(cells?.map(v=>({...v, id:undefined}))), [original, cells])
+  return isSaved
+}
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -26,18 +33,22 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
 
   const content = useContent(params.created?undefined:params.id)
   const contents = useContentList(params.created?undefined:params.id)
-  const cellContents = useMemo(()=>{
-    return (params.created?[]:contents)?.map(v=>({type:v.type as CellType, content:v.title, output:v.description || '', executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, status:v.option.EXECUTION_STATUS}))
+  const init = useMemo(()=>{
+    return (params.created?[]:contents)?.map(v=>({id: `${v.id}`, type:v.type as CellType, content:v.title, output:v.description || '', executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, status:(v.option.EXECUTION_STATUS || 'idle') as any}))
   }, [contents])
+  const [unsaved, setUnsaved] = useState<Record<number, CellItem[]>>({})
+  const unsavedKey = params.created?params.parentId:params.id
+  const cells = unsaved[unsavedKey] as (CellItem[] | undefined)
   const contentMutation = useContentMutation()
   const [title, setTitle] = useState<string>()
   const [editPage, setEditPage] = useState(false)
+  const isSaved = useIsSaved(init, cells)
   const onSaveTitle = () => {
         if (!auth.user){
           return;
       }
       let promise
-      const description = cellRef.current? cellRef.current.cells.map((v, i)=>{
+      const description = cells?cells.map((v, i)=>{
         let str = toRaw(v.content).replaceAll(/\r\n/g, '');
         if(str.length > 32){
           str = str.substring(0, 32 - 2) + '...';
@@ -60,7 +71,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
     const promise = onSaveTitle()
     promise?.then((parentId)=>{
       const userId = auth.user?.id
-      const created = userId && cellRef.current? cellRef.current.cells.map((v, i)=>({
+      const created = userId && cells ? cells.map((v, i)=>({
         userId, parentId, type:v.type, order:i, description:v.output, title:v.content, option:{EXECUTION_COUNT:v.executionCount!==null?`${v.executionCount}`:undefined, EXECUTION_STATUS: v.status} })):[]
       return contentMutation.updateCells({created, deleted:{parentId}})
     })
@@ -82,16 +93,16 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   useLayoutEffect(() => {
     if (params.created || content){
         navigation.setOptions({
-            title,
+            title:isSaved?title:`${title}*`,
             headerRight: () => <View style={{flexDirection: 'row'}}>
+              {!isSaved && <CommonButton title={'💾'} onPress={onSave} style={{paddingTop:8, marginRight:10}}/>}
               <CommonButton title={'✏️'} style={{height:40, paddingTop:8, marginRight:10}} onPress={()=>setEditPage(true)}/>
-              <CommonButton title={'💾'} onPress={onSave} style={{paddingTop:8, marginRight:10}}/>
               <CommonButton title={'❌'} onPress={exit} style={{paddingTop:8, marginRight:10}}/>
             </View>,
             headerShown: !editPage
           });
       }
-  }, [navigation, content, contents, title, editPage]);
+  }, [navigation, content, contents, title, editPage, isSaved]);
 
   const back = ()=>{
     if(navigation.canGoBack())
@@ -112,10 +123,9 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
     }
   }
   const exit = ()=> {
-    deleteOpenedIds(params.created?params.parentId:params.id, params.created)
+    deleteOpenedIds(unsavedKey, params.created)
     back()
   }
-  
   return <ThemedView style={{width:"100%", height:"100%"}}>
      <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
      {editPage ? <>
@@ -124,7 +134,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
         <CommonButton title={lang('cancel')} onPress={()=>setEditPage(false)} style={{height:65, paddingVertical:20}}/>
         {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>exit())}/>}
       </>:
-      cellContents !==undefined && <NoteSection init={cellContents} cellRef={cellRef}/>}
+      init !==undefined && <NoteSection cells={cells || init} setCells={(data)=>{const u = {...unsaved};u[unsavedKey]=data;setUnsaved(u)}} cellRef={cellRef}/>}
     </ScrollView>
   </ThemedView>
 }

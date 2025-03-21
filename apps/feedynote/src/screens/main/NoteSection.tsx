@@ -1,5 +1,5 @@
 // App.tsx
-import React, { useState, useCallback, MutableRefObject, useEffect, useRef } from 'react';
+import React, { useState, useCallback, MutableRefObject, useEffect, useRef, useMemo } from 'react';
 import { 
   SafeAreaView, 
   StyleSheet, 
@@ -35,21 +35,20 @@ const execute = (type:CellType, query: string): Promise<string> => {
   });
 };
 
-const App = (props: {init:{type:CellType, content:string, output:string, executionCount:number|null, status?:string}[], cellRef:MutableRefObject<{cells:CellItem[], executeAllCells:()=>Promise<void>}|undefined>}) => {
+const App = (props: {cells:CellItem[], setCells:(data:CellItem[])=>void, cellRef:MutableRefObject<{executeAllCells:()=>Promise<void>}|undefined>}) => {
   const theme = useColorScheme()
   const { lang } = useLangContext()
-  const [cells, setCells] = useState<CellItem[]>([]);
-  
+  const cells = props.cells
+  const setCells = (func:(c:CellItem[])=>CellItem[])=>props.setCells(func(cells))
+
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
-  const [nextExecutionCount, setNextExecutionCount] = useState(1);
   const heightRef = useRef<Record<string, number>>({})
-  useEffect(()=>{
-    setCells(props.init.map((v, i)=>({...v, id:`${i}` , status:v.status as ExecutionStatus || ExecutionStatus.IDLE})))
-    setSelectedCellId(null)
-  }, [props.init])
+  const nextExecutionCount = useMemo(()=>{
+    const counts = props.cells.map(v=>v.executionCount).filter(v=>v!==null)
+    return counts.length>0?counts.sort((a,b)=>b-a)[0]+1:1
+  }, [props.cells])
   useEffect(()=>{
     props.cellRef.current = {
-      cells:cells,
       executeAllCells: async () => {
         for (const cell of cells) {
           if (typeDetail[cell.type].executable) {
@@ -101,7 +100,6 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
             : cell
         )
       );
-      setNextExecutionCount(prev => prev + 1);
     } catch (error) {
       setCells(prevCells => 
         prevCells.map(cell => 
@@ -115,7 +113,6 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
             : cell
         )
       );
-      setNextExecutionCount(prev => prev + 1);
     }
   };
 
@@ -133,7 +130,7 @@ const App = (props: {init:{type:CellType, content:string, output:string, executi
   }, [selectedCellId, cells]);
   return (
     <SafeAreaView style={styles.container}>
-      <SortableList data={cells} setData={setCells} getId={v=>v.id} renderItem={renderCellContent}/>
+      <SortableList data={cells} setData={props.setCells} getId={v=>v.id} renderItem={renderCellContent}/>
       
       <View style={styles.addCellContainer}>
         {Object.entries(typeDetail).map(([k, v], i)=>{

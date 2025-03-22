@@ -35,18 +35,58 @@ const execute = (type:CellType, query: string): Promise<string> => {
   });
 };
 
-const App = (props: {cells:CellItem[], setCells:(data:CellItem[])=>void, cellRef:MutableRefObject<{executeAllCells:()=>Promise<void>}|undefined>}) => {
+export type CellHistory = {past:string[][], present:string[], future:string[][], cells:Record<string,CellItem>}
+
+const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>void, cellRef:MutableRefObject<{executeAllCells:()=>Promise<void>}|undefined>}) => {
   const theme = useColorScheme()
   const { lang } = useLangContext()
-  const cells = props.cells
-  const setCells = (func:(c:CellItem[])=>CellItem[])=>props.setCells(func(cells))
+  const cellsHistory = props.cellsHistory
+  const cells = cellsHistory?.present.map(v=>cellsHistory.cells[v])
+  const _setCells = (_cells:CellItem[]) => {
+    if (JSON.stringify(cells) === JSON.stringify(_cells)){
+      return;
+    }
+    const newCells = cellsHistory?.cells || {}
+    _cells.forEach(v=>{newCells[v.id] = v})
+    props.setHistory({
+      past: cellsHistory?[ ...cellsHistory.past, cellsHistory.present]:[],
+      present:_cells.map(v=>v.id),
+      future: [],
+      cells:newCells,
+    })
+  }
+  const undo = () =>{
+    if(cellsHistory && cellsHistory.past.length>0){
+      const previous = cellsHistory.past[cellsHistory.past.length - 1];
+      const newPast = cellsHistory.past.slice(0, cellsHistory.past.length - 1);
+      props.setHistory({
+        past: newPast,
+        present:previous,
+        future: [cellsHistory.present, ...cellsHistory.future],
+        cells:cellsHistory.cells,
+      })
+    }
+  }
+  const redo = () => {
+    if(cellsHistory && cellsHistory.future.length>0){
+      const next = cellsHistory.future[0];
+      const newFuture = cellsHistory.future.slice(1);
+      props.setHistory({
+        past: [...cellsHistory.past, cellsHistory.present],
+        present:next,
+        future: newFuture,
+        cells:cellsHistory.cells,
+      })
+    }
+  }
+  const setCells = (func:(c:CellItem[])=>CellItem[])=>_setCells(func(cells))
 
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const heightRef = useRef<Record<string, number>>({})
   const nextExecutionCount = useMemo(()=>{
-    const counts = props.cells.map(v=>v.executionCount).filter(v=>v!==null)
+    const counts = cells.map(v=>v.executionCount).filter(v=>v!==null)
     return counts.length>0?counts.sort((a,b)=>b-a)[0]+1:1
-  }, [props.cells])
+  }, [cells])
   useEffect(()=>{
     props.cellRef.current = {
       executeAllCells: async () => {
@@ -130,7 +170,7 @@ const App = (props: {cells:CellItem[], setCells:(data:CellItem[])=>void, cellRef
   }, [selectedCellId, cells]);
   return (
     <SafeAreaView style={styles.container}>
-      <SortableList data={cells} setData={props.setCells} getId={v=>v.id} renderItem={renderCellContent}/>
+      <SortableList data={cells} setData={_setCells} getId={v=>v.id} renderItem={renderCellContent}/>
       
       <View style={styles.addCellContainer}>
         {Object.entries(typeDetail).map(([k, v], i)=>{
@@ -146,6 +186,22 @@ const App = (props: {cells:CellItem[], setCells:(data:CellItem[])=>void, cellRef
           <Text style={styles.addCellButtonText}>{lang(k)}</Text>
         </TouchableOpacity>
         })}
+        <TouchableOpacity
+          key={'undo'}
+          style={[styles.addCellButton, {backgroundColor:'gray'}]}
+          onPress={() => undo()}
+        >
+          <Icon name={'undo'} size={18} color="#fff" />
+          <Text style={styles.addCellButtonText}>{lang('undo')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          key={'redo'}
+          style={[styles.addCellButton, {backgroundColor:'gray'}]}
+          onPress={() => redo()}
+        >
+          <Icon name={'redo'} size={18} color="#fff" />
+          <Text style={styles.addCellButtonText}>{lang('redo')}</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

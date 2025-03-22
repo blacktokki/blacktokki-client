@@ -8,7 +8,7 @@ import { TextInput } from 'react-native-paper';
 import { useAuthContext } from '@blacktokki/account';
 import { navigate } from '@blacktokki/navigation';
 import useContent from '../../hooks/useContent';
-import NoteSection from './NoteSection';
+import NoteSection, { CellHistory } from './NoteSection';
 import { CellType } from '../../types';
 import { toRaw } from '@blacktokki/editor';
 import { useOpenedContext } from '../../hooks/useNotebookContext';
@@ -19,6 +19,8 @@ const useIsSaved = (init:CellItem[]|undefined, cells:CellItem[]|undefined)=>{
   const isSaved = useMemo(()=>cells===undefined || original===JSON.stringify(cells?.map(v=>({...v, id:undefined}))), [original, cells])
   return isSaved
 }
+
+
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -36,9 +38,20 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const init = useMemo(()=>{
     return (params.created?[]:contents)?.map(v=>({id: `${v.id}`, type:v.type as CellType, content:v.title, output:v.description || '', executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, status:(v.option.EXECUTION_STATUS || 'idle') as any}))
   }, [contents])
-  const [unsaved, setUnsaved] = useState<Record<number, CellItem[]>>({})
+  const [unsaved, _setUnsaved] = useState<Record<number, CellHistory>>({})
   const unsavedKey = params.created?params.parentId:params.id
-  const cells = unsaved[unsavedKey] as (CellItem[] | undefined)
+  const cellsHistory = unsaved[unsavedKey] as (CellHistory | undefined)
+  const setHistory = (history?:CellHistory)=>{
+    const u = {...unsaved};
+    if (history){
+      u[unsavedKey] = history
+    }
+    else{
+      delete u[unsavedKey]
+    }
+    _setUnsaved(u)
+  }
+  const cells = cellsHistory?.present.map(v=>cellsHistory.cells[v])
   const contentMutation = useContentMutation()
   const [title, setTitle] = useState<string>()
   const [editPage, setEditPage] = useState(false)
@@ -78,17 +91,31 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   }
 
   useLayoutEffect(()=>{
-      if(params.created){
-        setEditPage(false)
-        setTitle(lang("New Page"))
-        addOpenedIds(params.parentId, true)
-      }
-      else if (content){
-        setEditPage(false)
-        setTitle(content.title)
-        addOpenedIds(content.id, false)
-      }
-    }, [content])
+    if(init){
+        if(params.created){
+          setEditPage(false)
+          setTitle(lang("New Page"))
+          addOpenedIds(params.parentId, true)
+          cellsHistory === undefined && setHistory({
+            past: [],
+            present: [],
+            future: [],
+            cells: {}
+          })
+        }
+        else if (content){
+          setEditPage(false)
+          setTitle(content.title)
+          addOpenedIds(content.id, false)
+          cellsHistory === undefined && setHistory({
+            past: [],
+            present: init.map(v=>v.id),
+            future: [],
+            cells: Object.fromEntries(init.map(v=>[v.id, v]))
+          })
+        }
+    }
+    }, [init, content])
 
   useLayoutEffect(() => {
     if (params.created || content){
@@ -124,6 +151,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   }
   const exit = ()=> {
     deleteOpenedIds(unsavedKey, params.created)
+    setHistory(undefined)
     back()
   }
   return <ThemedView style={{width:"100%", height:"100%"}}>
@@ -134,7 +162,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
         <CommonButton title={lang('cancel')} onPress={()=>setEditPage(false)} style={{height:65, paddingVertical:20}}/>
         {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>exit())}/>}
       </>:
-      init !==undefined && <NoteSection cells={cells || init} setCells={(data)=>{const u = {...unsaved};u[unsavedKey]=data;setUnsaved(u)}} cellRef={cellRef}/>}
+      cellsHistory !==undefined && <NoteSection cellsHistory={cellsHistory} setHistory={setHistory} cellRef={cellRef}/>}
     </ScrollView>
   </ThemedView>
 }

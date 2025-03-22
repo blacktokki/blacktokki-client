@@ -96,10 +96,15 @@ const SortableCellsList = <T, >({
   getId:(item:T)=>string,
 }) => {
   const [codes, setCodes] = useState(items.map(v=>''+ getId(v)))
+  const [tempCodes, setTempCodes] = useState<string[]>()
   useEffect(()=>{
-    if (items.length !== codes.length || items.filter((v, i)=>!codes[i].startsWith(getId(v))).length>0){
+    if (tempCodes){
+      setCodes(tempCodes)
+      setTempCodes(undefined)
+    }
+    else if (items.length !== codes.length || items.filter((v, i)=>!codes[i].endsWith(getId(v))).length>0){
       setCodes((codes)=>{
-        return items.map((v, i)=>i<codes.length && codes[i].startsWith(getId(v))?codes[i]:''+getId(v)).slice(0, items.length)
+        return items.map((v, i)=>i<codes.length && codes[i].endsWith(getId(v))?codes[i]:Date.now().toString() + '@'+getId(v)).slice(0, items.length)
       })
     }
   }, [items])
@@ -121,9 +126,7 @@ const SortableCellsList = <T, >({
       const oldIndex = codes.findIndex((item) => item === active.id);
       const newIndex = codes.findIndex((item) => item === over.id);
       const idx = DndSortable.arrayMove(Array.from(Array(items.length).keys()), oldIndex, newIndex)
-      setCodes((codes)=>{
-        return DndSortable.arrayMove(codes, oldIndex, newIndex).map((v:string, i:number)=>i>idx[i]?'@'+v:v) 
-      })
+      setTempCodes(DndSortable.arrayMove(codes, oldIndex, newIndex).map((v:string, i:number)=>i>idx[i]?'@'+v:v))
       onSortEnd(DndSortable.arrayMove(items, oldIndex, newIndex));
     }
   };
@@ -134,12 +137,12 @@ const SortableCellsList = <T, >({
       onDragEnd={handleDragEnd}
     >
       <DndSortable.SortableContext
-        items={codes}
+        items={tempCodes || codes}
         strategy={DndSortable.verticalListSortingStrategy}
       >
         <View style={commonStyles.cellsList}>
           {items.map((item, i) => {
-            const code = codes[i]
+            const code = (tempCodes || codes)[i]
             return <DraggableCellItem
               key={code || '' + getId(item)}
               code={code}

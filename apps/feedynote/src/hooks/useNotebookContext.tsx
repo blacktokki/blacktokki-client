@@ -21,9 +21,11 @@ export const NotebookProvider = (props: { children: React.ReactNode; }) => {
 
   useEffect(() => {
     loadOpened().then((v) => {
-      if (auth.user){
-        const ids:number[] = v[`${auth.user.id}`] || []
-        setOpened(Object.fromEntries(ids.map(v=>[`${v}`, {created:false}])));
+      if (auth){
+        if (auth.user){
+          const ids:number[] = v[`${auth.user.id}`] || []
+          setOpened(Object.fromEntries(ids.map(v=>[`${v}`, {created:false}])));
+        }
         setComplete(true);
       }
     });

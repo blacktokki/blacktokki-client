@@ -117,7 +117,7 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
         />
         <View style={{flex:1, paddingHorizontal:5}}>
           {/* SUMMARY CELL */}
-          {!item.inputVisible && <TouchableOpacity style={styles.summaryButton}>
+          {!item.inputVisible && <TouchableOpacity style={styles.summaryButton} onPress={() => toggleInputVisibility(item.id)}>
             <Text style={styles.summaryText}>● ● ●</Text>
           </TouchableOpacity>}
           {/* EDITOR CELL */}
@@ -158,7 +158,7 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
             style={styles.visibleToggle}
             onPress={() => toggleOutputVisibility(item.id)}
           />
-          {!item.outputVisible ? (item.inputVisible && <TouchableOpacity style={styles.summaryButton}>
+          {!item.outputVisible ? (item.inputVisible && <TouchableOpacity style={styles.summaryButton} onPress={() => toggleOutputVisibility(item.id)}>
             <Text style={styles.summaryText}>● ● ●</Text>
           </TouchableOpacity>):
           <View style={{flex:1}}>
@@ -309,9 +309,15 @@ const useStyles = createUseStyle((theme)=>({
       fontSize: 12,
     },
     visibleToggle: {
-      width:10, height:'100%', backgroundColor:'#2196F3',borderRadius:5
+      width:10, 
+      height:'100%', 
+      backgroundColor:'#2196F3',
+      borderRadius:5
     },
-    summaryButton: {padding:10, width:'100%'},
+    summaryButton: {
+      padding:10, 
+      width:'100%'
+    },
     summaryText: {
       minHeight: 20,
       color: 'gray',

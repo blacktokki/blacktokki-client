@@ -37,6 +37,7 @@ const styles = StyleSheet.create({
   },
 });
 
+const pathnameLength = 'blacktokki-notebook'.length + 1;
 
 (function(l) {  // for github-page
   if (l !== undefined && l.search[1] === '/' ) {
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
           l.pathname.slice(0, -1) + decoded + l.hash
       );
   }
-  if (l.pathname.length >= 10 && l.pathname.substring(10).replaceAll('/', '').length === 0){
-    window.history.replaceState(null, '', l.pathname.substring(0, 10) + '/home')
+  if (l.pathname.length >= pathnameLength && l.pathname.substring(pathnameLength).replaceAll('/', '').length === 0){
+    window.history.replaceState(null, '', l.pathname.substring(0, pathnameLength) + '/home')
   }
 }(window.location))

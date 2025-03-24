@@ -17,6 +17,8 @@ export interface CellItem {
   output: string;
   executionCount: number | null;
   status: ExecutionStatus;
+  inputVisible: boolean;
+  outputVisible: boolean;
 }
 
 export const typeDetail = {

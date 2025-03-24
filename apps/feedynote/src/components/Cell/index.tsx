@@ -32,10 +32,29 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
   const deleteCell = (id: string) => {
     setCells(prevCells => prevCells.filter(cell => cell.id !== id));
   };
+
+  // Toggle input visibility
+  const toggleInputVisibility = (id: string) => {
+    setCells(prevCells => 
+      prevCells.map(cell => 
+        cell.id === id ? { ...cell, inputVisible: !cell.inputVisible } : cell
+      )
+    );
+  };
+  
+  // Toggle output visibility
+  const toggleOutputVisibility = (id: string) => {
+    setCells(prevCells => 
+      prevCells.map(cell => 
+        cell.id === id ? { ...cell, outputVisible: !cell.outputVisible } : cell
+      )
+    );
+  };
+
   return (
     <View style={[
       styles.cellContainer,
-      item.type==='EDITOR' && {minHeight: heightRef.current[item.id]},
+      item.inputVisible && item.type==='EDITOR' && {minHeight: heightRef.current[item.id]},
       isSelected && styles.selectedCell,
       // isDragging && styles.draggingCell
     ]}
@@ -91,13 +110,23 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
           onPress={() => setSelectedCellId(item.id)}
           style={styles.cellInputContainer}
         >
+        {/* New toggle button for input */}
+        <TouchableOpacity 
+          style={styles.visibleToggle}
+          onPress={() => toggleInputVisibility(item.id)}
+        />
+        <View style={{flex:1, paddingHorizontal:5}}>
+          {/* SUMMARY CELL */}
+          {!item.inputVisible && <TouchableOpacity style={styles.summaryButton}>
+            <Text style={styles.summaryText}>● ● ●</Text>
+          </TouchableOpacity>}
           {/* EDITOR CELL */}
-          {<View style={{display:item.type === 'EDITOR'?'flex':'none'}}>
+          {<View style={{display:item.inputVisible && item.type === 'EDITOR'?'flex':'none'}}>
             <EditorViewer theme={theme} value={item.content} autoResize active={!isSelected} onPress={()=>setSelectedCellId(item.id)}/>
             <Editor       theme={theme} value={item.content} autoResize active={isSelected} setValue={item.type === 'EDITOR'?(text) => updateCellContent(item.id, text):()=>{}}/>
           </View>}
           {/* LINK CELL */}
-          {item.type === 'LINK' && <DynamicTextInput
+          {item.inputVisible && item.type === 'LINK' && <DynamicTextInput
               style={styles.codeInput}
               value={item.content}
               onChangeText={(text) => updateCellContent(item.id, text)}
@@ -106,7 +135,7 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
             />
           }
           {/* MARKDOWN CELL */}
-          {item.type === "MARKDOWN" && (
+          {item.inputVisible && item.type === "MARKDOWN" && (
           isSelected ? (
             <DynamicTextInput
               style={styles.markdownInput}
@@ -121,14 +150,26 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
               </Markdown>
             )
           )}
+        </View>
         </TouchableOpacity>
         {/* Output area for code cells */}
-        {item.status === ExecutionStatus.COMPLETED  ? <>
-            {typeDetail[item.type].executable && (JSON.parse(item.output) as Link[]).map((link, i)=><LinkPreview key={i} link={link} isMobile={false} />)}
-          </>:
-          item.status === ExecutionStatus.ERROR && <View style={[styles.outputContainer, styles.errorOutput]}>
-            <Text style={styles.outputText}>{item.output}</Text>
+        {<View style={{flexDirection:'row'}}> 
+          <TouchableOpacity 
+            style={styles.visibleToggle}
+            onPress={() => toggleOutputVisibility(item.id)}
+          />
+          {!item.outputVisible ? (item.inputVisible && <TouchableOpacity style={styles.summaryButton}>
+            <Text style={styles.summaryText}>● ● ●</Text>
+          </TouchableOpacity>):
+          <View style={{flex:1}}>
+            {item.status === ExecutionStatus.COMPLETED  ? <>
+              {typeDetail[item.type].executable && (JSON.parse(item.output) as Link[]).map((link, i)=><LinkPreview key={i} link={link} isMobile={false} />)}
+            </>:
+            item.status === ExecutionStatus.ERROR && <View style={[styles.outputContainer, styles.errorOutput]}>
+              <Text style={styles.outputText}>{item.output}</Text>
+            </View>}
           </View>}
+        </View>}
       </View>
     </View>
   );
@@ -213,7 +254,7 @@ const useStyles = createUseStyle((theme)=>({
     },
     cellToolbar: {
       flexDirection: 'row',
-      padding: 5,
+      padding: 10,
       paddingVertical: 0,
       borderBottomColor: Colors[theme].border,
     },
@@ -259,12 +300,23 @@ const useStyles = createUseStyle((theme)=>({
     },
     cellInputContainer: {
       //padding: 10,
+      flexDirection:'row',
       padding:0,
-      paddingHorizontal:5,
+      // paddingHorizontal:5,
     },
     executionCountText: {
       color: '#888',
       fontSize: 12,
+    },
+    visibleToggle: {
+      width:10, height:'100%', backgroundColor:'#2196F3',borderRadius:5
+    },
+    summaryButton: {padding:10, width:'100%'},
+    summaryText: {
+      minHeight: 20,
+      color: 'gray',
+      backgroundColor: Colors[theme].background,
+      fontSize:10
     },
 }))
 

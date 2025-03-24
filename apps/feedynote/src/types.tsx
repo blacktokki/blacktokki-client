@@ -11,7 +11,9 @@ export type PostContent = {
         INPUT?: string,
         IMAGE_URL?: string,
         EXECUTION_COUNT?: string,
-        EXECUTION_STATUS?: string 
+        EXECUTION_STATUS?: string,
+        INPUT_VISIBLE?:boolean,
+        OUTPUT_VISIBLE?:boolean
     }
 }
 

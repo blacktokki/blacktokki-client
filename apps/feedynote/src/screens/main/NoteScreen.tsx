@@ -36,7 +36,15 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const content = useContent(params.created?undefined:params.id)
   const contents = useContentList(params.created?undefined:params.id)
   const init = useMemo(()=>{
-    return (params.created?[]:contents)?.map(v=>({id: `${v.id}`, type:v.type as CellType, content:v.title, output:v.description || '', executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, status:(v.option.EXECUTION_STATUS || 'idle') as any}))
+    return (params.created?[]:contents)?.map(v=>({
+      id: `${v.id}`, 
+      type:v.type as CellType, 
+      content:v.title, 
+      output:v.description || '', 
+      executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, 
+      status:(v.option.EXECUTION_STATUS || 'idle') as any, 
+      inputVisible: v.option.INPUT_VISIBLE!==undefined?v.option.INPUT_VISIBLE:true,
+      outputVisible:v.option.OUTPUT_VISIBLE!==undefined?v.option.OUTPUT_VISIBLE:true}))
   }, [contents])
   const [unsaved, _setUnsaved] = useState<Record<number, CellHistory>>({})
   const unsavedKey = params.created?params.parentId:params.id
@@ -85,7 +93,18 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
     promise?.then((parentId)=>{
       const userId = auth.user?.id
       const created = userId && cells ? cells.map((v, i)=>({
-        userId, parentId, type:v.type, order:i, description:v.output, title:v.content, option:{EXECUTION_COUNT:v.executionCount!==null?`${v.executionCount}`:undefined, EXECUTION_STATUS: v.status} })):[]
+        userId, 
+        parentId, 
+        type:v.type, 
+        order:i, 
+        description:v.output, 
+        title:v.content, 
+        option:{
+          EXECUTION_COUNT:v.executionCount!==null?`${v.executionCount}`:undefined, 
+          EXECUTION_STATUS: v.status,
+          INPUT_VISIBLE:v.inputVisible,
+          OUTPUT_VISIBLE:v.outputVisible
+        }})):[]
       return contentMutation.updateCells({created, deleted:{parentId}})
     })
   }

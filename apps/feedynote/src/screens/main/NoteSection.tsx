@@ -108,6 +108,8 @@ const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>vo
       output: '',
       executionCount: null,
       status: ExecutionStatus.IDLE,
+      inputVisible: true,
+      outputVisible: true
     };
     
     setCells(prevCells => [...prevCells, newCell]);

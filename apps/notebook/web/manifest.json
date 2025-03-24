@@ -1,0 +1,29 @@
+{
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "lang": "ko",
+  "name": "Blacktokki Notebook",
+  "short_name": "Blacktokki Notebook",
+  "start_url": "/blacktokki-notebook/?utm_source=web_app_manifest",
+  "orientation": "portrait",
+  "theme_color": "#000000",
+  "id": "notebook",
+  "description": "",
+  "icons": [
+    {
+      "src": "\\blacktokki-notebook\\pwa\\chrome-icon\\chrome-icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "\\blacktokki-notebook\\pwa\\chrome-icon\\chrome-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "\\blacktokki-notebook\\pwa\\chrome-icon\\chrome-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

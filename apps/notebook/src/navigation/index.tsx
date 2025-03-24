@@ -13,10 +13,10 @@ const getConfig = async () => {
         main,
         login,
         prefixes: [ Linking.makeUrl('/') ],
-        rootPath: 'feedynote',
+        rootPath: 'blacktokki-notebook',
         documentTitle: {
             formatter: ()=>{
-                return 'feedynote'
+                return 'blacktokki-notebook'
             }
         },
         rootScreen: {

@@ -5,7 +5,7 @@
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "expo-blank": "yarn workspace @blacktokki/expo-blank",
-    "feedynote": "yarn workspace @blacktokki/feedynote"
+    "notebook": "yarn workspace @blacktokki/notebook"
   },
   "workspaces": {
     "packages":[

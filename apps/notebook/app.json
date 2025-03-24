@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "blacktokki-feedynote",
-    "slug": "blacktokki-feedynote",
+    "name": "blacktokki-notebook",
+    "slug": "blacktokki-notebook",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

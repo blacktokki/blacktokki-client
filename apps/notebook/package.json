@@ -1,15 +1,15 @@
 {
-  "name": "@blacktokki/feedynote",
+  "name": "@blacktokki/notebook",
   "version": "1.0.0",
   "main": "index.js",
-  "homepage": "http://blacktokki.github.io/feedynote",
+  "homepage": "http://blacktokki.github.io/blacktokki-notebook",
   "scripts": {
-    "build": "yarn --cwd ../../ workspace @blacktokki/editor tinymce ../../apps/feedynote/web",
+    "build": "yarn --cwd ../../ workspace @blacktokki/editor tinymce ../../apps/notebook/web",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "github": "npx expo export:web && replace-in-file --configFile=scripts/seo.js && gh-pages -d web-build -r https://github.com/blacktokki/feedynote",
+    "github": "npx expo export:web && replace-in-file --configFile=scripts/seo.js && gh-pages -d web-build -r https://github.com/blacktokki/blacktokki-notebook",
     "pwa": "npx expo-pwa",
     "analyzer": "node scripts/analyzer.js && expo start --web --no-dev --minify && rimraf webpack.config.js"
   },

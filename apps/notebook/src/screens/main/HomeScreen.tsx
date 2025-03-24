@@ -32,7 +32,7 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   ]
   return <HomeSection tabViews={tabViews} title={lang('home')}>
     <View style={{flexGrow:1, width:'80%', marginTop:72}}>
-      <Text style={{fontSize:32, color}}>feedynote</Text>
+      <Text style={{fontSize:32, color}}>Blacktokki Notebook</Text>
       <View style={{backgroundColor:Colors.borderColor, height:1, width:'100%'}}/>
       {/* <Text style={{fontSize:20, color:'gray'}}>Welcome! This is a messenger for teams.</Text>*/}
       <View style={{height:24}}/>

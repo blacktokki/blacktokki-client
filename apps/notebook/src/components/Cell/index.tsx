@@ -73,91 +73,94 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
       </View>
       
       <View style={styles.cellContent}>
-        {/* Cell toolbar */}
-        {<View style={styles.cellToolbar}>
-        <TouchableOpacity 
-            style={styles.toolbarButton}
-            onPress={() => setSelectedCellId(item.id)}
-          >
-            <Icon
-              name={typeDetail[item.type].iconName} 
-              size={typeDetail[item.type].iconSize} 
-              color="#2196F3" 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.toolbarButton}
-            onPress={() => executeCell(item.id)}
-            disabled={!typeDetail[item.type].executable}
-          >
-            <Icon 
-              name="play-arrow" 
-              size={20} 
-              color={typeDetail[item.type].executable ? "#4CAF50" : "#ccc"} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.toolbarButton}
-            onPress={() => deleteCell(item.id)}
-          >
-            <Icon name="delete" size={20} color="#F44336" />
-          </TouchableOpacity>
-        </View>}
-        
         {/* Cell input area */}
         <TouchableOpacity
           activeOpacity={1}
           onPress={() => setSelectedCellId(item.id)}
           style={styles.cellInputContainer}
         >
-        {/* New toggle button for input */}
-        <TouchableOpacity 
-          style={styles.visibleToggle}
-          onPress={() => toggleInputVisibility(item.id)}
-        />
-        <View style={{flex:1, paddingHorizontal:5}}>
-          {/* SUMMARY CELL */}
-          {!item.inputVisible && <TouchableOpacity style={styles.summaryButton} onPress={() => toggleInputVisibility(item.id)}>
-            <Text style={styles.summaryText}>● ● ●</Text>
-          </TouchableOpacity>}
-          {/* EDITOR CELL */}
-          {<View style={{display:item.inputVisible && item.type === 'EDITOR'?'flex':'none'}}>
-            <EditorViewer theme={theme} value={item.content} autoResize active={!isSelected} onPress={()=>setSelectedCellId(item.id)}/>
-            <Editor       theme={theme} value={item.content} autoResize active={isSelected} setValue={item.type === 'EDITOR'?(text) => updateCellContent(item.id, text):()=>{}}/>
-          </View>}
-          {/* LINK CELL */}
-          {item.inputVisible && item.type === 'LINK' && <DynamicTextInput
-              style={styles.codeInput}
-              value={item.content}
-              onChangeText={(text) => updateCellContent(item.id, text)}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          }
-          {/* MARKDOWN CELL */}
-          {item.inputVisible && item.type === "MARKDOWN" && (
-          isSelected ? (
-            <DynamicTextInput
-              style={styles.markdownInput}
-              value={item.content}
-              onChangeText={(text) => updateCellContent(item.id, text)}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            ) : (
-              <Markdown style={markdownStyles}>
-                {item.content}
-              </Markdown>
-            )
-          )}
-        </View>
+          {/* New toggle button for input */}
+          <TouchableOpacity 
+            style={styles.visibleToggleContainer}
+            onPress={() => toggleInputVisibility(item.id)}
+          >
+            <View style={styles.visibleToggle}/>
+          </TouchableOpacity>
+          <View style={{flex:1, paddingHorizontal:5}}>
+            {/* Cell toolbar */}
+            <View style={styles.cellToolbar}>
+              <TouchableOpacity 
+                style={styles.toolbarButton}
+                onPress={() => setSelectedCellId(item.id)}
+              >
+                <Icon
+                  name={typeDetail[item.type].iconName} 
+                  size={typeDetail[item.type].iconSize} 
+                  color="#2196F3" 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.toolbarButton}
+                onPress={() => executeCell(item.id)}
+                disabled={!typeDetail[item.type].executable}
+              >
+                <Icon 
+                  name="play-arrow" 
+                  size={20} 
+                  color={typeDetail[item.type].executable ? "#4CAF50" : "#ccc"} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.toolbarButton}
+                onPress={() => deleteCell(item.id)}
+              >
+                <Icon name="delete" size={20} color="#F44336" />
+              </TouchableOpacity>
+            </View>
+            {/* SUMMARY CELL */}
+            {!item.inputVisible && <TouchableOpacity style={styles.summaryButton} onPress={() => toggleInputVisibility(item.id)}>
+              <Text style={styles.summaryText}>● ● ●</Text>
+            </TouchableOpacity>}
+            {/* EDITOR CELL */}
+            {<View style={{display:item.inputVisible && item.type === 'EDITOR'?'flex':'none'}}>
+              <EditorViewer theme={theme} value={item.content} autoResize active={!isSelected} onPress={()=>setSelectedCellId(item.id)}/>
+              <Editor       theme={theme} value={item.content} autoResize active={isSelected} setValue={item.type === 'EDITOR'?(text) => updateCellContent(item.id, text):()=>{}}/>
+            </View>}
+            {/* LINK CELL */}
+            {item.inputVisible && item.type === 'LINK' && <DynamicTextInput
+                style={styles.codeInput}
+                value={item.content}
+                onChangeText={(text) => updateCellContent(item.id, text)}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            }
+            {/* MARKDOWN CELL */}
+            {item.inputVisible && item.type === "MARKDOWN" && (
+            isSelected ? (
+              <DynamicTextInput
+                style={styles.markdownInput}
+                value={item.content}
+                onChangeText={(text) => updateCellContent(item.id, text)}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              ) : (
+                <Markdown style={markdownStyles}>
+                  {item.content}
+                </Markdown>
+              )
+            )}
+          </View>
         </TouchableOpacity>
         {/* Output area for code cells */}
         {<View style={{flexDirection:'row'}}> 
-          <TouchableOpacity 
-            style={styles.visibleToggle}
+          {(item.status === ExecutionStatus.COMPLETED || item.status === ExecutionStatus.ERROR) && <TouchableOpacity 
+            style={styles.visibleToggleContainer}
             onPress={() => toggleOutputVisibility(item.id)}
-          />
+          >
+            <View style={styles.visibleToggle}/>
+          </TouchableOpacity>}
           {!item.outputVisible ? (item.inputVisible && <TouchableOpacity style={styles.summaryButton} onPress={() => toggleOutputVisibility(item.id)}>
             <Text style={styles.summaryText}>● ● ●</Text>
           </TouchableOpacity>):
@@ -194,7 +197,7 @@ const Colors = {
       codeText: '#B0B0B0',// 회색 텍스트
       codeBackground: '#2A2A2A',  // 어두운 출력 배경
       outerBackground: '#121212', // 다크 모드 배경색
-      border: '3A3A3A',  // 어두운 구분선
+      border: '#3A3A3A',  // 어두운 구분선
       selectedBorder: '#4A90E2', // 밝은 블루 선택 강조
       error:  'rgba(244, 67, 54, 0.2)', // 오류 출력 배경 (반투명 레드)
       markdownHead: '#A0B9D0',
@@ -254,7 +257,7 @@ const useStyles = createUseStyle((theme)=>({
     },
     cellToolbar: {
       flexDirection: 'row',
-      padding: 10,
+      padding: 0,
       paddingVertical: 0,
       borderBottomColor: Colors[theme].border,
     },
@@ -296,23 +299,30 @@ const useStyles = createUseStyle((theme)=>({
     },
     toolbarButton: {
       padding: 5,
+      paddingVertical:0,
       marginRight: 10,
     },
     cellInputContainer: {
       //padding: 10,
       flexDirection:'row',
       padding:0,
+      flex:1,
       // paddingHorizontal:5,
     },
     executionCountText: {
       color: '#888',
       fontSize: 12,
     },
-    visibleToggle: {
-      width:10, 
+    visibleToggleContainer: {
+      width:12, 
       height:'100%', 
-      backgroundColor:'#2196F3',
-      borderRadius:5
+    },
+    visibleToggle: {
+      flex:1,
+      marginLeft:4,
+      marginVertical:4,
+      borderRadius:4,
+      backgroundColor: Colors[theme].border,
     },
     summaryButton: {
       padding:10, 

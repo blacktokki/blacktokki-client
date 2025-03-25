@@ -10,6 +10,6 @@ export default ()=>{
     return <ScrollView style={{flex:1}}>
         <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>navigate('HomeScreen')} />
         <ContentGroupList type={'PAGE'} />
-        <ContentGroupList type={'NOTEV2'} />
+        <ContentGroupList type={'NOTEV2'} extra={true} />
     </ScrollView>
 }

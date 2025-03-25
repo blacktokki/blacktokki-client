@@ -194,7 +194,6 @@ const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>vo
           onPress={() => undo()}
         >
           <Icon name={'undo'} size={18} color="#fff" />
-          <Text style={styles.addCellButtonText}>{lang('undo')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           key={'redo'}
@@ -202,7 +201,6 @@ const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>vo
           onPress={() => redo()}
         >
           <Icon name={'redo'} size={18} color="#fff" />
-          <Text style={styles.addCellButtonText}>{lang('redo')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

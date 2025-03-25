@@ -14,13 +14,13 @@ import { toRaw } from '@blacktokki/editor';
 import { useOpenedContext } from '../../hooks/useNotebookContext';
 import { CellItem } from '../../components/Cell';
 
+const unsaved:Record<number, CellHistory> = {}
+
 const useIsSaved = (init:CellItem[]|undefined, cells:CellItem[]|undefined)=>{
   const original = useMemo(()=>JSON.stringify(init?.map(v=>({...v, id:undefined}))), [init])
   const isSaved = useMemo(()=>cells===undefined || original===JSON.stringify(cells?.map(v=>({...v, id:undefined}))), [original, cells])
   return isSaved
 }
-
-
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -46,18 +46,16 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
       inputVisible: v.option.INPUT_VISIBLE!==undefined?v.option.INPUT_VISIBLE:true,
       outputVisible:v.option.OUTPUT_VISIBLE!==undefined?v.option.OUTPUT_VISIBLE:true}))
   }, [contents])
-  const [unsaved, _setUnsaved] = useState<Record<number, CellHistory>>({})
   const unsavedKey = params.created?params.parentId:params.id
-  const cellsHistory = unsaved[unsavedKey] as (CellHistory | undefined)
+  const [cellsHistory, _setHistory] = useState<CellHistory | undefined>()
   const setHistory = (history?:CellHistory)=>{
-    const u = {...unsaved};
     if (history){
-      u[unsavedKey] = history
+      unsaved[unsavedKey] = history
     }
     else{
-      delete u[unsavedKey]
+      delete unsaved[unsavedKey]
     }
-    _setUnsaved(u)
+    _setHistory(history)
   }
   const cells = cellsHistory?.present.map(v=>cellsHistory.cells[v])
   const contentMutation = useContentMutation()
@@ -71,8 +69,8 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
       let promise
       const description = cells?cells.map((v, i)=>{
         let str = toRaw(v.content).replaceAll(/\r\n/g, '');
-        if(str.length > 32){
-          str = str.substring(0, 32 - 2) + '...';
+        if(str.length > 64){
+          str = str.substring(0, 64 - 2) + '...';
         }
         return str
       }).join('\r\n'):''
@@ -110,12 +108,13 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   }
 
   useLayoutEffect(()=>{
+    const history =  unsaved[unsavedKey]
     if(init){
         if(params.created){
           setEditPage(false)
           setTitle(lang("New Page"))
           addOpenedIds(params.parentId, true)
-          cellsHistory === undefined && setHistory({
+          setHistory(history || {
             past: [],
             present: [],
             future: [],
@@ -126,7 +125,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
           setEditPage(false)
           setTitle(content.title)
           addOpenedIds(content.id, false)
-          cellsHistory === undefined && setHistory({
+          setHistory(history || {
             past: [],
             present: init.map(v=>v.id),
             future: [],
@@ -148,7 +147,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
             headerShown: !editPage
           });
       }
-  }, [navigation, content, contents, title, editPage, isSaved]);
+  }, [navigation, content, contents, title, editPage, cells]);
 
   const back = ()=>{
     if(navigation.canGoBack())
@@ -181,7 +180,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
         <CommonButton title={lang('cancel')} onPress={()=>setEditPage(false)} style={{height:65, paddingVertical:20}}/>
         {content && <CommonButton title={lang('delete')} textStyle={{color:'red'}} style={{height:65, paddingVertical:20}} onPress={()=>contentMutation.delete(content.id).then(v=>exit())}/>}
       </>:
-      cellsHistory !==undefined && <NoteSection cellsHistory={cellsHistory} setHistory={setHistory} cellRef={cellRef}/>}
+      cellsHistory !==undefined && cellsHistory === unsaved[unsavedKey] && <NoteSection cellsHistory={cellsHistory} setHistory={setHistory} cellRef={cellRef}/>}
     </ScrollView>
   </ThemedView>
 }

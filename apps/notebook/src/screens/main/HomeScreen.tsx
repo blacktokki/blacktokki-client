@@ -2,15 +2,22 @@ import React, {} from 'react';
 import { StackScreenProps } from '@react-navigation/stack';
 import { ScrollView, View} from 'react-native';
 import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
-import { HomeSection, ConfigSections } from '@blacktokki/navigation';
+import { HomeSection, ConfigSections, navigate } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation';
-import ContentGroupList from '../../components/ContentGroupList';
+import ContentGroupList, { AddNoteButton } from '../../components/ContentGroupList';
 import { List } from 'react-native-paper';
 
-const ContentTabView = ()=>{
+
+const OpenedEditorsTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
       <ContentGroupList type={'PAGE'} />
+    </ScrollView>
+}
+
+const NoteTabView = ()=>{
+  const theme = useColorScheme()
+  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
       <ContentGroupList type={'NOTEV2'} extra={false}/>
     </ScrollView>
 }
@@ -27,7 +34,8 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   const theme = useColorScheme()
   const color = Colors[theme].text
   const tabViews:TabViewOption[] = [
-    {title: lang('Contents'), component:ContentTabView, icon:<List.Icon icon={'table-of-contents'}/>, headerRight:()=><></>},
+    {title: lang('Opened Editors'), component:OpenedEditorsTabView, icon:<List.Icon icon={'file-document-edit'}/>, headerRight:()=><></>},
+    {title: lang('Notes'), component:NoteTabView, icon:<List.Icon icon={'notebook'}/>, headerRight:()=><AddNoteButton/>},
     {title: lang('Config'), component:ConfigTabView, icon:<List.Icon icon={'dots-horizontal'}/>, headerRight:()=><></>}
   ]
   return <HomeSection tabViews={tabViews} title={lang('home')}>

@@ -15,6 +15,7 @@ const getItemPadding = (isLandscape:boolean)=>{
 
 const ContentSubGroupList = (props:{note:Content}) => {
   const theme = useColorScheme()
+  const { lang } = useLangContext()
   const [expanded, setExpanded] = React.useState(false);
   const window = useResizeContext()
   const data = useContentList(expanded?props.note.id:undefined);
@@ -38,12 +39,18 @@ const ContentSubGroupList = (props:{note:Content}) => {
         right={()=>undefined}
       >
         {data && data.slice(0, 10).map(v=><List.Item key={v.id} left={(_props)=><List.Icon {..._props} icon={"file-document"} />} title={v.title} onPress={()=>navigate('NoteScreen', {id:v.id})} style={{padding:itemPadding}} />)}
-        {(data?.length || 0 > 10) && <List.Item left={(_props)=><List.Icon {..._props} icon={"file-document-multiple"} />} title={"more..."} onPress={()=>navigate("ContentListScreen", {id: props.note.id})} style={{padding:itemPadding}}  />}
+        {((data?.length || 0) > 10) && <List.Item left={(_props)=><List.Icon {..._props} icon={"file-document-multiple"} />} title={lang("more...")} onPress={()=>navigate("ContentListScreen", {id: props.note.id})} style={{padding:itemPadding}}  />}
       </List.Accordion>
       <TouchableRipple style={{position:'absolute', justifyContent:'center', paddingLeft: 8 + itemPadding, width:40 + itemPadding * 2, height:40 + itemPadding*2 }} onPress={handlePress}>
           <Left isExpanded={expanded}/>
       </TouchableRipple>
     </View>
+}
+
+export const AddNoteButton = () => {
+  const window = useResizeContext()
+  const itemPadding = getItemPadding(window==='landscape')
+  return <TouchableRipple style={{position:'absolute', right:0}} onPress={()=>navigate('ContentListScreen', {type:'NOTEV2'})}><List.Icon icon='plus' style={{margin:itemPadding}}></List.Icon></TouchableRipple>
 }
 
 
@@ -63,10 +70,6 @@ const ContentGroupList = ( props : {type:'PAGE'}| {type:'NOTEV2', extra:boolean}
   const itemPadding = getItemPadding(window==='landscape')
   return (
     <List.Section>
-      <View style={{flexDirection:'row'}}>
-        <List.Subheader style={{flex:1}} selectable={false}>{props.type==='NOTEV2'?lang("Notes"):lang("Open Editors")}</List.Subheader>
-        {props.type==='NOTEV2' && <TouchableRipple style={{position:'absolute', right:0}} onPress={()=>navigate('ContentListScreen', {type:'NOTEV2'})}><List.Icon icon='plus' style={{margin:itemPadding}}/></TouchableRipple>}
-      </View>
         {data && data.map(v=>
           (props.type==='NOTEV2' && props.extra)?
           <ContentSubGroupList key={v.id} note={v as Content}/>:

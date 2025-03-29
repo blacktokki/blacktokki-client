@@ -2,11 +2,12 @@ import { Auth } from '@blacktokki/account';
 import { Colors, useColorScheme, useResizeContext } from '@blacktokki/core';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 
 export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) => {
   const { colors } = useTheme();
   const theme = useColorScheme();
+  const { height } = useWindowDimensions();
   const windowType = useResizeContext();
   return (
     <View
@@ -17,8 +18,8 @@ export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) =
               {
                 backgroundColor: Colors[theme].background,
                 borderTopColor: colors.border,
+                maxHeight: height,
               },
-              // tabBarStyle,
             ]
           : { width: 0 }
       }

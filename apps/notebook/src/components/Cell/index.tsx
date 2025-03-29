@@ -17,7 +17,7 @@ import { CellItem, ExecutionStatus, createUseStyle, typeDetail} from './common';
 
 export { ExecutionStatus, typeDetail } from './common';
 export type { CellItem } from './common';
-export default React.memo(({theme, item, isSelected, heightRef, setCells, executeCell, setSelectedCellId}:{theme:'light'|'dark', item:CellItem, isSelected:boolean, heightRef:MutableRefObject<Record<string, number>>, setCells:(func:(cells:CellItem[])=>CellItem[])=>void, executeCell:(id:string)=>void, setSelectedCellId:(id:string)=>void})=>{
+export default React.memo(({theme, item, isSelected, heightRef, setCells, executeCell, setSelectedCellId}:{theme:'light'|'dark', item:CellItem, isSelected:boolean, heightRef:MutableRefObject<Record<string, number>>, setCells:(func:(cells:CellItem[])=>CellItem[])=>void, executeCell:(id:string)=>void, setSelectedCellId:(id:string|null)=>void})=>{
   const styles = useStyles(theme)
   const markdownStyles = useMarkdownStyles(theme)
   // Update cell content
@@ -50,6 +50,12 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
       )
     );
   };
+  const renderLinkOutput = ()=>{
+    const output = JSON.parse(item.output) as {query:string, links:Link[]}
+    return <>
+      {typeDetail[item.type].executable && output.links.map((link, i)=><View style={{opacity:output.query===item.content?1:0.25}}><LinkPreview key={i} link={link} isMobile={false} /></View>)}
+    </>
+  }
 
   return (
     <View style={[
@@ -91,7 +97,7 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
             <View style={styles.cellToolbar}>
               <TouchableOpacity 
                 style={styles.toolbarButton}
-                onPress={() => setSelectedCellId(item.id)}
+                onPress={() => setSelectedCellId(isSelected?null:item.id)}
               >
                 <Icon
                   name={typeDetail[item.type].iconName} 
@@ -165,9 +171,8 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
             <Text style={styles.summaryText}>● ● ●</Text>
           </TouchableOpacity>):
           <View style={{flex:1}}>
-            {item.status === ExecutionStatus.COMPLETED  ? <>
-              {typeDetail[item.type].executable && (JSON.parse(item.output) as Link[]).map((link, i)=><LinkPreview key={i} link={link} isMobile={false} />)}
-            </>:
+            {item.status === ExecutionStatus.COMPLETED  ? 
+            renderLinkOutput():
             item.status === ExecutionStatus.ERROR && <View style={[styles.outputContainer, styles.errorOutput]}>
               <Text style={styles.outputText}>{item.output}</Text>
             </View>}

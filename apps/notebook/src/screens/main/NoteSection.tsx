@@ -21,7 +21,7 @@ const execute = (type:CellType, query: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     try {
       if (type==='LINK'){
-        resolve(previewScrap({query}).then(v=>JSON.stringify(v)))
+        resolve(previewScrap({query}).then(v=>JSON.stringify({query, links:v})))
       }
       else if(type==='MARKDOWN'){
         console.log("TEMP")
@@ -35,15 +35,26 @@ const execute = (type:CellType, query: string): Promise<string> => {
   });
 };
 
-export type CellHistory = {past:string[][], present:string[], future:string[][], cells:Record<string,CellItem>}
+type HashItem = {hash: string}
 
-const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>void, cellRef:MutableRefObject<{executeAllCells:()=>Promise<void>}|undefined>}) => {
+export const Hash = {
+  get:(item:CellItem) => {
+    return JSON.stringify({...item, hash:undefined, id:undefined});
+  },
+  equals: (old:HashItem[], _new:HashItem[]) =>{
+    return old.length === _new.length && _new.findIndex((v, i)=>v.hash !== old[i].hash)<0
+  }
+}
+
+export type CellHistory = {past:string[][], present:string[], future:string[][], cells:Record<string, CellItem & HashItem>}
+
+const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>void, cellRef:MutableRefObject<{unselected:()=>void, executeAllCells:()=>Promise<void>}|undefined>}) => {
   const theme = useColorScheme()
   const { lang } = useLangContext()
   const cellsHistory = props.cellsHistory
   const cells = cellsHistory?.present.map(v=>cellsHistory.cells[v])
-  const _setCells = (_cells:CellItem[]) => {
-    if (JSON.stringify(cells) === JSON.stringify(_cells)){
+  const _setCells = (_cells:(CellItem & HashItem)[]) => {
+    if (Hash.equals(cells, _cells)){
       return;
     }
     const newCells = cellsHistory?.cells || {}
@@ -79,7 +90,7 @@ const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>vo
       })
     }
   }
-  const setCells = (func:(c:CellItem[])=>CellItem[])=>_setCells(func(cells))
+  const setCells = (func:(c:CellItem[])=>CellItem[])=>_setCells(func(cells).map((v, i)=>v === cells[i]?v as (CellItem & HashItem):{...v, hash:Hash.get(v)}))
 
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const heightRef = useRef<Record<string, number>>({})
@@ -95,7 +106,8 @@ const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>vo
             await executeCell(cell.id);
           }
         }
-      }
+      },
+      unselected: () =>setSelectedCellId(null)
     }
   }, [cells])
   
@@ -175,33 +187,37 @@ const App = (props: {cellsHistory:CellHistory, setHistory:(data:CellHistory)=>vo
       <SortableList data={cells} setData={_setCells} getId={v=>v.id} renderItem={renderCellContent}/>
       
       <View style={styles.addCellContainer}>
-        {Object.entries(typeDetail).map(([k, v], i)=>{
-          const buttonStyle:StyleProp<ViewStyle> = {
-            backgroundColor: v[theme]
-          }
-          return <TouchableOpacity
-          key={i}
-          style={[styles.addCellButton, buttonStyle]}
-          onPress={() => addCell(k as CellType)}
-        >
-          <Icon name={v.iconName} size={v.iconSize} color="#fff" />
-          <Text style={styles.addCellButtonText}>{lang(k)}</Text>
-        </TouchableOpacity>
-        })}
-        <TouchableOpacity
-          key={'undo'}
-          style={[styles.addCellButton, {backgroundColor:'gray'}]}
-          onPress={() => undo()}
-        >
-          <Icon name={'undo'} size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          key={'redo'}
-          style={[styles.addCellButton, {backgroundColor:'gray'}]}
-          onPress={() => redo()}
-        >
-          <Icon name={'redo'} size={18} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.addCellRow}>
+          {Object.entries(typeDetail).map(([k, v], i)=>{
+            const buttonStyle:StyleProp<ViewStyle> = {
+              backgroundColor: v[theme]
+            }
+            return <TouchableOpacity
+            key={i}
+            style={[styles.addCellButton, buttonStyle]}
+            onPress={() => addCell(k as CellType)}
+          >
+            <Icon name={v.iconName} size={v.iconSize} color="#fff" />
+            <Text style={styles.addCellButtonText}>{lang(k)}</Text>
+          </TouchableOpacity>
+          })}
+        </View>
+        <View style={styles.addCellRow}>
+          <TouchableOpacity
+            key={'undo'}
+            style={[styles.addCellButton, {backgroundColor:'gray'}]}
+            onPress={() => undo()}
+          >
+            <Icon name={'undo'} size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            key={'redo'}
+            style={[styles.addCellButton, {backgroundColor:'gray'}]}
+            onPress={() => redo()}
+          >
+            <Icon name={'redo'} size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -215,10 +231,14 @@ const styles = StyleSheet.create({
   addCellContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    flexWrap:'wrap',
     padding: 15,
     borderTopWidth: 1,
     borderTopColor: '#888',
     zIndex: -1
+  },
+  addCellRow: {
+    flexDirection: 'row',
   },
   addCellButton: {
     flexDirection: 'row',
@@ -226,7 +246,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 4,
-    marginHorizontal: 5,
+    margin: 5,
   },
   addCellButtonText: {
     color: '#fff',

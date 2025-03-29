@@ -10,7 +10,6 @@ export default ({
     autoCapitalize = 'none',
     autoCorrect = false,
     minHeight = 40,
-    maxHeight = 200,
   }: {
     value: string;
     onChangeText: (text: string) => void;
@@ -29,7 +28,7 @@ export default ({
       // 높이를 minHeight와 maxHeight 사이로 제한
       const newHeight = Math.max(
         minHeight, 
-        Math.min(contentHeight, maxHeight)
+        contentHeight
       );
   
       setHeight(newHeight);
@@ -48,7 +47,6 @@ export default ({
             textAlignVertical: 'top',
           }
         ]}
-        scrollEnabled={height >= maxHeight}
         placeholder={placeholder}
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}

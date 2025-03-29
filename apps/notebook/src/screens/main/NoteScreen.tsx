@@ -8,19 +8,13 @@ import { TextInput } from 'react-native-paper';
 import { useAuthContext } from '@blacktokki/account';
 import { navigate } from '@blacktokki/navigation';
 import useContent from '../../hooks/useContent';
-import NoteSection, { CellHistory } from './NoteSection';
+import NoteSection, { CellHistory, Hash } from './NoteSection';
 import { CellType } from '../../types';
 import { toRaw } from '@blacktokki/editor';
 import { useOpenedContext } from '../../hooks/useNotebookContext';
-import { CellItem } from '../../components/Cell';
+
 
 const unsaved:Record<number, CellHistory> = {}
-
-const useIsSaved = (init:CellItem[]|undefined, cells:CellItem[]|undefined)=>{
-  const original = useMemo(()=>JSON.stringify(init?.map(v=>({...v, id:undefined}))), [init])
-  const isSaved = useMemo(()=>cells===undefined || original===JSON.stringify(cells?.map(v=>({...v, id:undefined}))), [original, cells])
-  return isSaved
-}
 
 export default function NoteScreen({ navigation, route }: StackScreenProps<any, 'Editor'>) {
   const params = {
@@ -44,7 +38,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
       executionCount:v.option.EXECUTION_COUNT?parseInt(v.option.EXECUTION_COUNT, 10):null, 
       status:(v.option.EXECUTION_STATUS || 'idle') as any, 
       inputVisible: v.option.INPUT_VISIBLE!==undefined?v.option.INPUT_VISIBLE:true,
-      outputVisible:v.option.OUTPUT_VISIBLE!==undefined?v.option.OUTPUT_VISIBLE:true}))
+      outputVisible:v.option.OUTPUT_VISIBLE!==undefined?v.option.OUTPUT_VISIBLE:true})).map(v=>({...v, hash: Hash.get(v)}))
   }, [contents])
   const unsavedKey = params.created?params.parentId:params.id
   const [cellsHistory, _setHistory] = useState<CellHistory | undefined>()
@@ -61,7 +55,7 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   const contentMutation = useContentMutation()
   const [title, setTitle] = useState<string>()
   const [editPage, setEditPage] = useState(false)
-  const isSaved = useIsSaved(init, cells)
+  const isSaved = useMemo(()=>cells===undefined || init && Hash.equals(init, cells) || init===undefined, [init, cells])
   const onSaveTitle = () => {
         if (!auth.user){
           return;
@@ -110,30 +104,31 @@ export default function NoteScreen({ navigation, route }: StackScreenProps<any, 
   useLayoutEffect(()=>{
     const history =  unsaved[unsavedKey]
     if(init){
-        if(params.created){
-          setEditPage(false)
-          setTitle(lang("New Page"))
-          addOpenedIds(params.parentId, true)
-          setHistory(history || {
-            past: [],
-            present: [],
-            future: [],
-            cells: {}
-          })
-        }
-        else if (content){
-          setEditPage(false)
-          setTitle(content.title)
-          addOpenedIds(content.id, false)
-          setHistory(history || {
-            past: [],
-            present: init.map(v=>v.id),
-            future: [],
-            cells: Object.fromEntries(init.map(v=>[v.id, v]))
-          })
-        }
+      if(params.created){
+        setEditPage(false)
+        setTitle(lang("New Page"))
+        addOpenedIds(params.parentId, true)
+        setHistory(history || {
+          past: [],
+          present: [],
+          future: [],
+          cells: {}
+        })
+      }
+      else if (content){
+        setEditPage(false)
+        setTitle(content.title)
+        addOpenedIds(content.id, false)
+        setHistory(history || {
+          past: [],
+          present: init.map(v=>v.id),
+          future: [],
+          cells: Object.fromEntries(init.map(v=>[v.id, v]))
+        })
+      }
+      cellRef.current?.unselected()
     }
-    }, [init, content])
+  }, [init, content])
 
   useLayoutEffect(() => {
     if (params.created || content){

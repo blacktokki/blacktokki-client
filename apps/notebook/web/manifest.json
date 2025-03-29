@@ -1,12 +1,10 @@
 {
   "background_color": "#ffffff",
   "display": "standalone",
-  "lang": "ko",
   "name": "Blacktokki Notebook",
   "short_name": "Blacktokki Notebook",
   "start_url": "/blacktokki-notebook/?utm_source=web_app_manifest",
   "orientation": "portrait",
-  "theme_color": "#000000",
   "id": "notebook",
   "description": "",
   "icons": [

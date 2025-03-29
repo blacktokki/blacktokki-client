@@ -1,15 +1,24 @@
 import React from 'react';
-import ContentGroupList from '../components/ContentGroupList';
+import ContentGroupList, { AddNoteButton } from '../components/ContentGroupList';
 import { ScrollView } from 'react-native';
 import { List } from 'react-native-paper';
-import { useLangContext } from '@blacktokki/core';
+import { useLangContext, View } from '@blacktokki/core';
 import { navigate } from '@blacktokki/navigation';
 
 export default ()=>{
     const {lang} = useLangContext()
-    return <ScrollView style={{flex:1}}>
+    return <View style={{flex:1}}>
         <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>navigate('HomeScreen')} />
-        <ContentGroupList type={'PAGE'} />
-        <ContentGroupList type={'NOTEV2'} extra={true} />
-    </ScrollView>
+        <List.Subheader style={{}} selectable={false}>{lang("Open Editors")}</List.Subheader>
+        <ScrollView style={{minHeight:'30%', maxHeight:'60%', flexShrink:1, flexGrow:0.1}}>
+            <ContentGroupList type={'PAGE'} />
+        </ScrollView>
+        <View style={{flexDirection:'row'}}>
+            <List.Subheader style={{flex:1}} selectable={false}>{lang("Notes")}</List.Subheader>
+            <AddNoteButton/>
+        </View>
+        <ScrollView style={{minHeight:'30%', maxHeight:'60%', flexShrink:0.1, flexGrow:1}}>
+            <ContentGroupList type={'NOTEV2'} extra={true} />
+        </ScrollView>
+    </View>
 }

@@ -3,6 +3,7 @@ import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 // @ts-ignore
 import { MaterialIcons as Icon } from 'react-native-vector-icons';
 import { RenderItem, SortableListProps } from './SortableListBase';
+import { useIsMobile } from '@blacktokki/core';
 // Import platform-specific components
 let DraggableFlatList: any;
 let ScaleDecorator: any;
@@ -96,6 +97,7 @@ const SortableCellsList = <T, >({
 }) => {
   const [codes, setCodes] = useState(items.map(v=>''+ getId(v)))
   const [tempCodes, setTempCodes] = useState<string[]>()
+  const isMobile = useIsMobile()
   useEffect(()=>{
     if (tempCodes){
       setCodes(tempCodes)
@@ -108,15 +110,14 @@ const SortableCellsList = <T, >({
     }
   }, [items])
   const sensors = DndCore.useSensors(
-    DndCore.useSensor(DndCore.PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    DndCore.useSensor(DndCore.TouchSensor, {
+    isMobile? DndCore.useSensor(DndCore.TouchSensor, {
       activationConstraint: {
         distance: 8,
       }
+    }): DndCore.useSensor(DndCore.PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
     }),
     DndCore.useSensor(DndCore.KeyboardSensor, {
       coordinateGetter: DndSortable.sortableKeyboardCoordinates,

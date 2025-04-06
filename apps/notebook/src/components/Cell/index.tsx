@@ -67,8 +67,8 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
     onLayout={e=>{heightRef.current[item.id]=e.nativeEvent.layout.height}}
     >
       {/* Cell sidebar with execution count and drag handle */}
-      <View style={styles.cellHandle}>
-        {typeDetail[item.type].executable && (
+      <View style={[styles.cellHandle, {paddingTop: (item.inputVisible || (typeDetail[item.type].executable && item.outputVisible)) ?15:6}]}>
+        {(item.inputVisible || item.outputVisible) && typeDetail[item.type].executable && (
           <View style={styles.executionCount}>
             <Text style={styles.executionCountText}>
               {item.executionCount ? `[${item.executionCount}]` : '[ ]'}
@@ -94,7 +94,7 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
           </TouchableOpacity>
           <View style={{flex:1, paddingHorizontal:5}}>
             {/* Cell toolbar */}
-            <View style={styles.cellToolbar}>
+            {item.inputVisible && <View style={styles.cellToolbar}>
               <TouchableOpacity 
                 style={styles.toolbarButton}
                 onPress={() => setSelectedCellId(isSelected?null:item.id)}
@@ -122,7 +122,7 @@ export default React.memo(({theme, item, isSelected, heightRef, setCells, execut
               >
                 <Icon name="delete" size={20} color="#F44336" />
               </TouchableOpacity>
-            </View>
+            </View>}
             {/* SUMMARY CELL */}
             {!item.inputVisible && <TouchableOpacity style={styles.summaryButton} onPress={() => toggleInputVisibility(item.id)}>
               <Text style={styles.summaryText}>● ● ●</Text>
@@ -251,7 +251,6 @@ const useStyles = createUseStyle((theme)=>({
       width: 40,
       backgroundColor: Colors[theme].codeBackground,
       alignItems: 'center',
-      paddingTop: 15,
     },
     cellContent: {
       flex: 1,
@@ -330,11 +329,11 @@ const useStyles = createUseStyle((theme)=>({
       backgroundColor: Colors[theme].border,
     },
     summaryButton: {
-      padding:10, 
+      paddingTop:4, 
       width:'100%'
     },
     summaryText: {
-      minHeight: 20,
+      minHeight: 16,
       color: 'gray',
       backgroundColor: Colors[theme].background,
       fontSize:10

@@ -1,6 +1,6 @@
 import ContentListScreen from "./main/ContentListScreen";
 import NoteScreen from "./main/NoteScreen";
-import HomeScreen from "./main/HomeScreen";
+import HomeScreen from "./main/home/HomeScreen";
 
 export const main = {
     HomeScreen:{

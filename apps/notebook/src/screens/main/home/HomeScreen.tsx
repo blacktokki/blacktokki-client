@@ -4,21 +4,21 @@ import { ScrollView, View} from 'react-native';
 import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections, navigate } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation';
-import ContentGroupList, { AddNoteButton } from '../../components/ContentGroupList';
+import ContentGroupSection, { AddNoteButton } from './ContentGroupSection';
 import { List } from 'react-native-paper';
 
 
 const OpenedEditorsTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
-      <ContentGroupList type={'PAGE'} />
+      <ContentGroupSection type={'PAGE'} />
     </ScrollView>
 }
 
 const NoteTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
-      <ContentGroupList type={'NOTEV2'} extra={false}/>
+      <ContentGroupSection type={'NOTEV2'} extra={false}/>
     </ScrollView>
 }
 

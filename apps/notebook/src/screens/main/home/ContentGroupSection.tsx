@@ -4,9 +4,9 @@ import { navigate } from '@blacktokki/navigation';
 
 import MaterialCommunityIcon from 'react-native-paper/src/components/MaterialCommunityIcon';
 import { Colors, useColorScheme, useLangContext, useResizeContext, View } from '@blacktokki/core';
-import useContentList from '../hooks/useContentList';
-import {useOpenedContext} from '../hooks/useNotebookContext';
-import { Content } from '../types';
+import useContentList from '../../../hooks/useContentList';
+import {useOpenedContext} from '../../../hooks/useNotebookContext';
+import { Content } from '../../../types';
 import { I18nManager } from 'react-native';
 
 const getItemPadding = (isLandscape:boolean)=>{

@@ -4,21 +4,20 @@ import { navigate } from '@blacktokki/navigation';
 
 import MaterialCommunityIcon from 'react-native-paper/src/components/MaterialCommunityIcon';
 import { Colors, useColorScheme, useLangContext, useResizeContext, View } from '@blacktokki/core';
-import useContentList from '../../../hooks/useContentList';
-import {useOpenedContext} from '../../../hooks/useNotebookContext';
 import { Content } from '../../../types';
 import { I18nManager } from 'react-native';
+import { useRecentPages, useWikiPages } from '../../../hooks/useWikiStorage';
 
 const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
 }
 
-const ContentSubGroupList = (props:{note:Content}) => {
+const ContentGroupList = (props:{note:Content}) => {
   const theme = useColorScheme()
   const { lang } = useLangContext()
   const [expanded, setExpanded] = React.useState(false);
   const window = useResizeContext()
-  const data = useContentList(expanded?props.note.id:undefined);
+  const data:any[] = []
   const handlePress = () => setExpanded(!expanded);
   const itemPadding = getItemPadding(window==='landscape')
   const Left = ({isExpanded}:{isExpanded:boolean}) => {
@@ -50,33 +49,26 @@ const ContentSubGroupList = (props:{note:Content}) => {
 export const AddNoteButton = () => {
   const window = useResizeContext()
   const itemPadding = getItemPadding(window==='landscape')
-  return <TouchableRipple style={{position:'absolute', right:0}} onPress={()=>navigate('ContentListScreen', {type:'NOTEV2'})}><List.Icon icon='plus' style={{margin:itemPadding}}></List.Icon></TouchableRipple>
+  return <TouchableRipple style={{position:'absolute', right:0}} onPress={()=>navigate('ContentListScreen', {type:'NOTE'})}><List.Icon icon='plus' style={{margin:itemPadding}}></List.Icon></TouchableRipple>
 }
 
 
-const ContentGroupList = ( props : {type:'PAGE'}| {type:'NOTEV2', extra:boolean}) => {
+const ContentGroupSection = ( props : {type:'PAGE'}| {type:'NOTE', extra:boolean}) => {
   const { lang } = useLangContext()
-  const notes = useContentList(undefined, 'NOTEV2');
-  const pages = useContentList(undefined, props.type==='PAGE'?'PAGE':undefined);
-  const { openedIds } = useOpenedContext()
-  const data = props.type === 'NOTEV2'? notes:openedIds.map((v)=>v.created?{
-    parentId:v.parentId,
-    title:lang("New Page") + `(${notes?.find(v2=>v2.id===v.parentId)?.title})`
-  }:{
-    id:v.id,
-    title:pages?.find(v2=>v2.id===v.id)?.title
-  })
+  const notes = useWikiPages()
+  const pages = useRecentPages()
+  const data = (props.type === 'NOTE'? notes:pages).data
   const window = useResizeContext()
   const itemPadding = getItemPadding(window==='landscape')
   return (
     <List.Section>
         {data && data.map(v=>
-          (props.type==='NOTEV2' && props.extra)?
-          <ContentSubGroupList key={v.id} note={v as Content}/>:
-          <List.Item key={v.id || v.parentId} left={(_props)=><List.Icon {..._props} icon={props.type==='NOTEV2'?"notebook":"file-document-edit"} />} title={v.title} onPress={()=>navigate(props.type==='NOTEV2'?'ContentListScreen':'NoteScreen', v.id!==undefined?{id:v.id}:{parentId:v.parentId})} style={{padding:itemPadding }} />
+          (props.type==='NOTE' && props.extra)?
+          <ContentGroupList key={v.id} note={v as Content}/>:
+          <List.Item key={v.id} left={(_props)=><List.Icon {..._props} icon={props.type==='NOTE'?"notebook":"file-document-edit"} />} title={v.title} onPress={()=>navigate('WikiPage', {title:v.title})} style={{padding:itemPadding }} />
         )}
     </List.Section>
   );
 };
 
-export default ContentGroupList;
+export default ContentGroupSection;

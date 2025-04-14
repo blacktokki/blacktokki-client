@@ -1,20 +1,18 @@
-export type CellType = 'EDITOR'|'MARKDOWN'|'LINK'
-
 export type PostContent = {
     userId: number,
     parentId: number,
-    type: 'NOTEV2'|'PAGE'| CellType,
+    type: 'NOTE'|'BOOKMARK',
     order: number,
     title: string,
     description?: string
-    option:{
-        INPUT?: string,
-        IMAGE_URL?: string,
-        EXECUTION_COUNT?: string,
-        EXECUTION_STATUS?: string,
-        INPUT_VISIBLE?:boolean,
-        OUTPUT_VISIBLE?:boolean
-    }
+    // option:{
+    //     INPUT?: string,
+    //     IMAGE_URL?: string,
+    //     EXECUTION_COUNT?: string,
+    //     EXECUTION_STATUS?: string,
+    //     INPUT_VISIBLE?:boolean,
+    //     OUTPUT_VISIBLE?:boolean
+    // }
 }
 
 export type Content = PostContent & {
@@ -28,3 +26,11 @@ export type Link = {
     url:string,
     imageUrl?:string
 }
+  
+export type NavigationParamList = {
+    Home: undefined;
+    WikiPage: { title: string };
+    EditPage: { title: string };
+    RecentPages: undefined;
+    MovePage: { title: string };
+};

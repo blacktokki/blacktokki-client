@@ -43,11 +43,13 @@ const renderIndexDetector = (
 
 export default function HomeSection({
   tabViews,
-  title,
+  homeView,
+  headerTitle,
   children,
 }: {
   tabViews: TabViewOption[];
-  title: string;
+  homeView: { title: string; headerRight: () => React.JSX.Element };
+  headerTitle?: string;
   children?: React.ReactNode;
 }) {
   const navigation = useNavigation<any>();
@@ -57,14 +59,10 @@ export default function HomeSection({
   useLayoutEffect(() => {
     const index = route?.params?.tab | 0;
     setTimeout(() => {
-      navigation.setOptions(
-        windowType === 'portrait'
-          ? tabViews[index]
-          : {
-              title,
-              headerRight: () => <></>,
-            }
-      );
+      navigation.setOptions({
+        ...(windowType === 'portrait' ? tabViews[index] : homeView),
+        ...(headerTitle ? { title: headerTitle } : {}),
+      });
     }, 1);
   }, [navigation, route, windowType]);
   useEffect(() => {
@@ -74,21 +72,24 @@ export default function HomeSection({
   return home ? (
     <ScrollView contentContainerStyle={{ flex: 1, alignItems: 'center' }}>{children}</ScrollView>
   ) : (
-    <TabView
-      tabs={Object.fromEntries(
-        tabViews.map((v, i) => [
-          v.title,
-          {
-            ...v,
-            component: i === 0 ? renderIndexDetector(v.component, headerSetter) : v.component,
-          },
-        ])
-      )}
-      tabBarPosition="bottom"
-      index={parseInt(route.params?.['tab'] || 0, 10)}
-      onTab={(index) => {
-        navigation.setParams({ tab: index });
-      }}
-    />
+    <>
+      {homeView.headerRight()}
+      <TabView
+        tabs={Object.fromEntries(
+          tabViews.map((v, i) => [
+            v.title,
+            {
+              ...v,
+              component: i === 0 ? renderIndexDetector(v.component, headerSetter) : v.component,
+            },
+          ])
+        )}
+        tabBarPosition="bottom"
+        index={parseInt(route.params?.['tab'] || 0, 10)}
+        onTab={(index) => {
+          navigation.setParams({ tab: index });
+        }}
+      />
+    </>
   );
 }

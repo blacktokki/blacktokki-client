@@ -1,4 +1,4 @@
-import { Content, PostContent, CellType, Link } from '../types';
+import { Content, PostContent, Link } from '../types';
 import { axiosCreate } from '@blacktokki/account';
 
 const axios = axiosCreate("notebook")
@@ -23,14 +23,6 @@ export const patchContent = async ({id, updated}:{id:number, updated:PostContent
 
 export const deleteContent = async (id: number) =>{
     await axios.delete(`/api/v1/content/${id}`)
-}
-
-export const postCells = async (contents:{created:(PostContent & {type:CellType})[], deleted:{parentId:number}}) => {
-    await axios.post(`/api/v1/content/bulk`, contents)
-}
-
-export const executeCells = async (cells:({type: CellType |'OUTPUT'} & ({query:string} | {id:number}))[]) => { // TBA
-    return (await axios.post(`/api/v1/cell/`, cells)).data
 }
 
 const _tmp = (re:RegExp, description :string)=>{

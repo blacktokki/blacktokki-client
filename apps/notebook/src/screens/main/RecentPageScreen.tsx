@@ -1,0 +1,74 @@
+import React from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+//@ts-ignore
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { NavigationParamList } from '../../types';
+import { useRecentPages } from '../../hooks/useWikiStorage';
+import { createCommonStyles } from '../../styles';
+import { useColorScheme } from '@blacktokki/core';
+
+const updatedOffset = new Date().getTimezoneOffset()
+
+const updatedFormat = (_updated:string) => {
+  const _date = new Date(_updated)
+  _date.setMinutes(_date.getMinutes() - updatedOffset)
+  const updated = _date.toISOString().slice(0, 16)
+    const date = updated.slice(0, 10)
+    const today = new Date().toISOString().slice(0, 10)
+    return date==today?updated.slice(11):date;
+}
+
+
+export const RecentPagesScreen: React.FC = () => {
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
+  
+  const { data: recentPages = [], isLoading } = useRecentPages();
+  
+  const handlePagePress = (title: string) => {
+    navigation.navigate('WikiPage', { title });
+  };
+  
+
+  return (
+    <View style={commonStyles.container}>      
+      {isLoading ? (
+        <View style={[commonStyles.card, commonStyles.centerContent]}>
+          <Text style={commonStyles.text}>로딩 중...</Text>
+        </View>
+      ) : recentPages.length > 0 ? (
+        <FlatList
+          data={recentPages}
+          keyExtractor={(item) => item.title}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={commonStyles.card}
+              onPress={() => handlePagePress(item.title)}
+            >
+              <Text style={commonStyles.title}>{item.title}</Text>
+              <Text style={commonStyles.smallText}>
+                최근 방문: {updatedFormat(item.updated)}
+              </Text>
+            </TouchableOpacity>
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        />
+      ) : (
+        <View style={[commonStyles.card, commonStyles.centerContent]}>
+          <Text style={commonStyles.text}>
+            최근 방문한 문서가 없습니다.
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  backButton: {
+    padding: 8,
+  },
+});

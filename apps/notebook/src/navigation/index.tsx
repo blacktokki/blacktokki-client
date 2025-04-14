@@ -5,9 +5,9 @@ import { main } from '../screens';
 import Drawer from './Drawer';
 import { Colors, useColorScheme } from '@blacktokki/core';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
-import { NotebookProvider } from '../hooks/useNotebookContext';
+import { SearchBar } from '../components/SearchBar';
 
-const getConfig = async () => {
+const getConfig = async (theme:'light'|'dark') => {
     const Linking = await import('expo-linking')
     return {
         main,
@@ -20,11 +20,11 @@ const getConfig = async () => {
             }
         },
         rootScreen: {
-            main: 'HomeScreen',
+            main: 'Home',
             login: 'LoginScreen'
         },
         headerLeftIcon: <List.Icon icon='backburger' style={{left:-18, top: -14}} />,
-        headerRight: <></>,
+        headerRight: <SearchBar/>,
         modals: [],
         drawer: <Drawer/>
     } as NavigationConfig
@@ -34,12 +34,10 @@ export default () => {
     const scheme = useColorScheme()
     const preTheme = scheme == 'dark' ? MD2DarkTheme : MD2LightTheme;
     const theme:typeof preTheme = {...preTheme, colors:{...preTheme.colors, primary:Colors[scheme].text} }
-    const NavigationLazy = React.lazy(()=>getConfig().then(config=> ({"default":()=><Navigation config={config}/>})))
+    const NavigationLazy = React.lazy(()=>getConfig(scheme).then(config=> ({"default":()=><Navigation config={config}/>})))
     return <PaperProvider theme={theme}>
-        <NotebookProvider>
             <Suspense fallback={<></>}>
                 <NavigationLazy/>
             </Suspense>
-        </NotebookProvider>
     </PaperProvider>
 }

@@ -5,7 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 //@ts-ignore
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
-import { useRecentPages } from '../../hooks/useWikiStorage';
+import { useNotePages, useRecentPages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme } from '@blacktokki/core';
 
@@ -26,10 +26,10 @@ export const RecentPagesScreen: React.FC = () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   
-  const { data: recentPages = [], isLoading } = useRecentPages();
+  const { data: recentPages = [], isLoading } = useNotePages();
   
   const handlePagePress = (title: string) => {
-    navigation.navigate('WikiPage', { title });
+    navigation.navigate('NotePage', { title });
   };
   
 
@@ -41,7 +41,7 @@ export const RecentPagesScreen: React.FC = () => {
         </View>
       ) : recentPages.length > 0 ? (
         <FlatList
-          data={recentPages}
+          data={recentPages.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime() )}
           keyExtractor={(item) => item.title}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -50,7 +50,7 @@ export const RecentPagesScreen: React.FC = () => {
             >
               <Text style={commonStyles.title}>{item.title}</Text>
               <Text style={commonStyles.smallText}>
-                최근 방문: {updatedFormat(item.updated)}
+                최근 수정: {updatedFormat(item.updated)}
               </Text>
             </TouchableOpacity>
           )}
@@ -59,7 +59,7 @@ export const RecentPagesScreen: React.FC = () => {
       ) : (
         <View style={[commonStyles.card, commonStyles.centerContent]}>
           <Text style={commonStyles.text}>
-            최근 방문한 문서가 없습니다.
+            최근 수정한 노트가 없습니다.
           </Text>
         </View>
       )}

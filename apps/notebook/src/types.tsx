@@ -5,14 +5,14 @@ export type PostContent = {
     order: number,
     title: string,
     description?: string
-    // option:{
+    option:{
     //     INPUT?: string,
     //     IMAGE_URL?: string,
     //     EXECUTION_COUNT?: string,
     //     EXECUTION_STATUS?: string,
     //     INPUT_VISIBLE?:boolean,
     //     OUTPUT_VISIBLE?:boolean
-    // }
+    }
 }
 
 export type Content = PostContent & {
@@ -29,7 +29,7 @@ export type Link = {
   
 export type NavigationParamList = {
     Home: undefined;
-    WikiPage: { title: string };
+    NotePage: { title: string };
     EditPage: { title: string };
     RecentPages: undefined;
     MovePage: { title: string };

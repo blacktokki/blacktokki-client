@@ -2,71 +2,79 @@ import * as React from 'react';
 import { List, TouchableRipple } from 'react-native-paper';
 import { navigate } from '@blacktokki/navigation';
 
-import MaterialCommunityIcon from 'react-native-paper/src/components/MaterialCommunityIcon';
-import { Colors, useColorScheme, useLangContext, useResizeContext, View } from '@blacktokki/core';
-import { Content } from '../../../types';
-import { I18nManager } from 'react-native';
-import { useRecentPages, useWikiPages } from '../../../hooks/useWikiStorage';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
+import { useRecentPages, useNotePages, useDeleteRecentPage, useLastPage, useAddRecentPage } from '../../../hooks/useNoteStorage';
 
 const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
 }
 
-const ContentGroupList = (props:{note:Content}) => {
-  const theme = useColorScheme()
+const RECENT_COUNT = 5
+
+const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
   const { lang } = useLangContext()
-  const [expanded, setExpanded] = React.useState(false);
-  const window = useResizeContext()
-  const data:any[] = []
-  const handlePress = () => setExpanded(!expanded);
-  const itemPadding = getItemPadding(window==='landscape')
-  const Left = ({isExpanded}:{isExpanded:boolean}) => {
-    return <MaterialCommunityIcon
-        name={isExpanded ? 'chevron-down' : 'chevron-right'}
-        color={Colors[theme].text}
-        size={24}
-        direction={I18nManager.getConstants().isRTL ? 'rtl' : 'ltr'}
-      />
-  }
-  return <View>
-      <List.Accordion
-        title={props.note.title}
-        expanded={expanded && data!==undefined}
-        style={{padding:itemPadding}}
-        onPress={()=>navigate('ContentListScreen', {id:props.note.id})}
-        left={(_props)=><List.Icon {..._props} icon={expanded?'chevron-down' : 'chevron-right'} />}
-        right={()=>undefined}
-      >
-        {data && data.slice(0, 10).map(v=><List.Item key={v.id} left={(_props)=><List.Icon {..._props} icon={"file-document"} />} title={v.title} onPress={()=>navigate('NoteScreen', {id:v.id})} style={{padding:itemPadding}} />)}
-        {((data?.length || 0) > 10) && <List.Item left={(_props)=><List.Icon {..._props} icon={"file-document-multiple"} />} title={lang("more...")} onPress={()=>navigate("ContentListScreen", {id: props.note.id})} style={{padding:itemPadding}}  />}
-      </List.Accordion>
-      <TouchableRipple style={{position:'absolute', justifyContent:'center', paddingLeft: 8 + itemPadding, width:40 + itemPadding * 2, height:40 + itemPadding*2 }} onPress={handlePress}>
-          <Left isExpanded={expanded}/>
-      </TouchableRipple>
-    </View>
-}
-
-export const AddNoteButton = () => {
-  const window = useResizeContext()
-  const itemPadding = getItemPadding(window==='landscape')
-  return <TouchableRipple style={{position:'absolute', right:0}} onPress={()=>navigate('ContentListScreen', {type:'NOTE'})}><List.Icon icon='plus' style={{margin:itemPadding}}></List.Icon></TouchableRipple>
-}
-
-
-const ContentGroupSection = ( props : {type:'PAGE'}| {type:'NOTE', extra:boolean}) => {
-  const { lang } = useLangContext()
-  const notes = useWikiPages()
+  const notes = useNotePages()
   const pages = useRecentPages()
-  const data = (props.type === 'NOTE'? notes:pages).data
+  const { data:lastPage } = useLastPage()
+  const tabRef = React.useRef<NodeJS.Timeout>();
+  const addRecentPage = useAddRecentPage()
+  const deleteRecentPage = useDeleteRecentPage()
+  const data = (props.type === 'NOTE'? notes.data?.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime() ):pages.data)
   const window = useResizeContext()
   const itemPadding = getItemPadding(window==='landscape')
+  const noteOnPress = (title:string)=> {
+    if (title === lastPage?.title){
+      if (tabRef.current){
+        clearTimeout(tabRef.current)
+        tabRef.current = undefined
+        addRecentPage.mutate({title});
+      }
+      else {
+        tabRef.current = setTimeout(()=>{tabRef.current = undefined}, 500)
+      }
+    }
+    navigate('NotePage', {title})
+  }
+  const noteOnLongPress = (title:string) => {
+    if (tabRef.current){
+      clearTimeout(tabRef.current)
+      tabRef.current = undefined
+    }
+    addRecentPage.mutate({title, direct:true});
+  }
   return (
     <List.Section>
-        {data && data.map(v=>
-          (props.type==='NOTE' && props.extra)?
-          <ContentGroupList key={v.id} note={v as Content}/>:
-          <List.Item key={v.id} left={(_props)=><List.Icon {..._props} icon={props.type==='NOTE'?"notebook":"file-document-edit"} />} title={v.title} onPress={()=>navigate('WikiPage', {title:v.title})} style={{padding:itemPadding }} />
-        )}
+        {props.type==='PAGE' && lastPage && (data?.find(v=>v.id===lastPage.id) === undefined) && <List.Item 
+            left={(_props)=><List.Icon {..._props} icon={"file-document"} />}
+            title={lastPage.title} 
+            onPress={()=>noteOnPress(lastPage.title)}
+            onLongPress={()=>noteOnLongPress(lastPage.title)}
+            style={{padding:itemPadding }}
+            titleStyle={{fontStyle:'italic'}} 
+          />}
+        {data && (
+         props.type === 'NOTE'
+         ?<>{data.slice(0, RECENT_COUNT).map(v=><List.Item 
+          key={v.id} 
+          left={(_props)=><List.Icon {..._props} icon={"notebook"} />}
+          title={v.title} 
+          onPress={()=>noteOnPress(v.title)}
+          onLongPress={()=>noteOnLongPress(v.title)}
+          style={{padding:itemPadding }} 
+        />)}
+        {((data?.length || 0) > RECENT_COUNT) && <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>navigate("RecentPages")} style={{padding:itemPadding}}  />}
+        </>
+        :data.map(v=><List.Item 
+          key={v.id} 
+          left={(_props)=><List.Icon {..._props} icon={"file-document-edit"} />}
+          right={(_props)=><TouchableRipple style={{justifyContent:'center', borderRadius:itemPadding, width:40 + itemPadding * 2, height:40 + itemPadding*2, margin:-itemPadding }} onPress={()=>deleteRecentPage.mutate(v.title)}>
+              <List.Icon style={{left:itemPadding -7}} icon={"close"} />
+            </TouchableRipple>}
+          title={v.title} 
+          onPress={()=>navigate('NotePage', {title:v.title})} 
+          style={{padding:itemPadding }} 
+        />)
+      )}
     </List.Section>
   );
 };

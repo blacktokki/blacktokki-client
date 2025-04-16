@@ -4,7 +4,7 @@ import { EditPageScreen } from "./main/EditPageScreen";
 import HomeScreen from "./main/home/HomeScreen";
 import { MovePageScreen } from "./main/MovePageScreen";
 import { RecentPagesScreen } from "./main/RecentPageScreen";
-import { WikiPageScreen } from "./main/WikiPageScreen";
+import { NotePageScreen } from "./main/NotePageScreen";
 
 export const main = {
     Home:{
@@ -12,10 +12,10 @@ export const main = {
       component:HomeScreen,
       path:'home',
     },
-    WikiPage:{
+    NotePage:{
       title:'Blacktokki Notebook',
-      component:WikiPageScreen,
-      path:'wiki',
+      component:NotePageScreen,
+      path:'page',
     },
     EditPage:{
       title:'Blacktokki Notebook',

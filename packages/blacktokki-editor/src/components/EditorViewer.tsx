@@ -6,7 +6,9 @@ import { EditorProps } from '../types';
 
 const emptyFunction = () => {};
 
-export default (props: EditorProps & { active: boolean; onPress?: () => void }) => {
+export default (
+  props: EditorProps & { active: boolean; onPress?: () => void; onLink?: (url: string) => void }
+) => {
   const [ready, setReady] = useState<boolean>(false);
   useEffect(() => {
     if (!props.active) setReady(false);
@@ -17,10 +19,11 @@ export default (props: EditorProps & { active: boolean; onPress?: () => void }) 
         <Tinymce
           readonly
           theme={props.theme}
-          value={`<div class="mceNonEditable" style="width:100%;height:100%">${props.value}</div>`}
+          value={props.value}
           setValue={emptyFunction}
           autoResize={props?.autoResize}
           onPress={props.onPress || emptyFunction}
+          onLink={props.onLink}
           onReady={() => {
             if (!ready) {
               setReady(true);

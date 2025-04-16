@@ -2,10 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Alert, StyleSheet } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-//@ts-ignore
-import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
-import { useMovePage } from '../../hooks/useWikiStorage';
+import { useMovePage, useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme } from '@blacktokki/core';
 
@@ -17,13 +15,14 @@ export const MovePageScreen: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
+  const { data: page, isLoading } = useNotePage(title);
   const commonStyles = createCommonStyles(theme);
   
   const mutation = useMovePage();
   
   const handleMove = () => {
     if (!newTitle.trim()) {
-      Alert.alert('오류', '새 문서 제목을 입력하세요.');
+      Alert.alert('오류', '새 노트 제목을 입력하세요.');
       return;
     }
     
@@ -40,33 +39,38 @@ export const MovePageScreen: React.FC = () => {
             index: 1,
             routes: [
               { name: 'Home' },
-              { name: 'WikiPage', params: { title: data.newTitle } },
+              { name: 'NotePage', params: { title: data.newTitle } },
             ],
           });
         },
         onError: (error:any) => {
-          Alert.alert('오류', error.message || '문서 이동 중 오류가 발생했습니다.');
+          Alert.alert('오류', error.message || '노트 이동 중 오류가 발생했습니다.');
         }
       }
     );
   };
-  
   const handleCancel = () => {
-    navigation.goBack();
+    navigation.canGoBack() ? navigation.goBack() : navigation.navigate('NotePage', { title });
   };
+
+  useEffect(()=>{
+    if(!isLoading && !page){
+      handleCancel()
+    }
+  }, [page, isLoading])
 
   return (
     <View style={commonStyles.container}>      
       <View style={commonStyles.card}>
-        <Text style={commonStyles.text}>현재 문서 제목:</Text>
+        <Text style={commonStyles.text}>현재 노트 제목:</Text>
         <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>{title}</Text>
         
-        <Text style={commonStyles.text}>새 문서 제목:</Text>
+        <Text style={commonStyles.text}>새 노트 제목:</Text>
         <TextInput
           style={[commonStyles.input, { marginTop: 8 }]}
           value={newTitle}
           onChangeText={setNewTitle}
-          placeholder="새 문서 제목을 입력하세요"
+          placeholder="새 노트 제목을 입력하세요"
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
         />
         

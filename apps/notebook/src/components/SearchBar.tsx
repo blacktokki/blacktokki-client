@@ -1,42 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, FlatList, Text, StyleSheet } from 'react-native';
 //@ts-ignore
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { NavigationParamList } from '../types';
-import { useWikiPages } from '../hooks/useWikiStorage';
+import { Content, NavigationParamList } from '../types';
+import { useNotePages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
 import { useColorScheme } from '@blacktokki/core';
 
-export const SearchBar: React.FC = () => {
-  const [searchText, setSearchText] = useState('');
+let _searchText = ''
+
+export const SearchBar: React.FC<{renderExtra?:(input:string, isFind:boolean)=>React.ReactNode}> = ({renderExtra}) => {
+  const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   
-  const { data: pages = [] } = useWikiPages();
+  const { data: pages = [] } = useNotePages();
   
   const filteredPages = searchText.length > 0
     ? pages.filter(page => 
-        page.title.toLowerCase().includes(searchText.toLowerCase())
+        page.title.toLowerCase().startsWith(searchText.toLowerCase())
       ).slice(0, 5)
     : [];
 
   const handleSearch = () => {
     if (searchText.trim()) {
-      navigation.navigate('WikiPage', { title: searchText.trim() });
+      navigation.navigate('NotePage', { title: searchText.trim() });
       setSearchText('');
       setShowResults(false);
     }
   };
 
   const handlePagePress = (title: string) => {
-    navigation.navigate('WikiPage', { title });
+    navigation.navigate('NotePage', { title });
     setSearchText('');
     setShowResults(false);
   };
+
+  useEffect(()=>{
+    _searchText = searchText;
+  }, [searchText])
+
+  useFocusEffect(()=>{
+    if (searchText !== _searchText){
+      setSearchText(_searchText)
+    }
+  })
 
   return (
     <View style={styles.container}>
@@ -48,7 +60,7 @@ export const SearchBar: React.FC = () => {
             setSearchText(text);
             setShowResults(text.length > 0);
           }}
-          placeholder="문서 검색"
+          placeholder="검색"
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
           onSubmitEditing={handleSearch}
         />
@@ -83,10 +95,11 @@ export const SearchBar: React.FC = () => {
               onPress={handleSearch}
             >
               <Text style={[commonStyles.text, styles.resultText]}>
-                "{searchText}" 새 문서 만들기
+                "{searchText}" 새 노트 만들기
               </Text>
             </TouchableOpacity>
           ) : null}
+          {renderExtra?.(searchText, filteredPages.length > 0)}
         </View>
       )}
     </View>
@@ -96,7 +109,9 @@ export const SearchBar: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    minWidth: 250,
+    width: '100%',
+    maxWidth: 960,
+    zIndex: 999,
   },
   searchContainer: {
     flexDirection: 'row',

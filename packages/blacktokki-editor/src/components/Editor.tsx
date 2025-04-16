@@ -15,6 +15,7 @@ export default (props: EditorProps & { active: boolean; setValue: (v: string) =>
         theme={props.theme}
         value={props.value}
         setValue={props.setValue}
+        autoResize={props?.autoResize}
         onReady={() => {
           if (!ready) {
             setReady(true);

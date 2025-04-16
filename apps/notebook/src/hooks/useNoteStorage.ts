@@ -1,36 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Content, PostContent } from '../types';
-import { getContentList, patchContent, postContent } from '../services/notebook';
+import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { useAuthContext } from '@blacktokki/account';
 
-const WIKI_STORAGE_KEY = '@blacktokki:notebook:contents';
+const PAGE_STORAGE_KEY = '@blacktokki:notebook:contents';
 const RECENT_PAGES_KEY = '@blacktokki:recent_pages';
 const ONLINE = true;
+let lastPage:string|undefined
 
-const getWikiContents = async (): Promise<Content[]> => {
+const getNoteContents = async (): Promise<Content[]> => {
   if (ONLINE){
-    return (await getContentList()).filter(v=>v.type==='NOTE'|| v.type==='BOOKMARK')
+    return (await getContentList()).filter(v=>(v.type==='NOTE'|| v.type==='BOOKMARK'))
   }
   try {
-    const jsonValue = await AsyncStorage.getItem(WIKI_STORAGE_KEY);
+    const jsonValue = await AsyncStorage.getItem(PAGE_STORAGE_KEY);
     return jsonValue ? JSON.parse(jsonValue) : [];
   } catch (e) {
-    console.error('Error loading wiki contents', e);
+    console.error('Error loading page contents', e);
     return [];
   }
 };
 
-const saveWikiContents = async (contents: (Content|PostContent)[], id?:number): Promise<void> => {
+const saveNoteContents = async (contents: (Content|PostContent)[], id?:number): Promise<void> => {
   if (ONLINE){
     const content = contents.find(v=>id===(v as {id?:number}).id);
-    content && await (id?patchContent({id, updated:content}):postContent(content));
+    if (content){
+      await (id?patchContent({id, updated:content}):postContent(content));
+    }
   }
   try {
     const jsonValue = JSON.stringify(contents);
-    await AsyncStorage.setItem(WIKI_STORAGE_KEY, jsonValue);
+    await AsyncStorage.setItem(PAGE_STORAGE_KEY, jsonValue);
   } catch (e) {
-    console.error('Error saving wiki contents', e);
+    console.error('Error saving page contents', e);
   }
 };
   
@@ -53,25 +56,28 @@ const saveRecentPages = async (titles: string[]): Promise<void> => {
   }
 };
   
-export const useWikiPages = () => {
+export const useNotePages = () => {
   return useQuery({
-    queryKey: ['wikiContents'],
-    queryFn: getWikiContents,
+    queryKey: ['pageContents'],
+    queryFn: getNoteContents,
   });
 };
 
-export const useWikiPage = (title: string, opened:boolean) => {
+export const useNotePage = (title: string) => {
+  const queryClient = useQueryClient()
   return useQuery({
-    queryKey: ['wikiContent', title, opened],
+    queryKey: ['pageContent', title],
     queryFn: async () => {
-      const contents = await getWikiContents();
+      const contents = await getNoteContents();
       const page = contents.find(c => c.title === title);
       
       // Add to recent pages
-      if (page && opened) {
+      if (page) {
         const recentPages = await getRecentPages();
-        const updatedRecentPages = [title, ...recentPages.filter(p => p !== title)].slice(0, 10);
-        await saveRecentPages(updatedRecentPages);
+        if (recentPages.find(v=>v===title)===undefined){
+          lastPage = title;
+          await queryClient.invalidateQueries({ queryKey: ['lastPage'] });
+        }
       }
       return page || { title, description: '' };
     },
@@ -83,20 +89,30 @@ export const useWikiPage = (title: string, opened:boolean) => {
       queryKey: ['recentPages'],
       queryFn: async () => {
         const recentTitles = await getRecentPages();
-        const contents = await getWikiContents();
+        const contents = await getNoteContents();
         return recentTitles
           .map(title => contents.find(c => c.title === title))
           .filter(c => c !== undefined) as Content[];
       },
     });
   };
+
+  export const useLastPage = () => {
+    return useQuery({
+      queryKey: ['lastPage'],
+      queryFn: async() => {
+        const contents = await getNoteContents();
+        return contents.find(v=>v.title === lastPage)
+      } 
+    });
+  }
   
   export const useCreateOrUpdatePage = () => {
     const queryClient = useQueryClient();
     const { auth } = useAuthContext()
     return useMutation({
       mutationFn: async ({ title, description }: {title:string, description:string}) => {
-        const contents = await getWikiContents();
+        const contents = await getNoteContents();
         const page = contents.find(c => c.title === title);
         
         let updatedContents: (Content|PostContent)[];
@@ -105,16 +121,16 @@ export const useWikiPage = (title: string, opened:boolean) => {
             c.id === page.id ? { ...c, description } : c
           );
         } else {
-          const newPage:PostContent = { title, description, userId:auth.user?.id || 0, parentId:0, type:'NOTE', order:0 }
+          const newPage:PostContent = { title, description, userId:auth.user?.id || 0, parentId:0, type:'NOTE', order:0, option: {} }
           updatedContents = [...contents, newPage];
         }
         
-        await saveWikiContents(updatedContents, page?.id);
+        await saveNoteContents(updatedContents, page?.id);
         return { title, description };
       },
       onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: ['wikiContents'] });
-        queryClient.invalidateQueries({ queryKey: ['wikiContent', data.title] });
+        queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+        queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
         queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       },
     });
@@ -125,7 +141,7 @@ export const useWikiPage = (title: string, opened:boolean) => {
     
     return useMutation({
       mutationFn: async ({ oldTitle, newTitle }: { oldTitle: string, newTitle: string }) => {
-        const contents = await getWikiContents();
+        const contents = await getNoteContents();
         const page = contents.find(c => c.title === oldTitle);
         
         if (!page) {
@@ -140,7 +156,7 @@ export const useWikiPage = (title: string, opened:boolean) => {
           c.title === oldTitle ? { ...c, title: newTitle } : c
         );
         
-        await saveWikiContents(updatedContents, page.id);
+        await saveNoteContents(updatedContents, page.id);
         
         // Update recent pages
         const recentPages = await getRecentPages();
@@ -152,10 +168,55 @@ export const useWikiPage = (title: string, opened:boolean) => {
         return { oldTitle, newTitle };
       },
       onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: ['wikiContents'] });
-        queryClient.invalidateQueries({ queryKey: ['wikiContent', data.oldTitle] });
-        queryClient.invalidateQueries({ queryKey: ['wikiContent', data.newTitle] });
+        queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+        queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
+        queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
         queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       },
     });
   };
+
+export const useAddRecentPage = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({title, direct}:{title:string, direct?:boolean}) => {
+      
+      // Update recent pages
+      const recentPages = await getRecentPages();
+      if (recentPages.find(v=>v===title) === undefined || direct){
+        const updatedRecentPages = [title, ...recentPages]
+        await saveRecentPages(updatedRecentPages);
+      }
+      
+      return { title };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['recentPages'] });
+    },
+  });
+}
+
+export const useDeleteRecentPage = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (title:string) => {
+      
+      // Update recent pages
+      const recentPages = await getRecentPages();
+      const updatedRecentPages = recentPages.filter(_title => 
+        title !== _title
+      );
+      lastPage = undefined
+      await saveRecentPages(updatedRecentPages);
+      
+      return { title };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['recentPages'] });
+      queryClient.invalidateQueries({ queryKey: ['pageContent'] });
+      queryClient.invalidateQueries({ queryKey: ['lastPage']})
+    },
+  });
+}

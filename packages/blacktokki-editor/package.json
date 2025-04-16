@@ -14,18 +14,22 @@
   "scripts": {
     "build": "bob build",
     "test": "eslint --ext ts,tsx ./src",
-    "pretinymce": "copyfiles -u 1 \"node_modules/tinymce/**/*.min.*\" template",
+    "pretinymce": "copyfiles -u 1 \"node_modules/tinymce/**/*.min.*\" template && copyfiles -u 2 \"node_modules/supercode/supercode/**/*.min.*\" template/tinymce/plugins",
     "tinymce": "copyfiles -u 1 \"template/**/*\""
   },
   "devDependencies": {
     "@blacktokki/eslint-config": "*",
-    "@tsconfig/recommended": "^1.0.1",
     "@tinymce/tinymce-react": "^4.3.0",
-    "tinymce": "^5.10.7",
+    "@tsconfig/recommended": "^1.0.1",
+    "copyfiles": "^2.4.1",
     "react-dom": "^18.0.0 <18.3",
     "react-native-builder-bob": "^0.18.3",
+    "supercode": "prathamVaidya/supercode-tinymce-plugin#a692a27",
+    "tinymce": "^6.8.5",
+    "markdown-it": "^14.1.0",
+    "turndown": "^7.2.0",
     "typescript": "^5.1.3",
-    "copyfiles": "^2.4.1"
+    "@types/turndown": "*"
   },
   "eslintConfig": {
     "extends": "@blacktokki/eslint-config"

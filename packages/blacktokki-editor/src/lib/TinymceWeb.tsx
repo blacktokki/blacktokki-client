@@ -1,14 +1,34 @@
 import { Editor, IAllProps } from '@tinymce/tinymce-react';
+//@ts-ignore
+import markdownIt from 'markdown-it';
 import React from 'react';
 // import { createRoot } from 'react-dom/client';
 import { EditorEvent } from 'tinymce';
+import TurndownService from 'turndown';
 
 import { EditorProps } from '../types';
 
+const markdownToHtml = markdownIt();
+const HtmlToMarkdown = new TurndownService({
+  preformattedCode: true,
+  codeBlockStyle: 'fenced',
+  headingStyle: 'atx',
+});
+
+// A function that renders markdown to HTML
+const renderer = (markdownCode: string) => {
+  return markdownToHtml.render(markdownCode);
+};
+
+// A function that converts HTML back to Markdown
+export const parser = (htmlCode: string) => {
+  return HtmlToMarkdown.turndown(htmlCode);
+};
+
 const INIT: IAllProps['init'] = {
-  plugins: 'image link charmap advlist lists paste hr noneditable', // textcolor imagetools,
+  plugins: 'image link charmap advlist lists paste hr supercode', // textcolor imagetools,
   toolbar:
-    'fontsizeselect | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link', // charmap removeformat
+    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote', // charmap removeformat
   setup: () => {},
 };
 
@@ -33,7 +53,12 @@ export const toRaw = (text: string) => {
 };
 
 export default (
-  props: EditorProps & { readonly?: boolean; onPress?: () => void; setValue: (v: string) => void }
+  props: EditorProps & {
+    readonly?: boolean;
+    onPress?: () => void;
+    setValue: (v: string) => void;
+    onLink?: (url: string) => void;
+  }
 ) => {
   const customDiv = document.createElement('div');
   // const root = createRoot(customDiv);
@@ -49,7 +74,7 @@ export default (
       tinymceScriptSrc={PATH}
       onInit={(_e, editor) => {
         props.onReady?.();
-        (editor as any).setMode(props.readonly ? 'readonly' : 'design');
+        editor.mode.set(props.readonly ? 'readonly' : 'design');
         if (props.onPress) {
           let pressed = false;
           let moved = false;
@@ -67,7 +92,11 @@ export default (
             if (moved) {
               moved = false;
             } else if (e.target.href) {
-              window.open(e.target.href, '_blank');
+              if (props.onLink) {
+                props.onLink(e.target.href);
+              } else {
+                window.open(e.target.href, '_blank');
+              }
             } else {
               onPress();
             }
@@ -80,9 +109,8 @@ export default (
           editor.on('mouseup', onEnd);
           editor.on('touchend', onEnd);
         }
-        const editorContainer = document.querySelector('.tox-editor-container');
-        const toolbar = document.querySelector('.tox-editor-header');
-        if (editorContainer && toolbar) {
+        const toolbar = editor.getContainer().firstChild?.firstChild as HTMLElement;
+        if (toolbar) {
           // Insert customDiv after the toolbar
           toolbar.parentNode?.insertBefore(customDiv, toolbar.nextSibling);
           // root.render(<></>);
@@ -90,6 +118,10 @@ export default (
         }
         if (props.readonly) {
           editor.getContainer().style.borderWidth = '0px';
+          if (toolbar) {
+            toolbar.style.backgroundColor = 'transparent';
+            toolbar.style.borderBottomWidth = '0px';
+          }
         }
       }}
       onEditorChange={props.setValue}
@@ -107,11 +139,24 @@ export default (
         menubar: false,
         branding: false,
         statusbar: false,
-        block_formats: '제목1=h2;제목2=h3;제목3=h4;본문=p;',
-        fontsize_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt',
-        forced_root_block_attrs: { style: 'font-size: 14pt' },
+        block_formats:
+          'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Preformatted=pre',
         content_style: bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : undefined,
         autoresize_bottom_margin: 10,
+        init_instance_callback: () => {
+          document.querySelectorAll('.tox-tbtn').forEach((btn) => {
+            if (btn.getAttribute('aria-label') === 'Source Code Editor (Ctrl + space)') {
+              btn.setAttribute('data-mce-name', 'supercode');
+            }
+          });
+        },
+        supercode: {
+          theme: props.theme === 'light' ? 'chrome' : 'ambiance',
+          dark: props.theme === 'dark',
+          renderer, // Function : Markdown => HTML
+          parser, // Function: HTML => Markdown
+          language: 'markdown', // Uses 'markdown' language for code highlighting and autocomplete
+        },
       }}
       value={props.value}
     />

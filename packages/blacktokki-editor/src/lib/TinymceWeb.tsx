@@ -15,6 +15,47 @@ const HtmlToMarkdown = new TurndownService({
   headingStyle: 'atx',
 });
 
+//@ts-ignore
+markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  const code = token.content;
+  let language = token.info || '';
+  if (language === 'html') {
+    language = 'markup';
+  }
+  const languageClass = language ? ` class="language-${language}"` : '';
+  let escapeCode: string = markdownToHtml.utils.escapeHtml(code);
+  if (escapeCode.endsWith('\n')) {
+    escapeCode = escapeCode.slice(0, escapeCode.length - 1);
+  }
+  // Create custom HTML for code blocks
+  return `<pre ${languageClass}><code>${escapeCode}</code></pre>`;
+};
+
+HtmlToMarkdown.addRule('codeBlock', {
+  filter(node, options) {
+    // Determine if this node should be treated as a code block
+    // For example, looking for <pre><code> combinations
+    return (
+      node.nodeName === 'PRE' && node.firstChild !== null && node.firstChild.nodeName === 'CODE'
+    );
+  },
+  replacement(content, node, options) {
+    // Get the language if specified (often in a class attribute)
+    const language = (node as HTMLElement).getAttribute('class') || '';
+    const languageMatch = language.match(/language-(\S+)/);
+    let languageSpec = languageMatch ? languageMatch[1] : '';
+    if (languageSpec === 'markup') {
+      languageSpec = 'html';
+    }
+    // Get the code content and trim whitespace
+    const code = (node.firstChild as HTMLElement).textContent || '';
+    // Format as a code block with your preferred style
+    // This example uses GitHub-style code fences with language specification
+    return '\n\n```' + languageSpec + '\n' + code + '\n```\n\n';
+  },
+});
+
 // A function that renders markdown to HTML
 const renderer = (markdownCode: string) => {
   return markdownToHtml.render(markdownCode);
@@ -26,9 +67,9 @@ export const parser = (htmlCode: string) => {
 };
 
 const INIT: IAllProps['init'] = {
-  plugins: 'image link charmap advlist lists paste hr supercode', // textcolor imagetools,
+  plugins: 'image link charmap advlist lists paste hr supercode codesample', // textcolor imagetools,
   toolbar:
-    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote', // charmap removeformat
+    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample', // charmap removeformat
   setup: () => {},
 };
 
@@ -44,12 +85,13 @@ const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 // };
 
 export const toRaw = (text: string) => {
-  return text
-    .replaceAll(/\n/g, '')
-    .replaceAll(/<hr\s*[/]?>\n/gi, '')
-    .replaceAll(/&nbsp;/gi, ' ')
-    .replaceAll(/<br\s*[/]?>/gi, '\r\n')
-    .replaceAll(/<\/?[^>]*>/gi, '');
+  return markdownToHtml.utils.escapeHtml(text);
+  // return text
+  //   .replaceAll(/\n/g, '')
+  //   .replaceAll(/<hr\s*[/]?>\n/gi, '')
+  //   .replaceAll(/&nbsp;/gi, ' ')
+  //   .replaceAll(/<br\s*[/]?>/gi, '\r\n')
+  //   .replaceAll(/<\/?[^>]*>/gi, '');
 };
 
 export default (

@@ -37,7 +37,7 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   const commonStyles = createCommonStyles(theme);
   const title = lang('Blacktokki Notebook')
   const tabViews:TabViewOption[] = [
-    {title: lang('Open Pages'), component:OpenedEditorsTabView, icon:<List.Icon icon={'file-document-edit'}/>, headerRight:()=><></>},
+    {title: lang('Open Pages'), component:OpenedEditorsTabView, icon:<List.Icon icon={'file-document'}/>, headerRight:()=><></>},
     {title: lang('Notes'), component:NoteTabView, icon:<List.Icon icon={'notebook'}/>, headerRight:()=><></>},
     {title: lang('Config'), component:ConfigTabView, icon:<List.Icon icon={'dots-horizontal'}/>, headerRight:()=><></>}
   ]

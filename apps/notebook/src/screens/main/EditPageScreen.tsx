@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList } from '../../types';
 import { useNotePage, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
@@ -44,6 +44,15 @@ export const EditPageScreen: React.FC = () => {
       setContent(page?.description)
     }
   }, [isLoading])
+  
+  useFocusEffect(()=>{
+    const callback = (event:any) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', callback);
+    return () => window.removeEventListener('beforeunload', callback);
+  })
 
   return (
     <View style={commonStyles.container}>

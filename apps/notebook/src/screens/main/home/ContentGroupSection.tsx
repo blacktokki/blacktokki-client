@@ -40,7 +40,12 @@ const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
       clearTimeout(tabRef.current)
       tabRef.current = undefined
     }
-    addRecentPage.mutate({title, direct:true});
+    if (pages.data?.find(v=>v.title===title) === undefined){
+      addRecentPage.mutate({title, direct:true});
+    }
+    else {
+      deleteRecentPage.mutate(title);
+    }
   }
   return (
     <List.Section>
@@ -56,7 +61,7 @@ const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
          props.type === 'NOTE'
          ?<>{data.slice(0, RECENT_COUNT).map(v=><List.Item 
           key={v.id} 
-          left={(_props)=><List.Icon {..._props} icon={"notebook"} />}
+          left={(_props)=><List.Icon {..._props} icon={pages.data?.find(v2=>v2.title===v.title)===undefined?"notebook":"notebook-edit"} />}
           title={v.title} 
           onPress={()=>noteOnPress(v.title)}
           onLongPress={()=>noteOnLongPress(v.title)}

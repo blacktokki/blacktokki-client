@@ -69,7 +69,7 @@ export const SearchBar: React.FC<{renderExtra?:(input:string, isFind:boolean)=>R
           onPress={handleSearch}
           disabled={!searchText.trim()}
         >
-          <Icon name="search" size={18} color="#FFFFFF" />
+          <Icon name={renderExtra?"search-plus":"search"} size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
       

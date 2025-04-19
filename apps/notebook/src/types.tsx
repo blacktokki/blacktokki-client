@@ -3,6 +3,7 @@ export type PostContent = {
     parentId: number,
     type: 'NOTE'|'BOOKMARK',
     order: number,
+    input: string,
     title: string,
     description?: string
     option:{

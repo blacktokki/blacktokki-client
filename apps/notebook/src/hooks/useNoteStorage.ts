@@ -121,7 +121,7 @@ export const useNotePage = (title: string) => {
             c.id === page.id ? { ...c, description } : c
           );
         } else {
-          const newPage:PostContent = { title, description, userId:auth.user?.id || 0, parentId:0, type:'NOTE', order:0, option: {} }
+          const newPage:PostContent = { title, description, input:title, userId:auth.user?.id || 0, parentId:0, type:'NOTE', order:0, option: {} }
           updatedContents = [...contents, newPage];
         }
         

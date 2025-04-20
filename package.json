@@ -5,6 +5,7 @@
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "expo-blank": "yarn workspace @blacktokki/expo-blank",
+    "expo-files": "yarn workspace @blacktokki/expo-files",
     "notebook": "yarn workspace @blacktokki/notebook"
   },
   "workspaces": {

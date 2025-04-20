@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-//@ts-ignore
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
 import { useNotePage } from '../../hooks/useNoteStorage';

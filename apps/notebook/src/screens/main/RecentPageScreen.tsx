@@ -2,8 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-//@ts-ignore
-import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
 import { useNotePages, useRecentPages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';

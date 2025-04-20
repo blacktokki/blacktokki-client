@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, FlatList, Text, StyleSheet } from 'react-native';
-//@ts-ignore
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';

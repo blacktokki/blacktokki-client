@@ -6,8 +6,9 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
 import { useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
-import { useColorScheme } from '@blacktokki/core';
+import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer, toMarkdown } from '@blacktokki/editor';
+import { SearchBar } from '../../components/SearchBar';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
@@ -16,8 +17,10 @@ export const NotePageScreen: React.FC = () => {
   const { title } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
+  const window = useResizeContext();
   const commonStyles = createCommonStyles(theme);
   
+
   const { data: page, isLoading } = useNotePage(title);
 
   const handleEdit = () => {
@@ -28,7 +31,8 @@ export const NotePageScreen: React.FC = () => {
     navigation.navigate('MovePage', { title });
   };
 
-  return (
+  return (<>
+    {window === 'portrait' && <SearchBar/>}
     <ScrollView style={commonStyles.container}>
       <View style={commonStyles.header}>
         <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>
@@ -71,7 +75,7 @@ export const NotePageScreen: React.FC = () => {
         </>}
       </View>
     </ScrollView>
-  );
+  </>);
 };
 
 const styles = StyleSheet.create({

@@ -43,6 +43,19 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       fontWeight: '500',
       fontSize: 16,
     },
+    searchButton: {
+      backgroundColor: '#3498DB',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 36,
+      height: 36,
+      borderRadius: 4,
+      marginHorizontal: 4,
+    },
+    resultSeparator: {
+      height: 1,
+      backgroundColor: theme === 'dark' ? '#333333' : '#EEEEEE',
+    },
     input: {
       backgroundColor: theme === 'dark' ? '#222222' : '#FFFFFF',
       borderWidth: 1,

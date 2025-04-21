@@ -10,7 +10,7 @@ import { useColorScheme } from '@blacktokki/core';
 
 let _searchText = ''
 
-export const SearchBar: React.FC<{renderExtra?:(input:string, isFind:boolean)=>React.ReactNode}> = ({renderExtra}) => {
+export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?:(input:string, isFind:boolean)=>React.ReactNode}> = ({handlePress, renderExtra}) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -27,14 +27,12 @@ export const SearchBar: React.FC<{renderExtra?:(input:string, isFind:boolean)=>R
 
   const handleSearch = () => {
     if (searchText.trim()) {
-      navigation.navigate('NotePage', { title: searchText.trim() });
-      setSearchText('');
-      setShowResults(false);
+      handlePagePress(searchText.trim())
     }
   };
 
   const handlePagePress = (title: string) => {
-    navigation.navigate('NotePage', { title });
+    handlePress?handlePress(title):navigation.navigate('NotePage', { title });
     setSearchText('');
     setShowResults(false);
   };
@@ -64,7 +62,7 @@ export const SearchBar: React.FC<{renderExtra?:(input:string, isFind:boolean)=>R
           onSubmitEditing={handleSearch}
         />
         <TouchableOpacity
-          style={styles.searchButton}
+          style={commonStyles.searchButton}
           onPress={handleSearch}
           disabled={!searchText.trim()}
         >
@@ -86,7 +84,7 @@ export const SearchBar: React.FC<{renderExtra?:(input:string, isFind:boolean)=>R
                   <Text style={[commonStyles.text, styles.resultText]}>{item.title}</Text>
                 </TouchableOpacity>
               )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => <View style={[commonStyles.resultSeparator]} />}
             />
           ) : searchText.trim() ? (
             <TouchableOpacity
@@ -122,15 +120,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     fontSize: 14,
   },
-  searchButton: {
-    backgroundColor: '#3498DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 36,
-    height: 36,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
   resultsContainer: {
     position: 'absolute',
     top: 40,
@@ -155,9 +144,5 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 14,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#EEEEEE',
   },
 });

@@ -3,9 +3,14 @@ import React, { Suspense } from 'react';
 import { login, Navigation, NavigationConfig } from "@blacktokki/navigation"
 import { main } from '../screens';
 import Drawer from './Drawer';
-import { Colors, useColorScheme } from '@blacktokki/core';
+import { Colors, useColorScheme, useResizeContext } from '@blacktokki/core';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
 import { SearchBar } from '../components/SearchBar';
+
+const HeaderRight = ()=>{
+    const windowType = useResizeContext();
+    return windowType==='landscape'?<SearchBar/>:undefined
+}
 
 const getConfig = async (theme:'light'|'dark') => {
     const Linking = await import('expo-linking')
@@ -24,7 +29,7 @@ const getConfig = async (theme:'light'|'dark') => {
             login: 'LoginScreen'
         },
         headerLeftIcon: <List.Icon icon='backburger' style={{left:-18, top: -14}} />,
-        headerRight: <SearchBar/>,
+        headerRight: <HeaderRight/>,
         modals: [],
         drawer: <Drawer/>
     } as NavigationConfig

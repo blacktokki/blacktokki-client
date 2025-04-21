@@ -5,7 +5,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList } from '../../types';
 import { useNotePages, useRecentPages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
-import { useColorScheme } from '@blacktokki/core';
+import { useColorScheme, useResizeContext } from '@blacktokki/core';
+import { SearchBar } from '../../components/SearchBar';
 
 const updatedOffset = new Date().getTimezoneOffset()
 
@@ -23,7 +24,8 @@ export const RecentPagesScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  
+  const window = useResizeContext();
+
   const { data: recentPages = [], isLoading } = useNotePages();
   
   const handlePagePress = (title: string) => {
@@ -31,7 +33,8 @@ export const RecentPagesScreen: React.FC = () => {
   };
   
 
-  return (
+  return (<>
+    {window === 'portrait' && <SearchBar/>}
     <View style={commonStyles.container}>      
       {isLoading ? (
         <View style={[commonStyles.card, commonStyles.centerContent]}>
@@ -62,7 +65,7 @@ export const RecentPagesScreen: React.FC = () => {
         </View>
       )}
     </View>
-  );
+  </>);
 };
 
 const styles = StyleSheet.create({

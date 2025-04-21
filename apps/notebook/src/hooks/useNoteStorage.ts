@@ -140,7 +140,7 @@ export const useNotePage = (title: string) => {
     const queryClient = useQueryClient();
     
     return useMutation({
-      mutationFn: async ({ oldTitle, newTitle }: { oldTitle: string, newTitle: string }) => {
+      mutationFn: async ({ oldTitle, newTitle, description }: { oldTitle: string, newTitle: string, description?:string }) => {
         const contents = await getNoteContents();
         const page = contents.find(c => c.title === oldTitle);
         
@@ -153,7 +153,7 @@ export const useNotePage = (title: string) => {
         }
         
         const updatedContents = contents.map(c => 
-          c.title === oldTitle ? { ...c, title: newTitle } : c
+          c.title === oldTitle ? { ...c, title: newTitle, description:description || page.description } : c
         );
         
         await saveNoteContents(updatedContents, page.id);

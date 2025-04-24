@@ -11,8 +11,8 @@ import {
   SafeAreaView,
   Platform,
 } from 'react-native';
-//@ts-ignore
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { showDirectoryPicker } from 'file-system-access';
 
 // Custom hook for color scheme (provided externally)
 const useColorScheme = () => 'light' as 'light' | 'dark';
@@ -294,14 +294,7 @@ const App: React.FC = () => {
   // Open directory using File System Access API
   const openDirectory = async () => {
     try {
-      // Check if the API is available
-      if (!('showDirectoryPicker' in window)) {
-        alert('File System Access API is not supported in this browser');
-        return;
-      }
-      
-      // @ts-ignore - TypeScript doesn't have proper types for this API yet
-      const dirHandle = await window.showDirectoryPicker();
+      const dirHandle = await showDirectoryPicker();
       
       // Create root directory item
       const rootItem: FileSystemItem = {

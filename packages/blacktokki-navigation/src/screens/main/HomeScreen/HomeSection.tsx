@@ -1,45 +1,46 @@
-import { TabView, useResizeContext, TabViewData } from '@blacktokki/core';
+import { TabView, useResizeContext } from '@blacktokki/core';
 import { useNavigation, useRoute } from '@react-navigation/core';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { View, ScrollView, useWindowDimensions } from 'react-native';
 
 import { TabViewOption } from '../../../types';
 
-const useHeaderSetter = (tabViews: TabViewData[]) => {
-  const tempref = useRef<NodeJS.Timeout>();
-  const indexRef = useRef<number>();
-  const { width } = useWindowDimensions();
-  const navigation = useNavigation();
-  useEffect(() => {
-    return () => {
+function firstComponent(tabViews: TabViewOption[], headerTitle?: string) {
+  const Component = tabViews[0].component;
+  const FirstTabView = (props: any) => {
+    const tempref = useRef<NodeJS.Timeout>();
+    const indexRef = useRef<number>();
+    const { width } = useWindowDimensions();
+    const navigation = useNavigation();
+    useEffect(() => {
+      return () => {
+        clearInterval(tempref.current);
+      };
+    }, []);
+    const headerIndexRef = (ref: any) => {
       clearInterval(tempref.current);
+      tempref.current = setInterval(() => {
+        /*@ts-ignore */
+        ref?.measure((fx, fy, _, height, px, py) => {
+          const i = Math.round(-px / width);
+          if (indexRef.current !== i) {
+            indexRef.current = i;
+            navigation.setOptions({
+              ...tabViews[i],
+              title: headerTitle ? headerTitle : tabViews[i].title,
+            });
+          }
+        });
+      }, 300);
     };
-  }, []);
-  return (ref: any) => {
-    clearInterval(tempref.current);
-    tempref.current = setInterval(() => {
-      /*@ts-ignore */
-      ref?.measure((fx, fy, _, height, px, py) => {
-        const i = Math.round(-px / width);
-        if (indexRef.current !== i) {
-          indexRef.current = i;
-          navigation.setOptions(tabViews[i]);
-        }
-      });
-    }, 300);
+    return (
+      <View style={{ flex: 1 }} ref={headerIndexRef}>
+        <Component {...props} />
+      </View>
+    );
   };
-};
-
-const renderIndexDetector = (
-  Component: React.ComponentType<any>,
-  headerIndexRef: (ref: any) => void
-) => {
-  return (props: any) => (
-    <View style={{ flex: 1 }} ref={headerIndexRef}>
-      <Component {...props} />
-    </View>
-  );
-};
+  return FirstTabView;
+}
 
 export default function HomeSection({
   tabViews,
@@ -68,7 +69,6 @@ export default function HomeSection({
   useEffect(() => {
     setHome(windowType === 'landscape');
   }, [windowType]);
-  const headerSetter = useHeaderSetter(tabViews);
   return home ? (
     <ScrollView contentContainerStyle={{ flex: 1, alignItems: 'center' }}>{children}</ScrollView>
   ) : (
@@ -80,7 +80,7 @@ export default function HomeSection({
             v.title,
             {
               ...v,
-              component: i === 0 ? renderIndexDetector(v.component, headerSetter) : v.component,
+              component: i === 0 ? firstComponent(tabViews, headerTitle) : v.component,
             },
           ])
         )}

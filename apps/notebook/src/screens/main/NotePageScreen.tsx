@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -7,18 +7,25 @@ import { NavigationParamList } from '../../types';
 import { useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
-import { EditorViewer, toMarkdown } from '@blacktokki/editor';
+import { EditorViewer } from '@blacktokki/editor';
 import { SearchBar } from '../../components/SearchBar';
+import HeaderSelectBar, { NodeData, parseHtmlToSections } from '../../components/HeaderSelectBar';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
+const sectionDescription = (paragraph:NodeData[], section:string) => {
+  const path = paragraph.find(v=>v.title===section)?.path
+  return path?paragraph.filter(v=>v.path.startsWith(path)).map(v=>v.header + v.description).join(""):""
+}
+
 export const NotePageScreen: React.FC = () => {
   const route = useRoute<NotePageScreenRouteProp>();
-  const { title } = route.params;
+  const { title, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
-  const window = useResizeContext();
+  const _window = useResizeContext();
   const commonStyles = createCommonStyles(theme);
+  const [toc, toggleToc] = useState(false)
   
 
   const { data: page, isLoading } = useNotePage(title);
@@ -28,37 +35,66 @@ export const NotePageScreen: React.FC = () => {
   };
   
   const handleMovePage = () => {
-    navigation.navigate('MovePage', { title });
+    navigation.navigate('MovePage', { title, section });
   };
 
+  const paragraph = parseHtmlToSections(page?.description||'');
+  const description = section?sectionDescription(paragraph, section) :page?.description
+
+  useEffect(()=>{
+    toggleToc(false)
+  }, [route])
+
   return (<>
-    {window === 'portrait' && <SearchBar/>}
-    <ScrollView style={commonStyles.container}>
+    {_window === 'portrait' && <SearchBar/>}
+    <ScrollView style={[
+      commonStyles.container, 
+      //@ts-ignore
+      {paddingRight:12, scrollbarGutter: 'stable'}]}>
       <View style={commonStyles.header}>
-        <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>
-          {title}
-        </Text>
+        <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title })}>
+          <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>
+            {title}{section?" ▶ "+section:""}
+          </Text>
+        </TouchableOpacity>
         <View style={styles.actionButtons}>
+          <TouchableOpacity onPress={()=>toggleToc(!toc)} style={styles.actionButton}>
+            <Icon name="list" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleMovePage} style={styles.actionButton}>
             <Icon name="exchange" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
-            <Icon name="pencil" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
-          </TouchableOpacity>
+          {section
+          ?undefined
+          :<>
+            <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
+              <Icon name="pencil" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+            </TouchableOpacity>
+          </>}
         </View>
       </View>
-      
       <View style={commonStyles.flex}>
-        {isLoading ? (
+        {toc? <HeaderSelectBar data={paragraph} path={section || ''} root={title} onPress={(item)=>navigation.navigate('NotePage', {title, section:item.title})}/>
+        : isLoading ? (
           <View style={[commonStyles.card, commonStyles.centerContent]}>
             <ActivityIndicator size="large" color="#3498DB" />
           </View>
         ) : <>
-          <View style={page?.description?[commonStyles.card, {flex:1, padding:0}]:{flex:0}}>
+          <View style={description?[commonStyles.card, {flex:1, padding:0}]:{flex:0}}>
             <EditorViewer
               active
-              value={page?.description || ''}
+              value={description || ''}
               theme={theme}
+              onLink={(url)=>{
+                const newLocation = new URL(url);
+                if (location.origin + location.pathname === newLocation.origin + newLocation.pathname){
+                  const title = (new URLSearchParams(newLocation.search)).get("title")
+                  title && navigation.navigate("NotePage", {title})
+                }
+                else{
+                  window.open(url, '_blank');
+                }
+              }}
               autoResize
             /> 
           </View>

@@ -21,7 +21,7 @@ export default ()=>{
                     <List.Subheader style={{flex:1}} selectable={false}>{lang("Notes")}</List.Subheader>{/* 최근 변경 */}
                 </View>
                 <ScrollView >
-                    <ContentGroupSection type={'NOTE'} />
+                    <ContentGroupSection type={'NOTE'} noteCount={5}/>
                 </ScrollView>
             </View>
         </View>

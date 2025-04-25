@@ -5,7 +5,8 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
     container: {
       flex: 1,
       backgroundColor: theme === 'dark' ? '#121212' : '#FFFFFF',
-      padding: 16,
+      paddingHorizontal: 24,
+      paddingVertical: 16,
     },
     card: {
       backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',

@@ -1,109 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, StyleSheet, FlatList, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList } from '../../types';
 import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { SearchBar } from '../../components/SearchBar';
+import HeaderSelectBar, { parseHtmlToSections } from '../../components/HeaderSelectBar';
 
 type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
 
-interface NodeData {
-  path: string;
-  title: string;
-  level: number;
-  header: string;
-  description: string;
-}
-
-function parseHtmlToSections(html: string): NodeData[] {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-
-  const result: NodeData[] = [{path:"", title:"", header:"", level:0, description:""}];
-
-  const headings: string[] = ["H1", "H2", "H3", "H4", "H5", "H6"];
-  const headerStack: { level: number; title: string }[] = [];
-
-  let current: NodeData | null = null;
-  let cursor = doc.body.firstChild;
-
-  const flushCurrent = () => {
-    if (current) {
-      result.push(current);
-      current = null;
-    }
-  };
-
-  while (cursor) {
-    if (cursor.nodeType === Node.ELEMENT_NODE) {
-      const el = cursor as HTMLElement;
-      if (headings.includes(el.tagName)) {
-        flushCurrent();
-
-        const level = parseInt(el.tagName.substring(1));
-        const title = el.textContent?.trim() || "";
-
-        // 헤더 스택 업데이트
-        while (headerStack.length > 0 && headerStack[headerStack.length - 1].level >= level) {
-          headerStack.pop();
-        }
-        headerStack.push({ level, title });
-
-        const path = headerStack.map(h => h.title).join(" > ");
-
-        current = {
-          path,
-          title,
-          level,
-          header: el.outerHTML,
-          description: "",
-        };
-      } else if (current) {
-        current.description += el.outerHTML;
-      } else {
-        // 헤더 밖의 내용 처리
-        result[0].description += el.outerHTML;
-      }
-    } else if (cursor.nodeType === Node.TEXT_NODE && current) {
-      current.description += cursor.textContent || "";
-    }
-
-    cursor = cursor.nextSibling;
-  }
-
-  flushCurrent();
-  return result;
-}
-
-
-function HeaderSelectBar(props:{root:string, path:string, setPath:(path:string)=>void, data:NodeData[]}){
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const renderItem = (item:NodeData) => <TouchableOpacity
-    style={styles.resultItem}
-    onPress={() => props.setPath(item.path)}
-  >
-    {item.level===0 && <Icon name="file-text-o" size={18} color="#FFFFFF"/>}
-    <Text style={[props.path===item.path?commonStyles.title:commonStyles.text, styles.resultText, {left:item.level * 10 + 10}]}>{item.level===0?props.root:item.title}</Text>
-  </TouchableOpacity>
-  return <View style={[styles.resultsContainer, theme === 'dark' ? styles.darkResults : styles.lightResults]}>
-    <FlatList
-      data={props.data}
-      keyExtractor={(item) => item.path}
-      renderItem={({ item }) => renderItem(item)}
-      ItemSeparatorComponent={() => <View style={commonStyles.resultSeparator} />}
-    />
-  </View>
-}
 
 export const MovePageScreen: React.FC = () => {
   const route = useRoute<MovePageScreenRouteProp>();
-  const { title } = route.params;
+  const { title, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const window = useResizeContext()
@@ -180,25 +92,34 @@ export const MovePageScreen: React.FC = () => {
     page && setNewTitle(page.title);
   }, [page, isLoading])
   useEffect(()=>{
-    setNewPath('')
-  }, [newTitle])
-
+    if (!isLoading){
+      const _path = paragraph.find(v=>v.title === section)?.path || ''
+      setPath(_path)
+      setNewPath(_path)
+    }
+  }, [section, isLoading])
   const paragraphItem = paragraph.find(v=>v.path===path)
   const newParagraphItem = newParagraph.find(v=>v.path===newPath)
   const moveDisabled = !newTitle.trim() || newParagraphItem === undefined
   return (
     <ScrollView style={commonStyles.container}>
       <View style={commonStyles.card}>
-        <View style={{flexDirection:window==='landscape'?'row':'column'}}>
-          <View>
+        <View style={{flexDirection:window==='landscape'?'row':'column', zIndex:1}}>
+          <View style={{zIndex:1}}>
             <Text style={commonStyles.text}>현재 노트 제목:</Text>
-            <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>{title}</Text>
+            <Text style={[commonStyles.title, styles.columns]}>{title}</Text>
             <Text style={commonStyles.text}>현재 노트 문단:</Text>
-            <HeaderSelectBar path={path} setPath={setPath} root={page?.title || ''} data={paragraph}/>
+            { section!==undefined?
+              <Text style={[commonStyles.title, styles.columns]}>{section}</Text>:
+              <View style={styles.columns}>
+                <HeaderSelectBar path={path} onPress={(item)=>setPath(item.path)} root={page?.title || ''} data={paragraph}/>
+              </View>}
             <Text style={commonStyles.text}>새 노트 제목:</Text>
             <SearchBar handlePress={setNewTitle}/>
             <Text style={commonStyles.text}>새 노트 문단:</Text>
-            <HeaderSelectBar path={newPath} setPath={setNewPath} root={newPage?.title || ''} data={newParagraph}/>
+            <View style={styles.columns}>
+              <HeaderSelectBar path={newPath} onPress={(item)=>setNewPath(item.path)} root={newPage?.title || ''} data={newParagraph}/>
+            </View>
           </View>
           <View style={{flex:1}}>
             <Text style={commonStyles.text}> 미리보기:</Text>
@@ -241,33 +162,16 @@ export const MovePageScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  columns: { 
+    marginTop: 8, 
+    marginBottom: 16 
+  },
   backButton: {
     padding: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  resultsContainer: {
-    borderWidth: 1,
-    borderRadius: 4,
-    marginTop: 8,
-    marginBottom: 16
-  },
-  lightResults: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CCCCCC',
-  },
-  darkResults: {
-    backgroundColor: '#222222',
-    borderColor: '#444444',
-  },
-  resultItem: {
-    padding: 10,
-    flexDirection:'row'
-  },
-  resultText: {
-    fontSize: 14,
   },
   cancelButton: {
     flex: 1,

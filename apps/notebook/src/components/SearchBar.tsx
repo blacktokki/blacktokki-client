@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, FlatList, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Content, NavigationParamList } from '../types';
-import { useNotePages } from '../hooks/useNoteStorage';
+import { useLastPage, useNotePages, useRecentPages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
 import { useColorScheme } from '@blacktokki/core';
+import { NodeData, parseHtmlToSections } from './HeaderSelectBar';
 
 let _searchText = ''
+
+type ContentAndSection = Content & {
+  section?: NodeData
+}
 
 export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?:(input:string, isFind:boolean)=>React.ReactNode}> = ({handlePress, renderExtra}) => {
   const [searchText, setSearchText] = useState(_searchText);
@@ -16,14 +21,19 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  
+  const route = useRoute<any>()
+  const currentTitle = route.params?.title
+
   const { data: pages = [] } = useNotePages();
-  
-  const filteredPages = searchText.length > 0
-    ? pages.filter(page => 
-        page.title.toLowerCase().startsWith(searchText.toLowerCase())
-      ).slice(0, 5)
-    : [];
+  const { data:lastPage } = useLastPage();
+  const { data:recentPages = [] } = useRecentPages()
+  const defaultPages = ([...(lastPage?[lastPage ]:[]), ...recentPages ]);
+  const lowerCaseSearch = searchText.toLowerCase()
+  const filteredPages:ContentAndSection[] = searchText.length > 0
+    ? [...pages.filter(page => 
+        page.title.toLowerCase().startsWith(lowerCaseSearch)
+      ), ...pages.flatMap(v=>parseHtmlToSections(v.description || '').filter(v2=>v2.title.toLowerCase().startsWith(lowerCaseSearch)).map(v2=>({...v, section:v2})))].slice(0, 10)
+    : [...defaultPages, ...pages.filter(v=>defaultPages.find(v2=>v2.title===v.title)===undefined)].filter(v=>v.title !== currentTitle).slice(0, 10)
 
   const handleSearch = () => {
     if (searchText.trim()) {
@@ -31,10 +41,9 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
     }
   };
 
-  const handlePagePress = (title: string) => {
-    handlePress?handlePress(title):navigation.navigate('NotePage', { title });
+  const handlePagePress = (title: string, section?:string) => {
+    handlePress?handlePress(title):navigation.navigate('NotePage', { title, section });
     setSearchText('');
-    setShowResults(false);
   };
 
   useEffect(()=>{
@@ -55,11 +64,12 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
           value={searchText}
           onChangeText={(text) => {
             setSearchText(text);
-            setShowResults(text.length > 0);
           }}
           placeholder="검색"
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
           onSubmitEditing={handleSearch}
+          onFocus={()=>setShowResults(true)}
+          onBlur={()=>setTimeout(()=>setShowResults(false), 166)}
         />
         <TouchableOpacity
           style={commonStyles.searchButton}
@@ -75,13 +85,14 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
           {filteredPages.length > 0 ? (
             <FlatList
               data={filteredPages}
-              keyExtractor={(item) => item.title}
+              keyExtractor={(item) => JSON.stringify([item.title, item.section?.title])}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.resultItem}
-                  onPress={() => handlePagePress(item.title)}
+                  onPress={() => handlePagePress(item.title, item.section?.title)}
                 >
-                  <Text style={[commonStyles.text, styles.resultText]}>{item.title}</Text>
+                  <Text style={[commonStyles.text, styles.resultText]}>{item.section?item.section.title:item.title}</Text>
+                  {item.section && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{item.title}</Text>}
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={[commonStyles.resultSeparator]} />}
@@ -125,7 +136,7 @@ const styles = StyleSheet.create({
     top: 40,
     left: 0,
     right: 0,
-    maxHeight: 200,
+    maxHeight: 500,
     borderWidth: 1,
     borderRadius: 4,
     zIndex: 999,
@@ -140,6 +151,8 @@ const styles = StyleSheet.create({
     borderColor: '#444444',
   },
   resultItem: {
+    flexDirection:'row',
+    justifyContent:'space-between',
     padding: 10,
   },
   resultText: {

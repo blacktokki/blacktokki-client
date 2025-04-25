@@ -8,6 +8,12 @@ import TurndownService from 'turndown';
 
 import { EditorProps } from '../types';
 
+const INIT: IAllProps['init'] = {
+  plugins: 'image link charmap advlist lists paste hr supercode codesample searchreplace', // textcolor imagetools,
+  toolbar:
+    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample searchreplace', // charmap removeformat
+};
+
 const markdownToHtml = markdownIt();
 const HtmlToMarkdown = new TurndownService({
   preformattedCode: true,
@@ -23,13 +29,12 @@ markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
   if (language === 'html') {
     language = 'markup';
   }
-  const languageClass = language ? ` class="language-${language}"` : '';
   let escapeCode: string = markdownToHtml.utils.escapeHtml(code);
   if (escapeCode.endsWith('\n')) {
     escapeCode = escapeCode.slice(0, escapeCode.length - 1);
   }
   // Create custom HTML for code blocks
-  return `<pre ${languageClass}><code>${escapeCode}</code></pre>`;
+  return `<pre class="language-${language}"><code>${escapeCode}</code></pre>`;
 };
 
 HtmlToMarkdown.addRule('codeBlock', {
@@ -47,6 +52,9 @@ HtmlToMarkdown.addRule('codeBlock', {
     let languageSpec = languageMatch ? languageMatch[1] : '';
     if (languageSpec === 'markup') {
       languageSpec = 'html';
+    }
+    if (languageSpec === 'none') {
+      languageSpec = '';
     }
     // Get the code content and trim whitespace
     const code = (node.firstChild as HTMLElement).textContent || '';
@@ -66,14 +74,8 @@ export const parser = (htmlCode: string) => {
   return HtmlToMarkdown.turndown(htmlCode);
 };
 
-const INIT: IAllProps['init'] = {
-  plugins: 'image link charmap advlist lists paste hr supercode codesample', // textcolor imagetools,
-  toolbar:
-    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample', // charmap removeformat
-  setup: () => {},
-};
-
 const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
+let initMarkdown = false;
 
 // const CustomComponent = () => {
 //   return (
@@ -171,10 +173,11 @@ export default (
         readonly: props.readonly,
         disabled: props.readonly,
         disable_nodechange: props.readonly,
-        setup: INIT.setup,
+        setup: () => {},
         plugins:
           (props.readonly ? 'link' : INIT.plugins) + (props?.autoResize ? ' autoresize' : ''),
         toolbar: props.readonly ? '' : INIT.toolbar,
+        toolbar_mode: 'sliding',
         height: '100%',
         skin: props.theme === 'light' ? 'oxide' : 'oxide-dark',
         content_css: props.theme === 'light' ? 'default' : 'dark',
@@ -182,17 +185,43 @@ export default (
         branding: false,
         statusbar: false,
         block_formats:
-          'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Preformatted=pre',
+          'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6;',
         content_style: bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : undefined,
         autoresize_bottom_margin: 10,
-        init_instance_callback: () => {
+        init_instance_callback: (editor) => {
           document.querySelectorAll('.tox-tbtn').forEach((btn) => {
             if (btn.getAttribute('aria-label') === 'Source Code Editor (Ctrl + space)') {
               btn.setAttribute('data-mce-name', 'supercode');
+              if (initMarkdown) {
+                (btn as HTMLElement).click();
+              }
+            }
+          });
+          editor.on('ExecCommand', (e) => {
+            if (!props.readonly && e.command === 'ToggleView' && e.value === 'supercode') {
+              initMarkdown = !initMarkdown;
             }
           });
         },
+        paste_preprocess: (editor, args) => {
+          args.content = renderer(parser(args.content));
+        },
+        codesample_languages: [
+          { text: '-', value: 'none' },
+          { text: 'HTML/XML', value: 'markup' },
+          { text: 'JavaScript', value: 'javascript' },
+          // { text: 'TypeScript', value: 'typescript' },
+          { text: 'CSS', value: 'css' },
+          { text: 'PHP', value: 'php' },
+          { text: 'Ruby', value: 'ruby' },
+          { text: 'Python', value: 'python' },
+          { text: 'Java', value: 'java' },
+          { text: 'C', value: 'c' },
+          { text: 'C#', value: 'csharp' },
+          { text: 'C++', value: 'cpp' },
+        ],
         supercode: {
+          iconName: 'edit-block',
           theme: props.theme === 'light' ? 'chrome' : 'ambiance',
           dark: props.theme === 'dark',
           renderer, // Function : Markdown => HTML

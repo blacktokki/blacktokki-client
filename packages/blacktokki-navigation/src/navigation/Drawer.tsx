@@ -1,7 +1,7 @@
 import { Auth } from '@blacktokki/account';
 import { Colors, useColorScheme, useResizeContext } from '@blacktokki/core';
 import { useTheme } from '@react-navigation/native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 
 export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) => {
@@ -9,6 +9,10 @@ export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) =
   const theme = useColorScheme();
   const { height } = useWindowDimensions();
   const windowType = useResizeContext();
+  const childrenComponent = useMemo(
+    () => windowType === 'landscape' && auth.user && children,
+    [windowType, auth, children]
+  );
   return (
     <View
       style={
@@ -25,7 +29,7 @@ export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) =
       }
       pointerEvents={'auto'}
     >
-      {windowType === 'landscape' && auth.user && children}
+      {childrenComponent}
     </View>
   );
 };

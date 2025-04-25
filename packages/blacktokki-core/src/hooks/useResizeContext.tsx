@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Dimensions, useWindowDimensions } from 'react-native';
+import { Dimensions } from 'react-native';
 //@ts-ignore
 import useMobileDetect from 'use-mobile-detect-hook';
 
@@ -12,11 +12,14 @@ const ResizeContextContext = createContext<WindowType>(getWindowType(Dimensions.
 
 export const ResizeContextProvider = ({ children }: { children: React.ReactNode }) => {
   const detectMobile = useMobileDetect();
-  const { width, height } = useWindowDimensions();
-  const [windowType, setWindowType] = useState(getWindowType({ width, height }));
+  const [windowType, setWindowType] = useState(getWindowType(Dimensions.get('window')));
   useEffect(() => {
-    setWindowType(getWindowType({ width, height }));
-  }, [width, height]);
+    const listener = Dimensions.addEventListener('change', ({ window }) => {
+      const newWindowType = getWindowType(window);
+      windowType !== newWindowType && setWindowType(newWindowType);
+    });
+    return () => listener.remove();
+  }, [windowType]);
   return (
     <ResizeContextContext.Provider value={detectMobile.isMobile() ? 'portrait' : windowType}>
       {children}

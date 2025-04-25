@@ -9,9 +9,7 @@ const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
 }
 
-const RECENT_COUNT = 5
-
-const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
+const ContentGroupSection = ( props : {type:'PAGE'} | {type:'NOTE', noteCount:number}) => {
   const { lang } = useLangContext()
   const notes = useNotePages()
   const pages = useRecentPages()
@@ -19,7 +17,7 @@ const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
   const tabRef = React.useRef<NodeJS.Timeout>();
   const addRecentPage = useAddRecentPage()
   const deleteRecentPage = useDeleteRecentPage()
-  const data = (props.type === 'NOTE'? notes.data?.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime() ):pages.data)
+  const data = (props.type === 'NOTE'? notes.data?.filter(v=>v.description).sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime() ):pages.data)
   const window = useResizeContext()
   const itemPadding = getItemPadding(window==='landscape')
   const noteOnPress = (title:string)=> {
@@ -59,7 +57,7 @@ const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
           />}
         {data && (
          props.type === 'NOTE'
-         ?<>{data.slice(0, RECENT_COUNT).map(v=><List.Item 
+         ?<>{data.slice(0, props.noteCount).map(v=><List.Item 
           key={v.id} 
           left={(_props)=><List.Icon {..._props} icon={pages.data?.find(v2=>v2.title===v.title)===undefined?"notebook":"notebook-edit"} />}
           title={v.title} 
@@ -67,7 +65,7 @@ const ContentGroupSection = ( props : {type:'PAGE'|'NOTE'}) => {
           onLongPress={()=>noteOnLongPress(v.title)}
           style={{padding:itemPadding }} 
         />)}
-        {((data?.length || 0) > RECENT_COUNT) && <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>navigate("RecentPages")} style={{padding:itemPadding}}  />}
+        {((data?.length || 0) > props.noteCount) && <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>navigate("RecentPages")} style={{padding:itemPadding}}  />}
         </>
         :data.map(v=><List.Item 
           key={v.id} 

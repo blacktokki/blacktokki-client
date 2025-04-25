@@ -20,7 +20,7 @@ const OpenedEditorsTabView = ()=>{
 const NoteTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
-      <ContentGroupSection type={'NOTE'}/>
+      <ContentGroupSection type={'NOTE'} noteCount={15}/>
     </ScrollView>
 }
 

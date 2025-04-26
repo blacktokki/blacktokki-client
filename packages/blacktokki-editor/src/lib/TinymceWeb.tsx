@@ -189,6 +189,7 @@ export default (
         content_style: bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : undefined,
         autoresize_bottom_margin: 10,
         init_instance_callback: (editor) => {
+          editor.mode.set(props.readonly ? 'readonly' : 'design');
           document.querySelectorAll('.tox-tbtn').forEach((btn) => {
             if (btn.getAttribute('aria-label') === 'Source Code Editor (Ctrl + space)') {
               btn.setAttribute('data-mce-name', 'supercode');

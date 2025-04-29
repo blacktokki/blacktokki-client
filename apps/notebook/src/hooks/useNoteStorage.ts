@@ -128,10 +128,10 @@ export const useNotePage = (title: string) => {
         await saveNoteContents(updatedContents, page?.id);
         return { title, description };
       },
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: ['pageContents'] });
-        queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
-        queryClient.invalidateQueries({ queryKey: ['recentPages'] });
+      onSuccess: async (data) => {
+        await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+        await queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
+        await queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       },
     });
   };

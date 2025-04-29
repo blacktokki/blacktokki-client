@@ -3,7 +3,6 @@ import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import markdownIt from 'markdown-it';
 import React from 'react';
 // import { createRoot } from 'react-dom/client';
-import { EditorEvent } from 'tinymce';
 import TurndownService from 'turndown';
 
 import { EditorProps } from '../types';
@@ -118,41 +117,6 @@ export default (
       tinymceScriptSrc={PATH}
       onInit={(_e, editor) => {
         props.onReady?.();
-        editor.mode.set(props.readonly ? 'readonly' : 'design');
-        if (props.onPress) {
-          let pressed = false;
-          let moved = false;
-          const onPress = props.onPress;
-          const onStart = () => {
-            pressed = true;
-          };
-          const onMove = () => {
-            if (pressed) {
-              moved = true;
-            }
-          };
-          const onEnd = (e: EditorEvent<MouseEvent | TouchEvent>) => {
-            pressed = false;
-            if (moved) {
-              moved = false;
-            } else if (e.target.href) {
-              if (props.onLink) {
-                props.onLink(e.target.href);
-              } else {
-                window.open(e.target.href, '_blank');
-              }
-            } else {
-              onPress();
-            }
-          };
-
-          editor.on('mousedown', onStart);
-          editor.on('touchstart', onStart);
-          editor.on('mousemove', onMove);
-          editor.on('touchmove', onMove);
-          editor.on('mouseup', onEnd);
-          editor.on('touchend', onEnd);
-        }
         const toolbar = editor.getContainer().firstChild?.firstChild as HTMLElement;
         if (toolbar) {
           // Insert customDiv after the toolbar
@@ -187,9 +151,28 @@ export default (
         block_formats:
           'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6;',
         content_style: bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : undefined,
+        inline_boundaries: false,
         autoresize_bottom_margin: 10,
         init_instance_callback: (editor) => {
           editor.mode.set(props.readonly ? 'readonly' : 'design');
+          if (props.onPress) {
+            const onPress = props.onPress;
+            const onClick = (e: Event) => {
+              const anchor = (e.target as HTMLElement).closest('a');
+              if (anchor && props.onLink) {
+                if (props.onLink) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  props.onLink(anchor.href);
+                }
+              } else {
+                e.preventDefault();
+                e.stopPropagation();
+                onPress();
+              }
+            };
+            editor.getWin().addEventListener('click', onClick, { capture: true });
+          }
           document.querySelectorAll('.tox-tbtn').forEach((btn) => {
             if (btn.getAttribute('aria-label') === 'Source Code Editor (Ctrl + space)') {
               btn.setAttribute('data-mce-name', 'supercode');
@@ -203,9 +186,6 @@ export default (
               initMarkdown = !initMarkdown;
             }
           });
-        },
-        paste_preprocess: (editor, args) => {
-          args.content = renderer(parser(args.content));
         },
         codesample_languages: [
           { text: '-', value: 'none' },

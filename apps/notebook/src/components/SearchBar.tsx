@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, TextInput, TouchableOpacity, FlatList, Text, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, TextInput, TouchableOpacity, FlatList, Text, StyleSheet, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -46,6 +46,17 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
     setSearchText('');
   };
 
+  const searchHandlers = useMemo(()=>PanResponder.create({
+      onPanResponderStart: handleSearch,
+    }).panHandlers
+  ,[searchText])
+
+  const pagePressHandlers = useCallback((item:ContentAndSection)=>{
+    return PanResponder.create({
+      onPanResponderStart:() => handlePagePress(item.title, item.section?.title)
+    }).panHandlers
+  }, [])
+
   useEffect(()=>{
     _searchText = searchText;
   }, [searchText])
@@ -69,7 +80,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
           onSubmitEditing={handleSearch}
           onFocus={()=>setShowResults(true)}
-          onBlur={()=>setTimeout(()=>setShowResults(false), 166)}
+          onBlur={()=>setShowResults(false)}
         />
         <TouchableOpacity
           style={commonStyles.searchButton}
@@ -89,7 +100,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.resultItem}
-                  onPress={() => handlePagePress(item.title, item.section?.title)}
+                  {...pagePressHandlers(item)}
                 >
                   <Text style={[commonStyles.text, styles.resultText]}>{item.section?item.section.title:item.title}</Text>
                   {item.section && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{item.title}</Text>}
@@ -100,7 +111,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
           ) : searchText.trim() ? (
             <TouchableOpacity
               style={styles.resultItem}
-              onPress={handleSearch}
+              {...searchHandlers}
             >
               <Text style={[commonStyles.text, styles.resultText]}>
                 "{searchText}" 새 노트 만들기

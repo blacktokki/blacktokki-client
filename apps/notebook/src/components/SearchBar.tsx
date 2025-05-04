@@ -15,7 +15,7 @@ type ContentAndSection = Content & {
   section?: NodeData
 }
 
-export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?:(input:string, isFind:boolean)=>React.ReactNode}> = ({handlePress, renderExtra}) => {
+export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?:(input:string, isFind:boolean)=>React.ReactNode, useRandom?:boolean;}> = ({handlePress, renderExtra, useRandom=true}) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -28,12 +28,13 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
   const { data:lastPage } = useLastPage();
   const { data:recentPages = [] } = useRecentPages()
   const defaultPages = ([...(lastPage?[lastPage ]:[]), ...recentPages ]);
+  const randomPages = pages.filter(v=>v.description)
   const lowerCaseSearch = searchText.toLowerCase()
   const filteredPages:ContentAndSection[] = searchText.length > 0
     ? [...pages.filter(page => 
         page.title.toLowerCase().startsWith(lowerCaseSearch)
       ), ...pages.flatMap(v=>parseHtmlToSections(v.description || '').filter(v2=>v2.title.toLowerCase().startsWith(lowerCaseSearch)).map(v2=>({...v, section:v2})))].slice(0, 10)
-    : [...defaultPages, ...pages.filter(v=>defaultPages.find(v2=>v2.title===v.title)===undefined)].filter(v=>v.title !== currentTitle).slice(0, 10)
+    : [...defaultPages, ...pages.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime()).filter(v=>defaultPages.find(v2=>v2.title===v.title)===undefined)].filter(v=>v.description && v.title !== currentTitle).slice(0, 10)
 
   const handleSearch = () => {
     if (searchText.trim()) {
@@ -89,6 +90,16 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
         >
           <Icon name={renderExtra?"search-plus":"search"} size={18} color="#FFFFFF" />
         </TouchableOpacity>
+        {useRandom && randomPages && <TouchableOpacity
+          style={commonStyles.searchButton}
+          onPress={()=>{
+            const page = randomPages[Math.floor(Math.random() * randomPages.length)];
+            const sections = parseHtmlToSections(page.description || '')
+            handlePagePress(page.title, sections[Math.floor(Math.random() * sections.length)].title)
+          }}
+        >
+          <Icon name={"random"} size={18} color="#FFFFFF" />
+        </TouchableOpacity>}
       </View>
       
       {showResults && (

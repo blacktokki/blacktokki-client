@@ -57,7 +57,7 @@ export const NotePageScreen: React.FC = () => {
             {title}{section?" ▶ "+section:""}
           </Text>
         </TouchableOpacity>
-        <View style={styles.actionButtons}>
+        {page?.description && <View style={styles.actionButtons}>
           <TouchableOpacity onPress={()=>toggleToc(!toc)} style={styles.actionButton}>
             <Icon name="list" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
           </TouchableOpacity>
@@ -71,16 +71,15 @@ export const NotePageScreen: React.FC = () => {
               <Icon name="pencil" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
             </TouchableOpacity>
           </>}
-        </View>
+        </View>}
       </View>
       <View style={commonStyles.flex}>
-        {toc? <HeaderSelectBar data={paragraph} path={section || ''} root={title} onPress={(item)=>navigation.navigate('NotePage', {title, section:item.title})}/>
-        : isLoading ? (
+        {isLoading ? (
           <View style={[commonStyles.card, commonStyles.centerContent]}>
             <ActivityIndicator size="large" color="#3498DB" />
           </View>
         ) : <>
-          <View style={description?[commonStyles.card, {flex:1, padding:0}]:{flex:0}}>
+          <View style={!toc && description?[commonStyles.card, {flex:1, padding:0}]:{flex:1, position:'absolute'}}>
             <EditorViewer
               active
               value={description || ''}
@@ -98,7 +97,8 @@ export const NotePageScreen: React.FC = () => {
               autoResize
             /> 
           </View>
-          {page?.description ? undefined : (
+          {toc? <HeaderSelectBar data={paragraph} path={section || ''} root={title} onPress={(item)=>navigation.navigate('NotePage', {title, section:item.title})}/>
+          :page?.description ? undefined : (
             <View style={[commonStyles.card, commonStyles.centerContent]}>
               <Text style={commonStyles.text}>
                 아직 내용이 없는 문서입니다. 

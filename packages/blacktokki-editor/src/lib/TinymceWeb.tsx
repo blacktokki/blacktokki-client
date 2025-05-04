@@ -8,7 +8,7 @@ import TurndownService from 'turndown';
 import { EditorProps } from '../types';
 
 const INIT: IAllProps['init'] = {
-  plugins: 'image link charmap advlist lists paste hr supercode codesample searchreplace', // textcolor imagetools,
+  plugins: 'image link advlist lists supercode codesample searchreplace', // textcolor imagetools,
   toolbar:
     'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample searchreplace', // charmap removeformat
 };
@@ -105,7 +105,7 @@ export default (
 ) => {
   const customDiv = document.createElement('div');
   // const root = createRoot(customDiv);
-  const bodyStyle: string[] = [];
+  const bodyStyle: string[] = ['line-height: 1.75'];
   if (props.readonly) {
     bodyStyle.push('caret-color: transparent');
   }
@@ -139,7 +139,8 @@ export default (
         disable_nodechange: props.readonly,
         setup: () => {},
         plugins:
-          (props.readonly ? 'link' : INIT.plugins) + (props?.autoResize ? ' autoresize' : ''),
+          (props.readonly ? 'link codesample' : INIT.plugins) +
+          (props?.autoResize ? ' autoresize' : ''),
         toolbar: props.readonly ? '' : INIT.toolbar,
         toolbar_mode: 'sliding',
         height: '100%',
@@ -150,7 +151,9 @@ export default (
         statusbar: false,
         block_formats:
           'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6;',
-        content_style: bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : undefined,
+        content_style:
+          (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +
+          'p { margin: 0.5rem 0; }',
         inline_boundaries: false,
         autoresize_bottom_margin: 10,
         init_instance_callback: (editor) => {

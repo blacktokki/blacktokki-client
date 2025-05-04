@@ -115,7 +115,7 @@ export const MovePageScreen: React.FC = () => {
                 <HeaderSelectBar path={path} onPress={(item)=>setPath(item.path)} root={page?.title || ''} data={paragraph}/>
               </View>}
             <Text style={commonStyles.text}>새 노트 제목:</Text>
-            <SearchBar handlePress={setNewTitle}/>
+            <SearchBar handlePress={setNewTitle} useRandom={false}/>
             <Text style={commonStyles.text}>새 노트 문단:</Text>
             <View style={styles.columns}>
               <HeaderSelectBar path={newPath} onPress={(item)=>setNewPath(item.path)} root={newPage?.title || ''} data={newParagraph}/>

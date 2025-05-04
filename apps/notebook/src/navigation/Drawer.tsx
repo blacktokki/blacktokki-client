@@ -9,21 +9,12 @@ export default ()=>{
     const {lang} = useLangContext()
     return <View style={{flex:1}}>
         <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>navigate('Home')} />
-        <View style={{flex:1}}>
-            <View style={{minHeight:'35%', maxHeight:'65%', flexShrink:1, flexGrow:0.1}}>
-                <List.Subheader style={{}} selectable={false}>{lang("Open Pages")}</List.Subheader>
-                <ScrollView>
-                    <ContentGroupSection type={'PAGE'} />
-                </ScrollView>
-            </View>
-            <View style={{minHeight:'35%', maxHeight:'65%', flexShrink:0.1, flexGrow:1}}>
-                <View style={{flexDirection:'row'}}>
-                    <List.Subheader style={{flex:1}} selectable={false}>{lang("Notes")}</List.Subheader>{/* 최근 변경 */}
-                </View>
-                <ScrollView >
-                    <ContentGroupSection type={'NOTE'} noteCount={5}/>
-                </ScrollView>
-            </View>
-        </View>
+        <ScrollView>
+            <List.Subheader style={{}} selectable={false}>{lang("Open Pages")}</List.Subheader>
+            <ContentGroupSection type={'LAST'} />
+            <ContentGroupSection type={'PAGE'} />
+            <List.Subheader style={{flex:1}} selectable={false}>{lang("Notes")}</List.Subheader>{/* 최근 변경 */}
+            <ContentGroupSection type={'NOTE'} noteCount={10}/>
+        </ScrollView>
     </View>
 }

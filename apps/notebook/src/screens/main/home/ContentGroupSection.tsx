@@ -9,7 +9,7 @@ const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
 }
 
-const ContentGroupSection = ( props : {type:'PAGE'} | {type:'NOTE', noteCount:number}) => {
+const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteCount:number}) => {
   const { lang } = useLangContext()
   const notes = useNotePages()
   const pages = useRecentPages()
@@ -47,16 +47,17 @@ const ContentGroupSection = ( props : {type:'PAGE'} | {type:'NOTE', noteCount:nu
   }
   return (
     <List.Section>
-        {props.type==='PAGE' && lastPage && (data?.find(v=>v.id===lastPage.id) === undefined) && <List.Item 
+        {data && (
+         props.type === 'LAST'
+         ?(lastPage && (data?.find(v=>v.id===lastPage.id) === undefined) && <List.Item 
             left={(_props)=><List.Icon {..._props} icon={"file-document"} />}
             title={lastPage.title} 
             onPress={()=>noteOnPress(lastPage.title)}
             onLongPress={()=>noteOnLongPress(lastPage.title)}
             style={{padding:itemPadding }}
             titleStyle={{fontStyle:'italic'}} 
-          />}
-        {data && (
-         props.type === 'NOTE'
+         />)
+         :props.type === 'NOTE'
          ?<>{data.slice(0, props.noteCount).map(v=><List.Item 
           key={v.id} 
           left={(_props)=><List.Icon {..._props} icon={pages.data?.find(v2=>v2.title===v.title)===undefined?"notebook":"notebook-edit"} />}

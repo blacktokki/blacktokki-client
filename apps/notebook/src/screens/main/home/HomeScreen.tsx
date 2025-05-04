@@ -13,6 +13,7 @@ import { SearchBar } from '../../../components/SearchBar';
 const OpenedEditorsTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
+      <ContentGroupSection type={'LAST'} />
       <ContentGroupSection type={'PAGE'} />
     </ScrollView>
 }

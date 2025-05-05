@@ -1,7 +1,10 @@
+import React from 'react';
+
 export { default as SortableTree } from './components/SortableTree';
 export { default as CommonButton } from './components/CommonButton';
 export { default as TextButton } from './components/TextButton';
 export { default as TabView } from './components/TabView';
+export const Calendar = React.lazy(() => import('./components/Calendar'));
 export * from './components/Themed';
 export { default as Colors } from './constants/Colors';
 export {

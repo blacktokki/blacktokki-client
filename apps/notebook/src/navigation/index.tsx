@@ -6,6 +6,7 @@ import Drawer from './Drawer';
 import { Colors, useColorScheme, useResizeContext } from '@blacktokki/core';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
 import { SearchBar } from '../components/SearchBar';
+import DateTimePickerModal from '../modals/DatePickerModal';
 
 const HeaderRight = ()=>{
     const windowType = useResizeContext();
@@ -30,7 +31,7 @@ const getConfig = async (theme:'light'|'dark') => {
         },
         headerLeftIcon: <List.Icon icon='backburger' style={{left:-18, top: -14}} />,
         headerRight: <HeaderRight/>,
-        modals: [],
+        modals: [DateTimePickerModal],
         drawer: <Drawer/>
     } as NavigationConfig
 }

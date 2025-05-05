@@ -5,6 +5,7 @@ import HomeScreen from "./main/home/HomeScreen";
 import { MovePageScreen } from "./main/MovePageScreen";
 import { RecentPagesScreen } from "./main/RecentPageScreen";
 import { NotePageScreen } from "./main/NotePageScreen";
+import { TimeLineScreen } from "./main/TimeLineScreen";
 
 export const main = {
     Home:{
@@ -31,6 +32,11 @@ export const main = {
       title:'Blacktokki Notebook',
       component:RecentPagesScreen,
       path:'recent',
+    },
+    TimeLine:{
+      title:'Blacktokki Notebook',
+      component:TimeLineScreen,
+      path:'timeline',
     },
 
   };

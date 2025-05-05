@@ -9,6 +9,11 @@ const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
 }
 
+export const TimeLineButton = () => {
+  const { lang } = useLangContext()
+  return <List.Item left={_props=><List.Icon {..._props} icon={"clock"} />} title={lang("TimeLine")} onPress={()=>navigate('TimeLine')} />
+}
+
 const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteCount:number}) => {
   const { lang } = useLangContext()
   const notes = useNotePages()

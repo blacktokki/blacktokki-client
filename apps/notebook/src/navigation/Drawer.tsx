@@ -1,5 +1,5 @@
 import React from 'react';
-import ContentGroupSection from '../screens/main/home/ContentGroupSection';
+import ContentGroupSection, { TimeLineButton } from '../screens/main/home/ContentGroupSection';
 import { ScrollView } from 'react-native';
 import { List } from 'react-native-paper';
 import { useLangContext, View } from '@blacktokki/core';
@@ -9,6 +9,7 @@ export default ()=>{
     const {lang} = useLangContext()
     return <View style={{flex:1}}>
         <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>navigate('Home')} />
+        <TimeLineButton/>
         <ScrollView>
             <List.Subheader style={{}} selectable={false}>{lang("Open Pages")}</List.Subheader>
             <ContentGroupSection type={'LAST'} />

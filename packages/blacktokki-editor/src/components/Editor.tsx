@@ -19,7 +19,6 @@ export default (props: EditorProps & { active: boolean; setValue: (v: string) =>
         onReady={() => {
           if (!ready) {
             setReady(true);
-            props.onReady?.();
           }
         }}
       />

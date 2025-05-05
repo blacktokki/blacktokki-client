@@ -27,7 +27,6 @@ export default (
           onReady={() => {
             if (!ready) {
               setReady(true);
-              props.onReady?.();
             }
           }}
         />

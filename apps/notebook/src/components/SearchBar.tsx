@@ -22,7 +22,7 @@ type SearchContent = Content | {
   title: string
 }
 
-function extractMarkdownLinksWithQuery(text:string) {
+function extractHtmlLinksWithQuery(text:string) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'text/html');
 
@@ -50,8 +50,8 @@ export function urlToNoteLink(url:string){
   }
 }
 
-function extractMarkdownNoteLink(contents:Content[]){
-  return contents.flatMap(v=>extractMarkdownLinksWithQuery(v.description || '').map((v2)=>{
+function extractNoteLink(contents:Content[]){
+  return contents.flatMap(v=>extractHtmlLinksWithQuery(v.description || '').map((v2)=>{
     const noteLink = urlToNoteLink(v2.url);
     if(noteLink && v2.text !== noteLink.title /*&& v2.text.startsWith(v.title)*/){
       return {type: "_NOTELINK" as "_NOTELINK", name:v2.text, ...noteLink}
@@ -93,7 +93,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
   const filteredPages:SearchContent[] = searchText.length > 0
     ? [
       ...pages.filter(page =>page.title.toLowerCase().startsWith(lowerCaseSearch)),
-      ...extractMarkdownNoteLink(pages).filter(v=>v.name.toLowerCase().startsWith(lowerCaseSearch))
+      ...extractNoteLink(pages).filter(v=>v.name.toLowerCase().startsWith(lowerCaseSearch))
     ].slice(0, 10)
     : keywords.map(v=>({type:"_KEYWORD", title:v}))
 

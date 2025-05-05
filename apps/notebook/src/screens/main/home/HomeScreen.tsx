@@ -4,7 +4,7 @@ import { FlatList, ScrollView, StyleSheet, TextInput, TouchableOpacity, View} fr
 import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation';
-import ContentGroupSection, { TimeLineButton } from './ContentGroupSection';
+import ContentGroupSection from './ContentGroupSection';
 import { List } from 'react-native-paper';
 import { createCommonStyles } from '../../../styles';
 import { SearchBar } from '../../../components/SearchBar';
@@ -15,7 +15,6 @@ const OpenedEditorsTabView = ()=>{
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
       <ContentGroupSection type={'LAST'} />
       <ContentGroupSection type={'PAGE'} />
-      <TimeLineButton/>
     </ScrollView>
 }
 

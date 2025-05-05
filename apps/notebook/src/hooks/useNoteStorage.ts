@@ -5,7 +5,7 @@ import { deleteContent, getContentList, patchContent, postContent } from '../ser
 import { useAuthContext } from '@blacktokki/account';
 
 const PAGE_STORAGE_KEY = '@blacktokki:notebook:contents';
-const RECENT_PAGES_KEY = '@blacktokki:recent_pages';
+const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
 const ONLINE = true;
 let lastPage:string|undefined
 

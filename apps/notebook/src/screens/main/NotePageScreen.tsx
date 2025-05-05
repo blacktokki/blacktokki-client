@@ -8,7 +8,7 @@ import { useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
-import { SearchBar } from '../../components/SearchBar';
+import { SearchBar, urlToNoteLink } from '../../components/SearchBar';
 import HeaderSelectBar, { NodeData, parseHtmlToSections } from '../../components/HeaderSelectBar';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
@@ -57,7 +57,7 @@ export const NotePageScreen: React.FC = () => {
             {title}{section?" ▶ "+section:""}
           </Text>
         </TouchableOpacity>
-        {page?.description && <View style={styles.actionButtons}>
+        {!!page?.description && <View style={styles.actionButtons}>
           <TouchableOpacity onPress={()=>toggleToc(!toc)} style={styles.actionButton}>
             <Icon name="list" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
           </TouchableOpacity>
@@ -85,10 +85,9 @@ export const NotePageScreen: React.FC = () => {
               value={description || ''}
               theme={theme}
               onLink={(url)=>{
-                const newLocation = new URL(url);
-                if (location.origin + location.pathname === newLocation.origin + newLocation.pathname){
-                  const title = (new URLSearchParams(newLocation.search)).get("title")
-                  title && navigation.navigate("NotePage", {title})
+                const noteLink = urlToNoteLink(url);
+                if(noteLink){
+                  navigation.navigate("NotePage", noteLink)
                 }
                 else{
                   window.open(url, '_blank');

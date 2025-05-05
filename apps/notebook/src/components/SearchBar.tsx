@@ -1,18 +1,81 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, TextInput, TouchableOpacity, FlatList, Text, StyleSheet, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Content, NavigationParamList } from '../types';
-import { useLastPage, useNotePages, useRecentPages } from '../hooks/useNoteStorage';
+import { useNotePages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
 import { useColorScheme } from '@blacktokki/core';
-import { NodeData, parseHtmlToSections } from './HeaderSelectBar';
+import { parseHtmlToSections } from './HeaderSelectBar';
+import { useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 
 let _searchText = ''
 
-type ContentAndSection = Content & {
-  section?: NodeData
+type SearchContent = Content | {
+  type: "_NOTELINK",
+  name: string, 
+  title: string,
+  section?: string
+} | {
+  type:  "_KEYWORD",
+  title: string
+}
+
+function extractMarkdownLinksWithQuery(text:string) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'text/html');
+
+  // 모든 a 태그 선택
+  const links = doc.querySelectorAll('a');
+
+  // 이름과 주소 추출
+  const matches = Array.from(links).map(a => ({
+    text: a.textContent?.trim() || a.href,
+    url: a.href
+  }));
+
+  return matches;
+}
+
+export function urlToNoteLink(url:string){
+  const newLocation = new URL(url);
+  if (location.origin  === newLocation.origin){
+    const params = new URLSearchParams(newLocation.search);
+    const title = params.get("title")
+    const section = params.get("section") || undefined
+    if (title){
+      return {title, section}
+    }
+  }
+}
+
+function extractMarkdownNoteLink(contents:Content[]){
+  return contents.flatMap(v=>extractMarkdownLinksWithQuery(v.description || '').map((v2)=>{
+    const noteLink = urlToNoteLink(v2.url);
+    if(noteLink && v2.text !== noteLink.title /*&& v2.text.startsWith(v.title)*/){
+      return {type: "_NOTELINK" as "_NOTELINK", name:v2.text, ...noteLink}
+    }
+  }).filter(v=>v !==undefined))
+  
+}
+
+export const RandomButton = () => {
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const { data: pages = [] } = useNotePages();
+  const randomPages = pages.filter(v=>v.description);
+  return randomPages && <TouchableOpacity
+    style={commonStyles.searchButton}
+    onPress={()=>{
+      const page = randomPages[Math.floor(Math.random() * randomPages.length)];
+      const sections = parseHtmlToSections(page.description || '')
+      navigation.navigate('NotePage', { title:page.title, section: sections[Math.floor(Math.random() * sections.length)].title });
+    }}
+>
+  <Icon name={"random"} size={18} color="#FFFFFF" />
+</TouchableOpacity>
 }
 
 export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?:(input:string, isFind:boolean)=>React.ReactNode, useRandom?:boolean;}> = ({handlePress, renderExtra, useRandom=true}) => {
@@ -21,20 +84,18 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  const route = useRoute<any>()
-  const currentTitle = route.params?.title
+  const inputRef = useRef<TextInput|null>()
 
   const { data: pages = [] } = useNotePages();
-  const { data:lastPage } = useLastPage();
-  const { data:recentPages = [] } = useRecentPages()
-  const defaultPages = ([...(lastPage?[lastPage ]:[]), ...recentPages ]);
-  const randomPages = pages.filter(v=>v.description)
+  const { data:keywords = []} = useKeywords()
+  const addKeyword = useAddKeyowrd()
   const lowerCaseSearch = searchText.toLowerCase()
-  const filteredPages:ContentAndSection[] = searchText.length > 0
-    ? [...pages.filter(page => 
-        page.title.toLowerCase().startsWith(lowerCaseSearch)
-      ), ...pages.flatMap(v=>parseHtmlToSections(v.description || '').filter(v2=>v2.title.toLowerCase().startsWith(lowerCaseSearch)).map(v2=>({...v, section:v2})))].slice(0, 10)
-    : [...defaultPages, ...pages.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime()).filter(v=>defaultPages.find(v2=>v2.title===v.title)===undefined)].filter(v=>v.description && v.title !== currentTitle).slice(0, 10)
+  const filteredPages:SearchContent[] = searchText.length > 0
+    ? [
+      ...pages.filter(page =>page.title.toLowerCase().startsWith(lowerCaseSearch)),
+      ...extractMarkdownNoteLink(pages).filter(v=>v.name.toLowerCase().startsWith(lowerCaseSearch))
+    ].slice(0, 10)
+    : keywords.map(v=>({type:"_KEYWORD", title:v}))
 
   const handleSearch = () => {
     if (searchText.trim()) {
@@ -44,6 +105,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
 
   const handlePagePress = (title: string, section?:string) => {
     handlePress?handlePress(title):navigation.navigate('NotePage', { title, section });
+    addKeyword.mutate(searchText)
     setSearchText('');
   };
 
@@ -52,9 +114,20 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
     }).panHandlers
   ,[searchText])
 
-  const pagePressHandlers = useCallback((item:ContentAndSection)=>{
+  const pagePressHandlers = useCallback((item:SearchContent)=>{
     return PanResponder.create({
-      onPanResponderStart:() => handlePagePress(item.title, item.section?.title)
+      onPanResponderStart:() => {
+        if (item.type === "_KEYWORD"){
+          setSearchText(item.title)
+          setTimeout(()=>inputRef.current?.focus(), 50)
+        }
+        else if (item.type === "_NOTELINK" && item.section){
+          handlePagePress(item.title, item.section)
+        }
+        else {
+          handlePagePress(item.title)
+        }
+      }
     }).panHandlers
   }, [])
 
@@ -72,6 +145,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
     <View style={styles.container}>
       <View style={styles.searchContainer}>
         <TextInput
+          ref={ref=>{inputRef.current = ref}}
           style={[commonStyles.input, styles.searchInput]}
           value={searchText}
           onChangeText={(text) => {
@@ -90,16 +164,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
         >
           <Icon name={renderExtra?"search-plus":"search"} size={18} color="#FFFFFF" />
         </TouchableOpacity>
-        {useRandom && randomPages && <TouchableOpacity
-          style={commonStyles.searchButton}
-          onPress={()=>{
-            const page = randomPages[Math.floor(Math.random() * randomPages.length)];
-            const sections = parseHtmlToSections(page.description || '')
-            handlePagePress(page.title, sections[Math.floor(Math.random() * sections.length)].title)
-          }}
-        >
-          <Icon name={"random"} size={18} color="#FFFFFF" />
-        </TouchableOpacity>}
+        {useRandom && <RandomButton/>}
       </View>
       
       {showResults && (
@@ -107,14 +172,14 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
           {filteredPages.length > 0 ? (
             <FlatList
               data={filteredPages}
-              keyExtractor={(item) => JSON.stringify([item.title, item.section?.title])}
+              keyExtractor={(item:any) => JSON.stringify([item.title, item.name, item.section])}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.resultItem}
                   {...pagePressHandlers(item)}
                 >
-                  <Text style={[commonStyles.text, styles.resultText]}>{item.section?item.section.title:item.title}</Text>
-                  {item.section && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{item.title}</Text>}
+                  <Text style={[commonStyles.text, styles.resultText]}>{item.type==="_NOTELINK"?item.name:item.title}</Text>
+                  {item.type ==="_NOTELINK" && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{item.title}{item.section?(" > "+item.section):""}</Text>}
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={[commonStyles.resultSeparator]} />}

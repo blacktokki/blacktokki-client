@@ -1,7 +1,7 @@
 export type PostContent = {
     userId: number,
     parentId: number,
-    type: 'NOTE'|'BOOKMARK',
+    type: 'NOTE'|'BOOKMARK'|'SNAPSHOT',
     order: number,
     input: string,
     title: string,

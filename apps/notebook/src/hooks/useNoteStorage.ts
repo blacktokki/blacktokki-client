@@ -11,7 +11,7 @@ let lastPage:string|undefined
 
 const getNoteContents = async (): Promise<Content[]> => {
   if (ONLINE){
-    return (await getContentList()).filter(v=>(v.type==='NOTE'|| v.type==='BOOKMARK'))
+    return (await getContentList(undefined,["NOTE"]))
   }
   try {
     const jsonValue = await AsyncStorage.getItem(PAGE_STORAGE_KEY);

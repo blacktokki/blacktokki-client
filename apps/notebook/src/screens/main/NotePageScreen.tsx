@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
@@ -39,7 +39,15 @@ export const NotePageScreen: React.FC = () => {
   };
 
   const paragraph = parseHtmlToSections(page?.description||'');
-  const description = section?sectionDescription(paragraph, section) :page?.description
+  const [description, setDescription] = useState<string>()
+  useEffect(()=>{
+    if(description === undefined) {
+      setDescription(section?sectionDescription(paragraph, section) :page?.description)
+    }
+    else {
+      return () => setDescription(undefined);
+    }
+  }, [page, section, description])
 
   useEffect(()=>{
     toggleToc(false)

@@ -2,7 +2,7 @@ import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import React from 'react';
 // import { createRoot } from 'react-dom/client';
 
-import { EditorProps } from '../types';
+import { AutoCompleteProps, EditorProps } from '../types';
 import { parser, renderer } from './markdown';
 
 const INIT: IAllProps['init'] = {
@@ -24,13 +24,14 @@ let initMarkdown = false;
 // };
 
 export default (
-  props: EditorProps & {
-    readonly?: boolean;
-    onReady: () => void;
-    onPress?: () => void;
-    setValue: (v: string) => void;
-    onLink?: (url: string) => void;
-  }
+  props: EditorProps &
+    AutoCompleteProps & {
+      readonly?: boolean;
+      onReady: () => void;
+      onPress?: () => void;
+      setValue: (v: string) => void;
+      onLink?: (url: string) => void;
+    }
 ) => {
   const customDiv = document.createElement('div');
   // const root = createRoot(customDiv);
@@ -118,6 +119,28 @@ export default (
               initMarkdown = !initMarkdown;
             }
           });
+          if (props.autoComplete) {
+            props.autoComplete.forEach((ac, index) => {
+              const getMatchedChars = ac.getMatchedChars;
+              editor.ui.registry.addAutocompleter('autoComplete-' + index, {
+                trigger: ac.trigger,
+                fetch: (pattern) => {
+                  return new Promise((resolve) => {
+                    const results = getMatchedChars(pattern).map((item) => ({
+                      type: 'autocompleteitem' as any,
+                      ...item,
+                    }));
+                    resolve(results);
+                  });
+                },
+                onAction: (autocompleteApi, rng, value) => {
+                  editor.selection.setRng(rng);
+                  editor.insertContent(value);
+                  autocompleteApi.hide();
+                },
+              });
+            });
+          }
         },
         codesample_languages: [
           { text: '-', value: 'none' },

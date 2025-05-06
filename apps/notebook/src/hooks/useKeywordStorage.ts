@@ -3,8 +3,17 @@ import { useMutation, useQuery, useQueryClient } from "react-query";
 
 const KEYWORDS_KEY = '@blacktokki:notebook:keywords';
 
+export type KeywordContent = {
+  type: "_NOTELINK",
+  name: string, 
+  title: string,
+  section?: string
+} | {
+  type:  "_KEYWORD",
+  title: string
+}
 
-const getKeywords = async (): Promise<string[]> => {
+const getKeywords = async (): Promise<KeywordContent[]> => {
 try {
     const jsonValue = await AsyncStorage.getItem(KEYWORDS_KEY);
     return jsonValue ? JSON.parse(jsonValue) : [];
@@ -14,7 +23,7 @@ try {
 }
 };
     
-const saveKeywords = async (keywords: string[]): Promise<void> => {
+const saveKeywords = async (keywords: KeywordContent[]): Promise<void> => {
 try {
     const jsonValue = JSON.stringify(keywords);
     await AsyncStorage.setItem(KEYWORDS_KEY, jsonValue);
@@ -36,9 +45,9 @@ export const useAddKeyowrd = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (keyword:string) => {
+    mutationFn: async (keyword:KeywordContent) => {
       const keywords = await getKeywords();
-      const newKeywords = [...new Set([...keywords, keyword])].filter(v=>v.trim()).slice(0, 10)
+      const newKeywords = [...new Set([JSON.stringify(keyword), ...keywords.map(v=>JSON.stringify(v))])].map(v=>JSON.parse(v))
       await saveKeywords(newKeywords)
     },
     onSuccess: async() => {

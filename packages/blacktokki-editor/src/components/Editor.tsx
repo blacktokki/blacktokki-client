@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 
 import Tinymce from '../lib/TinymceWeb';
-import { EditorProps } from '../types';
+import { AutoCompleteProps, EditorProps } from '../types';
 
-export default (props: EditorProps & { active: boolean; setValue: (v: string) => void }) => {
+export default (
+  props: EditorProps & AutoCompleteProps & { active: boolean; setValue: (v: string) => void }
+) => {
   const [ready, setReady] = useState<boolean>(false);
   useEffect(() => {
     if (!props.active) setReady(false);
@@ -16,6 +18,7 @@ export default (props: EditorProps & { active: boolean; setValue: (v: string) =>
         value={props.value}
         setValue={props.setValue}
         autoResize={props?.autoResize}
+        autoComplete={props?.autoComplete}
         onReady={() => {
           if (!ready) {
             setReady(true);

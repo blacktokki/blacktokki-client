@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'rea
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList } from '../../types';
-import { useNotePage, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
+import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
+import { getFilteredPages } from '../../components/SearchBar';
 
 type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
 
@@ -18,6 +19,7 @@ export const EditPageScreen: React.FC = () => {
   const commonStyles = createCommonStyles(theme);
   
   const { data: page, isLoading } = useNotePage(title);
+  const { data: pages = [] } = useNotePages();
   const [content, setContent] = useState('');
   
   const mutation = useCreateOrUpdatePage();
@@ -66,6 +68,18 @@ export const EditPageScreen: React.FC = () => {
         value={content}
         setValue={setContent}
         theme={theme}
+        autoComplete={[{
+          trigger: '[',
+          getMatchedChars: (pattern) => {
+            return getFilteredPages(pages, pattern).map(v=>{
+              const text = v.type === '_NOTELINK' ? v.name : v.title;
+              const url = encodeURI(v.type === '_NOTELINK' && v.section ? `?title=${v.title}&section=${v.section}`:`?title=${v.title}`);
+              return {
+                text,
+                value:`<a href=${url}>${text}</a>`,
+              }})
+          }
+        }]}
       />
       
       <View style={styles.buttonContainer}>

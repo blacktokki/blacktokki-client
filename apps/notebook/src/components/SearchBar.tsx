@@ -8,19 +8,11 @@ import { useNotePages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
 import { useColorScheme } from '@blacktokki/core';
 import { parseHtmlToSections } from './HeaderSelectBar';
-import { useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
+import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 
 let _searchText = ''
 
-type SearchContent = Content | {
-  type: "_NOTELINK",
-  name: string, 
-  title: string,
-  section?: string
-} | {
-  type:  "_KEYWORD",
-  title: string
-}
+type SearchContent = Content | KeywordContent
 
 function extractHtmlLinksWithQuery(text:string) {
   const parser = new DOMParser();
@@ -50,14 +42,18 @@ export function urlToNoteLink(url:string){
   }
 }
 
-function extractNoteLink(contents:Content[]){
-  return contents.flatMap(v=>extractHtmlLinksWithQuery(v.description || '').map((v2)=>{
+export const getFilteredPages = (pages:Content[], searchText:string) => {
+  const lowerCaseSearch = searchText.toLowerCase()
+  const noteLinks = pages.flatMap(v=>extractHtmlLinksWithQuery(v.description || '').map((v2)=>{
     const noteLink = urlToNoteLink(v2.url);
     if(noteLink && v2.text !== noteLink.title /*&& v2.text.startsWith(v.title)*/){
       return {type: "_NOTELINK" as "_NOTELINK", name:v2.text, ...noteLink}
     }
   }).filter(v=>v !==undefined))
-  
+  return [
+    ...pages.filter(page =>page.title.toLowerCase().startsWith(lowerCaseSearch)),
+    ...noteLinks.filter(v=>v.name.toLowerCase().startsWith(lowerCaseSearch))
+  ]
 }
 
 export const RandomButton = () => {
@@ -78,34 +74,29 @@ export const RandomButton = () => {
 </TouchableOpacity>
 }
 
-export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?:(input:string, isFind:boolean)=>React.ReactNode, useRandom?:boolean;}> = ({handlePress, renderExtra, useRandom=true}) => {
+export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:boolean;}> = ({handlePress, useRandom=true}) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const inputRef = useRef<TextInput|null>()
-
-  const { data: pages = [] } = useNotePages();
   const { data:keywords = []} = useKeywords()
   const addKeyword = useAddKeyowrd()
-  const lowerCaseSearch = searchText.toLowerCase()
+  const { data: pages = [] } = useNotePages();
   const filteredPages:SearchContent[] = searchText.length > 0
-    ? [
-      ...pages.filter(page =>page.title.toLowerCase().startsWith(lowerCaseSearch)),
-      ...extractNoteLink(pages).filter(v=>v.name.toLowerCase().startsWith(lowerCaseSearch))
-    ].slice(0, 10)
-    : keywords.map(v=>({type:"_KEYWORD", title:v}))
+    ? getFilteredPages(pages, searchText).slice(0, 10)
+    : keywords.slice(0, 10)
 
   const handleSearch = () => {
     if (searchText.trim()) {
       handlePagePress(searchText.trim())
+      addKeyword.mutate({type:"_KEYWORD", title:searchText.trim()})
     }
   };
 
   const handlePagePress = (title: string, section?:string) => {
     handlePress?handlePress(title):navigation.navigate('NotePage', { title, section });
-    addKeyword.mutate(searchText)
     setSearchText('');
   };
 
@@ -117,15 +108,13 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
   const pagePressHandlers = useCallback((item:SearchContent)=>{
     return PanResponder.create({
       onPanResponderStart:() => {
-        if (item.type === "_KEYWORD"){
-          setSearchText(item.title)
-          setTimeout(()=>inputRef.current?.focus(), 50)
-        }
-        else if (item.type === "_NOTELINK" && item.section){
+        if (item.type === "_NOTELINK" && item.section){
           handlePagePress(item.title, item.section)
+          addKeyword.mutate(item)
         }
         else {
           handlePagePress(item.title)
+          addKeyword.mutate({type:"_KEYWORD", title:item.title})
         }
       }
     }).panHandlers
@@ -162,7 +151,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
           onPress={handleSearch}
           disabled={!searchText.trim()}
         >
-          <Icon name={renderExtra?"search-plus":"search"} size={18} color="#FFFFFF" />
+          <Icon name={"search"} size={18} color="#FFFFFF" />
         </TouchableOpacity>
         {useRandom && <RandomButton/>}
       </View>
@@ -194,7 +183,6 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void,renderExtra?
               </Text>
             </TouchableOpacity>
           ) : null}
-          {renderExtra?.(searchText, filteredPages.length > 0)}
         </View>
       )}
     </View>

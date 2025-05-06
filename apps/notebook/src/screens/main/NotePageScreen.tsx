@@ -8,14 +8,14 @@ import { useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
-import { SearchBar, urlToNoteLink } from '../../components/SearchBar';
+import { SearchBar, titleFormat, urlToNoteLink } from '../../components/SearchBar';
 import HeaderSelectBar, { NodeData, parseHtmlToSections } from '../../components/HeaderSelectBar';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
-const sectionDescription = (paragraph:NodeData[], section:string) => {
+export const sectionDescription = (paragraph:NodeData[], section:string, rootTitle:boolean) => {
   const path = paragraph.find(v=>v.title===section)?.path
-  return path?paragraph.filter(v=>v.path.startsWith(path)).map(v=>v.header + v.description).join(""):""
+  return path?paragraph.filter(v=>v.path.startsWith(path)).map(v=>((rootTitle || v.path!==path)?v.header:"") + v.description).join(""):""
 }
 
 export const NotePageScreen: React.FC = () => {
@@ -42,7 +42,7 @@ export const NotePageScreen: React.FC = () => {
   const [description, setDescription] = useState<string>()
   useEffect(()=>{
     if(description === undefined) {
-      setDescription(section?sectionDescription(paragraph, section) :page?.description)
+      setDescription(section?sectionDescription(paragraph, section, true) :page?.description)
     }
     else {
       return () => setDescription(undefined);
@@ -62,7 +62,7 @@ export const NotePageScreen: React.FC = () => {
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title })}>
           <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>
-            {title}{section?" ▶ "+section:""}
+            {titleFormat({title, section})}
           </Text>
         </TouchableOpacity>
         {!!page?.description && <View style={styles.actionButtons}>

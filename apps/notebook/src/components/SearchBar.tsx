@@ -42,14 +42,18 @@ export function urlToNoteLink(url:string){
   }
 }
 
-export const getFilteredPages = (pages:Content[], searchText:string) => {
-  const lowerCaseSearch = searchText.toLowerCase()
-  const noteLinks = pages.flatMap(v=>extractHtmlLinksWithQuery(v.description || '').map((v2)=>{
+export function getNoteLinks(pages:Content[]){
+  return pages.flatMap(v=>extractHtmlLinksWithQuery(v.description || '').map((v2)=>{
     const noteLink = urlToNoteLink(v2.url);
     if(noteLink && v2.text !== noteLink.title /*&& v2.text.startsWith(v.title)*/){
       return {type: "_NOTELINK" as "_NOTELINK", name:v2.text, ...noteLink}
     }
   }).filter(v=>v !==undefined))
+}
+
+export const getFilteredPages = (pages:Content[], searchText:string) => {
+  const lowerCaseSearch = searchText.toLowerCase()
+  const noteLinks = getNoteLinks(pages)
   return [
     ...pages.filter(page =>page.title.toLowerCase().startsWith(lowerCaseSearch)),
     ...noteLinks.filter(v=>v.name.toLowerCase().startsWith(lowerCaseSearch))
@@ -73,6 +77,8 @@ export const RandomButton = () => {
   <Icon name={"random"} size={18} color="#FFFFFF" />
 </TouchableOpacity>
 }
+
+export const titleFormat = (item:{title:string, section?:string}) => `${item.title}${item.section?(" ▶ "+item.section):""}`
 
 export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:boolean;}> = ({handlePress, useRandom=true}) => {
   const [searchText, setSearchText] = useState(_searchText);
@@ -168,7 +174,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:
                   {...pagePressHandlers(item)}
                 >
                   <Text style={[commonStyles.text, styles.resultText]}>{item.type==="_NOTELINK"?item.name:item.title}</Text>
-                  {item.type ==="_NOTELINK" && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{item.title}{item.section?(" > "+item.section):""}</Text>}
+                  {item.type ==="_NOTELINK" && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{titleFormat(item)}</Text>}
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={[commonStyles.resultSeparator]} />}

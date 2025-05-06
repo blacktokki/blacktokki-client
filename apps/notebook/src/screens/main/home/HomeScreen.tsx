@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StackScreenProps } from '@react-navigation/stack';
-import { FlatList, ScrollView, StyleSheet, TextInput, TouchableOpacity, View} from 'react-native';
+import { ScrollView, StyleSheet, View} from 'react-native';
 import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation';
-import ContentGroupSection from './ContentGroupSection';
+import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from './ContentGroupSection';
 import { List } from 'react-native-paper';
 import { createCommonStyles } from '../../../styles';
 import { SearchBar } from '../../../components/SearchBar';
@@ -22,6 +22,8 @@ const NoteTabView = ()=>{
   const theme = useColorScheme()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
       <ContentGroupSection type={'NOTE'} noteCount={15}/>
+      <EmptyPageButton/>
+      <EmptyContentButton/>
     </ScrollView>
 }
 

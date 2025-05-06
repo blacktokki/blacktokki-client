@@ -1,12 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import { useNotePages } from '../../hooks/useNoteStorage';
+import { NoteListSection } from './NoteListSection';
 import { NavigationParamList } from '../../types';
-import { useNotePages, useRecentPages } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
-import { useColorScheme, useResizeContext } from '@blacktokki/core';
-import { SearchBar } from '../../components/SearchBar';
 
 const updatedOffset = new Date().getTimezoneOffset()
 
@@ -19,57 +16,12 @@ const updatedFormat = (_updated:string) => {
     return date==today?updated.slice(11):date;
 }
 
-
 export const RecentPagesScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const window = useResizeContext();
-
   const { data: recentPages = [], isLoading } = useNotePages();
-  
-  const handlePagePress = (title: string) => {
-    navigation.navigate('NotePage', { title });
-  };
-  
-
-  return (<>
-    {window === 'portrait' && <SearchBar/>}
-    <View style={commonStyles.container}>      
-      {isLoading ? (
-        <View style={[commonStyles.card, commonStyles.centerContent]}>
-          <Text style={commonStyles.text}>로딩 중...</Text>
-        </View>
-      ) : recentPages.length > 0 ? (
-        <FlatList
-          data={recentPages.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime() )}
-          keyExtractor={(item) => item.title}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={commonStyles.card}
-              onPress={() => handlePagePress(item.title)}
-            >
-              <Text style={commonStyles.title}>{item.title}</Text>
-              <Text style={commonStyles.smallText}>
-                최근 수정: {updatedFormat(item.updated)}
-              </Text>
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        />
-      ) : (
-        <View style={[commonStyles.card, commonStyles.centerContent]}>
-          <Text style={commonStyles.text}>
-            최근 수정한 노트가 없습니다.
-          </Text>
-        </View>
-      )}
-    </View>
-  </>);
+  return <NoteListSection 
+    contents={recentPages.sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime()).map(v=>({...v, subtitle:`최근 수정: ${updatedFormat(v.updated as string)}`}))} 
+    isLoading={isLoading}
+    onPress={(title)=>navigation.navigate('NotePage', { title })}
+    emptyMessage='최근 수정한 노트가 없습니다.'/>
 };
-
-const styles = StyleSheet.create({
-  backButton: {
-    padding: 8,
-  },
-});

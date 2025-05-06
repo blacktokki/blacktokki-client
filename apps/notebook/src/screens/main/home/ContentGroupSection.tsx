@@ -9,6 +9,16 @@ const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
 }
 
+export const EmptyPageButton = () => {
+  const { lang } = useLangContext()
+  return <List.Item left={_props=><List.Icon {..._props} icon={"note-remove"} />} title={lang("Empty Page")} onPress={()=>navigate('EmptyPages')} />
+}
+
+export const EmptyContentButton = () => {
+  const { lang } = useLangContext()
+  return <List.Item left={_props=><List.Icon {..._props} icon={"note-edit"} />} title={lang("Empty Content")} onPress={()=>navigate('EmptyContents')} />
+}
+
 const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteCount:number}) => {
   const { lang } = useLangContext()
   const notes = useNotePages()

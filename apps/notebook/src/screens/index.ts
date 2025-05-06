@@ -7,6 +7,7 @@ import { RecentPagesScreen } from "./main/RecentPageScreen";
 import { NotePageScreen } from "./main/NotePageScreen";
 import { EmptyPagesScreen } from "./main/EmptyPageScreen";
 import { EmptyContentsScreen } from "./main/EmptyContentScreen";
+import { ArchiveScreen } from "./main/ArchiveScreen";
 
 export const main = {
     Home:{
@@ -43,6 +44,11 @@ export const main = {
       title:'Blacktokki Notebook',
       component:EmptyContentsScreen,
       path:'empty',
+    },
+    Archive:{
+      title:'Blacktokki Notebook',
+      component:ArchiveScreen,
+      path:'archive',
     },
   };
   

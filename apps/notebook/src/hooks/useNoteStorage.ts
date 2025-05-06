@@ -9,9 +9,12 @@ const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
 const ONLINE = true;
 let lastPage:string|undefined
 
-const getNoteContents = async (): Promise<Content[]> => {
+const getContents = async (type:"NOTE"|"SNAPSHOT"): Promise<Content[]> => {
   if (ONLINE){
-    return (await getContentList(undefined,["NOTE"]))
+    return (await getContentList(undefined,[type]))
+  }
+  if(type==="SNAPSHOT"){
+    return []
   }
   try {
     const jsonValue = await AsyncStorage.getItem(PAGE_STORAGE_KEY);
@@ -22,11 +25,15 @@ const getNoteContents = async (): Promise<Content[]> => {
   }
 };
 
+const getNoteContents = async () => await getContents("NOTE")
+
 const saveNoteContents = async (contents: (Content|PostContent)[], id?:number): Promise<void> => {
   if (ONLINE){
     const content = contents.find(v=>id===(v as {id?:number}).id);
     if (content){
-      await (id?patchContent({id, updated:content}):postContent(content));
+      const savedId = await (id?(patchContent({id, updated:content}).then(()=>id)):postContent(content));
+      const snapshot:Content|PostContent = {...content, type:"SNAPSHOT", id:undefined, parentId:savedId}
+      await postContent(snapshot)
     }
   }
   try {
@@ -60,6 +67,13 @@ export const useNotePages = () => {
   return useQuery({
     queryKey: ['pageContents'],
     queryFn: getNoteContents,
+  });
+};
+
+export const useSnapshotPages = () => {
+  return useQuery({
+    queryKey: ['snapshotContents'],
+    queryFn: async () => await getContents("SNAPSHOT"),
   });
 };
 
@@ -130,6 +144,7 @@ export const useNotePage = (title: string) => {
       },
       onSuccess: async (data) => {
         await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+        await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
         await queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
         await queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       },
@@ -169,6 +184,7 @@ export const useNotePage = (title: string) => {
       },
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+        queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
         queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
         queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
         queryClient.invalidateQueries({ queryKey: ['recentPages'] });

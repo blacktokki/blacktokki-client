@@ -4,7 +4,7 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { NavigationParamList } from '../../types';
-import { useNotePage } from '../../hooks/useNoteStorage';
+import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
@@ -20,7 +20,7 @@ export const sectionDescription = (paragraph:NodeData[], section:string, rootTit
 
 export const NotePageScreen: React.FC = () => {
   const route = useRoute<NotePageScreenRouteProp>();
-  const { title, section } = route.params;
+  const { title, section, archiveId } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
@@ -29,6 +29,8 @@ export const NotePageScreen: React.FC = () => {
   
 
   const { data: page, isLoading } = useNotePage(title);
+  const { data:archives } = useSnapshotPages()
+  const archive = archiveId?archives?.find(v=>v.id===archiveId &&v.description !== page?.description):undefined
 
   const handleEdit = () => {
     navigation.navigate('EditPage', { title });
@@ -42,12 +44,12 @@ export const NotePageScreen: React.FC = () => {
   const [description, setDescription] = useState<string>()
   useEffect(()=>{
     if(description === undefined) {
-      setDescription(section?sectionDescription(paragraph, section, true) :page?.description)
+      setDescription(archive?archive.description:section?sectionDescription(paragraph, section, true) :page?.description)
     }
     else {
       return () => setDescription(undefined);
     }
-  }, [page, section, description])
+  }, [page, archive, section, description])
 
   useEffect(()=>{
     toggleToc(false)
@@ -60,19 +62,27 @@ export const NotePageScreen: React.FC = () => {
       //@ts-ignore
       {paddingRight:12, scrollbarGutter: 'stable'}]}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title })}>
+        <TouchableOpacity style={{flexDirection:'row'}} onPress={()=>navigation.navigate('NotePage', { title })}>
           <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>
             {titleFormat({title, section})}
           </Text>
+          {archive && <Text style={[commonStyles.text, {fontStyle:'italic'}]}>
+            {"(" + archive.updated + ")"}
+          </Text>}
         </TouchableOpacity>
-        {!!page?.description && <View style={styles.actionButtons}>
-          <TouchableOpacity onPress={()=>toggleToc(!toc)} style={styles.actionButton}>
-            <Icon name="list" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+        {!!description && <View style={styles.actionButtons}>
+          <TouchableOpacity onPress={()=>navigation.navigate("Archive", { title })} style={styles.actionButton}>
+            <Icon name="history" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleMovePage} style={styles.actionButton}>
-            <Icon name="exchange" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
-          </TouchableOpacity>
-          {section
+          {!archive && <>
+            <TouchableOpacity onPress={()=>toggleToc(!toc)} style={styles.actionButton}>
+              <Icon name="list" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleMovePage} style={styles.actionButton}>
+              <Icon name="exchange" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+            </TouchableOpacity>
+          </>}
+          {(archive || section)
           ?undefined
           :<>
             <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>

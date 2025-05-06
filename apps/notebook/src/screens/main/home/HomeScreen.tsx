@@ -8,6 +8,7 @@ import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from './Cont
 import { List } from 'react-native-paper';
 import { createCommonStyles } from '../../../styles';
 import { SearchBar } from '../../../components/SearchBar';
+import { ArchiveButtonSection } from './ConfigButtonSection';
 
 
 const OpenedEditorsTabView = ()=>{
@@ -27,10 +28,24 @@ const NoteTabView = ()=>{
     </ScrollView>
 }
 
+const ConfigCommonView = () => {
+  const theme = useColorScheme()
+  const commonStyles = createCommonStyles(theme);
+  return <>
+    <View style={commonStyles.card}>
+      <ConfigSections/>
+    </View>
+    <View style={commonStyles.card}>
+      <ArchiveButtonSection/>
+    </View>
+  </>
+}
+
 const ConfigTabView = ()=>{
   const theme = useColorScheme()
-  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
-    <ConfigSections/>
+  const commonStyles = createCommonStyles(theme);
+  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}} contentContainerStyle={commonStyles.container}>
+    <ConfigCommonView/>
   </ScrollView>
 }
 
@@ -47,9 +62,7 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   
   return <HomeSection tabViews={tabViews} homeView={{title, headerRight:() => <SearchBar/>}} headerTitle={title}>
     <View style={[commonStyles.container, {width:'100%'}]}>
-      <View style={commonStyles.card}>
-        <ConfigSections/>
-      </View>
+      <ConfigCommonView/>
     </View>
   </HomeSection>
 }

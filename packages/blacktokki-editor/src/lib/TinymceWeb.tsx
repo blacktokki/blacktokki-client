@@ -79,8 +79,11 @@ export default (
         menubar: false,
         branding: false,
         statusbar: false,
+        formats: {
+          underline: [{ inline: 'u', remove: 'all' }],
+        },
         block_formats:
-          'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6;',
+          'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Code=code',
         content_style:
           (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +
           'p { margin: 0.5rem 0; }',

@@ -7,7 +7,7 @@ import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/use
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
-import { SearchBar } from '../../components/SearchBar';
+import { SearchBar, titleFormat } from '../../components/SearchBar';
 import HeaderSelectBar, { parseHtmlToSections } from '../../components/HeaderSelectBar';
 
 type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
@@ -22,7 +22,7 @@ export const MovePageScreen: React.FC = () => {
   const [newTitle, setNewTitle] = useState(title);
   const { data: page, isLoading } = useNotePage(title);
   const paragraph = parseHtmlToSections(page?.description|| '')
-  const [path,setPath] = useState('')
+  const path = paragraph.find(v=>v.title === section)?.path || ''
   const { data: newPage } = useNotePage(newTitle);
   const newParagraph = parseHtmlToSections(newPage?.description || '').filter(v=>title!==newTitle || path===v.path || !v.path.startsWith(path))
   const [newPath,setNewPath] = useState('')
@@ -93,9 +93,7 @@ export const MovePageScreen: React.FC = () => {
   }, [page, isLoading])
   useEffect(()=>{
     if (!isLoading){
-      const _path = paragraph.find(v=>v.title === section)?.path || ''
-      setPath(_path)
-      setNewPath(_path)
+      setNewPath(path)
     }
   }, [section, isLoading])
   const paragraphItem = paragraph.find(v=>v.path===path)
@@ -106,17 +104,10 @@ export const MovePageScreen: React.FC = () => {
       <View style={commonStyles.card}>
         <View style={{flexDirection:window==='landscape'?'row':'column', zIndex:1}}>
           <View style={{zIndex:1}}>
-            <Text style={commonStyles.text}>현재 노트 제목:</Text>
-            <Text style={[commonStyles.title, styles.columns]}>{title}</Text>
-            <Text style={commonStyles.text}>현재 노트 문단:</Text>
-            { section!==undefined?
-              <Text style={[commonStyles.title, styles.columns]}>{section}</Text>:
-              <View style={styles.columns}>
-                <HeaderSelectBar path={path} onPress={(item)=>setPath(item.path)} root={page?.title || ''} data={paragraph}/>
-              </View>}
-            <Text style={commonStyles.text}>새 노트 제목:</Text>
+            <Text style={commonStyles.text}>{section?"현재 노트 제목 및 문단:":"현재 노트 제목:"}</Text>
+            <Text style={[commonStyles.title, styles.columns]}>{titleFormat({title, section})}</Text>
+            <Text style={commonStyles.text}>새 노트 제목 및 문단:</Text>
             <SearchBar handlePress={setNewTitle} useRandom={false}/>
-            <Text style={commonStyles.text}>새 노트 문단:</Text>
             <View style={styles.columns}>
               <HeaderSelectBar path={newPath} onPress={(item)=>setNewPath(item.path)} root={newPage?.title || ''} data={newParagraph}/>
             </View>
@@ -127,9 +118,9 @@ export const MovePageScreen: React.FC = () => {
               style={[commonStyles.button, styles.moveButton, {flex:0, flexDirection:'row', alignItems:'center', paddingTop:24, paddingBottom:16}]} 
               onPress={()=>setPreview(!preview)}
             >
-              <Text style={commonStyles.title}>{title}{paragraphItem?.level!==0?( "/"+paragraphItem?.title):""}</Text>
-              <Text style={[commonStyles.text, {marginBottom:8,  fontSize:14}]}>  ▶  </Text>
-              <Text style={commonStyles.title}>{newTitle}{newParagraphItem?.level!==0?( "/"+(newParagraphItem?.title || "?")):""}</Text>   
+              <Text style={commonStyles.title}>{titleFormat({title, section:paragraphItem?.title})}</Text>
+              <Text style={[commonStyles.text, {marginBottom:8,  fontSize:14}]}>  ➜  </Text>
+              <Text style={commonStyles.title}>{titleFormat({title:newTitle, section:newParagraphItem?.title})}</Text>   
             </TouchableOpacity>
               {preview!==undefined && <View style={{display:preview?'flex':'none'}}>
               <EditorViewer

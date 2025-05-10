@@ -25,6 +25,21 @@ markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
   return `<pre class="language-${language}"><code>${escapeCode}</code></pre>`;
 };
 
+//@ts-ignore
+function renderStrong(tokens, idx, opts, _, slf) {
+  const token = tokens[idx];
+  if (token.markup === '__') {
+    token.tag = 'u';
+  }
+  if (token.markup === '**') {
+    token.tag = 'strong';
+  }
+  return slf.renderToken(tokens, idx, opts);
+}
+
+markdownToHtml.renderer.rules.strong_open = renderStrong;
+markdownToHtml.renderer.rules.strong_close = renderStrong;
+
 HtmlToMarkdown.addRule('codeBlock', {
   filter(node, options) {
     // Determine if this node should be treated as a code block
@@ -49,6 +64,18 @@ HtmlToMarkdown.addRule('codeBlock', {
     // Format as a code block with your preferred style
     // This example uses GitHub-style code fences with language specification
     return '\n\n```' + languageSpec + '\n' + code + '\n```\n\n';
+  },
+});
+HtmlToMarkdown.addRule('underline', {
+  filter: ['u'],
+  replacement(content) {
+    return '__' + content + '__';
+  },
+});
+HtmlToMarkdown.addRule('strikethrough', {
+  filter: ['del', 's'],
+  replacement(content) {
+    return '~~' + content + '~~';
   },
 });
 

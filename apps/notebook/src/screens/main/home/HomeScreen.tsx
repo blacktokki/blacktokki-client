@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { StackScreenProps } from '@react-navigation/stack';
-import { ScrollView, StyleSheet, View} from 'react-native';
-import { Colors, Text, useColorScheme, useLangContext } from '@blacktokki/core';
+import { ScrollView, View} from 'react-native';
+import { Colors, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation';
 import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from './ContentGroupSection';
@@ -44,7 +44,7 @@ const ConfigCommonView = () => {
 const ConfigTabView = ()=>{
   const theme = useColorScheme()
   const commonStyles = createCommonStyles(theme);
-  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}} contentContainerStyle={commonStyles.container}>
+  return <ScrollView style={{flex:1}} contentContainerStyle={[commonStyles.container, {backgroundColor:Colors[theme].background}]}>
     <ConfigCommonView/>
   </ScrollView>
 }
@@ -66,27 +66,3 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
     </View>
   </HomeSection>
 }
-
-const styles = StyleSheet.create({
-  searchContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  searchButton: {
-    backgroundColor: '#3498DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 48,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  recentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-  },
-});

@@ -46,7 +46,7 @@ export function getNoteLinks(pages:Content[]){
   return pages.flatMap(v=>extractHtmlLinksWithQuery(v.description || '').map((v2)=>{
     const noteLink = urlToNoteLink(v2.url);
     if(noteLink && v2.text !== noteLink.title /*&& v2.text.startsWith(v.title)*/){
-      return {type: "_NOTELINK" as "_NOTELINK", name:v2.text, ...noteLink}
+      return {type: "_NOTELINK" as "_NOTELINK", name:v2.text, ...noteLink, origin:v.title}
     }
   }).filter(v=>v !==undefined))
 }

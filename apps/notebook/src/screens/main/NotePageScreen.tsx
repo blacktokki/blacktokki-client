@@ -18,6 +18,14 @@ export const sectionDescription = (paragraph:NodeData[], section:string, rootTit
   return path?paragraph.filter(v=>v.path.startsWith(path)).map(v=>((rootTitle || v.path!==path)?v.header:"") + v.description).join(""):""
 }
 
+export const getSplitTitle = (title:string) => {
+  const splitTitle = title.split("/")
+  if (splitTitle.length<2) {
+    return [title]
+  }
+  return [splitTitle.slice(0, splitTitle.length -1).join("/"), splitTitle[splitTitle.length -1]]
+}
+
 export const NotePageScreen: React.FC = () => {
   const route = useRoute<NotePageScreenRouteProp>();
   const { title, section, archiveId } = route.params;
@@ -33,6 +41,7 @@ export const NotePageScreen: React.FC = () => {
   const archive = archiveId?archives?.find(v=>v.id===archiveId &&v.description !== page?.description):undefined
 
   const handleEdit = () => {
+    console.log('@', title)
     navigation.navigate('EditPage', { title });
   };
   
@@ -54,6 +63,7 @@ export const NotePageScreen: React.FC = () => {
   useEffect(()=>{
     toggleToc(false)
   }, [route])
+  const splitTitle = getSplitTitle(title)
 
   return (<>
     {_window === 'portrait' && <SearchBar/>}
@@ -62,19 +72,21 @@ export const NotePageScreen: React.FC = () => {
       //@ts-ignore
       {paddingRight:12, scrollbarGutter: 'stable'}]}>
       <View style={commonStyles.header}>
-        <TouchableOpacity style={{flexDirection:'row'}} onPress={()=>navigation.navigate('NotePage', { title })}>
-          <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>
-            {titleFormat({title, section})}
-          </Text>
-          {archive && <Text style={[commonStyles.text, {fontStyle:'italic'}]}>
-            {"(" + archive.updated + ")"}
-          </Text>}
-        </TouchableOpacity>
-        {!!description && <View style={styles.actionButtons}>
-          <TouchableOpacity onPress={()=>navigation.navigate("Archive", { title })} style={styles.actionButton}>
-            <Icon name="history" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+        <View style={{flexDirection:'row'}}>
+          <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title:splitTitle[0] })}>
+            <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>{splitTitle[0]}</Text>
           </TouchableOpacity>
-          {!archive && <>
+          {splitTitle.length === 2 && <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>{"/"+splitTitle[1]}</Text>}
+          {section && <Text style={[commonStyles.title, styles.pageTitle, {marginLeft:5}]} numberOfLines={1}>{titleFormat({title:"", section})}</Text>}
+          {archive && <Text style={[commonStyles.text, {marginLeft:5, fontStyle:'italic'}]}>{"(" + archive.updated + ")"}</Text>}
+        </View>
+        <View style={styles.actionButtons}>
+          {!section && <>
+            <TouchableOpacity onPress={()=>navigation.navigate("Archive", { title })} style={styles.actionButton}>
+              <Icon name="history" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
+            </TouchableOpacity>
+          </>}
+          {!!description && !archive && <>
             <TouchableOpacity onPress={()=>toggleToc(!toc)} style={styles.actionButton}>
               <Icon name="list" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
             </TouchableOpacity>
@@ -82,14 +94,12 @@ export const NotePageScreen: React.FC = () => {
               <Icon name="exchange" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
             </TouchableOpacity>
           </>}
-          {(archive || section)
-          ?undefined
-          :<>
+          {!!description && !archive && !section && <>
             <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
               <Icon name="pencil" size={16} color={theme === 'dark' ? '#E4E4E4' : '#333333'} />
             </TouchableOpacity>
           </>}
-        </View>}
+        </View>
       </View>
       <View style={commonStyles.flex}>
         {isLoading ? (

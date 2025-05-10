@@ -7,7 +7,7 @@ import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/us
 import { createCommonStyles } from '../../styles';
 import { useColorScheme } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
-import { getFilteredPages } from '../../components/SearchBar';
+import { getFilteredPages, titleFormat } from '../../components/SearchBar';
 
 type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
 
@@ -24,6 +24,10 @@ export const EditPageScreen: React.FC = () => {
   
   const mutation = useCreateOrUpdatePage();
   const handleSave = () => {
+    if (page?.description === content){
+      navigation.navigate('NotePage', { title });
+      return;
+    }
     mutation.mutate(
       { title, description: content },
       {
@@ -55,7 +59,7 @@ export const EditPageScreen: React.FC = () => {
     window.addEventListener('beforeunload', callback);
     return () => window.removeEventListener('beforeunload', callback);
   })
-
+  console.log(content)
   return (
     <View style={commonStyles.container}>
       <View style={commonStyles.header}>
@@ -71,8 +75,8 @@ export const EditPageScreen: React.FC = () => {
         autoComplete={[{
           trigger: '[',
           getMatchedChars: (pattern) => {
-            return getFilteredPages(pages, pattern).map(v=>{
-              const text = v.type === '_NOTELINK' ? v.name : v.title;
+            return [{type:"_NOTELINK", name:pattern, title, section:pattern}, ...getFilteredPages(pages, pattern)].map(v=>{
+              const text = v.type === '_NOTELINK' ? (v.name + `(${titleFormat(v)})`): v.title;
               const url = encodeURI(v.type === '_NOTELINK' && v.section ? `?title=${v.title}&section=${v.section}`:`?title=${v.title}`);
               return {
                 text,

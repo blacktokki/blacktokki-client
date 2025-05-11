@@ -22,7 +22,7 @@ export const EmptyPagesScreen: React.FC = () => {
   }).map(v=>({...v, subtitle:(v.section===undefined?'Unknown note link':'Unknown section link') + `(${v.origin})`}))
   const emptyParentData = pages.map(v=>{
     const splitTitle = getSplitTitle(v.title)
-    if (splitTitle.length === 2 && pages.find(v=>v.title===splitTitle[0]) === undefined){
+    if (v.description && splitTitle.length === 2 && pages.find(v=>v.title===splitTitle[0]) === undefined){
       return { title:splitTitle[0], subtitle: `Empty parent note(${v.title})`}
     }
     return undefined

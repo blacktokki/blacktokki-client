@@ -1,44 +1,92 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StackScreenProps } from '@react-navigation/stack';
-import { ScrollView, View} from 'react-native';
-import { Colors, useColorScheme, useLangContext } from '@blacktokki/core';
-import { HomeSection, ConfigSections } from '@blacktokki/navigation';
+import { ScrollView, TouchableOpacity, View} from 'react-native';
+import { Colors, ContractFooter, Text, TextButton, useColorScheme, useLangContext } from '@blacktokki/core';
+import { HomeSection, ConfigSections, navigate } from '@blacktokki/navigation';
 import { TabViewOption } from '@blacktokki/navigation';
 import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from './ContentGroupSection';
 import { List } from 'react-native-paper';
 import { createCommonStyles } from '../../../styles';
-import { SearchBar } from '../../../components/SearchBar';
-import { ArchiveButtonSection } from './ConfigButtonSection';
+import { SearchBar, SearchList } from '../../../components/SearchBar';
+import { RecentPagesSection } from '../RecentPageSection';
+import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
+import { useAuthContext } from '@blacktokki/account';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 
 
-const OpenedEditorsTabView = ()=>{
+const NotesTabView = ()=>{
   const theme = useColorScheme()
+  const { lang } = useLangContext()
   return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
+      <List.Subheader style={{}} selectable={false}>{lang("Open Pages")}</List.Subheader>
       <ContentGroupSection type={'LAST'} />
       <ContentGroupSection type={'PAGE'} />
-    </ScrollView>
-}
-
-const NoteTabView = ()=>{
-  const theme = useColorScheme()
-  return <ScrollView style={{flex:1, backgroundColor:Colors[theme].background}}>
-      <ContentGroupSection type={'NOTE'} noteCount={15}/>
+      <List.Subheader style={{}} selectable={false}>{lang("Problems")}</List.Subheader>
       <EmptyPageButton/>
       <EmptyContentButton/>
     </ScrollView>
 }
 
-const ConfigCommonView = () => {
+const RecentChangesTabView = ()=>{
+  return <RecentPagesSection/>
+}
+
+const CommonConfigButton = (props:{title:string, onPress?:()=>void})=>{
   const theme = useColorScheme()
   const commonStyles = createCommonStyles(theme);
-  return <>
+  const color = Colors[theme].text;
+  return <TouchableOpacity style={[commonStyles.header, {marginBottom:0}]} onPress={props.onPress} disabled={!props.onPress}>
+    <Text style={{ fontSize: 20, color, fontWeight: '600' }}>{props.title}</Text>
+    {props.onPress && <Text>{">"}</Text>}
+  </TouchableOpacity>
+}
+
+const ConfigCommonView = () => {
+  const { lang } = useLangContext()
+  const { dispatch } = useAuthContext()
+  const theme = useColorScheme()
+  const commonStyles = createCommonStyles(theme);
+  const color = Colors[theme].text;
+  const [search, setSearch] = useState(false)
+  const { data:keywords = []} = useKeywords()
+  const resetKeyword = useResetKeyowrd()
+  return <View>
     <View style={commonStyles.card}>
       <ConfigSections/>
     </View>
     <View style={commonStyles.card}>
-      <ArchiveButtonSection/>
+      <CommonConfigButton title={lang('* Search History')}/>
+      <View style={{flexDirection:'row'}}>
+        <TextButton
+          title={search?"Hide History":"Show History"}
+          textStyle={{
+            fontSize: 16,
+            color,
+          }}
+          style={{ borderRadius: 20 }}
+          onPress={() => setSearch(!search)}
+        />
+        <TextButton
+          title={"Reset"}
+          textStyle={{
+            fontSize: 16,
+            color,
+          }}
+          style={{ borderRadius: 20 }}
+          onPress={() => resetKeyword.mutate()}
+        />
+      </View>
+      {search && <View style={[commonStyles.card, {padding:0}]}>
+        <SearchList filteredPages={keywords} handlePagePress={(title, section)=>navigate('NotePage', { title, section })}/>
+      </View>}
     </View>
-  </>
+    <View style={commonStyles.card}>
+      <CommonConfigButton title={lang('* Archive')} onPress={()=>navigate('Archive', {})}/>
+    </View>
+    <View style={commonStyles.card}>
+      <CommonConfigButton title={lang('* Logout')} onPress={()=>dispatch({type:"LOGOUT_REQUEST"})}/>
+    </View>
+  </View>
 }
 
 const ConfigTabView = ()=>{
@@ -55,14 +103,18 @@ export default function HomeScreen({navigation, route}: StackScreenProps<any, 'H
   const commonStyles = createCommonStyles(theme);
   const title = lang('Blacktokki Notebook')
   const tabViews:TabViewOption[] = [
-    {title: lang('Open Pages'), component:OpenedEditorsTabView, icon:<List.Icon icon={'file-document'}/>, headerRight:()=><></>},
-    {title: lang('Notes'), component:NoteTabView, icon:<List.Icon icon={'notebook'}/>, headerRight:()=><></>},
+    {title: lang('Discovery'), component:NotesTabView, icon:<List.Icon icon={'compass'}/>, headerRight:()=><></>},
+    {title: lang('All Notes'), component:RecentChangesTabView, icon:<List.Icon icon={'notebook'}/>, headerRight:()=><></>},
     {title: lang('Config'), component:ConfigTabView, icon:<List.Icon icon={'dots-horizontal'}/>, headerRight:()=><></>}
   ]
   
   return <HomeSection tabViews={tabViews} homeView={{title, headerRight:() => <SearchBar/>}} headerTitle={title}>
-    <View style={[commonStyles.container, {width:'100%'}]}>
+    <View style={[commonStyles.container, {width:'100%', justifyContent:'space-between'}]}>
       <ConfigCommonView/>
+      <ContractFooter buttons={[
+        {icon:<AntDesign name="github" size={24} color={Colors[theme].iconColor}/>, url:'https://github.com/blacktokki/blacktokki-notebook', isWeb:true},
+        {icon:<AntDesign name="mail" size={24} color={Colors[theme].iconColor}/>, url:'mailto:ydh051541@naver.com', isWeb:false}
+      ]}/>
     </View>
   </HomeSection>
 }

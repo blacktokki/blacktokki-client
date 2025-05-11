@@ -4,6 +4,7 @@ import { navigate } from '@blacktokki/navigation';
 
 import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { useRecentPages, useNotePages, useDeleteRecentPage, useLastPage, useAddRecentPage } from '../../../hooks/useNoteStorage';
+import { Content } from '../../../types';
 
 const getItemPadding = (isLandscape:boolean)=>{
   return isLandscape?5:8
@@ -19,6 +20,8 @@ export const EmptyContentButton = () => {
   return <List.Item left={_props=><List.Icon {..._props} icon={"note-edit"} />} title={lang("Empty Content")} onPress={()=>navigate('EmptyContents')} />
 }
 
+export const toRecentContents = (data:Content[]) => data.filter(v=>v.description).sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime())
+
 const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteCount:number}) => {
   const { lang } = useLangContext()
   const notes = useNotePages()
@@ -27,7 +30,8 @@ const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteC
   const tabRef = React.useRef<NodeJS.Timeout>();
   const addRecentPage = useAddRecentPage()
   const deleteRecentPage = useDeleteRecentPage()
-  const data = (props.type === 'NOTE'? notes.data?.filter(v=>v.description).sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime() ):pages.data)
+  const data = (props.type === 'NOTE'? notes.data?toRecentContents(notes.data):[]:pages.data)
+  const lastPageExists = lastPage && (data?.find(v=>v.id===lastPage.id) === undefined);
   const window = useResizeContext()
   const itemPadding = getItemPadding(window==='landscape')
   const noteOnPress = (title:string)=> {
@@ -55,11 +59,10 @@ const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteC
       deleteRecentPage.mutate(title);
     }
   }
-  return (
-    <List.Section>
+  return ((props.type !== 'LAST' || lastPageExists) && <List.Section>
         {data && (
          props.type === 'LAST'
-         ?(lastPage && (data?.find(v=>v.id===lastPage.id) === undefined) && <List.Item 
+         ?(lastPageExists && <List.Item 
             left={(_props)=><List.Icon {..._props} icon={"file-document"} />}
             title={lastPage.title} 
             onPress={()=>noteOnPress(lastPage.title)}
@@ -69,14 +72,14 @@ const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteC
          />)
          :props.type === 'NOTE'
          ?<>{data.slice(0, props.noteCount).map(v=><List.Item 
-          key={v.id} 
-          left={(_props)=><List.Icon {..._props} icon={pages.data?.find(v2=>v2.title===v.title)===undefined?"notebook":"notebook-edit"} />}
-          title={v.title} 
-          onPress={()=>noteOnPress(v.title)}
-          onLongPress={()=>noteOnLongPress(v.title)}
-          style={{padding:itemPadding }} 
-        />)}
-        {((data?.length || 0) > props.noteCount) && <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>navigate("RecentPages")} style={{padding:itemPadding}}  />}
+            key={v.id} 
+            left={(_props)=><List.Icon {..._props} icon={pages.data?.find(v2=>v2.title===v.title)===undefined?"notebook":"notebook-edit"} />}
+            title={v.title} 
+            onPress={()=>noteOnPress(v.title)}
+            onLongPress={()=>noteOnLongPress(v.title)}
+            style={{padding:itemPadding }} 
+          />)}
+          <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>navigate("RecentPages")} style={{padding:itemPadding}}/>
         </>
         :data.map(v=><List.Item 
           key={v.id} 

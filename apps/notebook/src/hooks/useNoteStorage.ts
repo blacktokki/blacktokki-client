@@ -25,8 +25,6 @@ const getContents = async (type:"NOTE"|"SNAPSHOT"): Promise<Content[]> => {
   }
 };
 
-const getNoteContents = async () => await getContents("NOTE")
-
 const saveNoteContents = async (contents: (Content|PostContent)[], id?:number): Promise<void> => {
   if (ONLINE){
     const content = contents.find(v=>id===(v as {id?:number}).id);
@@ -66,7 +64,8 @@ const saveRecentPages = async (titles: string[]): Promise<void> => {
 export const useNotePages = () => {
   return useQuery({
     queryKey: ['pageContents'],
-    queryFn: getNoteContents,
+    queryFn: async() => await getContents("NOTE"),
+    staleTime: 1000
   });
 };
 
@@ -79,10 +78,10 @@ export const useSnapshotPages = () => {
 
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient()
+  const { data:contents=[], isLoading } = useNotePages()
   return useQuery({
-    queryKey: ['pageContent', title],
+    queryKey: ['pageContent', title, isLoading],
     queryFn: async () => {
-      const contents = await getNoteContents();
       const page = contents.find(c => c.title === title);
       
       // Add to recent pages
@@ -99,11 +98,11 @@ export const useNotePage = (title: string) => {
 };
   
   export const useRecentPages = () => {
+    const { data:contents=[], isLoading } = useNotePages()
     return useQuery({
-      queryKey: ['recentPages'],
+      queryKey: ['recentPages', isLoading],
       queryFn: async () => {
         const recentTitles = await getRecentPages();
-        const contents = await getNoteContents();
         return recentTitles
           .map(title => contents.find(c => c.title === title))
           .filter(c => c !== undefined) as Content[];
@@ -112,10 +111,11 @@ export const useNotePage = (title: string) => {
   };
 
   export const useLastPage = () => {
+    const { data:contents=[], isLoading } = useNotePages()
     return useQuery({
-      queryKey: ['lastPage'],
+      queryKey: ['lastPage', isLoading],
       queryFn: async() => {
-        const contents = await getNoteContents();
+        console.log(lastPage, )
         return contents.find(v=>v.title === lastPage)
       } 
     });
@@ -124,9 +124,9 @@ export const useNotePage = (title: string) => {
   export const useCreateOrUpdatePage = () => {
     const queryClient = useQueryClient();
     const { auth } = useAuthContext()
+    const { data:contents=[] } = useNotePages()
     return useMutation({
       mutationFn: async ({ title, description }: {title:string, description:string}) => {
-        const contents = await getNoteContents();
         const page = contents.find(c => c.title === title);
         
         let updatedContents: (Content|PostContent)[];
@@ -153,10 +153,10 @@ export const useNotePage = (title: string) => {
   
   export const useMovePage = () => {
     const queryClient = useQueryClient();
-    
+    const { data:contents=[] } = useNotePages()
+
     return useMutation({
       mutationFn: async ({ oldTitle, newTitle, description }: { oldTitle: string, newTitle: string, description?:string }) => {
-        const contents = await getNoteContents();
         const page = contents.find(c => c.title === oldTitle);
         
         if (!page) {

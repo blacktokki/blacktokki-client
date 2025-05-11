@@ -41,7 +41,6 @@ export const NotePageScreen: React.FC = () => {
   const archive = archiveId?archives?.find(v=>v.id===archiveId &&v.description !== page?.description):undefined
 
   const handleEdit = () => {
-    console.log('@', title)
     navigation.navigate('EditPage', { title });
   };
   

@@ -59,7 +59,6 @@ export const EditPageScreen: React.FC = () => {
     window.addEventListener('beforeunload', callback);
     return () => window.removeEventListener('beforeunload', callback);
   })
-  console.log(content)
   return (
     <View style={commonStyles.container}>
       <View style={commonStyles.header}>

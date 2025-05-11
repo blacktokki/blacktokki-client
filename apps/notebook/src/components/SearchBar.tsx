@@ -80,6 +80,40 @@ export const RandomButton = () => {
 
 export const titleFormat = (item:{title:string, section?:string}) => `${item.title}${item.section?(" ▶ "+item.section):""}`
 
+export const SearchList = ({filteredPages, handlePagePress, addKeyword}:{filteredPages:SearchContent[], handlePagePress:(title:string, section?:string)=>void, addKeyword?:(keyword:KeywordContent)=>void})=>{
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
+  const pagePressHandlers = useCallback((item:SearchContent)=>{
+    return PanResponder.create({
+      onPanResponderStart:() => {
+        if (item.type === "_NOTELINK" && item.section){
+          handlePagePress(item.title, item.section)
+          addKeyword?.(item)
+        }
+        else {
+          handlePagePress(item.title)
+          addKeyword?.({type:"_KEYWORD", title:item.title})
+        }
+      }
+    }).panHandlers
+  }, [])
+
+  return <FlatList
+  data={filteredPages}
+  keyExtractor={(item:any) => JSON.stringify([item.title, item.name, item.section])}
+  renderItem={({ item }) => (
+    <TouchableOpacity
+      style={styles.resultItem}
+      {...pagePressHandlers(item)}
+    >
+      <Text style={[commonStyles.text, styles.resultText]}>{item.type==="_NOTELINK"?item.name:item.title}</Text>
+      {item.type ==="_NOTELINK" && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{titleFormat(item)}</Text>}
+    </TouchableOpacity>
+  )}
+  ItemSeparatorComponent={() => <View style={[commonStyles.resultSeparator]} />}
+/>
+}
+
 export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:boolean;}> = ({handlePress, useRandom=true}) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
@@ -110,21 +144,6 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:
       onPanResponderStart: handleSearch,
     }).panHandlers
   ,[searchText])
-
-  const pagePressHandlers = useCallback((item:SearchContent)=>{
-    return PanResponder.create({
-      onPanResponderStart:() => {
-        if (item.type === "_NOTELINK" && item.section){
-          handlePagePress(item.title, item.section)
-          addKeyword.mutate(item)
-        }
-        else {
-          handlePagePress(item.title)
-          addKeyword.mutate({type:"_KEYWORD", title:item.title})
-        }
-      }
-    }).panHandlers
-  }, [])
 
   useEffect(()=>{
     _searchText = searchText;
@@ -165,20 +184,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:
       {showResults && (
         <View style={[styles.resultsContainer, theme === 'dark' ? styles.darkResults : styles.lightResults]}>
           {filteredPages.length > 0 ? (
-            <FlatList
-              data={filteredPages}
-              keyExtractor={(item:any) => JSON.stringify([item.title, item.name, item.section])}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.resultItem}
-                  {...pagePressHandlers(item)}
-                >
-                  <Text style={[commonStyles.text, styles.resultText]}>{item.type==="_NOTELINK"?item.name:item.title}</Text>
-                  {item.type ==="_NOTELINK" && <Text style={[commonStyles.text, styles.resultText, {fontSize:12}]}>{titleFormat(item)}</Text>}
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={[commonStyles.resultSeparator]} />}
-            />
+            <SearchList filteredPages={filteredPages} handlePagePress={handlePagePress} addKeyword={addKeyword.mutate}/> 
           ) : searchText.trim() ? (
             <TouchableOpacity
               style={styles.resultItem}

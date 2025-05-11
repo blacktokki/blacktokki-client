@@ -15,7 +15,7 @@ export default ()=>{
             <List.Subheader style={{}} selectable={false}>{lang("Open Pages")}</List.Subheader>
             <ContentGroupSection type={'LAST'} />
             <ContentGroupSection type={'PAGE'} />
-            <List.Subheader style={{flex:1}} selectable={false}>{lang("Notes")}</List.Subheader>{/* 최근 변경 */}
+            <List.Subheader style={{flex:1}} selectable={false}>{lang("Recent Changes")}</List.Subheader>{/* 최근 변경 */}
             <ContentGroupSection type={'NOTE'} noteCount={10}/>
         </ScrollView>
     </View>

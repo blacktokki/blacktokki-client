@@ -55,3 +55,16 @@ export const useAddKeyowrd = () => {
     },
   });
 }
+
+export const useResetKeyowrd = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      await saveKeywords([])
+    },
+    onSuccess: async() => {
+      await queryClient.invalidateQueries({ queryKey: ['keywords'] });
+    },
+  });
+}

@@ -42,5 +42,6 @@ export async function login(username: string, password: string) {
   }
 }
 export async function logout() {
-  throw new Error('Function not implemented.');
+  await setToken(null);
+  await account.get('/logout');
 }

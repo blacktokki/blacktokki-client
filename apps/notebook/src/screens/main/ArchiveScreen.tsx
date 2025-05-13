@@ -4,17 +4,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useSnapshotPages } from '../../hooks/useNoteStorage';
 import { NoteListSection } from './NoteListSection';
 import { NavigationParamList } from '../../types';
-
-const updatedOffset = new Date().getTimezoneOffset()
-
-const updatedFormat = (_updated:string) => {
-  const _date = new Date(_updated)
-  _date.setMinutes(_date.getMinutes() - updatedOffset)
-  const updated = _date.toISOString().slice(0, 16)
-    const date = updated.slice(0, 10)
-    const today = new Date().toISOString().slice(0, 10)
-    return date==today?updated.slice(11):date;
-}
+import { updatedFormat } from './RecentPageSection';
 
 type ArchiveScreenRouteProp = RouteProp<NavigationParamList, 'Archive'>;
 

@@ -6,7 +6,7 @@ import { AutoCompleteProps, EditorProps } from '../types';
 import { parser, renderer } from './markdown';
 
 const INIT: IAllProps['init'] = {
-  plugins: 'image link advlist lists supercode codesample searchreplace', // textcolor imagetools,
+  plugins: 'image link advlist lists supercode codesample searchreplace autolink', // textcolor imagetools,
   toolbar:
     'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample searchreplace', // charmap removeformat
 };

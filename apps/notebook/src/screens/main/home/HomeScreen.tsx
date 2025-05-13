@@ -55,26 +55,27 @@ const ConfigCommonView = () => {
       <ConfigSections/>
     </View>
     <View style={commonStyles.card}>
-      <CommonConfigButton title={lang('* Search History')}/>
+      <CommonConfigButton title={lang('* Search Settings')}/>
       <View style={{flexDirection:'row'}}>
         <TextButton
-          title={search?"Hide History":"Show History"}
+          title={"Search History"}
           textStyle={{
             fontSize: 16,
             color,
+            textDecorationLine: search ? 'underline' : 'none',
           }}
           style={{ borderRadius: 20 }}
           onPress={() => setSearch(!search)}
         />
-        <TextButton
-          title={"Reset"}
+        {search && keywords.length &&<TextButton
+          title={"Clear"}
           textStyle={{
             fontSize: 16,
             color,
           }}
           style={{ borderRadius: 20 }}
           onPress={() => resetKeyword.mutate()}
-        />
+        />}
       </View>
       {search && <View style={[commonStyles.card, {padding:0}]}>
         <SearchList filteredPages={keywords} handlePagePress={(title, section)=>navigate('NotePage', { title, section })}/>

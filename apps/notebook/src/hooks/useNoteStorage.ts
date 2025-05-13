@@ -65,7 +65,6 @@ export const useNotePages = () => {
   return useQuery({
     queryKey: ['pageContents'],
     queryFn: async() => await getContents("NOTE"),
-    staleTime: 1000
   });
 };
 
@@ -78,9 +77,9 @@ export const useSnapshotPages = () => {
 
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient()
-  const { data:contents=[], isLoading } = useNotePages()
+  const { data:contents=[], isFetching } = useNotePages()
   return useQuery({
-    queryKey: ['pageContent', title, isLoading],
+    queryKey: ['pageContent', title],
     queryFn: async () => {
       const page = contents.find(c => c.title === title);
       
@@ -94,30 +93,32 @@ export const useNotePage = (title: string) => {
       }
       return page || { title, description: '' };
     },
+    enabled:!isFetching
   });
 };
   
   export const useRecentPages = () => {
-    const { data:contents=[], isLoading } = useNotePages()
+    const { data:contents=[], isFetching } = useNotePages()
     return useQuery({
-      queryKey: ['recentPages', isLoading],
+      queryKey: ['recentPages'],
       queryFn: async () => {
         const recentTitles = await getRecentPages();
         return recentTitles
           .map(title => contents.find(c => c.title === title))
           .filter(c => c !== undefined) as Content[];
       },
+      enabled:!isFetching
     });
   };
 
   export const useLastPage = () => {
-    const { data:contents=[], isLoading } = useNotePages()
+    const { data:contents=[], isFetching } = useNotePages()
     return useQuery({
-      queryKey: ['lastPage', isLoading],
+      queryKey: ['lastPage'],
       queryFn: async() => {
-        console.log(lastPage, )
         return contents.find(v=>v.title === lastPage)
-      } 
+      },
+      enabled:!isFetching
     });
   }
   

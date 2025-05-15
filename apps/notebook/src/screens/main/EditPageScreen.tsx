@@ -8,6 +8,7 @@ import { createCommonStyles } from '../../styles';
 import { useColorScheme } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
 import { getFilteredPages, titleFormat } from '../../components/SearchBar';
+import { previewUrl } from '../../services/notebook';
 
 type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
 
@@ -77,7 +78,7 @@ export const EditPageScreen: React.FC = () => {
         theme={theme}
         autoComplete={[{
           trigger: '[',
-          getMatchedChars: async(pattern) => {
+          getMatchedChars: async (pattern) => {
             const childrenPages = getChildrenPages(pattern)
             return [{type:"_NOTELINK", name:pattern, title, section:pattern}, ...(childrenPages.length?childrenPages:[{type:"_CHILDNOTE", name:pattern, title: title + "/" + pattern}]), ...getFilteredPages(pages, pattern)].map(v=>{
               const text = v.type === '_NOTELINK' ? (v.name + `(${titleFormat(v)})`): v.type==='_CHILDNOTE'?v.name:v.title;
@@ -87,7 +88,31 @@ export const EditPageScreen: React.FC = () => {
                 value:`<a href=${url}>${text}</a>`,
               }})
           }
-        }]}
+        },
+        {
+          trigger: 'http',
+          getMatchedChars: async (pattern) => {
+            const query = 'http' + pattern;
+            const url = new URL(query);
+            if (url.protocol !== "http:" && url.protocol !== "https:"){
+              return [];
+            }
+            const preview = await previewUrl({query})
+            if (!preview.title){
+              return [];
+            }
+            return [{
+              text:preview.title,
+              value:`<a href=${preview.url}>${preview.title}</a>`,
+            },
+            // {
+            //   text:preview.title + '...',
+            //   value:`<a href=${preview.url}>${preview.title}</a><p>${preview.description}...</p>`,
+            // }
+          ]
+          }
+        }
+      ]}
       />
       
       <View style={styles.buttonContainer}>

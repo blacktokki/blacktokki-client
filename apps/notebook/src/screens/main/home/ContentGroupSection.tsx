@@ -12,7 +12,7 @@ const getItemPadding = (isLandscape:boolean)=>{
 
 export const EmptyPageButton = () => {
   const { lang } = useLangContext()
-  return <List.Item left={_props=><List.Icon {..._props} icon={"note-remove"} />} title={lang("Empty Page")} onPress={()=>navigate('EmptyPages')} />
+  return <List.Item left={_props=><List.Icon {..._props} icon={"note-remove"} />} title={lang("Empty Note")} onPress={()=>navigate('EmptyPages')} />
 }
 
 export const EmptyContentButton = () => {

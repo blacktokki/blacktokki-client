@@ -21,6 +21,36 @@ export const updatedFormat = (_updated:string) => {
     return date==today?updated.slice(11):date;
 }
 
+function removeAttributesRecursively(element: Element) {
+  const attributes = Array.from(element.attributes); // 반복 중 변경 방지용 복사
+
+  for (const attr of attributes) {
+    if (attr.name === 'href') {
+      element.setAttribute('href', '');
+    } else {
+      element.removeAttribute(attr.name);
+    }
+  }
+
+  // 자식 요소들에 대해 재귀 호출
+  for (const child of element.children as unknown as Element[]) {
+    removeAttributesRecursively(child);
+  }
+}
+
+function removeAllAttributesFromHTML(html: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // body 하위 요소에 대해서만 처리
+  const body = doc.body;
+  for (const child of body.children as unknown as Element[]) {
+    removeAttributesRecursively(child);
+  }
+
+  return body.innerHTML;
+}
+
 const _cardPadding = (isLandscape:boolean) => isLandscape?20:4
 const _cardMaxWidth = (isLandscape:boolean) => isLandscape?250:190
 
@@ -31,15 +61,10 @@ const CardPage = React.memo(({item, index}: {item:Content|null, index:number})=>
   const commonStyles = createCommonStyles(theme);
   const fSize = window==='landscape'?2:0
   const [mounted, setMounted] = useState(index < 10);
-  const [mounted2, setMounted2] = useState(index < 5);
 
   useEffect(() => {
     if (!mounted){
-      const timer = setTimeout(() => setMounted(true), 10 * index);
-      return () => clearTimeout(timer);
-    }
-    if (!mounted2){
-      const timer = setTimeout(() => setMounted2(true), 60);
+      const timer = setTimeout(() => setMounted(true), 50 * index - 400);
       return () => clearTimeout(timer);
     }
   }, [item, index, mounted]);
@@ -52,7 +77,7 @@ const CardPage = React.memo(({item, index}: {item:Content|null, index:number})=>
   return <TouchableOpacity style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==="landscape"), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
       <Card onPress={onPress} style={[commonStyles.card, {paddingTop:8, aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}]}>
         <Card.Content style={{padding:0}}>
-          {mounted &&<RenderHtml source={{html:(mounted2?item.description:item.description?.slice(0, 200)) || ''}} renderersProps={{ a : {onPress}}} tagsStyles={{body: {color:commonStyles.text.color}}} contentWidth={cardMaxWidth}/>}
+          {mounted &&<RenderHtml source={{html:item.description || ''}} renderersProps={{ a : {onPress}}} tagsStyles={{body: {color:commonStyles.text.color}}} contentWidth={cardMaxWidth}/>}
         </Card.Content>
       </Card>
       <View style={{flexDirection:'row', marginTop:10, padding:0, justifyContent:'space-between', alignItems:'center', width:'100%'}}>
@@ -70,7 +95,7 @@ export const RecentPagesSection = React.memo(() => {
     const commonStyles = createCommonStyles(theme);
     const window = useResizeContext();
     const { data: recentPages = [], isLoading } = useNotePages();
-    const contents = useMemo(()=>[...toRecentContents(recentPages), null, null], [recentPages])
+    const contents = useMemo(()=>[...toRecentContents(recentPages).map(v=>({...v, description:removeAllAttributesFromHTML(v.description || '').slice(0, 300)})), null, null], [recentPages])
     const maxWidth = (_cardMaxWidth(window==="landscape") + 5)  * (window==='landscape'?5:3)
     return isLoading ? (
       <View style={[commonStyles.card, commonStyles.centerContent]}>

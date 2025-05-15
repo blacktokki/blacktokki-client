@@ -89,11 +89,11 @@ export const MovePageScreen: React.FC = () => {
     if(!isLoading && !page){
       handleCancel()
     }
-    page && setNewTitle(page.title);
+    page && setNewTitle(page.title + (section?`/${section}`:""));
   }, [page, isLoading])
   useEffect(()=>{
     if (!isLoading){
-      setNewPath(path)
+      setNewPath(section?'':path)
     }
   }, [section, isLoading])
   const paragraphItem = paragraph.find(v=>v.path===path)

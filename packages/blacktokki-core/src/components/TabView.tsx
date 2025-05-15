@@ -1,5 +1,5 @@
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Dimensions, Platform } from 'react-native';
 import {
   TabView,
   SceneMap,
@@ -14,6 +14,8 @@ import useLangContext from '../hooks/useLangContext';
 
 export type TabViewData = { title: string; component: React.ComponentType<any>; icon: JSX.Element };
 
+const empty = () => <></>;
+
 export default (props: {
   tabs: Record<string, TabViewData>;
   tabBarPosition: 'top' | 'bottom';
@@ -26,6 +28,22 @@ export default (props: {
   const entries = Object.entries(props.tabs);
   const onTab = props.onTab;
   const icons = Object.assign({}, ...entries.map(([k, v]) => ({ [k]: v.icon })));
+  const [resizing, setResizing] = useState(false);
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | undefined;
+    const listener = Dimensions.addEventListener('change', () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      } else {
+        setResizing(true);
+      }
+      timeout = setTimeout(() => {
+        setResizing(false);
+        timeout = undefined;
+      }, 300);
+      return () => listener.remove();
+    });
+  }, []);
   return (
     <TabView
       renderTabBar={(props: SceneRendererProps & { navigationState: NavigationState<any> }) => {
@@ -58,7 +76,12 @@ export default (props: {
           }
         }
       }}
-      renderScene={SceneMap(Object.assign({}, ...entries.map(([k, v]) => ({ [k]: v.component }))))}
+      renderScene={SceneMap(
+        Object.assign(
+          {},
+          ...entries.map(([k, v], i) => ({ [k]: !resizing || i === index ? v.component : empty }))
+        )
+      )}
       tabBarPosition={props.tabBarPosition}
     />
   );

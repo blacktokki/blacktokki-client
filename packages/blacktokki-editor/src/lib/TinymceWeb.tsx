@@ -6,9 +6,9 @@ import { AutoCompleteProps, EditorProps } from '../types';
 import { parser, renderer } from './markdown';
 
 const INIT: IAllProps['init'] = {
-  plugins: 'image link advlist lists supercode codesample searchreplace autolink', // textcolor imagetools,
+  plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
   toolbar:
-    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample searchreplace', // charmap removeformat
+    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample searchreplace insertdatetime', // charmap removeformat
 };
 
 const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
@@ -84,6 +84,12 @@ export default (
         },
         block_formats:
           'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Code=code',
+        insertdatetime_formats: [
+          '%Y-%m',
+          '%Y-%m-%d',
+          new Date().toISOString().split('T')[0] + ' ~ %Y-%m-%d',
+        ],
+        insertdatetime_element: true,
         content_style:
           (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +
           'p { margin: 0.5rem 0; }',
@@ -129,11 +135,13 @@ export default (
                 trigger: ac.trigger,
                 fetch: (pattern) => {
                   return new Promise((resolve) => {
-                    const results = getMatchedChars(pattern).map((item) => ({
-                      type: 'autocompleteitem' as any,
-                      ...item,
-                    }));
-                    resolve(results);
+                    getMatchedChars(pattern).then((items) => {
+                      const results = items.map((item) => ({
+                        type: 'autocompleteitem' as any,
+                        ...item,
+                      }));
+                      resolve(results);
+                    });
                   });
                 },
                 onAction: (autocompleteApi, rng, value) => {
@@ -144,6 +152,20 @@ export default (
               });
             });
           }
+          editor.on('BeforeSetContent', function (e) {
+            if (e.content && e.content.includes('<time')) {
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(e.content, 'text/html');
+              const timeElements = doc.querySelectorAll('time');
+              timeElements.forEach((timeEl) => {
+                const codeEl = document.createElement('code');
+                codeEl.innerHTML = timeEl.innerHTML;
+                timeEl.replaceWith(codeEl);
+              });
+
+              e.content = doc.body.innerHTML;
+            }
+          });
         },
         codesample_languages: [
           { text: '-', value: 'none' },

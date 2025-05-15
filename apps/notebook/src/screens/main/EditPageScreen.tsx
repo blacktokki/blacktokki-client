@@ -20,6 +20,10 @@ export const EditPageScreen: React.FC = () => {
   
   const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();
+  const getChildrenPages = (keyword:string) => pages
+    .filter(v=>v.title.startsWith(title + '/'))
+    .map(v=>({type:'_CHILDNOTE' as '_CHILDNOTE', name:v.title.split(title + '/')[1], title:v.title}))
+    .filter(v=>v.name.toLowerCase().startsWith(keyword.toLowerCase()))
   const [content, setContent] = useState('');
   
   const mutation = useCreateOrUpdatePage();
@@ -73,9 +77,10 @@ export const EditPageScreen: React.FC = () => {
         theme={theme}
         autoComplete={[{
           trigger: '[',
-          getMatchedChars: (pattern) => {
-            return [{type:"_NOTELINK", name:pattern, title, section:pattern}, ...getFilteredPages(pages, pattern)].map(v=>{
-              const text = v.type === '_NOTELINK' ? (v.name + `(${titleFormat(v)})`): v.title;
+          getMatchedChars: async(pattern) => {
+            const childrenPages = getChildrenPages(pattern)
+            return [{type:"_NOTELINK", name:pattern, title, section:pattern}, ...(childrenPages.length?childrenPages:[{type:"_CHILDNOTE", name:pattern, title: title + "/" + pattern}]), ...getFilteredPages(pages, pattern)].map(v=>{
+              const text = v.type === '_NOTELINK' ? (v.name + `(${titleFormat(v)})`): v.type==='_CHILDNOTE'?v.name:v.title;
               const url = encodeURI(v.type === '_NOTELINK' && v.section ? `?title=${v.title}&section=${v.section}`:`?title=${v.title}`);
               return {
                 text,

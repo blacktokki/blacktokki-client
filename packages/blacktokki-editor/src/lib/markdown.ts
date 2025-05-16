@@ -1,15 +1,8 @@
-//@ts-ignore
 import markdownIt from 'markdown-it';
 import TurndownService from 'turndown';
 
 const markdownToHtml = markdownIt();
-const HtmlToMarkdown = new TurndownService({
-  preformattedCode: true,
-  codeBlockStyle: 'fenced',
-  headingStyle: 'atx',
-});
 
-//@ts-ignore
 markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const code = token.content;
@@ -25,8 +18,13 @@ markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
   return `<pre class="language-${language}"><code>${escapeCode}</code></pre>`;
 };
 
-//@ts-ignore
-function renderStrong(tokens, idx, opts, _, slf) {
+const renderStrong: typeof markdownToHtml.renderer.rules.strong_open = (
+  tokens,
+  idx,
+  opts,
+  _,
+  slf
+) => {
   const token = tokens[idx];
   if (token.markup === '__') {
     token.tag = 'u';
@@ -35,10 +33,16 @@ function renderStrong(tokens, idx, opts, _, slf) {
     token.tag = 'strong';
   }
   return slf.renderToken(tokens, idx, opts);
-}
+};
 
 markdownToHtml.renderer.rules.strong_open = renderStrong;
 markdownToHtml.renderer.rules.strong_close = renderStrong;
+
+const HtmlToMarkdown = new TurndownService({
+  preformattedCode: true,
+  codeBlockStyle: 'fenced',
+  headingStyle: 'atx',
+});
 
 HtmlToMarkdown.addRule('codeBlock', {
   filter(node, options) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
+const fs = require('fs');
 const config = `const createExpoWebpackConfigAsync = require('@expo/webpack-config');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
@@ -14,5 +14,5 @@ module.exports = async function (env, argv) {
     new BundleAnalyzerPlugin()
   );
   return config;
-};`
+};`;
 fs.writeFileSync('webpack.config.js', config, 'utf8');

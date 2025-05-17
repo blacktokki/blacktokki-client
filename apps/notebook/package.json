@@ -16,6 +16,7 @@
   "dependencies": {
     "@blacktokki/core": "*",
     "@blacktokki/editor": "*",
+    "@blacktokki/eslint-config": "*",
     "@blacktokki/navigation": "*",
     "@dnd-kit/core": "6.0.8",
     "@dnd-kit/sortable": "7.0.2",
@@ -45,6 +46,9 @@
     "replace-in-file": "^7.0.1",
     "rimraf": "^5.0.0",
     "webpack-bundle-analyzer": "^4.10.2"
+  },
+  "eslintConfig": {
+    "extends": "@blacktokki/eslint-config"
   },
   "private": true
 }

@@ -1,31 +1,32 @@
-import { Content, PostContent, Link } from '../types';
 import { axiosCreate } from '@blacktokki/account';
 
-const axios = axiosCreate("notebook")
+import { Content, PostContent, Link } from '../types';
 
-export const getContentOne = async (id:number)=>{
-    return (await axios.get(`/api/v1/content/${id}`)).data as Content
-}
+const axios = axiosCreate('notebook');
 
-export const getContentList = async (parentId?:number, types?: Content['type'][])=>{
-    const parentIdParam = parentId !== undefined?`&parentId=${parentId}`: ''
-    const typeParam = types !== undefined?`&types=${types.join(',')}` : ''
-    return (await axios.get(`/api/v1/content?self=true&size=256${parentIdParam}${typeParam}`)).data.value as Content[]
-}
+export const getContentOne = async (id: number) => {
+  return (await axios.get(`/api/v1/content/${id}`)).data as Content;
+};
 
-export const postContent = async (postContent:PostContent)=>{
-    return ((await axios.post(`/api/v1/content`, postContent)).data as Content).id
-}
+export const getContentList = async (parentId?: number, types?: Content['type'][]) => {
+  const parentIdParam = parentId !== undefined ? `&parentId=${parentId}` : '';
+  const typeParam = types !== undefined ? `&types=${types.join(',')}` : '';
+  return (await axios.get(`/api/v1/content?self=true&size=256${parentIdParam}${typeParam}`)).data
+    .value as Content[];
+};
 
-export const patchContent = async ({id, updated}:{id:number, updated:PostContent})=>{
-    await axios.patch(`/api/v1/content`,{ids: [id], updated})
-}
+export const postContent = async (postContent: PostContent) => {
+  return ((await axios.post(`/api/v1/content`, postContent)).data as Content).id;
+};
 
-export const deleteContent = async (id: number) =>{
-    await axios.delete(`/api/v1/content/${id}`)
-}
+export const patchContent = async ({ id, updated }: { id: number; updated: PostContent }) => {
+  await axios.patch(`/api/v1/content`, { ids: [id], updated });
+};
 
-export const previewUrl = async (preview: {query:string}) => {
-    return (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data as Link
-}
+export const deleteContent = async (id: number) => {
+  await axios.delete(`/api/v1/content/${id}`);
+};
 
+export const previewUrl = async (preview: { query: string }) => {
+  return (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data as Link;
+};

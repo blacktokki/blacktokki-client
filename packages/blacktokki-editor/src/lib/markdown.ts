@@ -95,12 +95,12 @@ export const parser = (htmlCode: string) => {
   return HtmlToMarkdown.turndown(htmlCode);
 };
 
-export const toRaw = (text: string) => {
-  return markdownToHtml.utils.escapeHtml(text);
-  // return text
-  //   .replaceAll(/\n/g, '')
-  //   .replaceAll(/<hr\s*[/]?>\n/gi, '')
-  //   .replaceAll(/&nbsp;/gi, ' ')
-  //   .replaceAll(/<br\s*[/]?>/gi, '\r\n')
-  //   .replaceAll(/<\/?[^>]*>/gi, '');
-};
+// export const toRaw = (text: string) => {
+//   return markdownToHtml.utils.escapeHtml(text);
+//   // return text
+//   //   .replaceAll(/\n/g, '')
+//   //   .replaceAll(/<hr\s*[/]?>\n/gi, '')
+//   //   .replaceAll(/&nbsp;/gi, ' ')
+//   //   .replaceAll(/<br\s*[/]?>/gi, '\r\n')
+//   //   .replaceAll(/<\/?[^>]*>/gi, '');
+// };

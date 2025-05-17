@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { TouchableOpacity, ScrollView, FlatList, FlatListProps } from 'react-native';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext, View, Text } from '@blacktokki/core';
@@ -8,7 +8,6 @@ import { useNavigation } from '@react-navigation/core';
 import { Card } from 'react-native-paper';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { toRecentContents } from './home/ContentGroupSection';
-import RenderHtml from 'react-native-render-html';
 
 const updatedOffset = new Date().getTimezoneOffset()
 
@@ -61,6 +60,7 @@ const CardPage = React.memo(({item, index}: {item:Content|null, index:number})=>
   const commonStyles = createCommonStyles(theme);
   const fSize = window==='landscape'?2:0
   const [mounted, setMounted] = useState(index < 10);
+  const RenderHtml = React.lazy(()=> import('react-native-render-html'))
 
   useEffect(() => {
     if (!mounted){
@@ -77,7 +77,9 @@ const CardPage = React.memo(({item, index}: {item:Content|null, index:number})=>
   return <TouchableOpacity style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==="landscape"), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
       <Card onPress={onPress} style={[commonStyles.card, {paddingTop:8, aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}]}>
         <Card.Content style={{padding:0}}>
-          {mounted &&<RenderHtml source={{html:item.description || ''}} renderersProps={{ a : {onPress}}} tagsStyles={{body: {color:commonStyles.text.color}}} contentWidth={cardMaxWidth}/>}
+          <Suspense>
+            {mounted && <RenderHtml source={{html:item.description || ''}} renderersProps={{ a : {onPress}}} tagsStyles={{body: {color:commonStyles.text.color}}} contentWidth={cardMaxWidth}/>}
+        </Suspense>
         </Card.Content>
       </Card>
       <View style={{flexDirection:'row', marginTop:10, padding:0, justifyContent:'space-between', alignItems:'center', width:'100%'}}>

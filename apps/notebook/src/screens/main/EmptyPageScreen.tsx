@@ -29,7 +29,7 @@ export const EmptyPagesScreen: React.FC = () => {
   }).filter(v=>v!==undefined)
   return <NoteListSection
     contents={[...unknownData, ...emptyParentData]}
-    onPress={(title)=>navigation.navigate('EditPage', { title })}
+    onPress={(title)=>navigation.push('EditPage', { title })}
     isLoading={isLoading}
     emptyMessage='작성이 필요한 노트가 없습니다.'/>
 };

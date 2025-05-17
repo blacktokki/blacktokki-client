@@ -16,6 +16,7 @@ import { enableScreens } from 'react-native-screens';
 import { NavigationConfig } from '../types';
 import RootNavigator from './RootNavigator';
 import linkingConfiguration from './linkingConfiguration';
+export { push } from './RootNavigator';
 
 enableScreens();
 

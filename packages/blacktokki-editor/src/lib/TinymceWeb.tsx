@@ -87,9 +87,8 @@ export default (
         insertdatetime_formats: [
           '%Y-%m',
           '%Y-%m-%d',
-          new Date().toISOString().split('T')[0] + ' ~ %Y-%m-%d',
+          new Date().toISOString().split('T')[0] + '/%Y-%m-%d',
         ],
-        insertdatetime_element: true,
         content_style:
           (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +
           'p { margin: 0.5rem 0; }',
@@ -152,20 +151,6 @@ export default (
               });
             });
           }
-          editor.on('BeforeSetContent', function (e) {
-            if (e.content && e.content.includes('<time')) {
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(e.content, 'text/html');
-              const timeElements = doc.querySelectorAll('time');
-              timeElements.forEach((timeEl) => {
-                const codeEl = document.createElement('code');
-                codeEl.innerHTML = timeEl.innerHTML;
-                timeEl.replaceWith(codeEl);
-              });
-
-              e.content = doc.body.innerHTML;
-            }
-          });
         },
         codesample_languages: [
           { text: '-', value: 'none' },

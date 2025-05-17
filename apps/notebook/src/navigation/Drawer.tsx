@@ -3,12 +3,12 @@ import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from '../scr
 import { Platform, ScrollView } from 'react-native';
 import { List } from 'react-native-paper';
 import { useLangContext, View } from '@blacktokki/core';
-import { navigate } from '@blacktokki/navigation';
+import { push } from '@blacktokki/navigation';
 
 export default ()=>{
     const {lang} = useLangContext()
     return <View style={{flex:1}}>
-        <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>navigate('Home')} />
+        <List.Item left={_props=><List.Icon {..._props} icon={"home"} />} title={lang("Home")} onPress={()=>push('Home')} />
         <EmptyPageButton/>
         <EmptyContentButton/>
         <ScrollView style={Platform.OS==='web'?{scrollbarWidth: 'thin'} as any:{}}>

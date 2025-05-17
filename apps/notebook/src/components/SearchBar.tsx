@@ -30,7 +30,7 @@ function extractHtmlLinksWithQuery(text:string) {
   return matches;
 }
 
-export function urlToNoteLink(url:string){
+function urlToNoteLink(url:string){
   const newLocation = new URL(url);
   if (location.origin  === newLocation.origin){
     const params = new URLSearchParams(newLocation.search);
@@ -39,6 +39,16 @@ export function urlToNoteLink(url:string){
     if (title){
       return {title, section}
     }
+  }
+}
+
+export function onLink(url:string, navigation:StackNavigationProp<NavigationParamList>){
+  const noteLink = urlToNoteLink(url);
+  if(noteLink){
+    navigation.push("NotePage", noteLink)
+  }
+  else{
+    window.open(url, '_blank');
   }
 }
 
@@ -71,7 +81,7 @@ export const RandomButton = () => {
     onPress={()=>{
       const page = randomPages[Math.floor(Math.random() * randomPages.length)];
       const sections = parseHtmlToSections(page.description || '')
-      navigation.navigate('NotePage', { title:page.title, section: sections[Math.floor(Math.random() * sections.length)].title });
+      navigation.push('NotePage', { title:page.title, section: sections[Math.floor(Math.random() * sections.length)].title });
     }}
 >
   <Icon name={"random"} size={18} color="#FFFFFF" />
@@ -136,7 +146,7 @@ export const SearchBar: React.FC<{handlePress?:(title:string)=>void, useRandom?:
   };
 
   const handlePagePress = (title: string, section?:string) => {
-    handlePress?handlePress(title):navigation.navigate('NotePage', { title, section });
+    handlePress?handlePress(title):navigation.push('NotePage', { title, section });
     setSearchText('');
   };
 

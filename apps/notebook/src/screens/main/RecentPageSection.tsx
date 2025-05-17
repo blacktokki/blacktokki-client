@@ -73,7 +73,7 @@ const CardPage = React.memo(({item, index}: {item:Content|null, index:number})=>
     return <View style={{flexBasis:window==='landscape'?'33%':'50%', maxWidth:cardMaxWidth}}/>
   }
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const onPress = ()=>navigation.navigate('NotePage', {title:item.title})
+  const onPress = ()=>navigation.push('NotePage', {title:item.title})
   return <TouchableOpacity style={{flexBasis:window==='landscape'?'33%':'50%', padding:_cardPadding(window==="landscape"), paddingRight:0, minWidth:cardMaxWidth, maxWidth:cardMaxWidth}} onPress={onPress}>
       <Card onPress={onPress} style={[commonStyles.card, {paddingTop:8, aspectRatio:1/Math.sqrt(2), borderRadius:6, marginVertical:10, marginHorizontal:8, overflow:'hidden'}]}>
         <Card.Content style={{padding:0}}>

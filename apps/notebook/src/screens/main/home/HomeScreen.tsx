@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StackScreenProps } from '@react-navigation/stack';
+import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 import { ScrollView, TouchableOpacity, View} from 'react-native';
 import { Colors, ContractFooter, Text, TextButton, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, ConfigSections, navigate } from '@blacktokki/navigation';
@@ -12,6 +12,8 @@ import { RecentPagesSection } from '../RecentPageSection';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
 import { useAuthContext } from '@blacktokki/account';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import { NavigationParamList } from '../../../types';
+import { useNavigation } from '@react-navigation/core';
 
 
 const NotesTabView = ()=>{
@@ -45,6 +47,7 @@ const ConfigCommonView = () => {
   const { lang } = useLangContext()
   const { dispatch } = useAuthContext()
   const theme = useColorScheme()
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const commonStyles = createCommonStyles(theme);
   const color = Colors[theme].text;
   const [search, setSearch] = useState(false)
@@ -78,11 +81,11 @@ const ConfigCommonView = () => {
         />}
       </View>
       {search && <View style={[commonStyles.card, {padding:0}]}>
-        <SearchList filteredPages={keywords} handlePagePress={(title, section)=>navigate('NotePage', { title, section })}/>
+        <SearchList filteredPages={keywords} handlePagePress={(title, section)=>navigation.push('NotePage', { title, section })}/>
       </View>}
     </View>
     <View style={commonStyles.card}>
-      <CommonConfigButton title={lang('* Archive')} onPress={()=>navigate('Archive', {})}/>
+      <CommonConfigButton title={lang('* Archive')} onPress={()=>navigation.push('Archive', {})}/>
     </View>
     <View style={commonStyles.card}>
       <CommonConfigButton title={lang('* Logout')} onPress={()=>dispatch({type:"LOGOUT_REQUEST"})}/>

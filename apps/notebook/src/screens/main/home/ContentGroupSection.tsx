@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { List, TouchableRipple } from 'react-native-paper';
-import { navigate } from '@blacktokki/navigation';
+import { navigate, push } from '@blacktokki/navigation';
 
 import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { useRecentPages, useNotePages, useDeleteRecentPage, useLastPage, useAddRecentPage } from '../../../hooks/useNoteStorage';
@@ -12,12 +12,12 @@ const getItemPadding = (isLandscape:boolean)=>{
 
 export const EmptyPageButton = () => {
   const { lang } = useLangContext()
-  return <List.Item left={_props=><List.Icon {..._props} icon={"note-remove"} />} title={lang("Empty Note")} onPress={()=>navigate('EmptyPages')} />
+  return <List.Item left={_props=><List.Icon {..._props} icon={"note-remove"} />} title={lang("Empty Note")} onPress={()=>push('EmptyPages')} />
 }
 
 export const EmptyContentButton = () => {
   const { lang } = useLangContext()
-  return <List.Item left={_props=><List.Icon {..._props} icon={"note-edit"} />} title={lang("Empty Content")} onPress={()=>navigate('EmptyContents')} />
+  return <List.Item left={_props=><List.Icon {..._props} icon={"note-edit"} />} title={lang("Empty Content")} onPress={()=>push('EmptyContents')} />
 }
 
 export const toRecentContents = (data:Content[]) => data.filter(v=>v.description).sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime())
@@ -79,7 +79,7 @@ const ContentGroupSection = ( props : {type:'PAGE'|'LAST'} | {type:'NOTE', noteC
             onLongPress={()=>noteOnLongPress(v.title)}
             style={{padding:itemPadding }} 
           />)}
-          <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>navigate("RecentPages")} style={{padding:itemPadding}}/>
+          <List.Item left={(_props)=><List.Icon {..._props} icon={"notebook-multiple"} />} title={lang("more...")} onPress={()=>push("RecentPages")} style={{padding:itemPadding}}/>
         </>
         :data.map(v=><List.Item 
           key={v.id} 

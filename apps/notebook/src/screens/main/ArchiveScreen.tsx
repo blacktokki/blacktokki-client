@@ -16,6 +16,6 @@ export const ArchiveScreen: React.FC = () => {
   return <NoteListSection 
     contents={recentPages.filter(v=>title===undefined || title===v.title).sort((a, b)=>new Date(b.updated).getTime() - new Date(a.updated).getTime()).map(v=>({...v, subtitle:`최근 수정: ${updatedFormat(v.updated as string)}`}))} 
     isLoading={isLoading}
-    onPress={(title, _, id)=>navigation.navigate('NotePage', { title, archiveId:id })}
+    onPress={(title, _, id)=>(title===undefined?navigation.push:navigation.navigate)('NotePage', { title, archiveId:id })}
     emptyMessage='최근 수정한 노트가 없습니다.'/>
 };

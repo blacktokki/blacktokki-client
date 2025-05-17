@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
-import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList } from '../../types';
 import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
@@ -14,6 +14,7 @@ type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
 
 export const EditPageScreen: React.FC = () => {
   const route = useRoute<EditPageScreenRouteProp>();
+  const isFocused = useIsFocused();
   const { title } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
@@ -54,7 +55,7 @@ export const EditPageScreen: React.FC = () => {
     if(!isLoading && page?.description){
       setContent(page?.description)
     }
-  }, [isLoading])
+  }, [isLoading, page])
   
   useFocusEffect(()=>{
     const callback = (event:any) => {
@@ -64,7 +65,7 @@ export const EditPageScreen: React.FC = () => {
     window.addEventListener('beforeunload', callback);
     return () => window.removeEventListener('beforeunload', callback);
   })
-  return (
+  return isFocused && (
     <View style={commonStyles.container}>
       <View style={commonStyles.header}>
         <Text style={[commonStyles.title, { flex: 1 }]}>

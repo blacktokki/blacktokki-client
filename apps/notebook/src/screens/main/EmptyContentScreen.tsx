@@ -33,7 +33,7 @@ export const EmptyContentsScreen: React.FC = () => {
   })
   return <NoteListSection 
     contents={data}
-    onPress={(title)=>navigation.navigate('EditPage', { title })}
+    onPress={(title)=>navigation.push('EditPage', { title })}
     isLoading={isLoading}
     emptyMessage='작성이 필요한 내용이 없습니다.'/>
 };

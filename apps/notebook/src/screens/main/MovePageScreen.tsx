@@ -7,7 +7,7 @@ import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/use
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
-import { SearchBar, titleFormat } from '../../components/SearchBar';
+import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
 import HeaderSelectBar, { parseHtmlToSections } from '../../components/HeaderSelectBar';
 
 type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
@@ -18,7 +18,7 @@ export const MovePageScreen: React.FC = () => {
   const { title, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
-  const window = useResizeContext()
+  const _window = useResizeContext()
   const [newTitle, setNewTitle] = useState(title);
   const { data: page, isLoading } = useNotePage(title);
   const paragraph = parseHtmlToSections(page?.description|| '')
@@ -33,20 +33,21 @@ export const MovePageScreen: React.FC = () => {
   const moveMutation = useMovePage();
   const {sourceDescription, targetDescription} = useMemo(()=>{
     const moveParagraph = paragraph.filter(v=>v.path.startsWith(path))
-    const moveDescription = moveParagraph.map(v=>v.header + v.description).join('');
+    const isSplit = newPage?.title === page?.title + '/' + moveParagraph[0]?.title
+    const moveDescription = moveParagraph.map((v, i)=>(isSplit && i===0 ? '':v.header) + v.description).join('');
     const sourceParagraph = paragraph.filter(v=>!v.path.startsWith(path))
     const sourceDescription = sourceParagraph.map(v=>v.header + v.description).join('')
     const targetParagraph = page?.title === newPage?.title?sourceParagraph:newParagraph;
     const targetIndex = targetParagraph.findLastIndex(v=>v.path.startsWith(newPath))
-    const targetDescription = newPage === undefined?moveDescription:[
+    const targetDescription = newPage?.id === undefined?moveDescription:[
       ...targetParagraph.slice(0, targetIndex+1).map(v=>v.header + v.description),
-      ...moveParagraph.map(v=>(v.path===path && v.description===''?'':v.header) + v.description),
+      ...moveParagraph.map((v, i)=>((v.path===path && v.description==='' || isSplit && i === 0)?'':v.header) + v.description),
       ...targetParagraph.slice(targetIndex+1).map(v=>v.header + v.description)].join('')
       return {sourceDescription, targetDescription}
   }, [paragraph, newParagraph, path, newPath])
   
   const handleMove = () => {
-    if (newPage === undefined){
+    if (newPage?.id === undefined){
       moveMutation.mutate(
         { oldTitle: title, newTitle: newTitle.trim(), description:path===''?undefined:targetDescription },
         {
@@ -64,7 +65,7 @@ export const MovePageScreen: React.FC = () => {
         handleCancel()
       }
       mutation.mutate(
-        { title:newPage.title, description:targetDescription },
+        { title:newPage.title, description:targetDescription,  },
         {
           onSuccess: (data) => {
             if (page?.title !== newPage.title){
@@ -102,7 +103,7 @@ export const MovePageScreen: React.FC = () => {
   return (
     <ScrollView style={commonStyles.container}>
       <View style={commonStyles.card}>
-        <View style={{flexDirection:window==='landscape'?'row':'column', zIndex:1}}>
+        <View style={{flexDirection:_window==='landscape'?'row':'column', zIndex:1}}>
           <View style={{zIndex:1}}>
             <Text style={commonStyles.text}>{section?"현재 노트 제목 및 문단:":"현재 노트 제목:"}</Text>
             <Text style={[commonStyles.title, styles.columns]}>{titleFormat({title, section})}</Text>
@@ -127,6 +128,7 @@ export const MovePageScreen: React.FC = () => {
                   active
                   value={targetDescription}
                   theme={theme}
+                  onLink={(url)=>onLink(url, navigation)}
                   autoResize
                 />
               </View>}

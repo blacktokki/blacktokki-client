@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -8,8 +8,9 @@ import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
-import { SearchBar, titleFormat, urlToNoteLink } from '../../components/SearchBar';
+import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
 import HeaderSelectBar, { NodeData, parseHtmlToSections } from '../../components/HeaderSelectBar';
+import { useIsFocused } from '@react-navigation/native';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
@@ -27,6 +28,7 @@ export const getSplitTitle = (title:string) => {
 }
 
 export const NotePageScreen: React.FC = () => {
+  const isFocused = useIsFocused();
   const route = useRoute<NotePageScreenRouteProp>();
   const { title, section, archiveId } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -37,7 +39,7 @@ export const NotePageScreen: React.FC = () => {
   const [fullSection, toggleFullSection] = useState(false)
   
 
-  const { data: page, isLoading } = useNotePage(title);
+  const { data: page, isFetching } = useNotePage(title);
   const { data:archives } = useSnapshotPages()
   const archive = archiveId?archives?.find(v=>v.id===archiveId &&v.description !== page?.description):undefined
 
@@ -52,44 +54,43 @@ export const NotePageScreen: React.FC = () => {
   const paragraph = parseHtmlToSections(page?.description||'');
   const idx = paragraph.findIndex(v=>v.title===section)
   const moveSections = [
-    {icon: 'arrow-left', moveSection: paragraph.findLast((v, i)=>i < idx && (fullSection?paragraph[idx]?.level >= v.level:true))},
-    {icon: 'arrow-right', moveSection: paragraph.find((v, i)=>i > idx && (fullSection?paragraph[idx]?.level >= v.level:true))}
+    {icon: 'arrow-left', moveSection: paragraph.findLast((v, i)=>i < idx && (fullSection?paragraph[idx]?.level >= v.level:true)), reverse:false},
+    {icon: 'arrow-right', moveSection: paragraph.find((v, i)=>i > idx && (fullSection?paragraph[idx]?.level >= v.level:true)), reverse:true}
   ]
   const [description, setDescription] = useState<string>()
   useEffect(()=>{
-    if(description === undefined) {
-      setDescription(archive?archive.description:(section?(fullSection?sectionDescription(paragraph, section, true):paragraph.find(v=>v.title===section)?.description):page?.description)?.trim())
-    }
-    else {
-      return () => setDescription(undefined);
-    }
-  }, [page, archive, section, description, fullSection])
-
+    setDescription(archive?archive.description:(section?(fullSection?sectionDescription(paragraph, section, true):paragraph.find(v=>v.title===section)?.description):page?.description)?.trim())
+  }, [page, archive, section, fullSection])
   useEffect(()=>{
     toggleToc(false)
   }, [route])
   const splitTitle = getSplitTitle(title)
   const iconColor = theme === 'dark' ? '#E4E4E4' : '#333333'
-  return (<>
+  const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088'
+  return isFocused && (<>
     {_window === 'portrait' && <SearchBar/>}
-    <ScrollView style={[
-      commonStyles.container, 
+    <ScrollView 
       //@ts-ignore
-      {paddingRight:12, scrollbarGutter: 'stable'}]}>
+      style={[commonStyles.container, {paddingRight:12, scrollbarGutter: 'stable'}]}
+      contentContainerStyle={{flexGrow:1}}
+    >
       <View style={commonStyles.header}>
         <View style={{flexDirection:'row'}}>
-          <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title:splitTitle[0] })}>
-            <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>{splitTitle[0]}</Text>
+          <TouchableOpacity onPress={()=>(splitTitle.length === 2?navigation.push:navigation.navigate)('NotePage', { title:splitTitle[0] })} >
+            <Text style={[commonStyles.title, styles.pageTitle, section || splitTitle.length === 2 ? {color: pressableTextColor}: {}]} numberOfLines={1}>{splitTitle[0]}</Text>
           </TouchableOpacity>
-           {splitTitle.length === 2 && <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title })}> 
-            <Text style={[commonStyles.title, styles.pageTitle]} numberOfLines={1}>{"/"+splitTitle[1]}</Text>
-          </TouchableOpacity>}
+           {splitTitle.length === 2 && <>
+            <Text style={[commonStyles.title, styles.pageTitle, {flex:0}]}>/</Text>
+            <TouchableOpacity onPress={()=>navigation.navigate('NotePage', { title })}> 
+              <Text style={[commonStyles.title, styles.pageTitle, section?{color: pressableTextColor}:{}]} numberOfLines={1}>{splitTitle[1]}</Text>
+            </TouchableOpacity>
+          </>}
           {!!section && <Text style={[commonStyles.title, styles.pageTitle, {marginLeft:5}]} numberOfLines={1}>{titleFormat({title:"", section})}</Text>}
           {archive && <Text style={[commonStyles.text, {marginLeft:5, fontStyle:'italic'}]}>{"(" + archive.updated + ")"}</Text>}
         </View>
         <View style={styles.actionButtons}>
           {!section && <>
-            <TouchableOpacity onPress={()=>navigation.navigate("Archive", { title })} style={styles.actionButton}>
+            <TouchableOpacity onPress={()=>navigation.navigate('Archive', { title })} style={styles.actionButton}>
               <Icon name="history" size={16} color={iconColor} />
             </TouchableOpacity>
           </>}
@@ -114,37 +115,27 @@ export const NotePageScreen: React.FC = () => {
         </View>
       </View>
       <View style={commonStyles.flex}>
-        {isLoading ? (
-          <View style={[commonStyles.card, commonStyles.centerContent]}>
-            <ActivityIndicator size="large" color="#3498DB" />
-          </View>
-        ) : <>
-          <View style={!toc && description?[commonStyles.card, {flex:1, padding:0, marginBottom:0}]:{flex:1, position:'absolute'}}>
+          <View style={!toc && description?[commonStyles.card, {padding:0, marginBottom:0}]:{flex:1, position:'absolute'}}>
             <EditorViewer
               active
               value={description || ''}
               theme={theme}
-              onLink={(url)=>{
-                const noteLink = urlToNoteLink(url);
-                if(noteLink){
-                  navigation.navigate("NotePage", noteLink)
-                }
-                else{
-                  window.open(url, '_blank');
-                }
-              }}
+              onLink={(url)=>onLink(url, navigation)}
               autoResize
             />
           </View>
-          {toc? <HeaderSelectBar data={paragraph} path={section || ''} root={title} onPress={(item)=>navigation.navigate('NotePage', {title, section:item.title})}/>
-          :page?.description ? (section && <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-            {moveSections.map(({moveSection, icon})=>moveSection!==undefined && <TouchableOpacity 
+          {(isFetching || description===undefined) ? <View style={[commonStyles.card, commonStyles.centerContent]}>
+            <ActivityIndicator size="large" color="#3498DB" />
+          </View>
+          :toc? <HeaderSelectBar data={paragraph} path={section || ''} root={title} onPress={(item)=>navigation.navigate('NotePage', {title, section:item.title})}/>
+          :page?.description ? (!!section && <View style={{flex:1, flexDirection:'row', justifyContent:'space-between', alignItems:'flex-end'}}>
+            {moveSections.map(({moveSection, icon, reverse})=>moveSection!==undefined && <TouchableOpacity 
                 key={icon} 
                 onPress={()=>navigation.navigate('NotePage', moveSection.level===0?{title}:{title, section:moveSection.title})} 
-                style={[{flexDirection: 'row', paddingTop:8}]}
+                style={[{flexDirection: reverse?'row-reverse':'row', paddingVertical:16}]}
             >
-              <Icon name={icon} size={16} color={iconColor} style={{alignSelf:'center', marginRight:8}} />
-              <Text style={[commonStyles.text, {fontWeight:'bold'}]}>{moveSection.level===0?title:moveSection.title}</Text>
+              <Icon name={icon} size={16} color={iconColor} style={{alignSelf:'center'}} />
+              <Text style={[commonStyles.text, {fontWeight:'bold', marginHorizontal:16}]}>{moveSection.level===0?title:moveSection.title}</Text>
             </TouchableOpacity>)}
             
           </View>) : (
@@ -157,7 +148,6 @@ export const NotePageScreen: React.FC = () => {
                 <Text style={commonStyles.buttonText}>편집하기</Text>
               </TouchableOpacity>
             </View>)}
-        </>}
       </View>
     </ScrollView>
   </>);

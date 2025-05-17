@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { useAuthContext } from '@blacktokki/account';
 import { useLangContext, useColorScheme, Colors, useResizeContext, ModalsProvider, useIsMobile, CommonButton } from '@blacktokki/core';
-import { CardStyleInterpolators, createStackNavigator } from '@react-navigation/stack';
+import { CardStyleInterpolators, createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import React, { useMemo } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 
@@ -11,6 +11,17 @@ import Drawer from './Drawer';
 
 
 const Root = createStackNavigator();
+const rootRef: {current?:StackNavigationProp<any>} = {}
+
+export function push<T>(name: string, params?: T) {
+  const routes = rootRef.current?.getState().routes;
+  const route = routes?routes[routes?.length - 1]:undefined
+  if (route === undefined || name === route.name && JSON.stringify(params) === JSON.stringify(route.params)){
+    return;
+  }
+  if (params) rootRef.current?.push(name, params);
+  else rootRef.current?.push(name);
+}
 
 function HeaderLeft({navigation, route, config}:{
   navigation: any,
@@ -65,23 +76,26 @@ export default ({ config }: { config: NavigationConfig }) => {
         <View style={[{ flex: 1 }, backgroundStyle]}>
           <ExtraProvider>
             <Root.Navigator
-              screenOptions={({ navigation, route }) => ({
-                headerStyle: {
-                  backgroundColor: Colors[theme].header,
-                  height: isMobile ? 50 : undefined,
-                },
-                headerTitleStyle: { color: Colors[theme].text },
-                headerLeft: () => <HeaderLeft {...{navigation, route, config}}/>,
-                headerRight: () => config.headerRight,
-                headerLeftContainerStyle: {
-                  backgroundColor: Colors[theme].header,
-                  borderBottomWidth: 1,
-                  borderColor: Colors[theme].headerBottomColor,
-                },
-                cardStyle: [{ flexShrink: 1 }, backgroundStyle],
-                animationEnabled: isMobile,
-                cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-              })}
+              screenOptions={({ navigation, route }) => {
+                rootRef.current = navigation;
+                return {
+                  headerStyle: {
+                    backgroundColor: Colors[theme].header,
+                    height: isMobile ? 50 : undefined,
+                  },
+                  headerTitleStyle: { color: Colors[theme].text },
+                  headerLeft: () => <HeaderLeft {...{navigation, route, config}}/>,
+                  headerRight: () => config.headerRight,
+                  headerLeftContainerStyle: {
+                    backgroundColor: Colors[theme].header,
+                    borderBottomWidth: 1,
+                    borderColor: Colors[theme].headerBottomColor,
+                  },
+                  cardStyle: [{ flexShrink: 1 }, backgroundStyle],
+                  animationEnabled: isMobile,
+                  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+                }
+              }}
             >
               {entries.map(([key, screen]) => (
                 <Root.Screen

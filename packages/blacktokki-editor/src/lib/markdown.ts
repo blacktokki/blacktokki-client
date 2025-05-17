@@ -73,13 +73,15 @@ HtmlToMarkdown.addRule('codeBlock', {
 HtmlToMarkdown.addRule('underline', {
   filter: ['u'],
   replacement(content) {
-    return '__' + content + '__';
+    const trailingNewline = content.endsWith('\n') ? '  \n' : '';
+    return '__' + content.trim() + '__' + trailingNewline;
   },
 });
 HtmlToMarkdown.addRule('strikethrough', {
   filter: ['del', 's'],
   replacement(content) {
-    return '~~' + content + '~~';
+    const trailingNewline = content.endsWith('\n') ? '  \n' : '';
+    return '~~' + content.trim() + '~~' + trailingNewline;
   },
 });
 

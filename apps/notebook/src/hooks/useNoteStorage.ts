@@ -91,7 +91,7 @@ export const useNotePage = (title: string) => {
           await queryClient.invalidateQueries({ queryKey: ['lastPage'] });
         }
       }
-      return page || { title, description: '' };
+      return page || { title, description: '', id:undefined };
     },
     enabled:!isFetching
   });

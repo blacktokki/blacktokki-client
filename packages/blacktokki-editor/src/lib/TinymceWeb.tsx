@@ -1,9 +1,22 @@
 import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import React from 'react';
-// import { createRoot } from 'react-dom/client';
 
 import { AutoCompleteProps, EditorProps } from '../types';
-import { parser, renderer } from './markdown';
+
+// import { createRoot } from 'react-dom/client';
+
+let markdown: { parser: (htmlCode: string) => string; renderer: (markdownCode: string) => string };
+import('./markdown').then((value) => {
+  markdown = value;
+});
+
+export const parser = (htmlCode: string) => {
+  return markdown.parser(htmlCode);
+};
+
+export const renderer = (markdownCode: string) => {
+  return markdown.renderer(markdownCode);
+};
 
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,

@@ -54,14 +54,15 @@ function removeAllAttributesFromHTML(html: string): string {
 const _cardPadding = (isLandscape: boolean) => (isLandscape ? 20 : 4);
 const _cardMaxWidth = (isLandscape: boolean) => (isLandscape ? 250 : 190);
 
-const CardPage = React.memo(({ item, index }: { item: Content | null; index: number }) => {
+type Item = (Content & { descriptionComponent: JSX.Element }) | null;
+
+const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => {
   const window = useResizeContext();
   const cardMaxWidth = _cardMaxWidth(window === 'landscape');
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const fSize = window === 'landscape' ? 2 : 0;
   const [mounted, setMounted] = useState(index < 10);
-  const RenderHtml = React.lazy(() => import('react-native-render-html'));
 
   useEffect(() => {
     if (!mounted) {
@@ -102,18 +103,7 @@ const CardPage = React.memo(({ item, index }: { item: Content | null; index: num
           },
         ]}
       >
-        <Card.Content style={{ padding: 0 }}>
-          <Suspense>
-            {mounted && (
-              <RenderHtml
-                source={{ html: item.description || '' }}
-                renderersProps={{ a: { onPress } }}
-                tagsStyles={{ body: { color: commonStyles.text.color } }}
-                contentWidth={cardMaxWidth}
-              />
-            )}
-          </Suspense>
-        </Card.Content>
+        <Card.Content style={{ padding: 0 }}>{mounted && item.descriptionComponent}</Card.Content>
       </Card>
       <View
         style={{
@@ -134,7 +124,7 @@ const CardPage = React.memo(({ item, index }: { item: Content | null; index: num
   );
 });
 
-const renderItem = ({ item, index }: { item: Content | null; index: number }) => (
+const renderItem = ({ item, index }: { item: Item; index: number }) => (
   <CardPage key={index} index={index} item={item} />
 );
 
@@ -143,18 +133,30 @@ export const RecentPagesSection = React.memo(() => {
   const commonStyles = createCommonStyles(theme);
   const window = useResizeContext();
   const { data: recentPages = [], isLoading } = useNotePages();
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const cardMaxWidth = _cardMaxWidth(window === 'landscape');
+  const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
   const contents = useMemo(
     () => [
       ...toRecentContents(recentPages).map((v) => ({
         ...v,
-        description: removeAllAttributesFromHTML(v.description || '').slice(0, 300),
+        descriptionComponent: (
+          <RenderHtml
+            source={{ html: removeAllAttributesFromHTML(v.description || '').slice(0, 300) || '' }}
+            renderersProps={{
+              a: { onPress: () => navigation.push('NotePage', { title: v.title }) },
+            }}
+            tagsStyles={{ body: { color: commonStyles.text.color } }}
+            contentWidth={cardMaxWidth}
+          />
+        ),
       })),
       null,
       null,
     ],
     [recentPages]
   );
-  const maxWidth = (_cardMaxWidth(window === 'landscape') + 5) * (window === 'landscape' ? 5 : 3);
+  const maxWidth = (cardMaxWidth + 5) * (window === 'landscape' ? 5 : 3);
   return isLoading ? (
     <View style={[commonStyles.card, commonStyles.centerContent]}>
       <Text style={commonStyles.text}>로딩 중...</Text>
@@ -173,7 +175,7 @@ export const RecentPagesSection = React.memo(() => {
         justifyContent: window === 'landscape' ? undefined : 'center',
       }}
     >
-      {contents.map((item, index) => renderItem({ item, index }))}
+      <Suspense>{contents.map((item, index) => renderItem({ item, index }))}</Suspense>
     </ScrollView>
   ) : (
     <View style={[commonStyles.card, commonStyles.centerContent]}>

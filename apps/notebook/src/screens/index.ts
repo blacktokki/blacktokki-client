@@ -1,5 +1,7 @@
 // import HomeScreen from "./main/home/HomeScreen";
 
+import { Auth } from '@blacktokki/account';
+
 import { ArchiveScreen } from './main/ArchiveScreen';
 import { EditPageScreen } from './main/EditPageScreen';
 import { EmptyContentsScreen } from './main/EmptyContentScreen';
@@ -9,44 +11,46 @@ import { NotePageScreen } from './main/NotePageScreen';
 import { RecentPagesScreen } from './main/RecentPageScreen';
 import HomeScreen from './main/home/HomeScreen';
 
+const title = (auth: Auth) =>
+  !auth.isLocal ? 'Blacktokki Notebook' : 'Blacktokki Notebook - Local';
 export const main = {
   Home: {
-    title: 'Blacktokki Notebook',
+    title,
     component: HomeScreen,
     path: 'home',
   },
   NotePage: {
-    title: 'Blacktokki Notebook',
+    title,
     component: NotePageScreen,
     path: 'page',
   },
   EditPage: {
-    title: 'Blacktokki Notebook',
+    title,
     component: EditPageScreen,
     path: 'edit',
   },
   MovePage: {
-    title: 'Blacktokki Notebook',
+    title,
     component: MovePageScreen,
     path: 'move',
   },
   RecentPages: {
-    title: 'Blacktokki Notebook',
+    title,
     component: RecentPagesScreen,
     path: 'recent',
   },
   EmptyPages: {
-    title: 'Blacktokki Notebook',
+    title,
     component: EmptyPagesScreen,
     path: 'need',
   },
   EmptyContents: {
-    title: 'Blacktokki Notebook',
+    title,
     component: EmptyContentsScreen,
     path: 'empty',
   },
   Archive: {
-    title: 'Blacktokki Notebook',
+    title,
     component: ArchiveScreen,
     path: 'archive',
   },

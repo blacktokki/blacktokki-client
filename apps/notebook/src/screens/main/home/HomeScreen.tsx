@@ -63,7 +63,7 @@ const CommonConfigButton = (props: { title: string; onPress?: () => void }) => {
 
 const ConfigCommonView = () => {
   const { lang } = useLangContext();
-  const { dispatch } = useAuthContext();
+  const { auth, dispatch } = useAuthContext();
   const theme = useColorScheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const commonStyles = createCommonStyles(theme);
@@ -89,7 +89,7 @@ const ConfigCommonView = () => {
             style={{ borderRadius: 20 }}
             onPress={() => setSearch(!search)}
           />
-          {search && keywords.length && (
+          {search && !!keywords.length && (
             <TextButton
               title={'Clear'}
               textStyle={{
@@ -117,10 +117,52 @@ const ConfigCommonView = () => {
         />
       </View>
       <View style={commonStyles.card}>
-        <CommonConfigButton
-          title={lang('* Logout')}
-          onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
-        />
+        <CommonConfigButton title={lang('* Account Settings')} />
+        <View style={{ flexDirection: 'row' }}>
+          {!!auth.user && (
+            <TextButton
+              title={'My Account: ' + auth.user?.username}
+              textStyle={{
+                fontSize: 16,
+                color,
+                textDecorationLine: !auth.isLocal ? 'underline' : 'none',
+              }}
+              style={{ borderRadius: 20 }}
+              onPress={() => dispatch({ type: 'LOGOUT_LOCAL' })}
+            />
+          )}
+          <TextButton
+            title={'Local Account'}
+            textStyle={{
+              fontSize: 16,
+              color,
+              textDecorationLine: auth.isLocal ? 'underline' : 'none',
+            }}
+            style={{ borderRadius: 20 }}
+            onPress={() => dispatch({ type: 'LOGIN_LOCAL' })}
+          />
+          {auth.user ? (
+            <TextButton
+              title={'Logout'}
+              textStyle={{
+                fontSize: 16,
+                color,
+              }}
+              style={{ borderRadius: 20 }}
+              onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
+            />
+          ) : (
+            <TextButton
+              title={'Login'}
+              textStyle={{
+                fontSize: 16,
+                color,
+              }}
+              style={{ borderRadius: 20 }}
+              onPress={() => dispatch({ type: 'LOGOUT_LOCAL' })}
+            />
+          )}
+        </View>
       </View>
     </View>
   );
@@ -146,7 +188,8 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
   const { lang } = useLangContext();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  const title = lang('Blacktokki Notebook');
+  const { auth } = useAuthContext();
+  const title = auth.isLocal ? 'Blacktokki Notebook - Local' : 'Blacktokki Notebook';
   const tabViews: TabViewOption[] = [
     {
       title: lang('Discovery'),

@@ -1,9 +1,13 @@
+import { Auth } from '@blacktokki/account';
 import { TabViewData, ModalComponent } from '@blacktokki/core';
 import { PathConfig, DocumentTitleOptions } from '@react-navigation/native';
 
 export type Screens = Record<
   string,
-  PathConfig<any> & { title: string; component: React.ComponentType<any> }
+  PathConfig<any> & {
+    title: string | ((auth: Auth) => string);
+    component: React.ComponentType<any>;
+  }
 >;
 
 export type TabViewOption = TabViewData & {

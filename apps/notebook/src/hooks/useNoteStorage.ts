@@ -7,11 +7,11 @@ import { Content, PostContent } from '../types';
 
 const PAGE_STORAGE_KEY = '@blacktokki:notebook:contents';
 const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
-const ONLINE = true;
+
 let lastPage: string | undefined;
 
-const getContents = async (type: 'NOTE' | 'SNAPSHOT'): Promise<Content[]> => {
-  if (ONLINE) {
+const getContents = async (isOnline: boolean, type: 'NOTE' | 'SNAPSHOT'): Promise<Content[]> => {
+  if (isOnline) {
     return await getContentList(undefined, [type]);
   }
   if (type === 'SNAPSHOT') {
@@ -27,10 +27,11 @@ const getContents = async (type: 'NOTE' | 'SNAPSHOT'): Promise<Content[]> => {
 };
 
 const saveNoteContents = async (
+  isOnline: boolean,
   contents: (Content | PostContent)[],
   id?: number
 ): Promise<void> => {
-  if (ONLINE) {
+  if (isOnline) {
     const content = contents.find((v) => id === (v as { id?: number }).id);
     if (content) {
       const savedId = await (id
@@ -44,6 +45,7 @@ const saveNoteContents = async (
       };
       await postContent(snapshot);
     }
+    return;
   }
   try {
     const jsonValue = JSON.stringify(contents);
@@ -73,16 +75,18 @@ const saveRecentPages = async (titles: string[]): Promise<void> => {
 };
 
 export const useNotePages = () => {
+  const { auth } = useAuthContext();
   return useQuery({
-    queryKey: ['pageContents'],
-    queryFn: async () => await getContents('NOTE'),
+    queryKey: ['pageContents', !auth.isLocal],
+    queryFn: async () => await getContents(!auth.isLocal, 'NOTE'),
   });
 };
 
 export const useSnapshotPages = () => {
+  const { auth } = useAuthContext();
   return useQuery({
-    queryKey: ['snapshotContents'],
-    queryFn: async () => await getContents('SNAPSHOT'),
+    queryKey: ['snapshotContents', !auth.isLocal],
+    queryFn: async () => await getContents(!auth.isLocal, 'SNAPSHOT'),
   });
 };
 
@@ -142,10 +146,13 @@ export const useCreateOrUpdatePage = () => {
       const page = contents.find((c) => c.title === title);
 
       let updatedContents: (Content | PostContent)[];
+      const updated = auth.isLocal ? new Date().toISOString() : undefined;
       if (page) {
-        updatedContents = contents.map((c, i) => (c.id === page.id ? { ...c, description } : c));
+        updatedContents = contents.map((c, i) =>
+          c.id === page.id ? ({ ...c, description, updated } as PostContent) : c
+        );
       } else {
-        const newPage: PostContent = {
+        const newPage = {
           title,
           description,
           input: title,
@@ -153,12 +160,13 @@ export const useCreateOrUpdatePage = () => {
           parentId: 0,
           type: 'NOTE',
           order: 0,
+          updated,
           option: {},
-        };
+        } as PostContent;
         updatedContents = [...contents, newPage];
       }
 
-      await saveNoteContents(updatedContents, page?.id);
+      await saveNoteContents(!auth.isLocal, updatedContents, page?.id);
       return { title, description };
     },
     onSuccess: async (data) => {
@@ -173,6 +181,7 @@ export const useCreateOrUpdatePage = () => {
 export const useMovePage = () => {
   const queryClient = useQueryClient();
   const { data: contents = [] } = useNotePages();
+  const { auth } = useAuthContext();
 
   return useMutation({
     mutationFn: async ({
@@ -200,7 +209,7 @@ export const useMovePage = () => {
           : c
       );
 
-      await saveNoteContents(updatedContents, page.id);
+      await saveNoteContents(!auth.isLocal, updatedContents, page.id);
 
       // Update recent pages
       const recentPages = await getRecentPages();

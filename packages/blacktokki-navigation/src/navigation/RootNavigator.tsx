@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { useAuthContext } from '@blacktokki/account';
+import { Auth, useAuthContext } from '@blacktokki/account';
 import { useLangContext, useColorScheme, Colors, useResizeContext, ModalsProvider, useIsMobile, CommonButton } from '@blacktokki/core';
 import { CardStyleInterpolators, createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import React, { useMemo } from 'react';
@@ -61,18 +61,18 @@ export default ({ config }: { config: NavigationConfig }) => {
   const entries = useMemo(() => {
     if (auth.user === undefined) return [];
     console.log('current user: ', auth.user);
-    return Object.entries(auth.user === null ? config.login : config.main);
+    return Object.entries(!auth.isLogin ? config.login : config.main);
   }, [auth, locale]);
   const modalValues = useMemo(() => {
     if (auth.user === undefined) return [];
-    return auth.user === null ? [] : config.modals;
+    return !auth.isLogin ? [] : config.modals;
   }, [auth]);
   const backgroundStyle = theme === 'light' ? {} : { backgroundColor: '#010409' };
   const ExtraProvider:React.ComponentType<any> = config.ExtraProvider || ((props) => props.children);
   return auth.user !== undefined ? (
     <View style={{ flexDirection: 'row', flex: 1 }}>
       <ModalsProvider modals={modalValues}>
-        {auth.user ? <Drawer auth={auth} children={config.drawer}/> : undefined}
+        {auth.isLogin ? <Drawer auth={auth} children={config.drawer}/> : undefined}
         <View style={[{ flex: 1 }, backgroundStyle]}>
           <ExtraProvider>
             <Root.Navigator
@@ -102,7 +102,7 @@ export default ({ config }: { config: NavigationConfig }) => {
                   key={key}
                   name={key}
                   component={screen.component}
-                  options={{ title: lang(screen.title) }}
+                  options={{ title: lang( typeof screen.title === "string" ? screen.title as string: (screen.title as (auth: Auth)=>string)(auth) ) }}
                 />
               ))}
               <Root.Screen

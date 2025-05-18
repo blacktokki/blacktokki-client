@@ -10,7 +10,7 @@ export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) =
   const { height } = useWindowDimensions();
   const windowType = useResizeContext();
   const childrenComponent = useMemo(
-    () => windowType === 'landscape' && auth.user && children,
+    () => windowType === 'landscape' && auth.isLogin && children,
     [windowType, auth, children]
   );
   return (

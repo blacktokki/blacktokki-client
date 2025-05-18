@@ -74,4 +74,13 @@ export const getToken = async () => {
   return token;
 };
 
+export const setLocal = async (isLocal: boolean) => {
+  await AsyncStorage.setItem('Authorization:Local', isLocal ? 'true' : 'false');
+};
+
+export const getLocal = async () => {
+  const isLocal = await AsyncStorage.getItem('Authorization:Local');
+  return isLocal === 'true';
+};
+
 export default account;

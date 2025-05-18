@@ -12,13 +12,4 @@ export type User = BaseUser & {
 
 export type CreateUser = BaseUser & {
   password: string;
-  inviteGroupId: number;
-};
-
-export type Membership = {
-  id?: number;
-  root_group_id?: number;
-  image_url?: string;
-  groupname: string;
-  group: number;
 };

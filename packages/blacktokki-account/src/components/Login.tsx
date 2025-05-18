@@ -6,7 +6,7 @@ import useAuthContext from '../hooks/useAuthContext';
 export default function Login({ lang }: { lang: (text: string) => string }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { error, dispatch } = useAuthContext();
+  const { error, dispatch, auth } = useAuthContext();
   const _login = () => dispatch({ type: 'LOGIN_REQUEST', username, password });
 
   return (
@@ -39,9 +39,16 @@ export default function Login({ lang }: { lang: (text: string) => string }) {
             <Text style={Styles.button_label}>{lang('Sign in')}</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => dispatch({ type: 'LOGIN_GUEST' })}>
-          <Text style={Styles.guest_footer_text}>{lang('Sign in as guest')}</Text>
-        </TouchableOpacity>
+        {auth.guestType === 'account' && (
+          <TouchableOpacity onPress={() => dispatch({ type: 'LOGIN_GUEST' })}>
+            <Text style={Styles.guest_footer_text}>{lang('Sign in as guest')}</Text>
+          </TouchableOpacity>
+        )}
+        {auth.guestType === 'local' && (
+          <TouchableOpacity onPress={() => dispatch({ type: 'LOGIN_LOCAL' })}>
+            <Text style={Styles.guest_footer_text}>{lang('Sign in as local account')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={Styles.login_social}>
         <View style={Styles.login_social_separator}>

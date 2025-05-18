@@ -24,7 +24,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="auto" />
       <Suspense fallback={<></>}>
-        <AuthProvider>
+        <AuthProvider guestType="local">
           <QueryClientProvider>
             <Navigation />
           </QueryClientProvider>

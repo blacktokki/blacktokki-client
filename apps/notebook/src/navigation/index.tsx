@@ -12,7 +12,7 @@ const HeaderRight = () => {
   return windowType === 'landscape' ? <SearchBar /> : undefined;
 };
 
-const getConfig = async (theme: 'light' | 'dark') => {
+const getConfig = async () => {
   const Linking = await import('expo-linking');
   return {
     main,
@@ -43,7 +43,7 @@ export default () => {
     colors: { ...preTheme.colors, primary: Colors[scheme].text },
   };
   const NavigationLazy = React.lazy(() =>
-    getConfig(scheme).then((config) => ({ default: () => <Navigation config={config} /> }))
+    getConfig().then((config) => ({ default: () => <Navigation config={config} /> }))
   );
   return (
     <PaperProvider theme={theme}>

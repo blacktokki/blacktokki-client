@@ -1,5 +1,6 @@
 import { User } from '../types';
 import account, { getToken, setToken } from './axios';
+export { getLocal, setLocal } from './axios';
 
 const checkLoginToken = async () => {
   const value = (await account.get('/api/v1/user/?self=true'))?.data?.value;

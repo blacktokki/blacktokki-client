@@ -102,7 +102,7 @@ const ContentGroupSection = (
             <>
               {data.slice(0, props.noteCount).map((v) => (
                 <List.Item
-                  key={v.id}
+                  key={v.title}
                   left={(_props) => (
                     <List.Icon
                       {..._props}
@@ -129,7 +129,7 @@ const ContentGroupSection = (
           ) : (
             data.map((v) => (
               <List.Item
-                key={v.id}
+                key={v.title}
                 left={(_props) => <List.Icon {..._props} icon={'file-document-edit'} />}
                 right={(_props) => (
                   <TouchableRipple

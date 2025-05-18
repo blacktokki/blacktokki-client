@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 
-import { checkLogin, login, logout } from '../services/account';
+import { checkLogin, getLocal, login, logout, setLocal } from '../services/account';
 import { User } from '../types';
 
 type AuthAction = {
@@ -16,13 +16,24 @@ type AuthAction = {
   username?: string;
   password?: string;
   user?: User | null;
+  useLocal?: boolean;
 };
 
-export type Auth = { user?: User | null };
+type GuestType = 'account' | 'local';
 
+export type Auth = (
+  | { user: User | null; isLogin: boolean; isLocal: boolean }
+  | { user?: undefined; isLogin?: undefined; isLocal?: undefined }
+) & {
+  guestType?: GuestType;
+};
 type AuthState = {
   user?: User | null;
-  request?: { username: string; password: string } | null;
+  request?:
+    | { username: string; password: string }
+    | { username?: undefined; useLocal: boolean }
+    | null;
+  useLocal?: boolean;
 };
 
 const AuthContext = createContext<{ auth: Auth; error?: string; dispatch: Dispatch<AuthAction> }>({
@@ -42,6 +53,11 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
         ...initialState,
         request: { username: 'guest', password: 'guest' },
       } as AuthState;
+    case 'LOGIN_LOCAL':
+      return {
+        ...initialState,
+        request: { useLocal: true },
+      };
     case 'LOGIN_SUCCESS':
       return {
         ...initialState,
@@ -53,10 +69,21 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
         ...initialState,
         request: undefined,
       };
+    case 'LOCAL_SUCCESS':
+      return {
+        ...initialState,
+        useLocal: action.useLocal,
+        request: undefined,
+      };
     case 'LOGOUT_REQUEST':
       return {
         ...initialState,
         request: null,
+      };
+    case 'LOGOUT_LOCAL':
+      return {
+        ...initialState,
+        request: { useLocal: false },
       };
     case 'LOGOUT_SUCCESS':
       return {
@@ -74,17 +101,32 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
   }
 };
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [authState, dispatch] = useReducer(authReducer, {} as Auth);
+export const AuthProvider = ({
+  children,
+  guestType,
+}: {
+  children: React.ReactNode;
+  guestType?: GuestType;
+}) => {
+  const [authState, dispatch] = useReducer(authReducer, {});
   const [error, setError] = useState<string>();
   const auth = useMemo(
-    () => ({
-      user: authState.user,
-    }),
+    () =>
+      ({
+        user: authState.user,
+        isLogin:
+          authState.user !== undefined ? authState.user !== null || authState.useLocal : undefined,
+        isLocal: authState.useLocal,
+        guestType,
+      } as Auth),
     [authState]
   );
   useEffect(() => {
-    if (authState.user === undefined) {
+    if (authState.useLocal === undefined) {
+      getLocal().then((useLocal) => {
+        dispatch({ type: 'LOCAL_SUCCESS', useLocal });
+      });
+    } else if (authState.user === undefined) {
       checkLogin()
         .then((user) => {
           dispatch({ type: 'LOGIN_SUCCESS', user });
@@ -94,14 +136,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           dispatch({ type: 'LOGOUT_SUCCESS' });
         });
     } else if (authState.user !== undefined && authState.request) {
-      login(authState.request.username, authState.request.password)
-        .then((user) => {
-          dispatch({ type: 'LOGIN_SUCCESS', user });
-        })
-        .catch((data) => {
-          dispatch({ type: 'LOGIN_FAILED' });
-          setError(data.response?.data?.message);
+      if (authState.request.username !== undefined) {
+        login(authState.request.username, authState.request.password)
+          .then((user) => {
+            dispatch({ type: 'LOGIN_SUCCESS', user });
+          })
+          .catch((data) => {
+            dispatch({ type: 'LOGIN_FAILED' });
+            setError(data.response?.data?.message);
+          });
+      } else {
+        const useLocal = authState.request.useLocal;
+        setLocal(useLocal).then(() => {
+          dispatch({ type: 'LOCAL_SUCCESS', useLocal });
         });
+      }
     } else if (authState.user && authState.request === null) {
       logout().then(() => dispatch({ type: 'LOGOUT_SUCCESS' }));
     }

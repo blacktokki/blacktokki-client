@@ -16,7 +16,6 @@ type AuthAction = {
   username?: string;
   password?: string;
   user?: User | null;
-  useLocal?: boolean;
 };
 
 type GuestType = 'account' | 'local';
@@ -29,10 +28,7 @@ export type Auth = (
 };
 type AuthState = {
   user?: User | null;
-  request?:
-    | { username: string; password: string }
-    | { username?: undefined; useLocal: boolean }
-    | null;
+  request?: { username: string; password: string } | null;
   useLocal?: boolean;
 };
 
@@ -56,7 +52,7 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
     case 'LOGIN_LOCAL':
       return {
         ...initialState,
-        request: { useLocal: true },
+        useLocal: true,
       };
     case 'LOGIN_SUCCESS':
       return {
@@ -69,12 +65,6 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
         ...initialState,
         request: undefined,
       };
-    case 'LOCAL_SUCCESS':
-      return {
-        ...initialState,
-        useLocal: action.useLocal,
-        request: undefined,
-      };
     case 'LOGOUT_REQUEST':
       return {
         ...initialState,
@@ -83,7 +73,7 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
     case 'LOGOUT_LOCAL':
       return {
         ...initialState,
-        request: { useLocal: false },
+        useLocal: false,
       };
     case 'LOGOUT_SUCCESS':
       return {
@@ -124,19 +114,19 @@ export const AuthProvider = ({
   useEffect(() => {
     if (authState.useLocal === undefined) {
       getLocal().then((useLocal) => {
-        dispatch({ type: 'LOCAL_SUCCESS', useLocal });
+        dispatch({ type: useLocal ? 'LOGIN_LOCAL' : 'LOGOUT_LOCAL' });
       });
-    } else if (authState.user === undefined) {
-      checkLogin()
-        .then((user) => {
-          dispatch({ type: 'LOGIN_SUCCESS', user });
-        })
-        .catch((e) => {
-          console.log(e);
-          dispatch({ type: 'LOGOUT_SUCCESS' });
-        });
-    } else if (authState.user !== undefined && authState.request) {
-      if (authState.request.username !== undefined) {
+    } else {
+      if (authState.user === undefined) {
+        checkLogin()
+          .then((user) => {
+            dispatch({ type: 'LOGIN_SUCCESS', user });
+          })
+          .catch((e) => {
+            console.log(e);
+            dispatch({ type: 'LOGOUT_SUCCESS' });
+          });
+      } else if (authState.user !== undefined && authState.request) {
         login(authState.request.username, authState.request.password)
           .then((user) => {
             dispatch({ type: 'LOGIN_SUCCESS', user });
@@ -145,14 +135,10 @@ export const AuthProvider = ({
             dispatch({ type: 'LOGIN_FAILED' });
             setError(data.response?.data?.message);
           });
-      } else {
-        const useLocal = authState.request.useLocal;
-        setLocal(useLocal).then(() => {
-          dispatch({ type: 'LOCAL_SUCCESS', useLocal });
-        });
+      } else if (authState.user && authState.request === null) {
+        logout().then(() => dispatch({ type: 'LOGOUT_SUCCESS' }));
       }
-    } else if (authState.user && authState.request === null) {
-      logout().then(() => dispatch({ type: 'LOGOUT_SUCCESS' }));
+      setLocal(authState.useLocal);
     }
   }, [authState]);
   return <AuthContext.Provider value={{ auth, error, dispatch }}>{children}</AuthContext.Provider>;

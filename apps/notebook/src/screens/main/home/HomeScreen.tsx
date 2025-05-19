@@ -1,26 +1,17 @@
 import { useAuthContext } from '@blacktokki/account';
-import {
-  Colors,
-  ContractFooter,
-  Text,
-  TextButton,
-  useColorScheme,
-  useLangContext,
-} from '@blacktokki/core';
-import { HomeSection, ConfigSections, TabViewOption } from '@blacktokki/navigation';
-import { useNavigation } from '@react-navigation/core';
-import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { Colors, ContractFooter, useColorScheme, useLangContext } from '@blacktokki/core';
+import { HomeSection, TabViewOption } from '@blacktokki/navigation';
+import { StackScreenProps } from '@react-navigation/stack';
+import React from 'react';
+import { ScrollView, View } from 'react-native';
 import { List } from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { SearchBar, SearchList } from '../../../components/SearchBar';
-import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
+import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
-import { NavigationParamList } from '../../../types';
 import { RecentPagesSection } from '../RecentPageSection';
 import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from './ContentGroupSection';
+import ExtraConfigSections from './ExtraConfigSections';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
@@ -45,129 +36,6 @@ const RecentChangesTabView = () => {
   return <RecentPagesSection />;
 };
 
-const CommonConfigButton = (props: { title: string; onPress?: () => void }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const color = Colors[theme].text;
-  return (
-    <TouchableOpacity
-      style={[commonStyles.header, { marginBottom: 0 }]}
-      onPress={props.onPress}
-      disabled={!props.onPress}
-    >
-      <Text style={{ fontSize: 20, color, fontWeight: '600' }}>{props.title}</Text>
-      {props.onPress && <Text>{'>'}</Text>}
-    </TouchableOpacity>
-  );
-};
-
-const ConfigCommonView = () => {
-  const { lang } = useLangContext();
-  const { auth, dispatch } = useAuthContext();
-  const theme = useColorScheme();
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const commonStyles = createCommonStyles(theme);
-  const color = Colors[theme].text;
-  const [search, setSearch] = useState(false);
-  const { data: keywords = [] } = useKeywords();
-  const resetKeyword = useResetKeyowrd();
-  return (
-    <View>
-      <View style={commonStyles.card}>
-        <ConfigSections />
-      </View>
-      <View style={commonStyles.card}>
-        <CommonConfigButton title={lang('* Search Settings')} />
-        <View style={{ flexDirection: 'row' }}>
-          <TextButton
-            title={'Search History'}
-            textStyle={{
-              fontSize: 16,
-              color,
-              textDecorationLine: search ? 'underline' : 'none',
-            }}
-            style={{ borderRadius: 20 }}
-            onPress={() => setSearch(!search)}
-          />
-          {search && !!keywords.length && (
-            <TextButton
-              title={'Clear'}
-              textStyle={{
-                fontSize: 16,
-                color,
-              }}
-              style={{ borderRadius: 20 }}
-              onPress={() => resetKeyword.mutate()}
-            />
-          )}
-        </View>
-        {search && (
-          <View style={[commonStyles.card, { padding: 0 }]}>
-            <SearchList
-              filteredPages={keywords}
-              handlePagePress={(title, section) => navigation.push('NotePage', { title, section })}
-            />
-          </View>
-        )}
-      </View>
-      <View style={commonStyles.card}>
-        <CommonConfigButton
-          title={lang('* Archive')}
-          onPress={() => navigation.push('Archive', {})}
-        />
-      </View>
-      <View style={commonStyles.card}>
-        <CommonConfigButton title={lang('* Account Settings')} />
-        <View style={{ flexDirection: 'row' }}>
-          {!!auth.user && (
-            <TextButton
-              title={'My Account: ' + auth.user?.username}
-              textStyle={{
-                fontSize: 16,
-                color,
-                textDecorationLine: !auth.isLocal ? 'underline' : 'none',
-              }}
-              style={{ borderRadius: 20 }}
-              onPress={() => dispatch({ type: 'LOGOUT_LOCAL' })}
-            />
-          )}
-          <TextButton
-            title={'Local Account'}
-            textStyle={{
-              fontSize: 16,
-              color,
-              textDecorationLine: auth.isLocal ? 'underline' : 'none',
-            }}
-            style={{ borderRadius: 20 }}
-            onPress={() => dispatch({ type: 'LOGIN_LOCAL' })}
-          />
-          {auth.user ? (
-            <TextButton
-              title={'Logout'}
-              textStyle={{
-                fontSize: 16,
-                color,
-              }}
-              style={{ borderRadius: 20 }}
-              onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
-            />
-          ) : (
-            <TextButton
-              title={'Login'}
-              textStyle={{
-                fontSize: 16,
-                color,
-              }}
-              style={{ borderRadius: 20 }}
-              onPress={() => dispatch({ type: 'LOGOUT_LOCAL' })}
-            />
-          )}
-        </View>
-      </View>
-    </View>
-  );
-};
-
 const ConfigTabView = () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -179,7 +47,7 @@ const ConfigTabView = () => {
         { backgroundColor: Colors[theme].background },
       ]}
     >
-      <ConfigCommonView />
+      <ExtraConfigSections />
     </ScrollView>
   );
 };
@@ -210,7 +78,6 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
       headerRight: () => <></>,
     },
   ];
-
   return (
     <HomeSection
       tabViews={tabViews}
@@ -218,7 +85,7 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
       headerTitle={title}
     >
       <View style={[commonStyles.container, { width: '100%', justifyContent: 'space-between' }]}>
-        <ConfigCommonView />
+        <ExtraConfigSections />
         <ContractFooter
           buttons={[
             {

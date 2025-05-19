@@ -80,7 +80,7 @@ export const setLocal = async (isLocal: boolean) => {
 
 export const getLocal = async () => {
   const isLocal = await AsyncStorage.getItem('Authorization:Local');
-  return isLocal === 'true';
+  return isLocal !== 'false';
 };
 
 export default account;

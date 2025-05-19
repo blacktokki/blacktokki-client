@@ -12,14 +12,18 @@ type ArchiveScreenRouteProp = RouteProp<NavigationParamList, 'Archive'>;
 export const ArchiveScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<ArchiveScreenRouteProp>();
-  const { title } = route.params;
+  const title = route.params?.title;
   const { data: recentPages = [], isLoading } = useSnapshotPages();
   return (
     <NoteListSection
       contents={recentPages
         .filter((v) => title === undefined || title === v.title)
         .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
-        .map((v) => ({ ...v, subtitle: `최근 수정: ${updatedFormat(v.updated as string)}` }))}
+        .map((v, i) => ({
+          ...v,
+          subtitle: `최근 수정: ${updatedFormat(v.updated as string)}`,
+          id: v.id || i,
+        }))}
       isLoading={isLoading}
       onPress={(title, _, id) =>
         (title === undefined ? navigation.push : navigation.navigate)('NotePage', {

@@ -5,7 +5,33 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
 
-const PAGE_STORAGE_KEY = '@blacktokki:notebook:contents';
+const DB_NAME = '@Blacktokki:notebook';
+const DB_VERSION = 1;
+
+export async function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains('NOTE')) {
+        db.createObjectStore('NOTE', { keyPath: 'title' }); // id 필드로 고유 식별
+      }
+      if (!db.objectStoreNames.contains('SNAPSHOT')) {
+        db.createObjectStore('SNAPSHOT', { keyPath: ['title', 'updated'] }); // id 필드로 고유 식별
+      }
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
 const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
 
 let lastPage: string | undefined;
@@ -14,14 +40,24 @@ const getContents = async (isOnline: boolean, type: 'NOTE' | 'SNAPSHOT'): Promis
   if (isOnline) {
     return await getContentList(undefined, [type]);
   }
-  if (type === 'SNAPSHOT') {
-    return [];
-  }
   try {
-    const jsonValue = await AsyncStorage.getItem(PAGE_STORAGE_KEY);
-    return jsonValue ? JSON.parse(jsonValue) : [];
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(type, 'readonly');
+      const store = transaction.objectStore(type);
+
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result as Content[]);
+      };
+      request.onerror = () => {
+        console.error('Error loading contents from IndexedDB:', request.error);
+        throw request.error;
+      };
+    });
   } catch (e) {
-    console.error('Error loading page contents', e);
+    console.error('Error opening IndexedDB', e);
     return [];
   }
 };
@@ -31,8 +67,8 @@ const saveNoteContents = async (
   contents: (Content | PostContent)[],
   id?: number
 ): Promise<void> => {
+  const content = contents.find((v) => id === (v as { id?: number }).id);
   if (isOnline) {
-    const content = contents.find((v) => id === (v as { id?: number }).id);
     if (content) {
       const savedId = await (id
         ? patchContent({ id, updated: content }).then(() => id)
@@ -48,10 +84,27 @@ const saveNoteContents = async (
     return;
   }
   try {
-    const jsonValue = JSON.stringify(contents);
-    await AsyncStorage.setItem(PAGE_STORAGE_KEY, jsonValue);
+    const db = await openDB();
+    const tx = db.transaction(['NOTE', 'SNAPSHOT'], 'readwrite');
+    const store = tx.objectStore('NOTE');
+    const archive = tx.objectStore('SNAPSHOT');
+
+    for (const contentItem of contents) {
+      store.put(contentItem); // id를 기준으로 덮어씌움 (없으면 추가)
+    }
+    if (content) {
+      const snapshot: Content | PostContent = {
+        ...content,
+        type: 'SNAPSHOT',
+      };
+      archive.put(snapshot);
+    }
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve(undefined);
+      tx.onerror = () => reject(tx.error);
+    });
   } catch (e) {
-    console.error('Error saving page contents', e);
+    console.error('Error saving contents to IndexedDB', e);
   }
 };
 

@@ -13,11 +13,15 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import HeaderSelectBar, { NodeData, parseHtmlToSections } from '../../components/HeaderSelectBar';
-import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
-import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
-import { NavigationParamList } from '../../types';
+import HeaderSelectBar, {
+  NodeData,
+  parseHtmlToSections,
+} from '../../../components/HeaderSelectBar';
+import { onLink, SearchBar, titleFormat } from '../../../components/SearchBar';
+import { useNotePage, useSnapshotPages } from '../../../hooks/useNoteStorage';
+import { createCommonStyles } from '../../../styles';
+import { NavigationParamList } from '../../../types';
+import TimerTagSection from './TimerTagSection';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
@@ -37,6 +41,25 @@ export const getSplitTitle = (title: string) => {
     return [title];
   }
   return [splitTitle.slice(0, splitTitle.length - 1).join('/'), splitTitle[splitTitle.length - 1]];
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const addMonth = (dateStr: string): string => {
+  const [year, month] = dateStr
+    .split('-')
+    .filter((v, i) => i < 2)
+    .map((v) => parseInt(v, 10));
+  if (month === 12) {
+    return `${year + 1}-01`;
+  }
+  return `${year}-${month + 1}`;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const addDays = (dateStr: string, days: number): string => {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 };
 
 export const NotePageScreen: React.FC = () => {
@@ -110,7 +133,7 @@ export const NotePageScreen: React.FC = () => {
           style={[commonStyles.container, { paddingRight: 12, scrollbarGutter: 'stable' }]}
           contentContainerStyle={{ flexGrow: 1 }}
         >
-          <View style={commonStyles.header}>
+          <View style={[commonStyles.header, { zIndex: 1 }]}>
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity
                 onPress={() =>
@@ -162,6 +185,7 @@ export const NotePageScreen: React.FC = () => {
               )}
             </View>
             <View style={styles.actionButtons}>
+              <TimerTagSection title={page?.title || ''} paragraph={paragraph} />
               {!section && (
                 <>
                   <TouchableOpacity

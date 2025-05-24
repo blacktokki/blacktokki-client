@@ -1,7 +1,7 @@
-import { useLangContext, useResizeContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext, View } from '@blacktokki/core';
 import { navigate, push } from '@blacktokki/navigation';
-import * as React from 'react';
-import { List, TouchableRipple } from 'react-native-paper';
+import React, { useRef } from 'react';
+import { List, TouchableRipple, Badge } from 'react-native-paper';
 
 import {
   useRecentPages,
@@ -10,6 +10,8 @@ import {
   useLastPage,
   useAddRecentPage,
 } from '../../../hooks/useNoteStorage';
+import useProblem from '../../../hooks/useProblem';
+import useTimeLine from '../../../hooks/useTimeLine';
 import { Content } from '../../../types';
 
 const getItemPadding = (isLandscape: boolean) => {
@@ -18,9 +20,15 @@ const getItemPadding = (isLandscape: boolean) => {
 
 export const TimeLineButton = () => {
   const { lang } = useLangContext();
+  const { data } = useTimeLine();
   return (
     <List.Item
       left={(_props) => <List.Icon {..._props} icon={'calendar'} />}
+      right={(_props) => (
+        <View style={{ alignSelf: 'center', backgroundColor: 'transparent' }}>
+          {data.length > 0 && <Badge>{data.length}</Badge>}
+        </View>
+      )}
       title={lang('TimeLine')}
       onPress={() => navigate('TimeLine')}
     />
@@ -29,9 +37,15 @@ export const TimeLineButton = () => {
 
 export const ProblemButton = () => {
   const { lang } = useLangContext();
+  const { data } = useProblem();
   return (
     <List.Item
       left={(_props) => <List.Icon {..._props} icon={'note-alert'} />}
+      right={(_props) => (
+        <View style={{ alignSelf: 'center', backgroundColor: 'transparent' }}>
+          {data.length > 0 && <Badge>{data.length}</Badge>}
+        </View>
+      )}
       title={lang('Problems')}
       onPress={() => push('Problem')}
     />
@@ -50,7 +64,7 @@ const ContentGroupSection = (
   const notes = useNotePages();
   const pages = useRecentPages();
   const { data: lastPage } = useLastPage();
-  const tabRef = React.useRef<NodeJS.Timeout>();
+  const tabRef = useRef<NodeJS.Timeout>(undefined);
   const addRecentPage = useAddRecentPage();
   const deleteRecentPage = useDeleteRecentPage();
   const data =

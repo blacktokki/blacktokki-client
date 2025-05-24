@@ -4,11 +4,11 @@ import { Auth } from '@blacktokki/account';
 
 import { ArchiveScreen } from './main/ArchiveScreen';
 import { EditPageScreen } from './main/EditPageScreen';
-import { EmptyContentsScreen } from './main/EmptyContentScreen';
-import { EmptyPagesScreen } from './main/EmptyPageScreen';
 import { MovePageScreen } from './main/MovePageScreen';
 import { NotePageScreen } from './main/NotePageScreen';
+import { ProblemsScreen } from './main/ProblemScreen';
 import { RecentPagesScreen } from './main/RecentPageScreen';
+import { TimeLineScreen } from './main/TimeLineScreen';
 import HomeScreen from './main/home/HomeScreen';
 
 const title = (auth: Auth) =>
@@ -39,19 +39,19 @@ export const main = {
     component: RecentPagesScreen,
     path: 'recent',
   },
-  EmptyPages: {
+  Problem: {
     title,
-    component: EmptyPagesScreen,
-    path: 'need',
-  },
-  EmptyContents: {
-    title,
-    component: EmptyContentsScreen,
-    path: 'empty',
+    component: ProblemsScreen,
+    path: 'problem',
   },
   Archive: {
     title,
     component: ArchiveScreen,
     path: 'archive',
+  },
+  TimeLine: {
+    title,
+    component: TimeLineScreen,
+    path: 'timeline',
   },
 };

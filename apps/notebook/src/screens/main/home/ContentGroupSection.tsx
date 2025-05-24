@@ -16,24 +16,24 @@ const getItemPadding = (isLandscape: boolean) => {
   return isLandscape ? 5 : 8;
 };
 
-export const EmptyPageButton = () => {
+export const TimeLineButton = () => {
   const { lang } = useLangContext();
   return (
     <List.Item
-      left={(_props) => <List.Icon {..._props} icon={'note-remove'} />}
-      title={lang('Empty Note')}
-      onPress={() => push('EmptyPages')}
+      left={(_props) => <List.Icon {..._props} icon={'calendar'} />}
+      title={lang('TimeLine')}
+      onPress={() => navigate('TimeLine')}
     />
   );
 };
 
-export const EmptyContentButton = () => {
+export const ProblemButton = () => {
   const { lang } = useLangContext();
   return (
     <List.Item
-      left={(_props) => <List.Icon {..._props} icon={'note-edit'} />}
-      title={lang('Empty Content')}
-      onPress={() => push('EmptyContents')}
+      left={(_props) => <List.Icon {..._props} icon={'note-alert'} />}
+      title={lang('Problems')}
+      onPress={() => push('Problem')}
     />
   );
 };

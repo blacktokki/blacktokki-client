@@ -5,8 +5,8 @@ import { Platform, ScrollView } from 'react-native';
 import { List } from 'react-native-paper';
 
 import ContentGroupSection, {
-  EmptyContentButton,
-  EmptyPageButton,
+  ProblemButton,
+  TimeLineButton,
 } from '../screens/main/home/ContentGroupSection';
 
 export default () => {
@@ -18,8 +18,8 @@ export default () => {
         title={lang('Home')}
         onPress={() => push('Home')}
       />
-      <EmptyPageButton />
-      <EmptyContentButton />
+      <TimeLineButton />
+      <ProblemButton />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <List.Subheader style={{}} selectable={false}>
           {lang('Open Pages')}

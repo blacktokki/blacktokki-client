@@ -10,7 +10,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
-import ContentGroupSection, { EmptyContentButton, EmptyPageButton } from './ContentGroupSection';
+import ContentGroupSection, { ProblemButton, TimeLineButton } from './ContentGroupSection';
 import ExtraConfigSections from './ExtraConfigSections';
 
 const NotesTabView = () => {
@@ -24,10 +24,10 @@ const NotesTabView = () => {
       <ContentGroupSection type={'LAST'} />
       <ContentGroupSection type={'PAGE'} />
       <List.Subheader style={{}} selectable={false}>
-        {lang('Problems')}
+        {lang('Event Pages')}
       </List.Subheader>
-      <EmptyPageButton />
-      <EmptyContentButton />
+      <TimeLineButton />
+      <ProblemButton />
     </ScrollView>
   );
 };

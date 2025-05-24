@@ -5,7 +5,11 @@ import { AutoCompleteProps, EditorProps } from '../types';
 
 // import { createRoot } from 'react-dom/client';
 
-let markdown: { parser: (htmlCode: string) => string; renderer: (markdownCode: string) => string };
+let markdown: {
+  parser: (htmlCode: string) => string;
+  renderer: (markdownCode: string) => string;
+  toRaw: (text: string) => string;
+};
 import('./markdown').then((value) => {
   markdown = value;
 });
@@ -16,6 +20,10 @@ export const parser = (htmlCode: string) => {
 
 export const renderer = (markdownCode: string) => {
   return markdown.renderer(markdownCode);
+};
+
+export const toRaw = (text: string) => {
+  return markdown.toRaw(text);
 };
 
 const INIT: IAllProps['init'] = {
@@ -101,6 +109,7 @@ export default (
           '%Y-%m',
           '%Y-%m-%d',
           new Date().toISOString().split('T')[0] + '/%Y-%m-%d',
+          '%m/%d',
         ],
         content_style:
           (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +

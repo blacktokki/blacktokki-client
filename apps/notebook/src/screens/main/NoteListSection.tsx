@@ -13,12 +13,12 @@ export const NoteListSection = ({
 }: {
   contents: {
     title: string;
-    section?: string;
+    paragraph?: string;
     subtitles?: string[];
     id?: number;
   }[];
   isLoading: boolean;
-  onPress: (title: string, section?: string, id?: number) => void;
+  onPress: (title: string, paragraph?: string, id?: number) => void;
   emptyMessage: string;
 }) => {
   const theme = useColorScheme();
@@ -32,11 +32,11 @@ export const NoteListSection = ({
       ) : contents.length > 0 ? (
         <FlatList
           data={contents}
-          keyExtractor={(item) => JSON.stringify([item.title, item.section, item.id])}
+          keyExtractor={(item) => JSON.stringify([item.title, item.paragraph, item.id])}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={commonStyles.card}
-              onPress={() => onPress(item.title, item.section, item.id)}
+              onPress={() => onPress(item.title, item.paragraph, item.id)}
             >
               <Text style={commonStyles.title}>{titleFormat(item)}</Text>
               {(item.subtitles || []).map((subtitle, index) => (

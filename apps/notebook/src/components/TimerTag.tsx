@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
-import { NodeData } from './HeaderSelectBar';
+import { Paragraph } from './HeaderSelectBar';
 
 type DatePattern = {
   pattern: string;
@@ -98,7 +98,6 @@ function extractDates(input: string) {
 
   return results;
 }
-
 export function cleanAndMergeTDs(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -131,19 +130,19 @@ export function cleanAndMergeTDs(html: string): string {
   return doc.body.innerHTML;
 }
 
-export const sectionsToDatePatterns = (title: string, sections: NodeData[]) => {
-  return sections
-    .map((section) => {
+export const paragraphsToDatePatterns = (title: string, paragraphs: Paragraph[]) => {
+  return paragraphs
+    .map((paragraph) => {
       const dateMatches = [
-        toRaw(section.header),
-        ...toRaw(cleanAndMergeTDs(section.description)).split('\n'),
+        toRaw(paragraph.header),
+        ...toRaw(cleanAndMergeTDs(paragraph.description)).split('\n'),
       ].map((v2, i) => ({
-        path: section.path,
+        path: paragraph.path,
         isHeader: i === 0,
         original: v2,
         matches: extractDates(v2),
       }));
-      return { title, section: section.title, dateMatches };
+      return { title, paragraph: paragraph.title, dateMatches };
     })
     .filter((v) => v.dateMatches.filter((v2) => v2.matches.length > 0).length > 0);
 };

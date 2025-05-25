@@ -9,7 +9,7 @@ export type KeywordContent =
       type: '_NOTELINK';
       name: string;
       title: string;
-      section?: string;
+      paragraph?: string;
     }
   | {
       type: '_KEYWORD';

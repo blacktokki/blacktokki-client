@@ -136,7 +136,9 @@ export default () => {
           <View style={[commonStyles.card, { padding: 0 }]}>
             <SearchList
               filteredPages={keywords}
-              handlePagePress={(title, section) => navigation.push('NotePage', { title, section })}
+              handlePagePress={(title, paragraph) =>
+                navigation.push('NotePage', { title, paragraph })
+              }
             />
           </View>
         )}

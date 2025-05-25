@@ -2,10 +2,10 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { NodeData } from '../../../components/HeaderSelectBar';
+import { Paragraph } from '../../../components/HeaderSelectBar';
 import TimerTag, {
   matchDateRange,
-  sectionsToDatePatterns,
+  paragraphsToDatePatterns,
   TimerData,
   today,
 } from '../../../components/TimerTag';
@@ -65,10 +65,10 @@ const buttons = (data: TimerData) => {
   ];
 };
 
-export default (props: { title: string; paragraph: NodeData[] }) => {
+export default (props: { title: string; paragraphs: Paragraph[] }) => {
   const dateNum = new Date(today()).getTime();
   const createOrUpdatePage = useCreateOrUpdatePage();
-  const data = sectionsToDatePatterns(props.title, props.paragraph)
+  const data = paragraphsToDatePatterns(props.title, props.paragraphs)
     .flatMap((v) => matchDateRange(v.dateMatches, dateNum))
     .flatMap((v) =>
       v.matches.map((v2) => ({
@@ -77,7 +77,7 @@ export default (props: { title: string; paragraph: NodeData[] }) => {
         replace: (a: string) =>
           createOrUpdatePage.mutate({
             title: props.title,
-            description: props.paragraph
+            description: props.paragraphs
               .map(
                 (v3) =>
                   (v3.path === v.path && v.isHeader

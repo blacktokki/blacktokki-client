@@ -30,8 +30,8 @@ export type Link = {
 
 export type NavigationParamList = {
   Home: undefined;
-  NotePage: { title: string; section?: string; archiveId?: number };
+  NotePage: { title: string; paragraph?: string; archiveId?: number };
   EditPage: { title: string };
-  MovePage: { title: string; section?: string };
+  MovePage: { title: string; paragraph?: string };
   Archive: { title?: string };
 };

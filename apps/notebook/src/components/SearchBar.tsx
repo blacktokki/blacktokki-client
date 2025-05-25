@@ -17,7 +17,7 @@ import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordS
 import { useNotePages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
 import { Content, NavigationParamList } from '../types';
-import { parseHtmlToSections } from './HeaderSelectBar';
+import { parseHtmlToParagraphs } from './HeaderSelectBar';
 
 let _searchText = '';
 
@@ -44,9 +44,9 @@ function urlToNoteLink(url: string) {
   if (location.origin === newLocation.origin) {
     const params = new URLSearchParams(newLocation.search);
     const title = params.get('title');
-    const section = params.get('section') || undefined;
+    const paragraph = params.get('paragraph') || undefined;
     if (title) {
-      return { title, section };
+      return { title, paragraph };
     }
   }
 }
@@ -94,10 +94,10 @@ export const RandomButton = () => {
         style={commonStyles.searchButton}
         onPress={() => {
           const page = randomPages[Math.floor(Math.random() * randomPages.length)];
-          const sections = parseHtmlToSections(page.description || '');
+          const paragraphs = parseHtmlToParagraphs(page.description || '');
           navigation.push('NotePage', {
             title: page.title,
-            section: sections[Math.floor(Math.random() * sections.length)].title,
+            paragraph: paragraphs[Math.floor(Math.random() * paragraphs.length)].title,
           });
         }}
       >
@@ -107,8 +107,8 @@ export const RandomButton = () => {
   );
 };
 
-export const titleFormat = (item: { title: string; section?: string }) =>
-  `${item.title}${item.section ? ' ▶ ' + item.section : ''}`;
+export const titleFormat = (item: { title: string; paragraph?: string }) =>
+  `${item.title}${item.paragraph ? ' ▶ ' + item.paragraph : ''}`;
 
 export const SearchList = ({
   filteredPages,
@@ -116,7 +116,7 @@ export const SearchList = ({
   addKeyword,
 }: {
   filteredPages: SearchContent[];
-  handlePagePress: (title: string, section?: string) => void;
+  handlePagePress: (title: string, paragraph?: string) => void;
   addKeyword?: (keyword: KeywordContent) => void;
 }) => {
   const theme = useColorScheme();
@@ -124,8 +124,8 @@ export const SearchList = ({
   const pagePressHandlers = useCallback((item: SearchContent) => {
     return PanResponder.create({
       onPanResponderStart: () => {
-        if (item.type === '_NOTELINK' && item.section) {
-          handlePagePress(item.title, item.section);
+        if (item.type === '_NOTELINK' && item.paragraph) {
+          handlePagePress(item.title, item.paragraph);
           addKeyword?.(item);
         } else {
           handlePagePress(item.title);
@@ -138,7 +138,7 @@ export const SearchList = ({
   return (
     <FlatList
       data={filteredPages}
-      keyExtractor={(item: any) => JSON.stringify([item.title, item.name, item.section])}
+      keyExtractor={(item: any) => JSON.stringify([item.title, item.name, item.paragraph])}
       renderItem={({ item }) => (
         <TouchableOpacity style={styles.resultItem} {...pagePressHandlers(item)}>
           <Text style={[commonStyles.text, styles.resultText]}>
@@ -181,11 +181,11 @@ export const SearchBar: React.FC<{
     }
   };
 
-  const handlePagePress = (title: string, section?: string) => {
+  const handlePagePress = (title: string, paragraph?: string) => {
     if (handlePress) {
       handlePress(title);
     } else {
-      navigation.push('NotePage', { title, section });
+      navigation.push('NotePage', { title, paragraph });
     }
     setSearchText('');
   };

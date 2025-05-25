@@ -5,7 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 
-import HeaderSelectBar, { parseHtmlToSections } from '../../components/HeaderSelectBar';
+import HeaderSelectBar, { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
 import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
@@ -15,16 +15,16 @@ type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
 
 export const MovePageScreen: React.FC = () => {
   const route = useRoute<MovePageScreenRouteProp>();
-  const { title, section } = route.params;
+  const { title, paragraph } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
   const [newTitle, setNewTitle] = useState(title);
   const { data: page, isLoading } = useNotePage(title);
-  const paragraph = parseHtmlToSections(page?.description || '');
-  const path = paragraph.find((v) => v.title === section)?.path || '';
+  const paragraphs = parseHtmlToParagraphs(page?.description || '');
+  const path = paragraphs.find((v) => v.title === paragraph)?.path || '';
   const { data: newPage } = useNotePage(newTitle);
-  const newParagraph = parseHtmlToSections(newPage?.description || '').filter(
+  const newParagraph = parseHtmlToParagraphs(newPage?.description || '').filter(
     (v) => title !== newTitle || path === v.path || !v.path.startsWith(path)
   );
   const [newPath, setNewPath] = useState('');
@@ -34,12 +34,12 @@ export const MovePageScreen: React.FC = () => {
   const mutation = useCreateOrUpdatePage();
   const moveMutation = useMovePage();
   const { sourceDescription, targetDescription } = useMemo(() => {
-    const moveParagraph = paragraph.filter((v) => v.path.startsWith(path));
+    const moveParagraph = paragraphs.filter((v) => v.path.startsWith(path));
     const isSplit = newPage?.title === page?.title + '/' + moveParagraph[0]?.title;
     const moveDescription = moveParagraph
       .map((v, i) => (isSplit && i === 0 ? '' : v.header) + v.description)
       .join('');
-    const sourceParagraph = paragraph.filter((v) => !v.path.startsWith(path));
+    const sourceParagraph = paragraphs.filter((v) => !v.path.startsWith(path));
     const sourceDescription = sourceParagraph.map((v) => v.header + v.description).join('');
     const targetParagraph = page?.title === newPage?.title ? sourceParagraph : newParagraph;
     const targetIndex = targetParagraph.findLastIndex((v) => v.path.startsWith(newPath));
@@ -57,7 +57,7 @@ export const MovePageScreen: React.FC = () => {
             ...targetParagraph.slice(targetIndex + 1).map((v) => v.header + v.description),
           ].join('');
     return { sourceDescription, targetDescription };
-  }, [paragraph, newParagraph, path, newPath]);
+  }, [paragraphs, newParagraph, path, newPath]);
 
   const handleMove = () => {
     if (newPage?.id === undefined) {
@@ -108,14 +108,14 @@ export const MovePageScreen: React.FC = () => {
     if (!isLoading && !page) {
       handleCancel();
     }
-    page && setNewTitle(page.title + (section ? `/${section}` : ''));
+    page && setNewTitle(page.title + (paragraph ? `/${paragraph}` : ''));
   }, [page, isLoading]);
   useEffect(() => {
     if (!isLoading) {
-      setNewPath(section ? '' : path);
+      setNewPath(paragraph ? '' : path);
     }
-  }, [section, isLoading]);
-  const paragraphItem = paragraph.find((v) => v.path === path);
+  }, [paragraph, isLoading]);
+  const paragraphItem = paragraphs.find((v) => v.path === path);
   const newParagraphItem = newParagraph.find((v) => v.path === newPath);
   const moveDisabled = !newTitle.trim() || newParagraphItem === undefined;
   return (
@@ -124,10 +124,10 @@ export const MovePageScreen: React.FC = () => {
         <View style={{ flexDirection: _window === 'landscape' ? 'row' : 'column', zIndex: 1 }}>
           <View style={{ zIndex: 1 }}>
             <Text style={commonStyles.text}>
-              {section ? '현재 노트 제목 및 문단:' : '현재 노트 제목:'}
+              {paragraph ? '현재 노트 제목 및 문단:' : '현재 노트 제목:'}
             </Text>
             <Text style={[commonStyles.title, styles.columns]}>
-              {titleFormat({ title, section })}
+              {titleFormat({ title, paragraph })}
             </Text>
             <Text style={commonStyles.text}>새 노트 제목 및 문단:</Text>
             <SearchBar handlePress={setNewTitle} useRandom={false} />
@@ -157,11 +157,11 @@ export const MovePageScreen: React.FC = () => {
               onPress={() => setPreview(!preview)}
             >
               <Text style={commonStyles.title}>
-                {titleFormat({ title, section: paragraphItem?.title })}
+                {titleFormat({ title, paragraph: paragraphItem?.title })}
               </Text>
               <Text style={[commonStyles.text, { marginBottom: 8, fontSize: 14 }]}> ➜ </Text>
               <Text style={commonStyles.title}>
-                {titleFormat({ title: newTitle, section: newParagraphItem?.title })}
+                {titleFormat({ title: newTitle, paragraph: newParagraphItem?.title })}
               </Text>
             </TouchableOpacity>
             {preview !== undefined && (

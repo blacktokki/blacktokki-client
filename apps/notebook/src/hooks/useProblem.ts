@@ -1,10 +1,10 @@
 import { toRaw } from '@blacktokki/editor';
 import { useMemo } from 'react';
 
-import { parseHtmlToSections } from '../components/HeaderSelectBar';
+import { parseHtmlToParagraphs } from '../components/HeaderSelectBar';
 import { getNoteLinks } from '../components/SearchBar';
 import { cleanAndMergeTDs } from '../components/TimerTag';
-import { getSplitTitle, sectionDescription } from '../screens/main/notepage/NotePageScreen';
+import { getSplitTitle, paragraphDescription } from '../screens/main/notepage/NotePageScreen';
 import { useNotePages } from './useNoteStorage';
 
 function findLists(html: string): { type: 'ul' | 'ol'; items: string[] }[] {
@@ -37,19 +37,19 @@ export default () => {
       string,
       {
         subtitles: string[];
-        sections: Record<string, string[]>;
+        paragraphs: Record<string, string[]>;
       }
     > = {};
-    const push = (title: string, section: string | undefined, subtitle: string) => {
+    const push = (title: string, paragraph: string | undefined, subtitle: string) => {
       if (records[title] === undefined) {
-        records[title] = { subtitles: [], sections: {} };
+        records[title] = { subtitles: [], paragraphs: {} };
       }
       const record = records[title];
-      if (section !== undefined) {
-        if (record.sections[section] === undefined) {
-          record.sections[section] = [];
+      if (paragraph !== undefined) {
+        if (record.paragraphs[paragraph] === undefined) {
+          record.paragraphs[paragraph] = [];
         }
-        record.sections[section].push(subtitle);
+        record.paragraphs[paragraph].push(subtitle);
       } else {
         record.subtitles.push(subtitle);
       }
@@ -61,16 +61,16 @@ export default () => {
         const linkPage = pages.find((v) => v.title === link.title);
         if (linkPage?.description) {
           if (
-            link.section === undefined ||
-            parseHtmlToSections(linkPage.description).find((v2) => v2.title === link.section)
+            link.paragraph === undefined ||
+            parseHtmlToParagraphs(linkPage.description).find((v2) => v2.title === link.paragraph)
           ) {
             return;
           }
         }
         push(
           link.title,
-          link.section,
-          (link.section === undefined ? 'Unknown note link' : 'Unknown section link') +
+          link.paragraph,
+          (link.paragraph === undefined ? 'Unknown note link' : 'Unknown paragraph link') +
             `(${link.origin})`
         );
       });
@@ -86,14 +86,16 @@ export default () => {
       }
 
       // empty contents
-      const paragraph = parseHtmlToSections(page.description || '');
-      const lists = paragraph
+      const paragraphs = parseHtmlToParagraphs(page.description || '');
+      const lists = paragraphs
         .map((v) => ({ ...v, lists: findLists(v.description) }))
         .filter((v) => v.lists.length > 0);
 
-      paragraph
-        .filter((v) => v.level !== 0 && sectionDescription(paragraph, v.title, false).trim() === '')
-        .forEach((v) => push(page.title, v.level === 0 ? undefined : v.title, 'Empty section'));
+      paragraphs
+        .filter(
+          (v) => v.level !== 0 && paragraphDescription(paragraphs, v.title, false).trim() === ''
+        )
+        .forEach((v) => push(page.title, v.level === 0 ? undefined : v.title, 'Empty paragraph'));
       lists
         .filter(
           (v) =>
@@ -105,10 +107,10 @@ export default () => {
         .forEach((v2) => push(page.title, v2.level === 0 ? undefined : v2.title, 'Empty list'));
 
       // duplicate contents
-      paragraph
-        .filter((v) => v !== paragraph.findLast((v2) => v2.path === v.path))
-        .forEach((v) => push(page.title, undefined, `Duplicate sections(${v})`));
-      paragraph
+      paragraphs
+        .filter((v) => v !== paragraphs.findLast((v2) => v2.path === v.path))
+        .forEach((v) => push(page.title, undefined, `Duplicate paragraphs(${v})`));
+      paragraphs
         .map((v) => {
           const sentences = cleanAndMergeTDs(v.description)
             .split('\n')
@@ -129,9 +131,9 @@ export default () => {
     return Object.entries(records).flatMap(([title, record]) => {
       return [
         ...(record.subtitles.length > 0 ? [{ title, subtitles: record.subtitles }] : []),
-        ...Object.entries(record.sections).map(([section, subtitles]) => ({
+        ...Object.entries(record.paragraphs).map(([paragraph, subtitles]) => ({
           title,
-          section,
+          paragraph,
           subtitles,
         })),
       ];

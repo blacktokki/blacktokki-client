@@ -28,7 +28,7 @@ export const TimeLineScreen: React.FC = () => {
       </View>
       <NoteListSection
         contents={data}
-        onPress={(title, section) => navigation.push('NotePage', { title, section })}
+        onPress={(title, paragraph) => navigation.push('NotePage', { title, paragraph })}
         isLoading={isLoading}
         emptyMessage="노트가 없습니다."
       />

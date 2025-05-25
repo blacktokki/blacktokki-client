@@ -94,7 +94,7 @@ export const EditPageScreen: React.FC = () => {
               getMatchedChars: async (pattern) => {
                 const childrenPages = getChildrenPages(pattern);
                 return [
-                  { type: '_NOTELINK', name: pattern, title, section: pattern },
+                  { type: '_NOTELINK', name: pattern, title, paragraph: pattern },
                   ...(childrenPages.length
                     ? childrenPages
                     : [{ type: '_CHILDNOTE', name: pattern, title: title + '/' + pattern }]),
@@ -107,8 +107,8 @@ export const EditPageScreen: React.FC = () => {
                       ? v.name
                       : v.title;
                   const url = encodeURI(
-                    v.type === '_NOTELINK' && v.section
-                      ? `?title=${v.title}&section=${v.section}`
+                    v.type === '_NOTELINK' && v.paragraph
+                      ? `?title=${v.title}&paragraph=${v.paragraph}`
                       : `?title=${v.title}`
                   );
                   return {

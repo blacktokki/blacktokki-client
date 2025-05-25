@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { createCommonStyles } from '../styles';
 
-export interface NodeData {
+export interface Paragraph {
   path: string;
   title: string;
   level: number;
@@ -12,16 +12,16 @@ export interface NodeData {
   description: string;
 }
 
-export function parseHtmlToSections(html: string): NodeData[] {
+export function parseHtmlToParagraphs(html: string): Paragraph[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
-  const result: NodeData[] = [{ path: '', title: '', header: '', level: 0, description: '' }];
+  const result: Paragraph[] = [{ path: '', title: '', header: '', level: 0, description: '' }];
 
   const headings: string[] = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
   const headerStack: { level: number; title: string }[] = [];
 
-  let current: NodeData | null = null;
+  let current: Paragraph | null = null;
   let cursor = doc.body.firstChild;
 
   const flushCurrent = () => {
@@ -75,12 +75,12 @@ export function parseHtmlToSections(html: string): NodeData[] {
 export default function HeaderSelectBar(props: {
   root: string;
   path: string;
-  onPress: (item: NodeData) => void;
-  data: NodeData[];
+  onPress: (item: Paragraph) => void;
+  data: Paragraph[];
 }) {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  const renderItem = (item: NodeData) => (
+  const renderItem = (item: Paragraph) => (
     <TouchableOpacity style={styles.resultItem} onPress={() => props.onPress(item)}>
       {item.level === 0 && <Icon name="file-text-o" size={18} color="#FFFFFF" />}
       <Text

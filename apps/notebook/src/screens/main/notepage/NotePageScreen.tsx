@@ -14,8 +14,8 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import HeaderSelectBar, {
-  NodeData,
-  parseHtmlToSections,
+  Paragraph,
+  parseHtmlToParagraphs,
 } from '../../../components/HeaderSelectBar';
 import { onLink, SearchBar, titleFormat } from '../../../components/SearchBar';
 import { useNotePage, useSnapshotPages } from '../../../hooks/useNoteStorage';
@@ -25,10 +25,14 @@ import TimerTagSection from './TimerTagSection';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
-export const sectionDescription = (paragraph: NodeData[], section: string, rootTitle: boolean) => {
-  const path = paragraph.find((v) => v.title === section)?.path;
+export const paragraphDescription = (
+  paragraphs: Paragraph[],
+  paragraph: string,
+  rootTitle: boolean
+) => {
+  const path = paragraphs.find((v) => v.title === paragraph)?.path;
   return path
-    ? paragraph
+    ? paragraphs
         .filter((v) => v.path.startsWith(path))
         .map((v) => (rootTitle || v.path !== path ? v.header : '') + v.description)
         .join('')
@@ -65,13 +69,13 @@ const addDays = (dateStr: string, days: number): string => {
 export const NotePageScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const route = useRoute<NotePageScreenRouteProp>();
-  const { title, section, archiveId } = route.params;
+  const { title, paragraph, archiveId } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
   const commonStyles = createCommonStyles(theme);
   const [toc, toggleToc] = useState(false);
-  const [fullSection, toggleFullSection] = useState(false);
+  const [fullParagraph, toggleFullParagraph] = useState(false);
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: archives } = useSnapshotPages();
@@ -84,23 +88,23 @@ export const NotePageScreen: React.FC = () => {
   };
 
   const handleMovePage = () => {
-    navigation.navigate('MovePage', { title, section });
+    navigation.navigate('MovePage', { title, paragraph });
   };
 
-  const paragraph = parseHtmlToSections(page?.description || '');
-  const idx = paragraph.findIndex((v) => v.title === section);
-  const moveSections = [
+  const paragraphs = parseHtmlToParagraphs(page?.description || '');
+  const idx = paragraphs.findIndex((v) => v.title === paragraph);
+  const moveParagraphs = [
     {
       icon: 'arrow-left',
-      moveSection: paragraph.findLast(
-        (v, i) => i < idx && (fullSection ? paragraph[idx]?.level >= v.level : true)
+      moveParagraph: paragraphs.findLast(
+        (v, i) => i < idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
       ),
       reverse: false,
     },
     {
       icon: 'arrow-right',
-      moveSection: paragraph.find(
-        (v, i) => i > idx && (fullSection ? paragraph[idx]?.level >= v.level : true)
+      moveParagraph: paragraphs.find(
+        (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
       ),
       reverse: true,
     },
@@ -110,14 +114,14 @@ export const NotePageScreen: React.FC = () => {
     setDescription(
       archive
         ? archive.description
-        : (section
-            ? fullSection
-              ? sectionDescription(paragraph, section, true)
-              : paragraph.find((v) => v.title === section)?.description
+        : (paragraph
+            ? fullParagraph
+              ? paragraphDescription(paragraphs, paragraph, true)
+              : paragraphs.find((v) => v.title === paragraph)?.description
             : page?.description
           )?.trim()
     );
-  }, [page, archive, section, fullSection]);
+  }, [page, archive, paragraph, fullParagraph]);
   useEffect(() => {
     toggleToc(false);
   }, [route]);
@@ -146,7 +150,7 @@ export const NotePageScreen: React.FC = () => {
                   style={[
                     commonStyles.title,
                     styles.pageTitle,
-                    section || splitTitle.length === 2 ? { color: pressableTextColor } : {},
+                    paragraph || splitTitle.length === 2 ? { color: pressableTextColor } : {},
                   ]}
                   numberOfLines={1}
                 >
@@ -161,7 +165,7 @@ export const NotePageScreen: React.FC = () => {
                       style={[
                         commonStyles.title,
                         styles.pageTitle,
-                        section ? { color: pressableTextColor } : {},
+                        paragraph ? { color: pressableTextColor } : {},
                       ]}
                       numberOfLines={1}
                     >
@@ -170,12 +174,12 @@ export const NotePageScreen: React.FC = () => {
                   </TouchableOpacity>
                 </>
               )}
-              {!!section && (
+              {!!paragraph && (
                 <Text
                   style={[commonStyles.title, styles.pageTitle, { marginLeft: 5 }]}
                   numberOfLines={1}
                 >
-                  {titleFormat({ title: '', section })}
+                  {titleFormat({ title: '', paragraph })}
                 </Text>
               )}
               {archive && (
@@ -185,8 +189,8 @@ export const NotePageScreen: React.FC = () => {
               )}
             </View>
             <View style={styles.actionButtons}>
-              <TimerTagSection title={page?.title || ''} paragraph={paragraph} />
-              {!section && (
+              <TimerTagSection title={page?.title || ''} paragraphs={paragraphs} />
+              {!paragraph && (
                 <>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Archive', { title })}
@@ -196,17 +200,21 @@ export const NotePageScreen: React.FC = () => {
                   </TouchableOpacity>
                 </>
               )}
-              {!!section && (
+              {!!paragraph && (
                 <>
                   <TouchableOpacity
-                    onPress={() => toggleFullSection(!fullSection)}
+                    onPress={() => toggleFullParagraph(!fullParagraph)}
                     style={styles.actionButton}
                   >
-                    <Icon name={fullSection ? 'compress' : 'expand'} size={16} color={iconColor} />
+                    <Icon
+                      name={fullParagraph ? 'compress' : 'expand'}
+                      size={16}
+                      color={iconColor}
+                    />
                   </TouchableOpacity>
                 </>
               )}
-              {!!(section || description) && !archive && (
+              {!!(paragraph || description) && !archive && (
                 <>
                   <TouchableOpacity onPress={() => toggleToc(!toc)} style={styles.actionButton}>
                     <Icon name="list" size={16} color={iconColor} />
@@ -216,7 +224,7 @@ export const NotePageScreen: React.FC = () => {
                   </TouchableOpacity>
                 </>
               )}
-              {!!(section || description) && !archive && !section && (
+              {!!(paragraph || description) && !archive && !paragraph && (
                 <>
                   <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
                     <Icon name="pencil" size={16} color={iconColor} />
@@ -247,13 +255,15 @@ export const NotePageScreen: React.FC = () => {
               </View>
             ) : toc ? (
               <HeaderSelectBar
-                data={paragraph}
-                path={section || ''}
+                data={paragraphs}
+                path={paragraph || ''}
                 root={title}
-                onPress={(item) => navigation.navigate('NotePage', { title, section: item.title })}
+                onPress={(item) =>
+                  navigation.navigate('NotePage', { title, paragraph: item.title })
+                }
               />
             ) : page?.description ? (
-              !!section && (
+              !!paragraph && (
                 <View
                   style={{
                     flex: 1,
@@ -262,17 +272,17 @@ export const NotePageScreen: React.FC = () => {
                     alignItems: 'flex-end',
                   }}
                 >
-                  {moveSections.map(
-                    ({ moveSection, icon, reverse }) =>
-                      moveSection !== undefined && (
+                  {moveParagraphs.map(
+                    ({ moveParagraph, icon, reverse }) =>
+                      moveParagraph !== undefined && (
                         <TouchableOpacity
                           key={icon}
                           onPress={() =>
                             navigation.navigate(
                               'NotePage',
-                              moveSection.level === 0
+                              moveParagraph.level === 0
                                 ? { title }
-                                : { title, section: moveSection.title }
+                                : { title, paragraph: moveParagraph.title }
                             )
                           }
                           style={[
@@ -291,7 +301,7 @@ export const NotePageScreen: React.FC = () => {
                               { fontWeight: 'bold', marginHorizontal: 16 },
                             ]}
                           >
-                            {moveSection.level === 0 ? title : moveSection.title}
+                            {moveParagraph.level === 0 ? title : moveParagraph.title}
                           </Text>
                         </TouchableOpacity>
                       )

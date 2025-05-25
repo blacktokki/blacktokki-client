@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
-import { parseHtmlToSections } from '../components/HeaderSelectBar';
-import { matchDateRange, sectionsToDatePatterns, today } from '../components/TimerTag';
+import { parseHtmlToParagraphs } from '../components/HeaderSelectBar';
+import { matchDateRange, paragraphsToDatePatterns, today } from '../components/TimerTag';
 import { useNotePages } from './useNoteStorage';
 
 export default (date?: string) => {
@@ -11,7 +11,7 @@ export default (date?: string) => {
   const preData = useMemo(
     () =>
       notes.flatMap((v) =>
-        sectionsToDatePatterns(v.title, parseHtmlToSections(v?.description || ''))
+        paragraphsToDatePatterns(v.title, parseHtmlToParagraphs(v?.description || ''))
       ),
     [notes]
   );

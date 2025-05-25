@@ -2,7 +2,7 @@ import { useColorScheme, useModalsContext, Text } from '@blacktokki/core';
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import { today } from '../../../components/TimerTag';
 import DatePickerModal, { MarkedDateRange } from '../../../modals/DatePikcerModal';
@@ -41,7 +41,7 @@ export default function DateHeaderSection({
       color: commonStyles.text.color,
     },
     todayButton: {
-      backgroundColor: theme === 'dark' ? '#7289DA' : '#4a6da7',
+      backgroundColor: commonStyles.searchButton.backgroundColor,
     },
     navButton: {
       backgroundColor: theme === 'dark' ? '#333333' : '#efefef',
@@ -71,7 +71,7 @@ export default function DateHeaderSection({
           onPress={() => moveDate(-1)}
           style={[headerStyles.navButton, themedStyles.navButton]}
         >
-          <Icon name="chevron-back" size={16} color={commonStyles.text.color} />
+          <Icon name="chevron-left" size={16} color={commonStyles.text.color} />
         </TouchableOpacity>
 
         {/* Today Button */}
@@ -88,7 +88,7 @@ export default function DateHeaderSection({
           onPress={() => moveDate(1)}
           style={[headerStyles.navButton, themedStyles.navButton]}
         >
-          <Icon name="chevron-forward" size={16} color={commonStyles.text.color} />
+          <Icon name="chevron-right" size={16} color={commonStyles.text.color} />
         </TouchableOpacity>
       </View>
     </View>

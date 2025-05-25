@@ -42,10 +42,6 @@ export const EditPageScreen: React.FC = () => {
 
   const mutation = useCreateOrUpdatePage();
   const handleSave = () => {
-    if (page?.description === content) {
-      navigation.navigate('NotePage', { title });
-      return;
-    }
     mutation.mutate(
       { title, description: content },
       {

@@ -99,17 +99,50 @@ function extractDates(input: string) {
   return results;
 }
 
+export function cleanAndMergeTDs(html: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // 1. <code> 태그 내부 비우기
+  const codeTags = doc.querySelectorAll('code');
+  codeTags.forEach((code) => {
+    code.textContent = '';
+  });
+
+  // 2. 각 <tr> 안의 <td> 병합
+  const trList = doc.querySelectorAll('tr');
+  trList.forEach((tr) => {
+    const tdList = tr.querySelectorAll('td');
+    if (tdList.length > 1) {
+      const mergedText = Array.from(tdList)
+        .map((td) => td.textContent?.trim() || '')
+        .join(' ');
+
+      // 첫 td에 병합된 텍스트 설정
+      const newTd = document.createElement('td');
+      newTd.textContent = mergedText;
+
+      // 기존 td 모두 제거 후 병합 td 삽입
+      tr.innerHTML = '';
+      tr.appendChild(newTd);
+    }
+  });
+
+  return doc.body.innerHTML;
+}
+
 export const sectionsToDatePatterns = (title: string, sections: NodeData[]) => {
   return sections
     .map((section) => {
-      const dateMatches = [toRaw(section.header), ...toRaw(section.description).split('\n')].map(
-        (v2, i) => ({
-          path: section.path,
-          isHeader: i === 0,
-          original: v2,
-          matches: extractDates(v2),
-        })
-      );
+      const dateMatches = [
+        toRaw(section.header),
+        ...toRaw(cleanAndMergeTDs(section.description)).split('\n'),
+      ].map((v2, i) => ({
+        path: section.path,
+        isHeader: i === 0,
+        original: v2,
+        matches: extractDates(v2),
+      }));
       return { title, section: section.title, dateMatches };
     })
     .filter((v) => v.dateMatches.filter((v2) => v2.matches.length > 0).length > 0);

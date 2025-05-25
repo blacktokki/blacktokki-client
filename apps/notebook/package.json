@@ -26,6 +26,7 @@
     "expo": "^49.0.23",
     "expo-linking": "~5.0.2",
     "expo-status-bar": "~1.6.0",
+    "jszip": "^3.10.1",
     "react": "*",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",

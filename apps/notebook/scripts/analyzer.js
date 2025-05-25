@@ -10,9 +10,7 @@ module.exports = async function (env, argv) {
   if (!config.plugins) {
     config.plugins = [];
   }
-  config.plugins.push(
-    new BundleAnalyzerPlugin()
-  );
+  config.plugins.push(new BundleAnalyzerPlugin());
   return config;
 };`;
 fs.writeFileSync('webpack.config.js', config, 'utf8');

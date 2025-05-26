@@ -1,4 +1,4 @@
-import { useColorScheme } from '@blacktokki/core';
+import { useColorScheme, useModalsContext } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
 import {
   RouteProp,
@@ -13,6 +13,7 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
 import { getFilteredPages, titleFormat } from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
+import AlertModal from '../../modals/AlertModal';
 import { previewUrl } from '../../services/notebook';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
@@ -41,6 +42,7 @@ export const EditPageScreen: React.FC = () => {
   const [content, setContent] = useState('');
 
   const mutation = useCreateOrUpdatePage();
+  const { setModal } = useModalsContext();
   const handleSave = () => {
     mutation.mutate(
       { title, description: content },
@@ -54,12 +56,19 @@ export const EditPageScreen: React.FC = () => {
       }
     );
   };
-
-  const handleCancel = () => {
+  const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
       navigation.navigate('NotePage', { title });
+    }
+  };
+
+  const handleCancel = () => {
+    if (page?.description === content) {
+      handleBack();
+    } else {
+      setModal(AlertModal, { type: 'UNSAVED', callbacks: [handleSave, handleBack] });
     }
   };
 

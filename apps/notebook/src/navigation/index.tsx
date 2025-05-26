@@ -4,7 +4,7 @@ import React, { Suspense } from 'react';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
 
 import { SearchBar } from '../components/SearchBar';
-import DatePickerModal from '../modals/DatePikcerModal';
+import modals from '../modals';
 import { main } from '../screens';
 import Drawer from './Drawer';
 
@@ -31,7 +31,7 @@ const getConfig = async () => {
     },
     headerLeftIcon: <List.Icon icon="backburger" style={{ left: -18, top: -14 }} />,
     headerRight: <HeaderRight />,
-    modals: [DatePickerModal],
+    modals,
     drawer: <Drawer />,
   } as NavigationConfig;
 };

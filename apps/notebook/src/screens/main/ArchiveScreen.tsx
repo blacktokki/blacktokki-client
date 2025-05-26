@@ -26,7 +26,7 @@ export const ArchiveScreen: React.FC = () => {
           .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
           .map((v, i) => ({
             ...v,
-            subtitle: `최근 수정: ${updatedFormat(v.updated as string)}`,
+            subtitles: [`최근 수정: ${updatedFormat(v.updated as string)}`],
             id: v.id || i,
           }))}
         isLoading={isLoading}

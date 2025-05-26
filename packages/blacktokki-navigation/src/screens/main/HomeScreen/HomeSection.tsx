@@ -1,6 +1,6 @@
 import { TabView, useResizeContext } from '@blacktokki/core';
 import { useNavigation, useRoute } from '@react-navigation/core';
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { View, ScrollView, useWindowDimensions } from 'react-native';
 
 import { TabViewOption } from '../../../types';
@@ -69,21 +69,26 @@ export default function HomeSection({
   useEffect(() => {
     setHome(windowType === 'landscape');
   }, [windowType]);
+  const tabs = useMemo(
+    () =>
+      Object.fromEntries(
+        tabViews.map((v, i) => [
+          v.title,
+          {
+            ...v,
+            component: i === 0 ? firstComponent(tabViews, headerTitle) : v.component,
+          },
+        ])
+      ),
+    [tabViews]
+  );
   return home ? (
     <ScrollView contentContainerStyle={{ flex: 1, alignItems: 'center' }}>{children}</ScrollView>
   ) : (
     <>
       {homeView.headerRight()}
       <TabView
-        tabs={Object.fromEntries(
-          tabViews.map((v, i) => [
-            v.title,
-            {
-              ...v,
-              component: i === 0 ? firstComponent(tabViews, headerTitle) : v.component,
-            },
-          ])
-        )}
+        tabs={tabs}
         tabBarPosition="bottom"
         index={parseInt(route.params?.['tab'] || 0, 10)}
         onTab={(index) => {

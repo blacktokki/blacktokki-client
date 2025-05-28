@@ -1,4 +1,4 @@
-import { useColorScheme } from '@blacktokki/core';
+import { useColorScheme, useLangContext } from '@blacktokki/core';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,7 +44,7 @@ function urlToNoteLink(url: string) {
   if (location.origin === newLocation.origin) {
     const params = new URLSearchParams(newLocation.search);
     const title = params.get('title');
-    const paragraph = params.get('paragraph') || undefined;
+    const paragraph = params.get('paragraph') || params.get('section') || undefined;
     if (title) {
       return { title, paragraph };
     }
@@ -162,6 +162,7 @@ export const SearchBar: React.FC<{
 }> = ({ handlePress, useRandom = true }) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
+  const { lang } = useLangContext();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -220,7 +221,7 @@ export const SearchBar: React.FC<{
           onChangeText={(text) => {
             setSearchText(text);
           }}
-          placeholder="검색"
+          placeholder={lang('Search')}
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
           onSubmitEditing={handleSearch}
           onFocus={() => setShowResults(true)}

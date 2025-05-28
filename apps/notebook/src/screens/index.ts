@@ -5,6 +5,7 @@ import { Auth } from '@blacktokki/account';
 import { ArchiveScreen } from './main/ArchiveScreen';
 import { EditPageScreen } from './main/EditPageScreen';
 import { MovePageScreen } from './main/MovePageScreen';
+import { NoteViewerScreen } from './main/NoteViewerScreen';
 import { ProblemsScreen } from './main/ProblemScreen';
 import { RecentPagesScreen } from './main/RecentPageScreen';
 import HomeScreen from './main/home/HomeScreen';
@@ -53,5 +54,10 @@ export const main = {
     title,
     component: TimeLineScreen,
     path: 'timeline',
+  },
+  NoteViewer: {
+    title,
+    component: NoteViewerScreen,
+    path: 'viewer',
   },
 };

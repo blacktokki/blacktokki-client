@@ -1,4 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
+import { toHtml } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 
@@ -116,7 +117,7 @@ const getRecentPages = async (): Promise<string[]> => {
     const jsonValue = await AsyncStorage.getItem(RECENT_PAGES_KEY);
     return jsonValue ? JSON.parse(jsonValue) : [];
   } catch (e) {
-    console.error('Error loading recent pages', e);
+    console.error('Error loading recent notes', e);
     return [];
   }
 };
@@ -126,7 +127,7 @@ const saveRecentPages = async (titles: string[]): Promise<void> => {
     const jsonValue = JSON.stringify(titles);
     await AsyncStorage.setItem(RECENT_PAGES_KEY, jsonValue);
   } catch (e) {
-    console.error('Error saving recent pages', e);
+    console.error('Error saving recent notes', e);
   }
 };
 
@@ -327,6 +328,21 @@ export const useDeleteRecentPage = () => {
       queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       queryClient.invalidateQueries({ queryKey: ['pageContent'] });
       queryClient.invalidateQueries({ queryKey: ['lastPage'] });
+    },
+  });
+};
+
+export const useNoteViewers = () => {
+  return useQuery({
+    queryKey: ['viewerContents'],
+    queryFn: async () => {
+      return await Promise.all(
+        ['Usage'].map(async (key) => {
+          const v2 = await fetch(process.env.PUBLIC_URL + '/' + key + '.md');
+          const description = toHtml(await v2.text());
+          return { key, description };
+        })
+      );
     },
   });
 };

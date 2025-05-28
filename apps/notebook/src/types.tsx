@@ -31,6 +31,7 @@ export type Link = {
 export type NavigationParamList = {
   Home: undefined;
   NotePage: { title: string; paragraph?: string; archiveId?: number };
+  NoteViewer: { key: string; paragraph?: string };
   EditPage: { title: string };
   MovePage: { title: string; paragraph?: string };
   Archive: { title?: string };

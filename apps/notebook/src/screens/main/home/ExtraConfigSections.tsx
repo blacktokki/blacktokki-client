@@ -166,6 +166,12 @@ export default () => {
         </View>
       </View>
       <View style={commonStyles.card}>
+        <ConfigButton
+          title={lang('* Usage')}
+          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
+        />
+      </View>
+      <View style={commonStyles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <ConfigButton title={lang('* Account Settings')} />
           {!auth.isLocal && (

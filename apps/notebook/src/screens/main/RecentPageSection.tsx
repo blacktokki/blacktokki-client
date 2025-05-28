@@ -113,6 +113,7 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
           justifyContent: 'space-between',
           alignItems: 'center',
           width: '100%',
+          backgroundColor: 'transparent',
         }}
       >
         <Text style={{ fontSize: 14 + fSize, overflow: 'hidden' }}>{item.title}</Text>

@@ -1,4 +1,4 @@
-import { useColorScheme } from '@blacktokki/core';
+import { useColorScheme, useLangContext } from '@blacktokki/core';
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 
@@ -23,6 +23,7 @@ export const NoteListSection = ({
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const { lang } = useLangContext();
   return (
     <View style={commonStyles.container}>
       {isLoading ? (
@@ -51,7 +52,7 @@ export const NoteListSection = ({
       ) : (
         <View style={[commonStyles.card, commonStyles.centerContent]}>
           <Text selectable={false} style={commonStyles.text}>
-            {emptyMessage}
+            {lang(emptyMessage)}
           </Text>
         </View>
       )}

@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext } from '@blacktokki/core';
+import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -19,6 +19,7 @@ export const MovePageScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
+  const { lang } = useLangContext();
   const [newTitle, setNewTitle] = useState(title);
   const { data: page, isLoading } = useNotePage(title);
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
@@ -72,7 +73,10 @@ export const MovePageScreen: React.FC = () => {
             navigation.navigate({ name: 'NotePage', params: { title: data.newTitle } });
           },
           onError: (error: any) => {
-            Alert.alert('오류', error.message || '노트 이동 중 오류가 발생했습니다.');
+            Alert.alert(
+              lang('error'),
+              error.message || lang('An error occurred while moving note.')
+            );
           },
         }
       );
@@ -90,7 +94,10 @@ export const MovePageScreen: React.FC = () => {
             navigation.navigate({ name: 'NotePage', params: { title: data.title } });
           },
           onError: (error: any) => {
-            Alert.alert('오류', error.message || '노트 이동 중 오류가 발생했습니다.');
+            Alert.alert(
+              lang('error'),
+              error.message || lang('An error occurred while moving note.')
+            );
           },
         }
       );
@@ -124,12 +131,12 @@ export const MovePageScreen: React.FC = () => {
         <View style={{ flexDirection: _window === 'landscape' ? 'row' : 'column', zIndex: 1 }}>
           <View style={{ zIndex: 1 }}>
             <Text style={commonStyles.text}>
-              {paragraph ? '현재 노트 제목 및 문단:' : '현재 노트 제목:'}
+              {lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
             </Text>
             <Text style={[commonStyles.title, styles.columns]}>
               {titleFormat({ title, paragraph })}
             </Text>
-            <Text style={commonStyles.text}>새 노트 제목 및 문단:</Text>
+            <Text style={commonStyles.text}>{lang('New note title and paragraph:')}</Text>
             <SearchBar handlePress={setNewTitle} useRandom={false} />
             <View style={styles.columns}>
               <HeaderSelectBar
@@ -141,7 +148,7 @@ export const MovePageScreen: React.FC = () => {
             </View>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={commonStyles.text}> 미리보기:</Text>
+            <Text style={commonStyles.text}> {lang('Preview:')}</Text>
             <TouchableOpacity
               style={[
                 commonStyles.button,
@@ -182,14 +189,14 @@ export const MovePageScreen: React.FC = () => {
             style={[commonStyles.button, styles.cancelButton]}
             onPress={handleCancel}
           >
-            <Text style={commonStyles.buttonText}>취소</Text>
+            <Text style={commonStyles.buttonText}>{lang('move')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[commonStyles.button, moveDisabled ? styles.cancelButton : styles.moveButton]}
             onPress={handleMove}
             disabled={moveDisabled}
           >
-            <Text style={commonStyles.buttonText}>이동</Text>
+            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
         </View>
       </View>

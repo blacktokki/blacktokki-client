@@ -30,7 +30,7 @@ export const TimeLineScreen: React.FC = () => {
         contents={data}
         onPress={(title, paragraph) => navigation.push('NotePage', { title, paragraph })}
         isLoading={isLoading}
-        emptyMessage="노트가 없습니다."
+        emptyMessage="There are no notes."
       />
     </>
   );

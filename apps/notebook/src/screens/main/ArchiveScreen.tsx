@@ -36,7 +36,7 @@ export const ArchiveScreen: React.FC = () => {
             archiveId: id,
           })
         }
-        emptyMessage="최근 수정한 노트가 없습니다."
+        emptyMessage="There are no recently modified notes."
       />
     </>
   );

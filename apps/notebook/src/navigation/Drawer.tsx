@@ -22,7 +22,7 @@ export default () => {
       <ProblemButton />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <List.Subheader style={{}} selectable={false}>
-          {lang('Open Pages')}
+          {lang('Open Notes')}
         </List.Subheader>
         <ContentGroupSection type={'LAST'} />
         <ContentGroupSection type={'PAGE'} />

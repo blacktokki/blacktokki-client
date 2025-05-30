@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
-export type Translations = Record<string, Record<string, string>>;
+type Locale = 'ko';
+
+export type Translations = Record<Locale, Record<string, string>>;
 
 const IntlContext = createContext<{
   locale?: string;
@@ -33,7 +35,7 @@ export default () => {
     (key: string) => {
       if (locale === 'en' || key.length === 0) return key;
       if (translations) {
-        if (locale !== undefined && locale !== 'auto') return translations[locale][key];
+        if (locale !== undefined && locale !== 'auto') return translations[locale as Locale][key];
         if (translations['ko']) return translations['ko'][key];
       }
       return key;

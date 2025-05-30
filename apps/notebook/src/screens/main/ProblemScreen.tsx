@@ -20,7 +20,7 @@ export const ProblemsScreen: React.FC = () => {
         contents={data}
         onPress={(title) => navigation.push('EditPage', { title })}
         isLoading={isLoading}
-        emptyMessage="작성이 필요한 노트가 없습니다."
+        emptyMessage="There are no notes needed to be written."
       />
     </>
   );

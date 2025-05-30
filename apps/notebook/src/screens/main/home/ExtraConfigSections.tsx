@@ -124,12 +124,16 @@ export default () => {
         <ConfigButton title={lang('* Search Settings')} />
         <View style={{ flexDirection: 'row' }}>
           <OptionButton
-            title={'Search History'}
+            title={lang('Search History')}
             onPress={() => setSearch(!search)}
             active={search}
           />
           {search && !!keywords.length && (
-            <OptionButton title={'Clear'} onPress={() => resetKeyword.mutate()} active={false} />
+            <OptionButton
+              title={lang('Clear')}
+              onPress={() => resetKeyword.mutate()}
+              active={false}
+            />
           )}
         </View>
         {search && (
@@ -147,18 +151,18 @@ export default () => {
         <ConfigButton title={lang('* Archive')} />
         <View style={{ flexDirection: 'row' }}>
           <OptionButton
-            title={'Export'}
+            title={lang('Export')}
             onPress={() => contents && exportMarkdowns(contents)}
             active={false}
           />
           <OptionButton
-            title={'Import'}
+            title={lang('Import')}
             onPress={() => importMarkdowns().then((v) => v.forEach((v2) => mutation.mutate(v2)))}
             active={false}
           />
           {!auth.isLocal && (
             <OptionButton
-              title={'Changelog'}
+              title={lang('Changelog')}
               onPress={() => navigation.push('Archive', {})}
               active={false}
             />
@@ -183,25 +187,25 @@ export default () => {
         <View style={{ flexDirection: 'row' }}>
           {!!auth.user && (
             <OptionButton
-              title={'My Account'}
+              title={lang('My Account')}
               onPress={() => auth.isLocal && dispatch({ type: 'LOGOUT_LOCAL' })}
               active={!auth.isLocal}
             />
           )}
           <OptionButton
-            title={'Local Account'}
+            title={lang('Local Account')}
             onPress={() => !auth.isLocal && dispatch({ type: 'LOGIN_LOCAL' })}
             active={!!auth.isLocal}
           />
           {auth.user ? (
             <OptionButton
-              title={'Logout'}
+              title={lang('Sign out')}
               onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
               active={false}
             />
           ) : (
             <OptionButton
-              title={'Login'}
+              title={lang('Sign in')}
               onPress={() => dispatch({ type: 'LOGOUT_LOCAL' })}
               active={false}
             />

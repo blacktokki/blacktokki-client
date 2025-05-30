@@ -19,12 +19,12 @@ const NotesTabView = () => {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors[theme].background }}>
       <List.Subheader style={{}} selectable={false}>
-        {lang('Open Pages')}
+        {lang('Open Notes')}
       </List.Subheader>
       <ContentGroupSection type={'LAST'} />
       <ContentGroupSection type={'PAGE'} />
       <List.Subheader style={{}} selectable={false}>
-        {lang('Event Pages')}
+        {lang('Event Notes')}
       </List.Subheader>
       <TimeLineButton />
       <ProblemButton />
@@ -53,7 +53,6 @@ const ConfigTabView = () => {
 };
 
 export default function HomeScreen({ navigation, route }: StackScreenProps<any, 'Home'>) {
-  const { lang, locale } = useLangContext();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { auth } = useAuthContext();
@@ -61,25 +60,25 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
   const tabViews: TabViewOption[] = useMemo(
     () => [
       {
-        title: lang('Discovery'),
+        title: 'Discovery',
         component: NotesTabView,
         icon: <List.Icon icon={'compass'} />,
         headerRight: () => <></>,
       },
       {
-        title: lang('All Notes'),
+        title: 'All Notes',
         component: RecentChangesTabView,
         icon: <List.Icon icon={'notebook'} />,
         headerRight: () => <></>,
       },
       {
-        title: lang('Config'),
+        title: 'Config',
         component: ConfigTabView,
         icon: <List.Icon icon={'dots-horizontal'} />,
         headerRight: () => <></>,
       },
     ],
-    [locale]
+    []
   );
   return (
     <HomeSection

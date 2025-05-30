@@ -1,4 +1,4 @@
-import { useColorScheme, useModalsContext } from '@blacktokki/core';
+import { useColorScheme, useLangContext, useModalsContext } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
 import {
   RouteProp,
@@ -27,6 +27,7 @@ export const EditPageScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const { lang } = useLangContext();
 
   const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();
@@ -159,10 +160,10 @@ export const EditPageScreen: React.FC = () => {
             style={[commonStyles.button, styles.cancelButton]}
             onPress={handleCancel}
           >
-            <Text style={commonStyles.buttonText}>취소</Text>
+            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[commonStyles.button, styles.saveButton]} onPress={handleSave}>
-            <Text style={commonStyles.buttonText}>저장</Text>
+            <Text style={commonStyles.buttonText}>{lang('save')}</Text>
           </TouchableOpacity>
         </View>
       </View>

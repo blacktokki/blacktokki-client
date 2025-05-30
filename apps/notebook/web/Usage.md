@@ -1,121 +1,143 @@
-# 📘 사용자 가이드 - Blacktokki Notebook
+# 📘 Blacktokki Notebook User Guide
 
-**Blacktokki Notebook**은 마크다운 기반의 **지식 관리 및 시간 관리 도구**입니다. 사용자는 다양한 주제의 문서를 자유롭게 작성하고, 구조화하며, 시간 기반으로 추적할 수 있습니다. 모바일과 웹에 최적화된 React Native 기반 앱으로, **자기 주도 학습**, **업무 문서 관리**, **지식 아카이빙**, **일정 중심 회고** 등에 유용하게 활용할 수 있습니다.
+**Blacktokki Notebook** is a markdown-based tool for knowledge and time management. Users can freely create, structure, and track notes over time. It is optimized for both mobile and web environments, making it suitable for self-directed learning, work documentation, knowledge archiving, and schedule-based reflection.
 
-### ✨ 주요 특징
+## Key Features
 
-* ✅ **마크다운 기반 에디터**로 자유롭고 유연한 문서 작성
-* 📁 **계층적 문서 구조** (폴더/하위 문서 지원)
-* 📆 **타임라인 기능**으로 날짜 중심 회고 및 일정 기반 정리
-* 🔁 **문단 이동 기능**으로 문서 리팩토링 및 구조화 가능
-* 🧠 **자동완성 링크**로 문서 간 연관성 강화
-* 🕑 **TimerTag**로 반복 일정을 손쉽게 관리
-* 🧳 **Markdown 내보내기/가져오기**를 통한 자료 백업 및 복원
-
----
-
-## 🏠 홈 화면 안내
-
-### 📱 모바일 화면
-
-* **상단 검색창(SearchBar)**: 언제든 문서 탐색 또는 새 문서 생성 가능
-
-* **탭 뷰 구성 (하단)**:
-
-  * **Discovery**: 최근 열람 노트, 문제 문서, 타임라인 접근
-  * **All Notes**: 최근 수정된 노트들 카드 보기
-  * **Config**: 설정/백업/계정 관리 등 기능
-
-### 🖥 웹 화면
-
-* **좌측 Drawer 컴포넌트 사용**
-
-  * 고정형 사이드바로 각 탭 및 메뉴 접근
-  * ‘최근 열람 문서’, ‘문제 문서’ 바로가기 제공
-
-* **우측 컨텐츠 영역**
-
-  * 선택한 탭에 따라 Notes, Timeline, 설정 뷰가 표시됨
-  * 마우스 우클릭이나 길게 누르기 등의 UI 요소도 웹에 최적화되어 있음
+* ✅ Freely write notes using a markdown editor
+* 📁 Organize content hierarchically using folders and sub-notes
+* 🧭 Automatically generated tree view for quick navigation based on headings
+* 🔍 Advanced search across titles, sections, links, and keywords
+* 🔁 Move specific sections to other notes
+* 📆 Automatically detect dates and visualize them as timer bars
+* 🧠 Use autocomplete to quickly insert links and child notes
+* 🧳 Export and import notes in Markdown format
 
 ---
 
-## 📝 노트 보기 및 작성
+## Getting Started
 
-### ✏️ 문서 생성
+### 🔍 Searching and Creating Notes
 
-* 상단 검색창에 새 제목 입력 → 해당 제목의 문서가 없으면 자동 생성
+* Use the top search bar to find existing notes or create new ones
+* Enter a new title and press `Enter` to automatically create and open the note
 
-### 🔍 문서 보기
+### ✏️ Editing Notes
 
-* 문서의 제목과 문단 기반으로 **전체 또는 부분 내용**을 볼 수 있습니다.
-* 🧭 **문단 간 이동** 버튼으로 구조화된 콘텐츠 탐색 가능
-* ✏️ **편집 버튼**을 눌러 문서를 수정할 수 있습니다.
-* 📂 **타임태그 일정 조정 기능** 제공
+* Use the markdown-based editor to write and format content
+* Autocomplete triggers:
 
-### ✏️ 문서 편집
-
-* 마크다운 기반 에디터 제공
-* 자동완성 지원:
-
-  * `[제목`: 노트 링크로 자동완성
-  * `http://...`: URL 미리보기
-* 저장 시 해당 문서 보기로 이동
+  * `[title` → internal note links
+  * `http` → external link previews
 
 ---
 
-## 📌 문단 이동 기능
+## Screen-by-Screen Guide
 
-* 문단을 다른 문서 또는 위치로 이동할 수 있습니다.
-* 타겟 문서와 문단을 선택하여 **부분 복사/이동** 가능
-* **미리보기** 기능으로 변경될 내용을 확인할 수 있음
+### 🏠 Home
+
+* The main screen that appears upon launch
+* Provides quick access to recently viewed notes, issue notes, and the timeline
+* On mobile, access main menus via the bottom tab; on web, use the left-side drawer menu
+
+### 📄 Note Page
+
+* Displays the note title, content, and structured section list
+* The section list is auto-generated from headings (H1\~H6); clicking a section jumps to its position
+* Use top buttons to edit the note, rearrange sections, or view edit history
+
+### ✏️ Note Editing
+
+* A flexible editor that supports both markdown and visual (WYSIWYG) modes
+* Allows free editing with both automatic and manual save options
+* Supports internal links, child notes, and external link previews via autocomplete
+
+### 🗂 Recent Notes
+
+* Lists recently viewed notes in chronological order
+* Click to revisit a note, or remove it from the list if no longer needed
+
+### 🧾 Issue Notes
+
+* Displays notes with detected issues like empty sections, broken links, or duplicated content
+* Clicking an item highlights the issue and lets you jump to that section for editing
+
+### 📆 Timeline
+
+* A calendar-based view that shows all notes linked to dates
+* Use the date selector or calendar to browse notes by day
+* View and edit dated sections directly from this screen
+
+### 🗃 Archive
+
+* Shows previous versions (snapshots) of notes
+* Compare historical content over time, sorted by save date
+* Useful for version control and restoring past content
 
 ---
 
-## 🗓️ 타임라인 기능
+## Advanced Features
 
-* 날짜별로 연결된 문서를 확인할 수 있습니다.
-* 상단 날짜 네비게이션을 통해 **날짜 이동**, **오늘로 복귀**
-* 현재 표시된 날짜를 클릭하여 **달력 선택** 가능
+### 📝 Dual Editor Support
+
+* The editor supports both WYSIWYG and markdown input
+* Changes in one mode are reflected in real-time in the other
+* Ideal for users who prefer visual editing or are familiar with markdown syntax
+
+### 📑 Automatic Section Detection
+
+* Headings within notes are automatically structured into a navigable tree view
+* Quickly jump between sections and visualize the overall structure
+
+### 🔗 Link Recognition and Navigation
+
+* Links within notes are automatically detected and categorized
+* Internal note links are also suggested during search and autocomplete
+
+### ⏱ Automatic Date Detection
+
+* Recognizes date patterns like `2024-06-01` or `06/01~06/05`
+* Visualizes dates in the form of a timer bar and integrates with the timeline
+
+### 🧠 Readability Analysis
+
+* Analyzes sentence length and structure to evaluate reading difficulty
+* Helps improve overly complex or lengthy notes
+
+### 🔍 Search History and Autocomplete
+
+* Previously searched keywords are stored for faster reuse
+* Suggestions appear in the search bar to reduce repeat typing
+
+### 🔄 Section Rearrangement and Copying
+
+* Move or copy specific sections to other notes to reorganize content
+* Preview changes before confirming to ensure safe editing
+
+### 📦 Backup and Restore
+
+* Export all notes in Markdown or ZIP format for backup
+* Restore notes from saved files when needed
+
+### 💾 Storage Options and Account Sync
+
+* Choose between local or cloud-based accounts for saving notes
+* Online sync keeps notes up-to-date automatically
+
+### 🗃 Snapshot History and Comparison
+
+* Notes are automatically backed up when saved
+* Compare current content with past versions through the Archive screen
+
+### 🎯 Random Note Access
+
+* Open a randomly selected note to discover content from a new perspective
 
 ---
 
-## 🛠 환경 설정 (Config)
+## 📞 Contact
 
-* 🔍 **검색 설정**:
+If you have feature suggestions, bug reports, or questions, feel free to reach out:
 
-  * 이전 검색 기록 보기 및 삭제 가능
-* 📦 **내보내기/가져오기**:
-
-  * Markdown 포맷으로 백업 가능 (ZIP 파일)
-  * `.md` 또는 `.zip` 파일을 가져와 문서로 복원 가능
-* 👤 **계정 전환**:
-
-  * 로컬 계정 ↔️ 외부 계정 지원
-
----
-
-## 🧠 문서 유형
-
-| 유형      | 설명                     |
-| ------- | ---------------------- |
-| 일반 노트   | 사용자가 직접 작성한 콘텐츠        |
-| 최근 노트   | 최근 열람 또는 편집한 문서        |
-| 문제 노트   | 내용이 비어있거나 작성이 필요한 노트   |
-| 타임라인 노트 | 날짜와 관련된 일정 기반 노트       |
-| 아카이브 노트 | 이전에 저장된 문서 스냅샷 (수정시각 기록) |
-
----
-
-## 🧭 빠른 사용 가이드
-
-| 할 일     | 경로                |
-| ------- | ----------------- |
-| 문서 검색   | 상단 🔍 검색바         |
-| 새 문서 생성 | 검색 후 없는 제목으로 진입   |
-| 문서 편집   | 보기 화면 → ✏️ 편집 버튼  |
-| 문단 이동   | 보기 화면 → 🔄 아이콘    |
-| 타임라인 보기 | 홈 → TimeLine 버튼   |
-| 문서 백업   | Config 탭 → Export |
-| 문서 복원   | Config 탭 → Import |
-
+* Email: [ydh051541@naver.com](mailto:ydh051541@naver.com)
+* GitHub Issues: [https://github.com/blacktokki/notebook/issues](https://github.com/blacktokki/notebook/issues)

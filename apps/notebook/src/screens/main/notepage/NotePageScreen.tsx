@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext } from '@blacktokki/core';
+import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
@@ -29,6 +29,7 @@ export const NotePageScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
+  const { lang } = useLangContext();
   const commonStyles = createCommonStyles(theme);
   const [toc, toggleToc] = useState(false);
   const [fullParagraph, toggleFullParagraph] = useState(false);
@@ -153,10 +154,10 @@ export const NotePageScreen: React.FC = () => {
             ) : (
               <View style={[commonStyles.card, commonStyles.centerContent]}>
                 <Text style={commonStyles.text}>
-                  아직 내용이 없는 문서입니다. '편집' 버튼을 눌러 내용을 추가해보세요.
+                  {lang('This note has no content yet. Press the ‘Edit’ button to add content.')}
                 </Text>
                 <TouchableOpacity onPress={handleEdit} style={commonStyles.button}>
-                  <Text style={commonStyles.buttonText}>편집하기</Text>
+                  <Text style={commonStyles.buttonText}>{lang('edit')}</Text>
                 </TouchableOpacity>
               </View>
             )}

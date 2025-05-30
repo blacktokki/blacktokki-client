@@ -1,4 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
+import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
@@ -333,12 +334,14 @@ export const useDeleteRecentPage = () => {
 };
 
 export const useNoteViewers = () => {
+  const { lang, locale } = useLangContext();
   return useQuery({
-    queryKey: ['viewerContents'],
+    queryKey: ['viewerContents', locale],
     queryFn: async () => {
       return await Promise.all(
         ['Usage'].map(async (key) => {
-          const v2 = await fetch(process.env.PUBLIC_URL + '/' + key + '.md');
+          const title = lang(key);
+          const v2 = await fetch(process.env.PUBLIC_URL + '/' + title + '.md');
           const description = toHtml(await v2.text());
           return { key, description };
         })

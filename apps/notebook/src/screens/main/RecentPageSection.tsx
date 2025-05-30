@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext, View, Text } from '@blacktokki/core';
+import { useColorScheme, useResizeContext, View, Text, useLangContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
@@ -133,6 +133,7 @@ export const RecentPagesSection = React.memo(() => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const window = useResizeContext();
+  const { lang } = useLangContext();
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const cardMaxWidth = _cardMaxWidth(window === 'landscape');
@@ -180,7 +181,13 @@ export const RecentPagesSection = React.memo(() => {
     </ScrollView>
   ) : (
     <View style={[commonStyles.card, commonStyles.centerContent]}>
-      <Text style={commonStyles.text}>최근 수정한 노트가 없습니다.</Text>
+      <Text style={commonStyles.text}>{lang('There are no recently modified notes.')}</Text>
+      <TouchableOpacity
+        onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
+        style={commonStyles.button}
+      >
+        <Text style={commonStyles.buttonText}>{lang('Usage')}</Text>
+      </TouchableOpacity>
     </View>
   );
 });

@@ -1,4 +1,4 @@
-import { useInitColorScheme } from '@blacktokki/core';
+import { IntlProvider, useInitColorScheme } from '@blacktokki/core';
 import { StatusBar } from 'expo-status-bar';
 import React, { Suspense } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ export default function App() {
       };
     })
   );
+  const ko = require('./src/lang/ko.json');
   const Navigation = React.lazy(() => import('./src/navigation'));
   const isAppearenceComplete = useInitColorScheme();
 
@@ -26,7 +27,9 @@ export default function App() {
       <Suspense fallback={<></>}>
         <AuthProvider guestType="local">
           <QueryClientProvider>
-            <Navigation />
+            <IntlProvider translations={{ ko }}>
+              <Navigation />
+            </IntlProvider>
           </QueryClientProvider>
         </AuthProvider>
       </Suspense>

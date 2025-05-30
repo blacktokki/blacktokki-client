@@ -1,4 +1,4 @@
-import { useColorScheme, useModalsContext, Text } from '@blacktokki/core';
+import { useColorScheme, useModalsContext, Text, useLangContext } from '@blacktokki/core';
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
@@ -24,6 +24,7 @@ export default function DateHeaderSection({
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { setModal } = useModalsContext();
+  const { lang } = useLangContext();
   const moveDate = (value: number) =>
     setDate(
       dayjs(date)
@@ -80,7 +81,7 @@ export default function DateHeaderSection({
           style={[headerStyles.todayButton, themedStyles.todayButton]}
           accessibilityLabel="Go to today"
         >
-          <Text style={headerStyles.todayButtonText}>Today</Text>
+          <Text style={headerStyles.todayButtonText}>{lang('Today')}</Text>
         </TouchableOpacity>
 
         {/* Next Day Button */}

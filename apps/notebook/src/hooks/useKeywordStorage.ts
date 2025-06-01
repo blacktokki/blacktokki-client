@@ -6,10 +6,17 @@ const KEYWORDS_KEY = '@blacktokki:notebook:keywords:';
 
 export type KeywordContent =
   | {
+      type: '_LINK';
+      name: string;
+      url: string;
+      origin: string;
+    }
+  | {
       type: '_NOTELINK';
       name: string;
       title: string;
       paragraph?: string;
+      origin: string;
     }
   | {
       type: '_KEYWORD';

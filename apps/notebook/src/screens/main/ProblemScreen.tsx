@@ -11,7 +11,7 @@ import { NoteListSection } from './NoteListSection';
 export const ProblemsScreen: React.FC = () => {
   const _window = useResizeContext();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const { data, isLoading } = useProblem();
+  const { data, isLoading } = useProblem(1);
 
   return (
     <>

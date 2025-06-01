@@ -27,7 +27,7 @@ apps/notebook/
 
 ### 요구 사항
 
-* Node.js ≥ 16.14
+* Node.js ≥ 16
 * Yarn ≥ 1.22
 * Expo CLI (`npm install -g expo-cli`)
 

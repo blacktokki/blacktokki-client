@@ -1,16 +1,8 @@
-import { useColorScheme, useLangContext } from '@blacktokki/core';
+import { useColorScheme, useLangContext, View, Text } from '@blacktokki/core';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Text,
-  StyleSheet,
-  PanResponder,
-} from 'react-native';
+import { TextInput, TouchableOpacity, FlatList, StyleSheet, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
@@ -60,29 +52,40 @@ export function onLink(url: string, navigation: StackNavigationProp<NavigationPa
   }
 }
 
-export function getNoteLinks(pages: Content[]) {
-  return pages.flatMap((v) =>
-    extractHtmlLinksWithQuery(v.description || '')
-      .map((v2) => {
+export function getLinks(pages: Content[]) {
+  return pages
+    .flatMap((v) =>
+      extractHtmlLinksWithQuery(v.description || '').map((v2) => {
         const noteLink = urlToNoteLink(v2.url);
-        if (noteLink && v2.text !== noteLink.title /*&& v2.text.startsWith(v.title)*/) {
-          return { type: '_NOTELINK' as '_NOTELINK', name: v2.text, ...noteLink, origin: v.title };
+        if (noteLink) {
+          if (v2.text !== noteLink.title) {
+            return {
+              type: '_NOTELINK' as '_NOTELINK',
+              name: v2.text,
+              ...noteLink,
+              origin: v.title,
+            };
+          }
+          return undefined;
         }
+        return { type: '_LINK' as '_LINK', url: v2.url, name: v2.text, origin: v.title };
       })
-      .filter((v) => v !== undefined)
-  );
+    )
+    .filter((v) => v !== undefined);
 }
 
 export const getFilteredPages = (pages: Content[], searchText: string) => {
-  const lowerCaseSearch = searchText.toLowerCase();
-  const noteLinks = getNoteLinks(pages);
+  const lowerCaseSearch = searchText.toLowerCase().normalize('NFKD');
+  const links = getLinks(pages);
   return [
-    ...pages.filter((page) => page.title.toLowerCase().startsWith(lowerCaseSearch)),
-    ...noteLinks.filter((v) => v.name.toLowerCase().startsWith(lowerCaseSearch)),
+    ...pages.filter((page) =>
+      page.title.toLowerCase().normalize('NFKD').startsWith(lowerCaseSearch)
+    ),
+    ...links.filter((v) => v.name.toLowerCase().normalize('NFKD').startsWith(lowerCaseSearch)),
   ];
 };
 
-export const RandomButton = () => {
+const RandomButton = () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -127,6 +130,9 @@ export const SearchList = ({
         if (item.type === '_NOTELINK' && item.paragraph) {
           handlePagePress(item.title, item.paragraph);
           addKeyword?.(item);
+        } else if (item.type === '_LINK') {
+          window.open(item.url, '_blank');
+          addKeyword?.(item);
         } else {
           handlePagePress(item.title);
           addKeyword?.({ type: '_KEYWORD', title: item.title });
@@ -141,12 +147,25 @@ export const SearchList = ({
       keyExtractor={(item: any) => JSON.stringify([item.title, item.name, item.paragraph])}
       renderItem={({ item }) => (
         <TouchableOpacity style={styles.resultItem} {...pagePressHandlers(item)}>
-          <Text style={[commonStyles.text, styles.resultText]}>
-            {item.type === '_NOTELINK' ? item.name : item.title}
+          <Text style={[commonStyles.text, styles.resultText, { flexShrink: 0 }]}>
+            {item.type === '_NOTELINK' || item.type === '_LINK' ? item.name : item.title}
           </Text>
           {item.type === '_NOTELINK' && (
-            <Text style={[commonStyles.text, styles.resultText, { fontSize: 12 }]}>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[commonStyles.text, styles.resultText, { fontSize: 12, paddingLeft: 24 }]}
+            >
               {titleFormat(item)}
+            </Text>
+          )}
+          {item.type === '_LINK' && (
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[commonStyles.text, styles.resultText, { fontSize: 12, paddingLeft: 24 }]}
+            >
+              {titleFormat({ title: item.origin, paragraph: item.url })}
             </Text>
           )}
         </TouchableOpacity>
@@ -170,10 +189,11 @@ export const SearchBar: React.FC<{
   const { data: keywords = [] } = useKeywords();
   const addKeyword = useAddKeyowrd();
   const { data: pages = [] } = useNotePages();
-  const filteredPages: SearchContent[] =
-    searchText.length > 0
-      ? getFilteredPages(pages, searchText).slice(0, 10)
-      : keywords.slice(0, 10);
+  const filteredPages: SearchContent[] = (
+    searchText.length > 0 ? getFilteredPages(pages, searchText) : keywords
+  )
+    .filter((v) => handlePress === undefined || v.type === 'NOTE')
+    .slice(0, 10);
 
   const handleSearch = () => {
     if (searchText.trim()) {

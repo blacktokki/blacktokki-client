@@ -2,7 +2,7 @@ import { toRaw } from '@blacktokki/editor';
 import { useEffect, useRef, useState } from 'react';
 
 import { Paragraph, parseHtmlToParagraphs } from '../components/HeaderSelectBar';
-import { getNoteLinks } from '../components/SearchBar';
+import { getLinks } from '../components/SearchBar';
 import { cleanAndMergeTDs } from '../components/TimerTag';
 import { Content } from '../types';
 import { useNotePages } from './useNoteStorage';
@@ -102,11 +102,13 @@ export const paragraphDescription = (
   const path = paragraphs.find((v) => v.title === paragraph)?.path;
   return path
     ? paragraphs
-        .filter((v) => v.path.startsWith(path))
+        .filter((v) => v.path === path || v.path.startsWith(path + ' > '))
         .map((v) => (rootTitle || v.path !== path ? v.header : '') + v.description)
         .join('')
     : '';
 };
+
+const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
 
 const getData = async (pages: Content[]) => {
   const records: Record<
@@ -133,23 +135,25 @@ const getData = async (pages: Content[]) => {
 
   pages.forEach((page) => {
     //unknown note
-    getNoteLinks([page]).forEach((link) => {
-      const linkPage = pages.find((v) => v.title === link.title);
-      if (linkPage?.description) {
-        if (
-          link.paragraph === undefined ||
-          parseHtmlToParagraphs(linkPage.description).find((v2) => v2.title === link.paragraph)
-        ) {
-          return;
+    getLinks([page])
+      .filter((v) => v.type === '_NOTELINK')
+      .forEach((link) => {
+        const linkPage = pages.find((v) => v.title === link.title);
+        if (linkPage?.description) {
+          if (
+            link.paragraph === undefined ||
+            parseHtmlToParagraphs(linkPage.description).find((v2) => v2.title === link.paragraph)
+          ) {
+            return;
+          }
         }
-      }
-      push(
-        link.title,
-        link.paragraph,
-        (link.paragraph === undefined ? 'Unknown note link' : 'Unknown paragraph link') +
-          `(${link.origin})`
-      );
-    });
+        push(
+          link.title,
+          link.paragraph,
+          (link.paragraph === undefined ? 'Unknown note link' : 'Unknown paragraph link') +
+            `(${link.origin})`
+        );
+      });
 
     //empty parent note
     const splitTitle = getSplitTitle(page.title);
@@ -166,19 +170,16 @@ const getData = async (pages: Content[]) => {
     const lists = paragraphs
       .map((v) => ({ ...v, lists: findLists(v.description) }))
       .filter((v) => v.lists.length > 0);
-
     paragraphs
       .filter(
-        (v) => v.level !== 0 && paragraphDescription(paragraphs, v.title, false).trim() === ''
+        (v) => v.level !== 0 && trim(paragraphDescription(paragraphs, v.title, false)).length === 0
       )
       .forEach((v) => push(page.title, v.level === 0 ? undefined : v.title, 'Empty paragraph'));
     lists
       .filter(
         (v) =>
-          v.lists.filter(
-            (v2) =>
-              v2.items.filter((v2) => v2.replaceAll('&nbsp;', '').trim().length === 0).length > 0
-          ).length > 0
+          v.lists.filter((v2) => v2.items.filter((v2) => trim(v2).length === 0).length > 0).length >
+          0
       )
       .forEach((v2) => push(page.title, v2.level === 0 ? undefined : v2.title, 'Empty list'));
 
@@ -233,18 +234,16 @@ const getData = async (pages: Content[]) => {
   });
 };
 
-export default () => {
+export default (delay?: number) => {
   const { data: pages = [], isLoading } = useNotePages();
-  const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>(
-    []
-  );
+  const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
   const timeoutRef = useRef<NodeJS.Timeout>();
   useEffect(() => {
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       getData(pages).then(setData);
       timeoutRef.current = undefined;
-    }, 500);
+    }, delay || 500);
   }, [pages]);
-  return { data, isLoading };
+  return { data: data || [], isLoading: isLoading || data === undefined };
 };

@@ -10,8 +10,8 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
+import ConfigSection from './ConfigSection';
 import ContentGroupSection, { ProblemButton, TimeLineButton } from './ContentGroupSection';
-import ExtraConfigSections from './ExtraConfigSections';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
@@ -47,7 +47,7 @@ const ConfigTabView = () => {
         { backgroundColor: Colors[theme].background },
       ]}
     >
-      <ExtraConfigSections />
+      <ConfigSection />
     </ScrollView>
   );
 };
@@ -87,7 +87,7 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
       headerTitle={title}
     >
       <View style={[commonStyles.container, { width: '100%', justifyContent: 'space-between' }]}>
-        <ExtraConfigSections />
+        <ConfigSection />
         <ContractFooter
           buttons={[
             {

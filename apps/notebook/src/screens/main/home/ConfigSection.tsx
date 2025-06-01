@@ -1,10 +1,10 @@
 import { useAuthContext } from '@blacktokki/account';
 import { Colors, TextButton, useColorScheme, useLangContext, Text } from '@blacktokki/core';
-import { ConfigSections } from '@blacktokki/navigation';
+import { ConfigSection, LanguageConfigSection, SkinConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 
 import { SearchList } from '../../../components/SearchBar';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
@@ -71,22 +71,6 @@ const importMarkdowns = async () => {
   return contents;
 };
 
-const ConfigButton = (props: { title: string; onPress?: () => void }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const color = Colors[theme].text;
-  return (
-    <TouchableOpacity
-      style={[commonStyles.header, { marginBottom: 0 }]}
-      onPress={props.onPress}
-      disabled={!props.onPress}
-    >
-      <Text style={{ fontSize: 20, color, fontWeight: '600' }}>{props.title}</Text>
-      {props.onPress && <Text>{'>'}</Text>}
-    </TouchableOpacity>
-  );
-};
-
 const OptionButton = (props: { title: string; onPress: () => void; active: boolean }) => {
   const theme = useColorScheme();
   const color = Colors[theme].text;
@@ -118,66 +102,71 @@ export default () => {
   return (
     <View>
       <View style={commonStyles.card}>
-        <ConfigSections />
+        <LanguageConfigSection />
       </View>
       <View style={commonStyles.card}>
-        <ConfigButton title={lang('* Search Settings')} />
-        <View style={{ flexDirection: 'row' }}>
-          <OptionButton
-            title={lang('Search History')}
-            onPress={() => setSearch(!search)}
-            active={search}
-          />
-          {search && !!keywords.length && (
+        <SkinConfigSection />
+      </View>
+      <View style={commonStyles.card}>
+        <ConfigSection title={lang('* Search Settings')}>
+          <View style={{ flexDirection: 'row' }}>
             <OptionButton
-              title={lang('Clear')}
-              onPress={() => resetKeyword.mutate()}
-              active={false}
+              title={lang('Search History')}
+              onPress={() => setSearch(!search)}
+              active={search}
             />
-          )}
-        </View>
-        {search && (
-          <View style={[commonStyles.card, { padding: 0 }]}>
-            <SearchList
-              filteredPages={keywords}
-              handlePagePress={(title, paragraph) =>
-                navigation.push('NotePage', { title, paragraph })
-              }
-            />
+            {search && !!keywords.length && (
+              <OptionButton
+                title={lang('Clear')}
+                onPress={() => resetKeyword.mutate()}
+                active={false}
+              />
+            )}
           </View>
-        )}
+          {search && (
+            <View style={[commonStyles.card, { padding: 0 }]}>
+              <SearchList
+                filteredPages={keywords}
+                handlePagePress={(title, paragraph) =>
+                  navigation.push('NotePage', { title, paragraph })
+                }
+              />
+            </View>
+          )}
+        </ConfigSection>
       </View>
       <View style={commonStyles.card}>
-        <ConfigButton title={lang('* Archive')} />
-        <View style={{ flexDirection: 'row' }}>
-          <OptionButton
-            title={lang('Export')}
-            onPress={() => contents && exportMarkdowns(contents)}
-            active={false}
-          />
-          <OptionButton
-            title={lang('Import')}
-            onPress={() => importMarkdowns().then((v) => v.forEach((v2) => mutation.mutate(v2)))}
-            active={false}
-          />
-          {!auth.isLocal && (
+        <ConfigSection title={lang('* Archive')}>
+          <View style={{ flexDirection: 'row' }}>
             <OptionButton
-              title={lang('Changelog')}
-              onPress={() => navigation.push('Archive', {})}
+              title={lang('Export')}
+              onPress={() => contents && exportMarkdowns(contents)}
               active={false}
             />
-          )}
-        </View>
+            <OptionButton
+              title={lang('Import')}
+              onPress={() => importMarkdowns().then((v) => v.forEach((v2) => mutation.mutate(v2)))}
+              active={false}
+            />
+            {!auth.isLocal && (
+              <OptionButton
+                title={lang('Changelog')}
+                onPress={() => navigation.push('Archive', {})}
+                active={false}
+              />
+            )}
+          </View>
+        </ConfigSection>
       </View>
       <View style={commonStyles.card}>
-        <ConfigButton
+        <ConfigSection
           title={lang('* Usage')}
           onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
         />
       </View>
       <View style={commonStyles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <ConfigButton title={lang('* Account Settings')} />
+          <ConfigSection title={lang('* Account Settings')} />
           {!auth.isLocal && (
             <Text numberOfLines={1} ellipsizeMode="tail" style={{ marginLeft: 4 }}>
               - {auth.user?.username}

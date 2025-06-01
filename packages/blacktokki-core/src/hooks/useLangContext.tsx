@@ -35,8 +35,9 @@ export default () => {
     (key: string) => {
       if (locale === 'en' || key.length === 0) return key;
       if (translations) {
-        if (locale !== undefined && locale !== 'auto') return translations[locale as Locale][key];
-        if (translations['ko']) return translations['ko'][key];
+        if (locale !== undefined && locale !== 'auto' && translations[locale as Locale][key])
+          return translations[locale as Locale][key];
+        if (translations['ko']) return translations['ko'][key] || key;
       }
       return key;
     },

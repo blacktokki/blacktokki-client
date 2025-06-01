@@ -73,7 +73,13 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
 
   if (item === null) {
     return (
-      <View style={{ flexBasis: window === 'landscape' ? '33%' : '50%', maxWidth: cardMaxWidth }} />
+      <View
+        style={{
+          flexBasis: window === 'landscape' ? '33%' : '50%',
+          maxWidth: cardMaxWidth,
+          backgroundColor: 'transparent',
+        }}
+      />
     );
   }
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();

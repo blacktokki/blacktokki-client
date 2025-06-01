@@ -148,7 +148,10 @@ export const NoteBottomSection = ({
                 style={[{ flexDirection: reverse ? 'row-reverse' : 'row', paddingVertical: 16 }]}
               >
                 <Icon name={icon} size={16} color={iconColor} style={{ alignSelf: 'center' }} />
-                <Text style={[commonStyles.text, { fontWeight: 'bold', marginHorizontal: 16 }]}>
+                <Text
+                  ellipsizeMode="tail"
+                  style={[commonStyles.text, { fontWeight: 'bold', marginHorizontal: 16 }]}
+                >
                   {moveParagraph.level === 0 ? root : moveParagraph.title}
                 </Text>
               </TouchableOpacity>

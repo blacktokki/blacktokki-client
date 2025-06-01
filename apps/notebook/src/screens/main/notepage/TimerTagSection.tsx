@@ -20,7 +20,9 @@ const replaceDay = (data: TimerData, newDate: string) => {
 };
 
 const addDay = (data: TimerData, value: number, unit: 'day' | 'month', moved: boolean) => {
-  const s = moved ? dayjs(data.dateStart).add(value, unit).format(data.pattern) : data.dateStart;
+  const s = dayjs(data.dateStart)
+    .add(moved ? value : 0, unit)
+    .format(data.pattern);
   const e = dayjs(data.dateEnd).add(value, unit).format(data.pattern);
   return replaceDay(data, data.format ? data.format(s, e) : e);
 };
@@ -55,10 +57,10 @@ const buttons = (data: TimerData) => {
               );
             },
           },
-          { title: '+0d/+1d', onPress: () => data.replace(addDay(data, 1, 'day', false)) },
-          { title: '+0d/+2d', onPress: () => data.replace(addDay(data, 2, 'day', false)) },
-          { title: '+0d/+7d', onPress: () => data.replace(addDay(data, 7, 'day', false)) },
-          { title: '+0d/+1M', onPress: () => data.replace(addDay(data, 1, 'month', false)) },
+          { title: 'End date +1d', onPress: () => data.replace(addDay(data, 1, 'day', false)) },
+          { title: 'End date +2d', onPress: () => data.replace(addDay(data, 2, 'day', false)) },
+          { title: 'End date +7d', onPress: () => data.replace(addDay(data, 7, 'day', false)) },
+          { title: 'End date +1M', onPress: () => data.replace(addDay(data, 1, 'month', false)) },
         ]
       : []),
     { title: 'Delete', onPress: () => data.replace(replaceDay(data, '')) },

@@ -57,5 +57,11 @@
   "There are no notes needed to be written.": "작성이 필요한 노트가 없습니다.",
   "There are no notes.": "노트가 없습니다.",
   "This note has no content yet. Press the ‘Edit’ button to add content.": "아직 내용이 없는 노트입니다. '편집' 버튼을 눌러 내용을 추가해보세요.",
-  "Edit": "편집하기"
+  "Edit": "편집하기",
+  "+Period": "+기간",
+  "End date +1d": "종료일 +1d",
+  "End date +2d": "종료일 +1d",
+  "End date +7d": "종료일 +1d",
+  "End date +1M": "종료일 +1M",
+  "Delete": "삭제"
 }

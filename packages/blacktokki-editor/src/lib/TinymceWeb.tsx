@@ -110,6 +110,7 @@ export default (
           '%Y-%m-%d',
           new Date().toISOString().split('T')[0] + '/%Y-%m-%d',
           '%m/%d',
+          new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) + ' ~ %m/%d',
         ],
         content_style:
           (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +

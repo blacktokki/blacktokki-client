@@ -1,4 +1,4 @@
-import { CommonButton } from '@blacktokki/core';
+import { CommonButton, useLangContext } from '@blacktokki/core';
 import { toRaw } from '@blacktokki/editor';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -57,6 +57,24 @@ function extractDates(input: string) {
           text: match[0],
           dateStart: `${year}-${String(month).padStart(2, '0')}-01`,
           dateEnd: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          index: match.index,
+        };
+      },
+    },
+    {
+      regex: /\b(\d{2})\/(\d{2})\s*~\s*(\d{2})\/(\d{2})\b/g,
+      parse: (match) => {
+        const mm = parseInt(match[1], 10);
+        const dd = parseInt(match[2], 10);
+        const mm2 = parseInt(match[3], 10);
+        const dd2 = parseInt(match[4], 10);
+        return {
+          // MM/DD ~ MM/DD
+          pattern: 'MM/DD',
+          format: (s, e) => `${s} ~ ${e}`,
+          text: match[0],
+          dateStart: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
+          dateEnd: `${currentYear}-${String(mm2).padStart(2, '0')}-${String(dd2).padStart(2, '0')}`,
           index: match.index,
         };
       },
@@ -174,6 +192,7 @@ const TimerTag = (props: {
   const start = dayjs(props.data.dateStart);
   const end = dayjs(props.data.dateEnd).add(1, 'day');
   const ratio = start.diff(props.now) / start.diff(end);
+  const { lang } = useLangContext();
   return (
     <TouchableOpacity onPress={() => props.toggleExpand()}>
       <View
@@ -198,8 +217,11 @@ const TimerTag = (props: {
               {props.buttons(props.data).map((v) => (
                 <CommonButton
                   key={v.title}
-                  title={v.title}
-                  onPress={() => v.onPress()}
+                  title={lang(v.title)}
+                  onPress={() => {
+                    v.onPress();
+                    props.toggleExpand();
+                  }}
                   style={{ width: '100%', backgroundColor: '#8888', margin: 4, maxWidth: 150 }}
                 />
               ))}

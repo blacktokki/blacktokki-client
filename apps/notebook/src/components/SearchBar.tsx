@@ -52,13 +52,13 @@ export function onLink(url: string, navigation: StackNavigationProp<NavigationPa
   }
 }
 
-export function getLinks(pages: Content[]) {
+export function getLinks(pages: Content[], sameTitle?: boolean) {
   return pages
     .flatMap((v) =>
       extractHtmlLinksWithQuery(v.description || '').map((v2) => {
         const noteLink = urlToNoteLink(v2.url);
         if (noteLink) {
-          if (v2.text !== noteLink.title) {
+          if (sameTitle || v2.text !== noteLink.title) {
             return {
               type: '_NOTELINK' as '_NOTELINK',
               name: v2.text,

@@ -57,10 +57,24 @@
 * Lists recently viewed notes in chronological order
 * Click to revisit a note, or remove it from the list if no longer needed
 
-### 🧾 Issue Notes
+### 🧾 Problem Notes
 
-* Displays notes with detected issues like empty sections, broken links, or duplicated content
-* Clicking an item highlights the issue and lets you jump to that section for editing
+* Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content
+* Problem types include:
+
+| Problem Type                              | Description                                                      |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| Empty paragraph                         | A section heading exists but its content is empty                |
+| Empty list                              | A list is present in a section, but it has no items              |
+| Duplicate paragraphs (...)              | The same section title appears more than once                |
+| Duplicate contents (...)                | Identical contents are repeated in section            |
+| Too high readability score: X > 3.5     | The reading difficulty score exceeds the recommended threshold   |
+| Unknown note link (...)                 | A link points to a non-existent note                             |
+| Empty parent note (...)                 | The parent note exists but contains no content                   |
+| Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |
+| Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note |
+
+* Click on an problem to jump directly to the problematic section for quick editing
 
 ### 📆 Timeline
 

@@ -116,7 +116,7 @@ function extractDates(input: string) {
 
   return results;
 }
-export function cleanAndMergeTDs(html: string): string {
+export function cleanHtml(html: string, cleanAnchors: boolean, mergeTds: boolean): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
@@ -125,26 +125,31 @@ export function cleanAndMergeTDs(html: string): string {
   codeTags.forEach((code) => {
     code.textContent = '';
   });
-
-  // 2. 각 <tr> 안의 <td> 병합
-  const trList = doc.querySelectorAll('tr');
-  trList.forEach((tr) => {
-    const tdList = tr.querySelectorAll('td');
-    if (tdList.length > 1) {
-      const mergedText = Array.from(tdList)
-        .map((td) => td.textContent?.trim() || '')
-        .join(' ');
-
-      // 첫 td에 병합된 텍스트 설정
-      const newTd = document.createElement('td');
-      newTd.textContent = mergedText;
-
-      // 기존 td 모두 제거 후 병합 td 삽입
-      tr.innerHTML = '';
-      tr.appendChild(newTd);
-    }
+  // 2. <a> 태그 내부 비우기
+  const aTags = doc.querySelectorAll('a');
+  aTags.forEach((a) => {
+    a.textContent = '';
   });
+  if (mergeTds) {
+    // 3. 각 <tr> 안의 <td> 병합
+    const trList = doc.querySelectorAll('tr');
+    trList.forEach((tr) => {
+      const tdList = tr.querySelectorAll('td');
+      if (tdList.length > 1) {
+        const mergedText = Array.from(tdList)
+          .map((td) => td.textContent?.trim() || '')
+          .join(' ');
 
+        // 첫 td에 병합된 텍스트 설정
+        const newTd = document.createElement('td');
+        newTd.textContent = mergedText;
+
+        // 기존 td 모두 제거 후 병합 td 삽입
+        tr.innerHTML = '';
+        tr.appendChild(newTd);
+      }
+    });
+  }
   return doc.body.innerHTML;
 }
 
@@ -153,7 +158,7 @@ export const paragraphsToDatePatterns = (title: string, paragraphs: Paragraph[])
     .map((paragraph) => {
       const dateMatches = [
         toRaw(paragraph.header),
-        ...toRaw(cleanAndMergeTDs(paragraph.description)).split('\n'),
+        ...toRaw(cleanHtml(paragraph.description, false, true)).split('\n'),
       ].map((v2, i) => ({
         path: paragraph.path,
         isHeader: i === 0,

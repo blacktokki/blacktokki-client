@@ -3,6 +3,7 @@
 **Blacktokki Notebook**은 마크다운 기반의 노트 및 타임라인 중심 지식 관리 앱입니다. 모바일과 웹 모두에서 동작하며, 구조화된 문서, 일정 자동 추적, 아카이브, 문단 이동 등 생산성을 높이기 위한 기능을 제공합니다.
 
 <!-- !\[홈화면 스크린샷 예시] -->
+[사용자 가이드](https://github.com/blacktokki/blacktokki-client/blob/master/apps/notebook/web/%EC%82%AC%EC%9A%A9%20%EB%B0%A9%EB%B2%95.md)
 
 ---
 

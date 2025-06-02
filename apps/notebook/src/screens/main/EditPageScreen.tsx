@@ -108,22 +108,23 @@ export const EditPageScreen: React.FC = () => {
                   ...(childrenPages.length
                     ? childrenPages
                     : [{ type: '_CHILDNOTE', name: pattern, title: title + '/' + pattern }]),
-                  ...getFilteredPages(pages, pattern),
+                  ...getFilteredPages(pages, pattern).filter((v) => v.type !== '_LINK'),
                 ].map((v) => {
-                  const text =
+                  const name = v.type === '_NOTELINK' || v.type === '_CHILDNOTE' ? v.name : v.title;
+                  const description =
                     v.type === '_NOTELINK'
-                      ? v.name + `(${titleFormat(v)})`
+                      ? `(${titleFormat(v)})`
                       : v.type === '_CHILDNOTE'
-                      ? v.name
-                      : v.title;
+                      ? `(${v.title})`
+                      : '';
                   const url = encodeURI(
                     v.type === '_NOTELINK' && v.paragraph
                       ? `?title=${v.title}&paragraph=${v.paragraph}`
                       : `?title=${v.title}`
                   );
                   return {
-                    text,
-                    value: `<a href=${url}>${text}</a>`,
+                    text: name + description,
+                    value: `<a href=${url}>${name}</a>`,
                   };
                 });
               },

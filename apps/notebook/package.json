@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "github": "npx expo export:web && replace-in-file --configFile=scripts/seo.js && gh-pages -d web-build -r https://github.com/blacktokki/blacktokki-notebook",
-    "pwa": "npx expo-pwa",
+    "pwa:icon": "npx expo-pwa icon --platform chrome -i assets/icon.png",
     "analyzer": "node scripts/analyzer.js && expo start --web --no-dev --minify && rimraf webpack.config.js",
     "script:md": "node scripts/script-to-md.js"
   },

@@ -68,7 +68,7 @@
 | Empty list                              | A list is present in a section, but it has no items              |
 | Duplicate paragraphs (...)              | The same section title appears more than once                |
 | Duplicate contents (...)                | Identical contents are repeated in section            |
-| Too high readability score: X > 3.5     | The reading difficulty score exceeds the recommended threshold   |
+| Too high readability score: X > 3.0     | The reading difficulty score exceeds the recommended threshold   |
 | Unknown note link (...)                 | A link points to a non-existent note                             |
 | Empty parent note (...)                 | The parent note exists but contains no content                   |
 | Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |

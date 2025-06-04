@@ -1,5 +1,5 @@
 import { useColorScheme, useLangContext } from '@blacktokki/core';
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 
 import { titleFormat } from '../../components/SearchBar';
@@ -10,6 +10,7 @@ export const NoteListSection = ({
   isLoading,
   onPress,
   emptyMessage,
+  onScrollEnd,
 }: {
   contents: {
     title: string;
@@ -20,10 +21,12 @@ export const NoteListSection = ({
   isLoading: boolean;
   onPress: (title: string, paragraph?: string, id?: number) => void;
   emptyMessage: string;
+  onScrollEnd?: () => void;
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { lang } = useLangContext();
+  const height = useRef(0);
   return (
     <View style={commonStyles.container}>
       {isLoading ? (
@@ -48,6 +51,16 @@ export const NoteListSection = ({
             </TouchableOpacity>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          onScroll={(e) => {
+            if (
+              e.nativeEvent.contentSize.height - height.current - e.nativeEvent.contentOffset.y <
+              1
+            )
+              onScrollEnd?.();
+          }}
+          onLayout={(p) => {
+            height.current = p.nativeEvent.layout.height;
+          }}
         />
       ) : (
         <View style={[commonStyles.card, commonStyles.centerContent]}>

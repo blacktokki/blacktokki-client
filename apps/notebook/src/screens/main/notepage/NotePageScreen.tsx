@@ -7,7 +7,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { SearchBar } from '../../../components/SearchBar';
-import { useNotePage, useSnapshotPages } from '../../../hooks/useNoteStorage';
+import { useArchivePage, useNotePage } from '../../../hooks/useNoteStorage';
 import { paragraphDescription } from '../../../hooks/useProblem';
 import { createCommonStyles } from '../../../styles';
 import { NavigationParamList } from '../../../types';
@@ -35,10 +35,7 @@ export const NotePageScreen: React.FC = () => {
   const [fullParagraph, toggleFullParagraph] = useState(false);
 
   const { data: page, isFetching } = useNotePage(title);
-  const { data: archives } = useSnapshotPages();
-  const archive = archiveId
-    ? archives?.find((v) => v.id === archiveId && v.description !== page?.description)
-    : undefined;
+  const { data: archive } = useArchivePage(archiveId);
 
   const handleEdit = () => {
     navigation.navigate('EditPage', { title });
@@ -75,7 +72,7 @@ export const NotePageScreen: React.FC = () => {
           style={[commonStyles.container, pageStyles.container]}
           contentContainerStyle={pageStyles.contentContainer}
         >
-          <View style={[commonStyles.header, { zIndex: 1 }]}>
+          <View style={[commonStyles.header, { zIndex: 1, alignItems: 'flex-start' }]}>
             <NotePageHeader
               title={title}
               paragraph={paragraph}
@@ -157,7 +154,7 @@ export const NotePageScreen: React.FC = () => {
                   {lang('This note has no content yet. Press the ‘Edit’ button to add content.')}
                 </Text>
                 <TouchableOpacity onPress={handleEdit} style={commonStyles.button}>
-                  <Text style={commonStyles.buttonText}>{lang('edit')}</Text>
+                  <Text style={commonStyles.buttonText}>{lang('Edit')}</Text>
                 </TouchableOpacity>
               </View>
             )}

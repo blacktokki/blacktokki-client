@@ -24,7 +24,7 @@ const getReadabilityLevel = (() => {
   }
 
   function calculateFleschKincaid(text: string): number {
-    const sentenceCount = (text.match(/[.!?]+/g) || []).length || 1;
+    const sentenceCount = (text.match(/[.!?\n]+/g) || []).length || 1;
     const wordList = text.trim().split(/\s+/);
     const wordCount = wordList.length;
     const syllableCount = wordList.reduce((sum, word) => sum + countSyllables(word), 0);
@@ -40,7 +40,7 @@ const getReadabilityLevel = (() => {
   }
 
   function classifyKoreanReadability(text: string): number {
-    const sentences = text.split(/[.?!\r\n]/).filter((s) => s.trim().length > 0);
+    const sentences = text.split(/[.?!\n]/).filter((s) => s.trim().length > 0);
     const words = text.trim().split(/\s+/);
     const wordCount = words.length;
     const sentenceCount = sentences.length || 1;
@@ -185,11 +185,11 @@ const getDataLinear = (page: Content) => {
         )
       )
     : { level: 0 };
-  if (readability.level > 3.5) {
+  if (readability.level > 3.0) {
     record.push([
       page.title,
       undefined,
-      `Too high readability score: ${readability.level.toFixed(4)} > 3.5`,
+      `Too high readability score: ${readability.level.toFixed(4)} > 3.0`,
     ]);
   }
   const links = getLinks([page], true).filter((v) => v.type === '_NOTELINK');

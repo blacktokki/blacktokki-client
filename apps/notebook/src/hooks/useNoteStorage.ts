@@ -2,9 +2,9 @@ import { useAuthContext } from '@blacktokki/account';
 import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 
-import { getContentList, patchContent, postContent } from '../services/notebook';
+import { getContentList, getContentOne, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
 
 const DB_NAME = '@Blacktokki:notebook';
@@ -38,13 +38,13 @@ const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
 
 let lastPage: string | undefined;
 
-const getContents = async (isOnline: boolean, type: 'NOTE' | 'SNAPSHOT'): Promise<Content[]> => {
-  if (isOnline) {
-    return await getContentList(undefined, [type]);
+const getContents = async (
+  data: { isOnline: true; type: 'NOTE' | 'SNAPSHOT'; page?: number } | { isOnline: false }
+): Promise<Content[]> => {
+  if (data.isOnline) {
+    return await getContentList(undefined, [data.type], data.page);
   }
-  if (type === 'SNAPSHOT') {
-    return [];
-  }
+  const type = 'NOTE';
   try {
     const db = await openDB();
     return new Promise((resolve) => {
@@ -136,15 +136,19 @@ export const useNotePages = () => {
   const { auth } = useAuthContext();
   return useQuery({
     queryKey: ['pageContents', !auth.isLocal],
-    queryFn: async () => await getContents(!auth.isLocal, 'NOTE'),
+    queryFn: async () => await getContents({ isOnline: !auth.isLocal, type: 'NOTE' }),
   });
 };
 
 export const useSnapshotPages = () => {
   const { auth } = useAuthContext();
-  return useQuery({
+  return useInfiniteQuery<Content[], number>({
     queryKey: ['snapshotContents', !auth.isLocal],
-    queryFn: async () => await getContents(!auth.isLocal, 'SNAPSHOT'),
+    queryFn: async ({ pageParam }) =>
+      await getContents({ isOnline: !auth.isLocal, type: 'SNAPSHOT', page: pageParam || 0 }),
+    getNextPageParam: (lastPage, allPages) => (lastPage?.length ? allPages.length : undefined),
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -167,6 +171,15 @@ export const useNotePage = (title: string) => {
       return page || { title, description: '', id: undefined };
     },
     enabled: !isFetching,
+  });
+};
+
+export const useArchivePage = (archiveId?: number) => {
+  const { auth } = useAuthContext();
+  return useQuery({
+    queryKey: ['snapshotContent', !auth.isLocal, archiveId],
+    queryFn: async () =>
+      auth.isLocal || archiveId === undefined ? undefined : await getContentOne(archiveId),
   });
 };
 
@@ -233,6 +246,7 @@ export const useCreateOrUpdatePage = () => {
       if (!data.skip) {
         await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
         await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
+        await queryClient.invalidateQueries({ queryKey: ['snapshotContent'] });
         await queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
         await queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       }
@@ -285,6 +299,7 @@ export const useMovePage = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['pageContents'] });
       queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
+      queryClient.invalidateQueries({ queryKey: ['snapshotContent'] });
       queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
       queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
       queryClient.invalidateQueries({ queryKey: ['recentPages'] });

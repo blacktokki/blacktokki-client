@@ -29,8 +29,19 @@ export const NotePageHeader = ({
   const splitTitle = getSplitTitle(title);
   const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
   return (
-    <View style={{ flexDirection: 'row' }}>
-      <TouchableOpacity onPress={() => onPress(splitTitle[0], splitTitle.length === 2)}>
+    <View
+      style={{
+        flexDirection: 'row',
+        maxWidth: '100%',
+        flexBasis: 0,
+        flexGrow: 1,
+        flexWrap: 'wrap',
+      }}
+    >
+      <TouchableOpacity
+        onPress={() => onPress(splitTitle[0], splitTitle.length === 2)}
+        style={{ maxWidth: '100%' }}
+      >
         <Text
           style={[
             commonStyles.title,
@@ -43,7 +54,7 @@ export const NotePageHeader = ({
         </Text>
       </TouchableOpacity>
       {splitTitle.length === 2 && (
-        <>
+        <View style={{ maxWidth: '100%', flexDirection: 'row' }}>
           <Text style={[commonStyles.title, styles.title, { flex: 0 }]}>/</Text>
           <TouchableOpacity onPress={() => onPress(title, false)}>
             <Text
@@ -57,14 +68,16 @@ export const NotePageHeader = ({
               {splitTitle[1]}
             </Text>
           </TouchableOpacity>
-        </>
+        </View>
       )}
-      {!!paragraph && (
-        <Text style={[commonStyles.title, styles.title, { marginLeft: 5 }]} numberOfLines={1}>
-          {titleFormat({ title: '', paragraph })}
-        </Text>
-      )}
-      {updated && <Text style={[commonStyles.text, styles.updated]}>{'(' + updated + ')'}</Text>}
+      <View style={{ maxWidth: '100%', flexDirection: 'row' }}>
+        {!!paragraph && (
+          <Text style={[commonStyles.title, styles.title, { marginLeft: 5 }]} numberOfLines={1}>
+            {titleFormat({ title: '', paragraph })}
+          </Text>
+        )}
+        {updated && <Text style={[commonStyles.text, styles.updated]}>{'(' + updated + ')'}</Text>}
+      </View>
     </View>
   );
 };
@@ -145,7 +158,9 @@ export const NoteBottomSection = ({
               <TouchableOpacity
                 key={icon}
                 onPress={() => onPress(moveParagraph)}
-                style={[{ flexDirection: reverse ? 'row-reverse' : 'row', paddingVertical: 16 }]}
+                style={[
+                  { flex: 1, flexDirection: reverse ? 'row-reverse' : 'row', paddingVertical: 16 },
+                ]}
               >
                 <Icon name={icon} size={16} color={iconColor} style={{ alignSelf: 'center' }} />
                 <Text
@@ -179,6 +194,8 @@ export const pageStyles = StyleSheet.create({
   contentContainer: { flexGrow: 1 },
   actionButtons: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
+    flexBasis: 156,
   },
   actionButton: {
     padding: 8,

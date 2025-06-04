@@ -16,14 +16,14 @@ export const ArchiveScreen: React.FC = () => {
   const route = useRoute<ArchiveScreenRouteProp>();
   const _window = useResizeContext();
   const title = route.params?.title;
-  const { data: recentPages = [], isLoading } = useSnapshotPages();
+  const { data: archives = { pages: [] }, isLoading, fetchNextPage } = useSnapshotPages();
   return (
     <>
       {_window === 'portrait' && <SearchBar />}
       <NoteListSection
-        contents={recentPages
+        contents={archives.pages
+          .flat()
           .filter((v) => title === undefined || title === v.title)
-          .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
           .map((v, i) => ({
             ...v,
             subtitles: [`최근 수정: ${updatedFormat(v.updated as string)}`],
@@ -37,6 +37,7 @@ export const ArchiveScreen: React.FC = () => {
           })
         }
         emptyMessage="There are no recently modified notes."
+        onScrollEnd={fetchNextPage}
       />
     </>
   );

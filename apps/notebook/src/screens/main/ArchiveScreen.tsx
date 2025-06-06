@@ -4,7 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 
 import { SearchBar } from '../../components/SearchBar';
-import { useSnapshotPages } from '../../hooks/useNoteStorage';
+import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
 import { NavigationParamList } from '../../types';
 import { NoteListSection } from './NoteListSection';
 import { updatedFormat } from './RecentPageSection';
@@ -16,7 +16,8 @@ export const ArchiveScreen: React.FC = () => {
   const route = useRoute<ArchiveScreenRouteProp>();
   const _window = useResizeContext();
   const title = route.params?.title;
-  const { data: archives = { pages: [] }, isLoading, fetchNextPage } = useSnapshotPages();
+  const { data: note } = useNotePage(title || '');
+  const { data: archives = { pages: [] }, isLoading, fetchNextPage } = useSnapshotPages(note?.id);
   return (
     <>
       {_window === 'portrait' && <SearchBar />}

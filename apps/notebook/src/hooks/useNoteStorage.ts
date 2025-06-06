@@ -39,10 +39,12 @@ const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
 let lastPage: string | undefined;
 
 const getContents = async (
-  data: { isOnline: true; type: 'NOTE' | 'SNAPSHOT'; page?: number } | { isOnline: false }
+  data:
+    | { isOnline: true; type: 'NOTE' | 'SNAPSHOT'; page?: number; parentId?: number }
+    | { isOnline: false }
 ): Promise<Content[]> => {
   if (data.isOnline) {
-    return await getContentList(undefined, [data.type], data.page);
+    return await getContentList(data.parentId, [data.type], data.page);
   }
   const type = 'NOTE';
   try {
@@ -140,12 +142,17 @@ export const useNotePages = () => {
   });
 };
 
-export const useSnapshotPages = () => {
+export const useSnapshotPages = (parentId?: number) => {
   const { auth } = useAuthContext();
   return useInfiniteQuery<Content[], number>({
-    queryKey: ['snapshotContents', !auth.isLocal],
+    queryKey: ['snapshotContents', !auth.isLocal, parentId],
     queryFn: async ({ pageParam }) =>
-      await getContents({ isOnline: !auth.isLocal, type: 'SNAPSHOT', page: pageParam || 0 }),
+      await getContents({
+        isOnline: !auth.isLocal,
+        type: 'SNAPSHOT',
+        parentId,
+        page: pageParam || 0,
+      }),
     getNextPageParam: (lastPage, allPages) => (lastPage?.length ? allPages.length : undefined),
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,

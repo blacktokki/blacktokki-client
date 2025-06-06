@@ -35,7 +35,8 @@ export const NotePageScreen: React.FC = () => {
   const [fullParagraph, toggleFullParagraph] = useState(false);
 
   const { data: page, isFetching } = useNotePage(title);
-  const { data: archive } = useArchivePage(archiveId);
+  const { data: _archive } = useArchivePage(archiveId);
+  const archive = page?.description !== _archive?.description ? _archive : undefined;
 
   const handleEdit = () => {
     navigation.navigate('EditPage', { title });

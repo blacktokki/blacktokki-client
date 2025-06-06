@@ -1,14 +1,8 @@
 import { useColorScheme, useLangContext, useModalsContext } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
-import {
-  RouteProp,
-  useFocusEffect,
-  useIsFocused,
-  useNavigation,
-  useRoute,
-} from '@react-navigation/native';
+import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
 import { getFilteredPages, titleFormat } from '../../components/SearchBar';
@@ -19,6 +13,50 @@ import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
+
+const useUnsaveEffect = (
+  isPrevent: () => boolean,
+  handleUnsaved: () => void,
+  currentTitle: () => string | undefined
+) => {
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const route = useRoute<EditPageScreenRouteProp>();
+  const { title } = route.params;
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (e) => {
+        if (!isPrevent()) {
+          return;
+        }
+        e.preventDefault();
+        if (e.data.action.type === 'NAVIGATE') {
+          const payload = e.data.action.payload as any;
+          navigation.push(payload.name, payload.params);
+          return;
+        }
+        handleUnsaved();
+      }),
+    [navigation]
+  );
+
+  useEffect(() => {
+    if (isPrevent() && currentTitle() !== title) {
+      navigation.setParams({ title: currentTitle() });
+      handleUnsaved();
+    }
+  }, [navigation, title]);
+
+  useEffect(() => {
+    const callback = (event: any) => {
+      if (isPrevent()) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', callback);
+    return () => window.removeEventListener('beforeunload', callback);
+  }, []);
+};
 
 export const EditPageScreen: React.FC = () => {
   const route = useRoute<EditPageScreenRouteProp>();
@@ -44,19 +82,8 @@ export const EditPageScreen: React.FC = () => {
 
   const mutation = useCreateOrUpdatePage();
   const { setModal } = useModalsContext();
-  const handleSave = () => {
-    mutation.mutate(
-      { title, description: content },
-      {
-        onSuccess: () => {
-          navigation.navigate('NotePage', { title });
-        },
-        onError: (error: any) => {
-          Alert.alert('오류', error.message || '문서를 저장하는 중 오류가 발생했습니다.');
-        },
-      }
-    );
-  };
+  const checkedRef = useRef<{ title: string; unsaved: boolean }>();
+
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -65,28 +92,53 @@ export const EditPageScreen: React.FC = () => {
     }
   };
 
-  const handleCancel = () => {
-    if (page?.description === content) {
-      handleBack();
-    } else {
-      setModal(AlertModal, { type: 'UNSAVED', callbacks: [handleSave, handleBack] });
-    }
+  const handleSave = () => {
+    if (checkedRef.current === undefined) return;
+    const title = checkedRef.current.title;
+    mutation.mutate(
+      { title, description: content },
+      {
+        onSuccess: () => {
+          checkedRef.current = undefined;
+          navigation.navigate('NotePage', { title });
+        },
+        onError: (error: any) => {
+          Alert.alert('오류', error.message || '문서를 저장하는 중 오류가 발생했습니다.');
+        },
+      }
+    );
   };
 
+  const handleUnsaved = () => {
+    setModal(AlertModal, {
+      type: 'UNSAVED',
+      callbacks: [
+        handleSave,
+        () => {
+          if (title === checkedRef.current?.title && page?.description !== undefined) {
+            setContent(page?.description);
+          }
+          checkedRef.current = undefined;
+          handleBack();
+        },
+      ],
+    });
+  };
+
+  if (title === checkedRef.current?.title) {
+    checkedRef.current.unsaved = page?.description !== content;
+  }
+
+  const isPrevent = () => checkedRef.current !== undefined && checkedRef.current.unsaved;
+
   useEffect(() => {
-    if (!isLoading && page?.description) {
-      setContent(page?.description);
+    if (!isLoading && page?.description !== undefined && !isPrevent()) {
+      checkedRef.current = { title, unsaved: false };
+      setContent(page.description);
     }
   }, [isLoading, page]);
 
-  useFocusEffect(() => {
-    const callback = (event: any) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', callback);
-    return () => window.removeEventListener('beforeunload', callback);
-  });
+  useUnsaveEffect(isPrevent, handleUnsaved, () => checkedRef.current?.title);
   return (
     isFocused && (
       <View style={commonStyles.container}>
@@ -159,7 +211,7 @@ export const EditPageScreen: React.FC = () => {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[commonStyles.button, styles.cancelButton]}
-            onPress={handleCancel}
+            onPress={isPrevent() ? handleUnsaved : handleBack}
           >
             <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>

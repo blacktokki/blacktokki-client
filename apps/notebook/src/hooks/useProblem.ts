@@ -64,24 +64,33 @@ const getReadabilityLevel = (() => {
 })();
 
 function findLists(html: string): { type: 'ul' | 'ol'; items: string[] }[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
   const results: { type: 'ul' | 'ol'; items: string[] }[] = [];
 
-  const listRegex = /<(ul|ol)[^>]*?>([\s\S]*?)<\/\1>/gi;
-  const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+  const listTags = ['ul', 'ol'] as const;
 
-  let listMatch;
-  while ((listMatch = listRegex.exec(html)) !== null) {
-    const [, type, innerHTML] = listMatch;
-    const items: string[] = [];
+  listTags.forEach((tag) => {
+    const lists = Array.from(doc.querySelectorAll(tag));
 
-    let liMatch;
-    while ((liMatch = liRegex.exec(innerHTML)) !== null) {
-      const itemContent = liMatch[1].trim();
-      items.push(itemContent);
-    }
+    lists.forEach((list) => {
+      const items: string[] = [];
 
-    results.push({ type: type as 'ul' | 'ol', items });
-  }
+      const liElements = list.querySelectorAll('li');
+      liElements.forEach((li) => {
+        // li 요소 내 중첩 리스트는 제거하고 텍스트만 추출
+        const cloned = li.cloneNode(true) as HTMLElement;
+
+        // 중첩된 리스트 제거
+        cloned.querySelectorAll('ul, ol').forEach((nested) => nested.remove());
+
+        items.push(cloned.textContent?.trim() || '');
+      });
+
+      results.push({ type: tag, items });
+    });
+  });
 
   return results;
 }

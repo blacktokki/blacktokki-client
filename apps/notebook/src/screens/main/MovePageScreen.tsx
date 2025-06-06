@@ -189,14 +189,14 @@ export const MovePageScreen: React.FC = () => {
             style={[commonStyles.button, styles.cancelButton]}
             onPress={handleCancel}
           >
-            <Text style={commonStyles.buttonText}>{lang('move')}</Text>
+            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[commonStyles.button, moveDisabled ? styles.cancelButton : styles.moveButton]}
             onPress={handleMove}
             disabled={moveDisabled}
           >
-            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+            <Text style={commonStyles.buttonText}>{lang('move')}</Text>
           </TouchableOpacity>
         </View>
       </View>

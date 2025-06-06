@@ -36,6 +36,7 @@ export const NotePageHeader = ({
         flexBasis: 0,
         flexGrow: 1,
         flexWrap: 'wrap',
+        alignItems: 'center',
       }}
     >
       <TouchableOpacity

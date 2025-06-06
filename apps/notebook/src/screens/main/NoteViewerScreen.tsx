@@ -59,7 +59,7 @@ export const NoteViewerScreen: React.FC = () => {
           style={[commonStyles.container, pageStyles.container]}
           contentContainerStyle={pageStyles.contentContainer}
         >
-          <View style={[commonStyles.header, { zIndex: 1 }]}>
+          <View style={[commonStyles.header, { zIndex: 1, alignItems: 'flex-start' }]}>
             <NotePageHeader
               title={key}
               paragraph={paragraph}

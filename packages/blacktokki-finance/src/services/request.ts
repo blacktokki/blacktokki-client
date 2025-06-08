@@ -1,13 +1,22 @@
 import axios from 'axios';
 
+import { CompanyInfoBlock, DailySimpleModel } from '../types';
+
 const headers = {
   'User-Agent': 'Chrome/78.0.3904.87 Safari/537.36',
   Referer: 'http://data.krx.co.kr/',
 };
 
-export async function request_company_list() {
+export async function request_company_list(bld: string) {
   const params = new URLSearchParams();
-  params.append('bld', 'dbms/comm/finder/finder_stkisu');
+  const data = {
+    bld,
+    mktId: 'ALL',
+    share: '1',
+    csvxls_isNo: 'false',
+  };
+  Object.keys(data).map((key) => params.append(key, (data as any)[key]));
+
   return (
     await axios.post('http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd', params, { headers })
   ).data;
@@ -41,37 +50,38 @@ companyApi.interceptors.request.use(function (config) {
   });
 });
 
-export const INDEX_INFO = [
+export const INDEX_INFO: CompanyInfoBlock[] = [
   {
-    codeName: '코스피',
-    full_code: '_KOSPI',
+    ISU_ABBRV: '코스피',
+    ISU_CD: '_KOSPI',
     lastDate: '',
-    marketCode: 'STK',
-    short_code: '1',
+    MKT_TP_NM: 'KOSPI',
+    ISU_SRT_CD: '1',
   },
   {
-    codeName: '코스닥',
-    full_code: '_KOSDAQ',
+    ISU_ABBRV: '코스닥',
+    ISU_CD: '_KOSDAQ',
     lastDate: '',
-    marketCode: 'KSQ',
-    short_code: '2',
+    MKT_TP_NM: 'KOSDAQ',
+    ISU_SRT_CD: '2',
   },
 ];
 
 export async function request_company(
+  bld: string,
   full_code: string,
   options: { start_date: Date; end_date: Date } = {
     start_date: new Date(1990, 1, 1),
     end_date: new Date(2100, 1, 1),
   }
 ) {
-  const index = INDEX_INFO.find((v) => v.full_code === full_code);
+  const index = INDEX_INFO.find((v) => v.ISU_CD === full_code);
   if (index) {
-    return await request_index(index.short_code, options);
+    return await request_index(index.ISU_SRT_CD, options);
   }
   const params = new URLSearchParams();
   const data = {
-    bld: 'dbms/MDC/STAT/issue/MDCSTAT23902',
+    bld,
     isuCd: full_code,
     isuCd2: '',
     strtDd: dd_format(options.start_date),
@@ -84,34 +94,30 @@ export async function request_company(
   const _data = (
     await companyApi.post('http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd', params)
   ).data;
-  /* ADJ_CLSPRC
-    let _data2 = ((await axios.get('https://fchart.stock.naver.com/sise.nhn?timeframe=day&count=6000&requestType=0&symbol=' + full_code.slice(3, 9))).data as string).match(/<item data=\"(.*?)\" \/>/gi)?.reduce((prev, value)=>{
-      const d = value.replace(/(<item data=\"|\" \/>)/gi, '').split('|')
-      prev[d[0]] = d
-      return prev
-    }, {} as any)
-    if(_data2)(_data['output'] as any[]).forEach((value)=>{
-        value['ADJ_CLSPRC'] = _data2[dd_format(new Date(value['TRD_DD']))][4]
-    })
-    _data2 = null
-    */
-  return _data;
-}
-
-export async function request_company_all(date: Date) {
-  const params = new URLSearchParams();
-  const data = {
-    bld: 'dbms/MDC/STAT/standard/MDCSTAT01501',
-    mktId: 'ALL',
-    trdDd: dd_format(date),
-    share: '1',
-    money: '1',
-    csvxls_isNo: 'false',
-  };
-  Object.keys(data).map((key) => params.append(key, (data as any)[key]));
-  const _data = (
-    await companyApi.post('http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd', params)
-  ).data;
+  // ADJ_CLSPRC
+  const _data2 = (
+    (
+      await axios.get(
+        'https://fchart.stock.naver.com/sise.nhn?timeframe=day&count=6000&requestType=0&symbol=' +
+          full_code.slice(3, 9)
+      )
+    ).data as string
+  )
+    .match(/<item data="(.*?)" \/>/gi)
+    ?.reduce((prev, value) => {
+      const d = value.replace(/(<item data="|" \/>)/gi, '').split('|');
+      prev[d[0]] = d;
+      return prev;
+    }, {} as Record<string, string[]>);
+  if (_data2) {
+    (_data['output'] as DailySimpleModel[]).forEach((value) => {
+      const adjPrc = _data2[dd_format(new Date(value['TRD_DD']))];
+      value['TDD_OPNPRC'] = adjPrc[1];
+      value['TDD_HGPRC'] = adjPrc[2];
+      value['TDD_LWPRC'] = adjPrc[3];
+      value['TDD_CLSPRC'] = adjPrc[4];
+    });
+  }
   return _data;
 }
 

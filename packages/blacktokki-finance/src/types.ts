@@ -33,22 +33,12 @@ export type CompanyResponse = {
   CURRENT_DATETIME: string;
 };
 
-export type CompanyResponseAll = {
-  OutBlock_1: (DailySimpleModel & { ISU_SRT_CD: string })[];
-  CURRENT_DATETIME: string;
-};
-
-export type CompanyBulk = {
-  output: Record<string, DailySimpleModel>;
-  hours?: number;
-};
-
 export type CompanyInfoBlock = {
-  marketCode: string;
-  full_code: string;
-  codeName: string;
+  ISU_CD: string; // Code, 코드
+  ISU_ABBRV: string; // Name, 종목명
+  MKT_TP_NM?: string; //Market, 시장
+  ISU_SRT_CD: string; // ShortCode, 단축코드
   lastDate: string;
-  short_code: string;
   checked?: boolean;
   traded?: boolean;
 };

@@ -47,17 +47,17 @@ export const NotePageScreen: React.FC = () => {
   };
 
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
+  const paragraphItem = paragraphs.find((v) => v.title === paragraph);
   const [description, setDescription] = useState<string>();
   useEffect(() => {
     setDescription(
       archive
         ? archive.description
-        : (paragraph
-            ? fullParagraph
-              ? paragraphDescription(paragraphs, paragraph, true)
-              : paragraphs.find((v) => v.title === paragraph)?.description
-            : page?.description
-          )?.trim()
+        : paragraph
+        ? fullParagraph
+          ? paragraphDescription(paragraphs, paragraph, true).trim()
+          : paragraphItem?.description
+        : page?.description?.trim()
     );
   }, [page, archive, paragraph, fullParagraph]);
   useEffect(() => {
@@ -128,7 +128,18 @@ export const NotePageScreen: React.FC = () => {
             </View>
           </View>
           <View style={commonStyles.flex}>
-            <NotePageSection active={!toc} description={description} />
+            <NotePageSection active={!toc} description={description}>
+              {!toc && paragraphItem?.description?.trim().length === 0 && (
+                <View style={[commonStyles.card, commonStyles.centerContent]}>
+                  <Text style={commonStyles.text}>
+                    {lang('There is no direct content in this paragraph.')}
+                  </Text>
+                  <TouchableOpacity onPress={() => toggleToc(true)} style={commonStyles.button}>
+                    <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </NotePageSection>
             {isFetching || description === undefined ? (
               <View style={[commonStyles.card, commonStyles.centerContent]}>
                 <ActivityIndicator size="large" color="#3498DB" />

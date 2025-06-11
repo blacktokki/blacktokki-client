@@ -137,7 +137,7 @@ export const MovePageScreen: React.FC = () => {
               {titleFormat({ title, paragraph })}
             </Text>
             <Text style={commonStyles.text}>{lang('New note title and paragraph:')}</Text>
-            <SearchBar handlePress={setNewTitle} useRandom={false} />
+            <SearchBar onPress={setNewTitle} addKeyword={false} useRandom={false} />
             <View style={styles.columns}>
               <HeaderSelectBar
                 path={newPath}

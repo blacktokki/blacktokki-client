@@ -125,12 +125,7 @@ export default () => {
           </View>
           {search && (
             <View style={[commonStyles.card, { padding: 0 }]}>
-              <SearchList
-                filteredPages={keywords}
-                handlePagePress={(title, paragraph) =>
-                  navigation.push('NotePage', { title, paragraph })
-                }
-              />
+              <SearchList filteredPages={keywords} />
             </View>
           )}
         </ConfigSection>

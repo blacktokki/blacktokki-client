@@ -1,5 +1,7 @@
 import markdownIt from 'markdown-it';
 import TurndownService from 'turndown';
+//@ts-ignore
+import { tables } from 'turndown-plugin-gfm';
 
 const markdownToHtml = markdownIt();
 
@@ -84,6 +86,8 @@ HtmlToMarkdown.addRule('strikethrough', {
     return '~~' + content.trim() + '~~' + trailingNewline;
   },
 });
+
+HtmlToMarkdown.use(tables);
 
 // A function that renders markdown to HTML
 export const renderer = (markdownCode: string) => {

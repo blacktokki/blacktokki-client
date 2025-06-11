@@ -86,9 +86,11 @@ export const NotePageHeader = ({
 export const NotePageSection = ({
   active,
   description,
+  children,
 }: {
   active: boolean;
   description?: string;
+  children?: React.ReactNode;
 }) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
@@ -102,6 +104,7 @@ export const NotePageSection = ({
         onLink={(url) => onLink(url, navigation)}
         autoResize
       />
+      {children}
     </View>
   );
 };

@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext, View, Text } from '@blacktokki/core';
+import { useColorScheme, useLangContext, View, Text, Colors } from '@blacktokki/core';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -113,31 +113,51 @@ const RandomButton = () => {
 export const titleFormat = (item: { title: string; paragraph?: string }) =>
   `${item.title}${item.paragraph ? ' ▶ ' + item.paragraph : ''}`;
 
+type PressKeywordOption = {
+  onPress?: (title: string) => void;
+  addKeyword?: boolean;
+};
+
+const useOnPressKeyword = ({
+  onPress,
+  addKeyword,
+  afterPress,
+}: PressKeywordOption & { afterPress?: () => void }) => {
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const { mutate: addKeywordMutate } = useAddKeyowrd();
+  return useCallback((item: SearchContent) => {
+    if (onPress && (item.type === 'NOTE' || item.type === '_KEYWORD')) {
+      onPress(item.title);
+    } else if (item.type === '_LINK') {
+      window.open(item.url, '_blank');
+      addKeyword && addKeywordMutate(item);
+    } else if (item.type === '_NOTELINK' && item.paragraph) {
+      navigation.push('NotePage', { title: item.title, paragraph: item.paragraph });
+      addKeyword && addKeywordMutate(item);
+    } else {
+      navigation.push('NotePage', { title: item.title });
+      addKeyword && addKeywordMutate({ type: '_KEYWORD', title: item.title });
+    }
+    afterPress?.();
+  }, []);
+};
+
 export const SearchList = ({
   filteredPages,
-  handlePagePress,
-  addKeyword,
+  onPressKeyword,
+  focus,
 }: {
   filteredPages: SearchContent[];
-  handlePagePress: (title: string, paragraph?: string) => void;
-  addKeyword?: (keyword: KeywordContent) => void;
+  onPressKeyword?: (item: SearchContent) => void;
+  focus?: number;
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const onPressDefault = useOnPressKeyword({});
+
   const pagePressHandlers = useCallback((item: SearchContent) => {
     return PanResponder.create({
-      onPanResponderStart: () => {
-        if (item.type === '_NOTELINK' && item.paragraph) {
-          handlePagePress(item.title, item.paragraph);
-          addKeyword?.(item);
-        } else if (item.type === '_LINK') {
-          window.open(item.url, '_blank');
-          addKeyword?.(item);
-        } else {
-          handlePagePress(item.title);
-          addKeyword?.({ type: '_KEYWORD', title: item.title });
-        }
-      },
+      onPanResponderStart: () => (onPressKeyword ? onPressKeyword : onPressDefault)(item),
     }).panHandlers;
   }, []);
 
@@ -145,8 +165,14 @@ export const SearchList = ({
     <FlatList
       data={filteredPages}
       keyExtractor={(item: any) => JSON.stringify([item.title, item.name, item.paragraph])}
-      renderItem={({ item }) => (
-        <TouchableOpacity style={styles.resultItem} {...pagePressHandlers(item)}>
+      renderItem={({ item, index }) => (
+        <TouchableOpacity
+          style={[
+            styles.resultItem,
+            { borderWidth: 1, borderColor: focus === index ? Colors[theme].text : 'transparent' },
+          ]}
+          {...pagePressHandlers(item)}
+        >
           <Text style={[commonStyles.text, styles.resultText, { flexShrink: 0 }]}>
             {item.type === '_NOTELINK' || item.type === '_LINK' ? item.name : item.title}
           </Text>
@@ -175,43 +201,40 @@ export const SearchList = ({
   );
 };
 
-export const SearchBar: React.FC<{
-  handlePress?: (title: string) => void;
-  useRandom?: boolean;
-}> = ({ handlePress, useRandom = true }) => {
+export const SearchBar: React.FC<
+  {
+    useRandom?: boolean;
+  } & PressKeywordOption
+> = ({ onPress, addKeyword = true, useRandom = true }) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
+  const [focusIndex, setFocusIndex] = useState(-1);
   const { lang } = useLangContext();
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const inputRef = useRef<TextInput | null>();
   const { data: keywords = [] } = useKeywords();
-  const addKeyword = useAddKeyowrd();
   const { data: pages = [] } = useNotePages();
   const filteredPages: SearchContent[] = (
     searchText.length > 0 ? getFilteredPages(pages, searchText) : keywords
   )
-    .filter((v) => handlePress === undefined || v.type === 'NOTE')
+    .filter((v) => onPress === undefined || v.type === 'NOTE')
     .slice(0, 10);
 
+  const handleKeywordPress = useOnPressKeyword({
+    onPress,
+    addKeyword,
+    afterPress: () => setSearchText(''),
+  });
+
   const handleSearch = () => {
-    if (searchText.trim()) {
-      handlePagePress(searchText.trim());
-      addKeyword.mutate({ type: '_KEYWORD', title: searchText.trim() });
+    const title = searchText.trim();
+    if (title) {
+      handleKeywordPress({ type: '_KEYWORD', title });
     }
   };
 
-  const handlePagePress = (title: string, paragraph?: string) => {
-    if (handlePress) {
-      handlePress(title);
-    } else {
-      navigation.push('NotePage', { title, paragraph });
-    }
-    setSearchText('');
-  };
-
-  const searchHandlers = useMemo(
+  const newNoteHandlers = useMemo(
     () =>
       PanResponder.create({
         onPanResponderStart: handleSearch,
@@ -221,6 +244,7 @@ export const SearchBar: React.FC<{
 
   useEffect(() => {
     _searchText = searchText;
+    setFocusIndex(-1);
   }, [searchText]);
 
   useFocusEffect(() => {
@@ -230,7 +254,21 @@ export const SearchBar: React.FC<{
   });
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      //@ts-ignore
+      onKeyDownCapture={(e: KeyboardEvent) => {
+        if (showResults) {
+          if (e.key === 'ArrowUp' && focusIndex > -1) {
+            e.preventDefault();
+            setFocusIndex(focusIndex - 1);
+          } else if (e.key === 'ArrowDown' && focusIndex < filteredPages.length - 1) {
+            e.preventDefault();
+            setFocusIndex(focusIndex + 1);
+          }
+        }
+      }}
+    >
       <View style={styles.searchContainer}>
         <TextInput
           ref={(ref) => {
@@ -243,7 +281,9 @@ export const SearchBar: React.FC<{
           }}
           placeholder={lang('Search')}
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
-          onSubmitEditing={handleSearch}
+          onSubmitEditing={
+            focusIndex > -1 ? () => handleKeywordPress(filteredPages[focusIndex]) : handleSearch
+          }
           onFocus={() => setShowResults(true)}
           onBlur={() => setShowResults(false)}
         />
@@ -267,11 +307,11 @@ export const SearchBar: React.FC<{
           {filteredPages.length > 0 ? (
             <SearchList
               filteredPages={filteredPages}
-              handlePagePress={handlePagePress}
-              addKeyword={addKeyword.mutate}
+              onPressKeyword={handleKeywordPress}
+              focus={focusIndex}
             />
           ) : searchText.trim() ? (
-            <TouchableOpacity style={styles.resultItem} {...searchHandlers}>
+            <TouchableOpacity style={styles.resultItem} {...newNoteHandlers}>
               <Text style={[commonStyles.text, styles.resultText]}>
                 "{searchText}" 새 노트 만들기
               </Text>

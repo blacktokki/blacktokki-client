@@ -43,5 +43,8 @@
       "module",
       "typescript"
     ]
+  },
+  "dependencies": {
+    "turndown-plugin-gfm": "^1.0.2"
   }
 }

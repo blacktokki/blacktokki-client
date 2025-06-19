@@ -129,14 +129,19 @@ export const NotePageScreen: React.FC = () => {
           </View>
           <View style={commonStyles.flex}>
             <NotePageSection active={!toc} description={description}>
-              {!toc && paragraphItem?.description?.trim().length === 0 && (
-                <View style={[commonStyles.card, commonStyles.centerContent]}>
-                  <Text style={commonStyles.text}>
-                    {lang('There is no direct content in this paragraph.')}
-                  </Text>
-                  <TouchableOpacity onPress={() => toggleToc(true)} style={commonStyles.button}>
-                    <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
-                  </TouchableOpacity>
+              {!!paragraph && !fullParagraph && paragraphItem?.description?.trim().length === 0 && (
+                <View style={{ position: 'absolute', width: '100%' }}>
+                  <View style={[commonStyles.card, commonStyles.centerContent]}>
+                    <Text style={commonStyles.text}>
+                      {lang('There is no direct content in this paragraph.')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => toggleFullParagraph(true)}
+                      style={commonStyles.button}
+                    >
+                      <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </NotePageSection>

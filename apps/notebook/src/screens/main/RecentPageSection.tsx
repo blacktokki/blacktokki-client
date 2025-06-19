@@ -166,8 +166,10 @@ export const RecentPagesSection = React.memo(() => {
   );
   const maxWidth = (cardMaxWidth + 5) * (window === 'landscape' ? 5 : 3);
   return isLoading ? (
-    <View style={[commonStyles.card, commonStyles.centerContent]}>
-      <Text style={commonStyles.text}>로딩 중...</Text>
+    <View style={commonStyles.container}>
+      <View style={[commonStyles.card, commonStyles.centerContent]}>
+        <Text style={commonStyles.text}>로딩 중...</Text>
+      </View>
     </View>
   ) : contents.length > 2 ? (
     <ScrollView
@@ -186,14 +188,16 @@ export const RecentPagesSection = React.memo(() => {
       <Suspense>{contents.map((item, index) => renderItem({ item, index }))}</Suspense>
     </ScrollView>
   ) : (
-    <View style={[commonStyles.card, commonStyles.centerContent]}>
-      <Text style={commonStyles.text}>{lang('There are no recently modified notes.')}</Text>
-      <TouchableOpacity
-        onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
-        style={commonStyles.button}
-      >
-        <Text style={commonStyles.buttonText}>{lang('Usage')}</Text>
-      </TouchableOpacity>
+    <View style={commonStyles.container}>
+      <View style={[commonStyles.card, commonStyles.centerContent]}>
+        <Text style={commonStyles.text}>{lang('There are no recently modified notes.')}</Text>
+        <TouchableOpacity
+          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
+          style={commonStyles.button}
+        >
+          <Text style={commonStyles.buttonText}>{lang('Usage')}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 });

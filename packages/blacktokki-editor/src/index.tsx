@@ -1,3 +1,3 @@
 export { default as Editor } from './components/Editor';
 export { default as EditorViewer } from './components/EditorViewer';
-export { toRaw, renderer as toHtml } from './lib/TinymceWeb';
+export { toRaw, renderer as toHtml, parser as toMarkdown } from './lib/TinymceWeb';

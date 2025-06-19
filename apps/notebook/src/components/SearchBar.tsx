@@ -282,7 +282,12 @@ export const SearchBar: React.FC<
           placeholder={lang('Search')}
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
           onSubmitEditing={
-            focusIndex > -1 ? () => handleKeywordPress(filteredPages[focusIndex]) : handleSearch
+            focusIndex > -1
+              ? () => {
+                  handleKeywordPress(filteredPages[focusIndex]);
+                  setFocusIndex(-1);
+                }
+              : handleSearch
           }
           onFocus={() => setShowResults(true)}
           onBlur={() => setShowResults(false)}

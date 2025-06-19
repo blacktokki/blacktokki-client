@@ -54,8 +54,6 @@ yarn workspace @blacktokki/notebook yarn web           # 웹 브라우저 실행
 yarn workspace @blacktokki/notebook yarn github # → 정적 파일 빌드 → SEO 텍스트 치환 → GitHub Pages 업로드
 ```
 
-* 배포 주소: [https://blacktokki.github.io/blacktokki-notebook](https://blacktokki.github.io/blacktokki-notebook)
-
 ---
 
 ## 📦 주요 의존성

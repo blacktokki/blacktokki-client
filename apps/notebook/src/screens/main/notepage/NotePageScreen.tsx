@@ -83,7 +83,12 @@ export const NotePageScreen: React.FC = () => {
               }
             />
             <View style={pageStyles.actionButtons}>
-              <TimerTagSection title={page?.title || ''} paragraphs={paragraphs} />
+              <TimerTagSection
+                title={page?.title || ''}
+                path={paragraphItem?.path}
+                fullParagraph={fullParagraph}
+                paragraphs={paragraphs}
+              />
               {!paragraph && (
                 <>
                   <TouchableOpacity

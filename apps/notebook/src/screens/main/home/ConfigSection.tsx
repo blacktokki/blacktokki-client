@@ -106,6 +106,12 @@ export default () => {
   return (
     <View>
       <View style={commonStyles.card}>
+        <ConfigSection
+          title={lang('* Usage')}
+          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
+        />
+      </View>
+      <View style={commonStyles.card}>
         <LanguageConfigSection />
       </View>
       <View style={commonStyles.card}>
@@ -156,12 +162,6 @@ export default () => {
             )}
           </View>
         </ConfigSection>
-      </View>
-      <View style={commonStyles.card}>
-        <ConfigSection
-          title={lang('* Usage')}
-          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
-        />
       </View>
       <View style={commonStyles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

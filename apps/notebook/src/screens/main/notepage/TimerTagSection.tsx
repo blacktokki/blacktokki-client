@@ -67,11 +67,22 @@ const buttons = (data: TimerData) => {
   ];
 };
 
-export default (props: { title: string; paragraphs: Paragraph[] }) => {
+export default (props: {
+  title: string;
+  path?: string;
+  fullParagraph: boolean;
+  paragraphs: Paragraph[];
+}) => {
   const dateNum = new Date(today()).getTime();
   const createOrUpdatePage = useCreateOrUpdatePage();
   const data = paragraphsToDatePatterns(props.title, props.paragraphs)
     .flatMap((v) => matchDateRange(v.dateMatches, dateNum))
+    .filter(
+      (v) =>
+        props.path === undefined ||
+        v.path === props.path ||
+        (props.fullParagraph && v.path.startsWith(props.path))
+    )
     .flatMap((v) =>
       v.matches.map((v2) => ({
         ...v2,

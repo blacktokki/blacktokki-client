@@ -29,7 +29,7 @@ export const toRaw = (text: string) => {
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
   toolbar:
-    'supercode | blocks | bold italic underline strikethrough | undo redo | alignleft aligncenter alignright | bullist numlist | hr link blockquote codesample searchreplace insertdatetime', // charmap removeformat
+    'supercode | blocks | bold italic underline strikethrough | undo redo | bullist numlist | hr link blockquote codesample searchreplace insertdatetime', // alignleft aligncenter alignright charmap removeformat
 };
 
 const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
@@ -117,6 +117,20 @@ export default (
           'p { margin: 0.5rem 0; }',
         inline_boundaries: false,
         autoresize_bottom_margin: 10,
+        paste_postprocess: (editor, args) => {
+          props.autoComplete?.forEach((v) => {
+            if (args.node.innerText.startsWith(v.trigger)) {
+              editor.fire('keypress');
+              args.node.innerHTML += ' ';
+              setTimeout(() => {
+                editor.undoManager.transact(() => {
+                  editor.selection.setRng(editor.selection.getRng());
+                  editor.execCommand('Delete');
+                });
+              }, 0);
+            }
+          });
+        },
         init_instance_callback: (editor) => {
           editor.mode.set(props.readonly ? 'readonly' : 'design');
           if (props.onPress) {

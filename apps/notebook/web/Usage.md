@@ -50,7 +50,7 @@
 
 * A flexible editor that supports both markdown and visual (WYSIWYG) modes
 * Allows free editing with both automatic and manual save options
-* Supports internal links, child notes, and external link previews via autocomplete
+* Supports internal note links and external link via autocomplete
 
 ### 🗂 Recent Notes
 
@@ -94,7 +94,7 @@
 
 ### 📝 Dual Editor Support
 
-* The editor supports both WYSIWYG and markdown input
+* The note editing screen can be freely converted to both WYSIWYG and Markdown methods with the ✏️ button.
 * Changes in one mode are reflected in real-time in the other
 * Ideal for users who prefer visual editing or are familiar with markdown syntax
 
@@ -147,6 +147,11 @@
 
 * Open a randomly selected note to discover content from a new perspective
 
+### 📌 Pin open notes
+
+* When you double-click or long-click on the first opened note or recent changes, it is fixed to the open note list.
+* You can unfreeze by pressing the X button.
+
 ---
 
 ## 📞 Contact
@@ -154,4 +159,4 @@
 If you have feature suggestions, bug reports, or questions, feel free to reach out:
 
 * Email: [ydh051541@naver.com](mailto:ydh051541@naver.com)
-* GitHub Issues: [https://github.com/blacktokki/notebook/issues](https://github.com/blacktokki/notebook/issues)
+* GitHub Issues: [https://github.com/blacktokki/blacktokki-notebook/issues](https://github.com/blacktokki/blacktokki-notebook/issues)

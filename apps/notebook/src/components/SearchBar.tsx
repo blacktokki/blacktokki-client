@@ -76,12 +76,16 @@ export function getLinks(pages: Content[], sameTitle?: boolean) {
 
 export const getFilteredPages = (pages: Content[], searchText: string) => {
   const lowerCaseSearch = searchText.toLowerCase().normalize('NFKD');
-  const links = getLinks(pages);
+  const links = getLinks(pages).map((v) => ({
+    ...v,
+    _name: v.name.toLowerCase().normalize('NFKD'),
+  }));
   return [
     ...pages.filter((page) =>
       page.title.toLowerCase().normalize('NFKD').startsWith(lowerCaseSearch)
     ),
-    ...links.filter((v) => v.name.toLowerCase().normalize('NFKD').startsWith(lowerCaseSearch)),
+    ...links.filter((v) => v.type === '_NOTELINK' && v._name.startsWith(lowerCaseSearch)),
+    ...links.filter((v) => v.type === '_LINK' && v._name.includes(lowerCaseSearch)),
   ];
 };
 
@@ -282,7 +286,12 @@ export const SearchBar: React.FC<
           placeholder={lang('Search')}
           placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
           onSubmitEditing={
-            focusIndex > -1 ? () => handleKeywordPress(filteredPages[focusIndex]) : handleSearch
+            focusIndex > -1
+              ? () => {
+                  handleKeywordPress(filteredPages[focusIndex]);
+                  setFocusIndex(-1);
+                }
+              : handleSearch
           }
           onFocus={() => setShowResults(true)}
           onBlur={() => setShowResults(false)}

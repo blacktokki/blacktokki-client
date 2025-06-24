@@ -1,5 +1,6 @@
 import { useAuthContext } from '@blacktokki/account';
 import { Colors, TextButton, useColorScheme, useLangContext, Text } from '@blacktokki/core';
+import { toHtml, toMarkdown } from '@blacktokki/editor';
 import { ConfigSection, LanguageConfigSection, SkinConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,7 +17,7 @@ const exportMarkdowns = async (contents: Content[]) => {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   for (const content of contents.filter((v) => (v.description?.length || 0) > 0)) {
-    zip.file(content.title + '.md', content.description as string);
+    zip.file(content.title + '.md', toMarkdown(content.description as string));
   }
   const blob = await zip.generateAsync({ type: 'blob' });
   const url = window.URL.createObjectURL(blob);
@@ -60,12 +61,15 @@ const importMarkdowns = async () => {
         if (!file.dir) {
           contents.push({
             title: relativePath.replace(/\.[^/.]+$/, ''),
-            description: (await file.async('text')).toString(),
+            description: toHtml((await file.async('text')).toString()),
           });
         }
       }
     } else if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) {
-      contents.push({ title: file.name.replace(/\.[^/.]+$/, ''), description: await file.text() });
+      contents.push({
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        description: toHtml(await file.text()),
+      });
     }
   }
   return contents;
@@ -101,6 +105,12 @@ export default () => {
   const resetKeyword = useResetKeyowrd();
   return (
     <View>
+      <View style={commonStyles.card}>
+        <ConfigSection
+          title={lang('* Usage')}
+          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
+        />
+      </View>
       <View style={commonStyles.card}>
         <LanguageConfigSection />
       </View>
@@ -152,12 +162,6 @@ export default () => {
             )}
           </View>
         </ConfigSection>
-      </View>
-      <View style={commonStyles.card}>
-        <ConfigSection
-          title={lang('* Usage')}
-          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
-        />
       </View>
       <View style={commonStyles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

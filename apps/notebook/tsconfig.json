@@ -3,8 +3,5 @@
   "compilerOptions": {
     "module": "ES2022",
     "strict": true,
-    "paths": {
-      "react": [ "../../node_modules/@types/react" ]
-    }
   }
 }

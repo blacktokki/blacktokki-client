@@ -32,7 +32,7 @@ const INIT: IAllProps['init'] = {
     'supercode | blocks | bold italic underline strikethrough | undo redo | bullist numlist | hr link blockquote codesample searchreplace insertdatetime', // alignleft aligncenter alignright charmap removeformat
 };
 
-const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
+const PATH = '/tinymce/tinymce.min.js';
 let initMarkdown = false;
 
 // const CustomComponent = () => {

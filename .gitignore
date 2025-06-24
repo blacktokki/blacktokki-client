@@ -6,6 +6,8 @@ packages/*/build
 .expo
 __generated__
 web-build
+**/web/pwa/*
+dist
 
 # macOS
 .DS_Store
@@ -56,8 +58,8 @@ xcuserdata
 # VSCode
 .history/
 
-**/web/tinymce*
-**/web/editor*
+**/public/tinymce*
+**/public/editor*
 **/template/tinymce*
 **/script.md
 **/data/*

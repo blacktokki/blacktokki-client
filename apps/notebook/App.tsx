@@ -1,3 +1,4 @@
+import '@expo/metro-runtime';
 import { IntlProvider, useInitColorScheme } from '@blacktokki/core';
 import { StatusBar } from 'expo-status-bar';
 import React, { Suspense } from 'react';

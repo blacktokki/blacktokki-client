@@ -25,7 +25,7 @@
     "@types/turndown": "*",
     "copyfiles": "^2.4.1",
     "markdown-it": "^14.1.0",
-    "react-dom": "^18.0.0 <18.3",
+    "react-dom": "*",
     "react-native-builder-bob": "^0.18.3",
     "supercode": "prathamVaidya/supercode-tinymce-plugin#a692a27",
     "tinymce": "^6.8.5",

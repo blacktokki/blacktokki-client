@@ -32,7 +32,6 @@ const INIT: IAllProps['init'] = {
     'supercode | blocks | bold italic underline strikethrough | undo redo | bullist numlist | hr link blockquote codesample searchreplace insertdatetime', // alignleft aligncenter alignright charmap removeformat
 };
 
-const PATH = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
 let initMarkdown = false;
 
 // const CustomComponent = () => {
@@ -63,9 +62,10 @@ export default (
   if (props.theme === 'dark') {
     bodyStyle.push('background-color: #1E1E1E');
   }
+  const path = (process.env.PUBLIC_URL ? process.env.PUBLIC_URL: '') + '/tinymce/tinymce.min.js';
   return (
     <Editor
-      tinymceScriptSrc={PATH}
+      tinymceScriptSrc={path}
       onInit={(_e, editor) => {
         props.onReady?.();
         const toolbar = editor.getContainer().firstChild?.firstChild as HTMLElement;

@@ -1,4 +1,5 @@
 import { IntlProvider, useInitColorScheme } from '@blacktokki/core';
+import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import React, { Suspense } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -39,8 +40,8 @@ export default function App() {
   );
 }
 
-const pathnameLength = 'blacktokki-notebook'.length + 1;
-
+const subpath = Constants.easConfig.experiments.baseUrl;
+const pathnameLength = subpath?.length || 0;
 (function (l) {
   // for github-page
   if (l !== undefined && l.search[1] === '/') {
@@ -52,6 +53,7 @@ const pathnameLength = 'blacktokki-notebook'.length + 1;
       })
       .join('?');
     window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash);
+    process.env.PUBLIC_URL = subpath;
   }
   if (
     l.pathname.length >= pathnameLength &&

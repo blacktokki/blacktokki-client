@@ -3,7 +3,7 @@
 **Blacktokki Notebook**은 마크다운 기반의 노트 및 타임라인 중심 지식 관리 앱입니다. 모바일과 웹 모두에서 동작하며, 구조화된 문서, 일정 자동 추적, 아카이브, 문단 이동 등 생산성을 높이기 위한 기능을 제공합니다.
 
 <!-- !\[홈화면 스크린샷 예시] -->
-[사용자 가이드](https://github.com/blacktokki/blacktokki-client/blob/master/apps/notebook/web/%EC%82%AC%EC%9A%A9%20%EB%B0%A9%EB%B2%95.md)
+[사용자 가이드](https://github.com/blacktokki/blacktokki-client/blob/master/apps/notebook/public/%EC%82%AC%EC%9A%A9%20%EB%B0%A9%EB%B2%95.md)
 
 ---
 
@@ -98,7 +98,6 @@ yarn workspace @blacktokki/notebook yarn github # → 정적 파일 빌드 → S
 | ----------- | ------------------------------ | ------------------------------------ |
 | 홈 내비게이션     | 하단 탭(TabView)                  | 좌측 Drawer 메뉴 (`ContentGroupSection`) |
 | 스크롤 영역      | ScrollView                     | Flex 기반 그리드 + 스크롤                    |
-| 드래그 지원      | `@dnd-kit` (모바일 대응 X)          | `react-dnd` 기반 마우스 조작 가능             |
 | 검색창 위치      | 상단 고정                          | 홈 헤더 영역 내 렌더링                        |
 | 모달 / 날짜 선택기 | 전체화면 모달 방식 (`DatePickerModal`) | 중간 뷰에 오버레이 형태                        |
 

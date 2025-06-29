@@ -1,8 +1,14 @@
 import React from 'react';
-import { Text } from '@blacktokki/core';
 
 const Component = () => {
-  return <Text style={{backgroundColor:'gray'}}>hi</Text>;
+  const Text = React.lazy(() =>
+    import('@blacktokki/core').then(({ Text }) => {
+      return {
+        default: Text,
+      };
+    })
+  );
+  return <React.Suspense><Text style={{backgroundColor:'gray'}}>hi</Text></React.Suspense>;
 };
 
 export default Component;

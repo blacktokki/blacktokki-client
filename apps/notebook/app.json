@@ -22,6 +22,9 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       }
+    },
+    "experiments": {
+      "baseUrl": "/blacktokki-notebook"
     }
   }
 }

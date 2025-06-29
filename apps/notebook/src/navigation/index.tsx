@@ -18,7 +18,7 @@ const getConfig = async () => {
   return {
     main,
     login,
-    prefixes: [Linking.makeUrl('/')],
+    prefixes: [Linking.createURL('/')],
     rootPath: 'blacktokki-notebook',
     documentTitle: {
       formatter: () => {

@@ -6,23 +6,22 @@
     "build": "echo 'Nothing to build'",
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "ios": "expo start --ios"
   },
   "dependencies": {
     "@blacktokki/core": "*",
-    "expo": "^49.0.23",
-    "expo-status-bar": "~1.6.0",
+    "expo": "~52.0.26",
+    "expo-status-bar": "~2.0.1",
     "react": "*",
-    "react-dom": "<18.3",
+    "react-dom": "*",
     "react-native": "*",
-    "react-native-web": "~0.19.6"
+    "react-native-web": "*",
+    "react-query": "^3.39.3",
+    "react-native-tab-view": "^3.3.0"
   },
   "devDependencies": {
     "@babel/core": "*",
-    "@expo/webpack-config": "^19.0.0",
-    "@types/react": "~18.2.14",
-    "@types/react-native": "~0.72.8"
+    "@types/react": "~18.3.12"
   },
   "private": true
 }

@@ -10,7 +10,6 @@
     "ios": "expo start --ios",
     "web": "expo start --web --port 19006",
     "github": "expo export -p web && replace-in-file --configFile=scripts/seo.js && gh-pages -d dist --nojekyll -r https://github.com/blacktokki/blacktokki-notebook",
-    "pwa:icon": "npx expo-pwa icon --platform chrome -i assets/icon.png",
     "analyzer": "node scripts/analyzer.js && expo start --web --no-dev --minify && rimraf webpack.config.js",
     "script:md": "node scripts/script-to-md.js"
   },

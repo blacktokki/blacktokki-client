@@ -23,6 +23,9 @@
         "backgroundColor": "#ffffff"
       }
     },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "experiments": {
       "baseUrl": "/blacktokki-notebook"
     }

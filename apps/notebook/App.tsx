@@ -44,6 +44,9 @@ const subpath = Constants.easConfig.experiments.baseUrl;
 const pathnameLength = subpath?.length || 0;
 (function (l) {
   // for github-page
+  if (l !== undefined) {
+    process.env.PUBLIC_URL = process.env.NODE_ENV === 'production' ? subpath : '';
+  }
   if (l !== undefined && l.search[1] === '/') {
     const decoded = l.search
       .slice(1)
@@ -53,7 +56,6 @@ const pathnameLength = subpath?.length || 0;
       })
       .join('?');
     window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash);
-    process.env.PUBLIC_URL = subpath;
   }
   if (
     l.pathname.length >= pathnameLength &&

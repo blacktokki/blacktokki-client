@@ -9,9 +9,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web --port 19006",
-    "github": "expo export -p web && replace-in-file --configFile=scripts/seo.js && gh-pages -d dist --nojekyll -r https://github.com/blacktokki/blacktokki-notebook",
-    "pwa:icon": "npx expo-pwa icon --platform chrome -i assets/icon.png",
-    "analyzer": "node scripts/analyzer.js && expo start --web --no-dev --minify && rimraf webpack.config.js",
+    "customize": "expo customize",
+    "github": "expo export -p web && gh-pages -d dist --nojekyll -r https://github.com/blacktokki/blacktokki-notebook",
     "script:md": "node scripts/script-to-md.js"
   },
   "dependencies": {
@@ -41,10 +40,7 @@
     "@babel/core": "*",
     "@types/react": "~18.3.12",
     "@types/react-native-vector-icons": "^6.4.18",
-    "gh-pages": "^6.1.0",
-    "replace-in-file": "^7.0.1",
-    "rimraf": "^5.0.0",
-    "webpack-bundle-analyzer": "^4.10.2"
+    "gh-pages": "^6.1.0"
   },
   "eslintConfig": {
     "extends": "@blacktokki/eslint-config"

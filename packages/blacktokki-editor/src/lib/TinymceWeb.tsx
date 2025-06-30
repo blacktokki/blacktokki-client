@@ -62,7 +62,7 @@ export default (
   if (props.theme === 'dark') {
     bodyStyle.push('background-color: #1E1E1E');
   }
-  const path = (process.env.PUBLIC_URL ? process.env.PUBLIC_URL: '') + '/tinymce/tinymce.min.js';
+  const path = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
   return (
     <Editor
       tinymceScriptSrc={path}

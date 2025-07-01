@@ -40,6 +40,14 @@ export default function App() {
   );
 }
 
+const ignoreErrors = ['Support for defaultProps will be removed'];
+
+const error = console.error;
+console.error = (...arg) => {
+  for (const error of ignoreErrors) if (arg[0].includes(error)) return;
+  error(...arg);
+};
+
 const subpath = Constants.easConfig.experiments.baseUrl;
 const pathnameLength = subpath?.length || 0;
 (function (l) {

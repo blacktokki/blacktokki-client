@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web --port 19006",
     "customize": "expo customize",
-    "github": "expo export -p web && gh-pages -d dist --nojekyll -r https://github.com/blacktokki/blacktokki-notebook",
+    "github": "expo export -p web && replace-in-file --configFile=scripts/seo.js && gh-pages -d dist --nojekyll -r https://github.com/blacktokki/blacktokki-notebook",
     "script:md": "node scripts/script-to-md.js"
   },
   "dependencies": {
@@ -38,9 +38,10 @@
   },
   "devDependencies": {
     "@babel/core": "*",
-    "@types/react": "~18.3.12",
+    "@types/react": "*",
     "@types/react-native-vector-icons": "^6.4.18",
-    "gh-pages": "^6.1.0"
+    "gh-pages": "^6.1.0",
+    "replace-in-file": "^7.0.1"
   },
   "eslintConfig": {
     "extends": "@blacktokki/eslint-config"

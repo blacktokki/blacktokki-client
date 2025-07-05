@@ -7,7 +7,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { SearchBar } from '../../../components/SearchBar';
-import { useArchivePage, useNotePage } from '../../../hooks/useNoteStorage';
+import { useNotePage, useSnapshotAll } from '../../../hooks/useNoteStorage';
 import { paragraphDescription } from '../../../hooks/useProblem';
 import { createCommonStyles } from '../../../styles';
 import { NavigationParamList } from '../../../types';
@@ -35,8 +35,16 @@ export const NotePageScreen: React.FC = () => {
   const [fullParagraph, toggleFullParagraph] = useState(false);
 
   const { data: page, isFetching } = useNotePage(title);
-  const { data: _archive } = useArchivePage(archiveId);
-  const archive = page?.description !== _archive?.description ? _archive : undefined;
+  const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
+  const archiveIndex = _archives?.findIndex((v) => v.id === archiveId);
+  const archive =
+    _archives && archiveIndex && archiveIndex > 0
+      ? {
+          ..._archives[archiveIndex],
+          previous: _archives[archiveIndex - 1]?.id,
+          next: _archives[archiveIndex + 1]?.id,
+        }
+      : undefined;
 
   const handleEdit = () => {
     navigation.navigate('EditPage', { title });
@@ -77,7 +85,7 @@ export const NotePageScreen: React.FC = () => {
             <NotePageHeader
               title={title}
               paragraph={paragraph}
-              updated={archive?.updated}
+              archive={archive}
               onPress={(title, hasChild) =>
                 (hasChild ? navigation.push : navigation.navigate)('NotePage', { title })
               }

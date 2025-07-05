@@ -4,7 +4,7 @@ import { toHtml } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 
-import { getContentList, getContentOne, patchContent, postContent } from '../services/notebook';
+import { getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
 
 const DB_NAME = '@Blacktokki:notebook';
@@ -181,12 +181,14 @@ export const useNotePage = (title: string) => {
   });
 };
 
-export const useArchivePage = (archiveId?: number) => {
+export const useSnapshotAll = (parentId?: number) => {
   const { auth } = useAuthContext();
   return useQuery({
-    queryKey: ['snapshotContent', !auth.isLocal, archiveId],
+    queryKey: ['snapshotContentsAll', !auth.isLocal, parentId],
     queryFn: async () =>
-      auth.isLocal || archiveId === undefined ? undefined : await getContentOne(archiveId),
+      parentId
+        ? await getContents({ isOnline: !auth.isLocal, type: 'SNAPSHOT', parentId })
+        : undefined,
   });
 };
 
@@ -253,7 +255,7 @@ export const useCreateOrUpdatePage = () => {
       if (!data.skip) {
         await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
         await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
-        await queryClient.invalidateQueries({ queryKey: ['snapshotContent'] });
+        await queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
         await queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
         await queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       }
@@ -306,7 +308,7 @@ export const useMovePage = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['pageContents'] });
       queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
-      queryClient.invalidateQueries({ queryKey: ['snapshotContent'] });
+      queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
       queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
       queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
       queryClient.invalidateQueries({ queryKey: ['recentPages'] });

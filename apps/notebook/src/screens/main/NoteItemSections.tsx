@@ -16,17 +16,19 @@ export const NotePageHeader = ({
   title,
   onPress,
   paragraph,
-  updated,
+  archive,
 }: {
   title: string;
   onPress: (title: string, hasChild: boolean) => void;
   pressable?: boolean;
   paragraph?: string;
-  updated?: string;
+  archive?: { updated: string; previous?: number; next?: number };
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const splitTitle = getSplitTitle(title);
+  const iconColor = getIconColor(theme);
   const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
   return (
     <View
@@ -77,7 +79,33 @@ export const NotePageHeader = ({
             {titleFormat({ title: '', paragraph })}
           </Text>
         )}
-        {updated && <Text style={[commonStyles.text, styles.updated]}>{'(' + updated + ')'}</Text>}
+        {archive && (
+          <View
+            style={[commonStyles.header, { zIndex: 1, alignItems: 'flex-start', marginBottom: 0 }]}
+          >
+            {archive.previous !== undefined && (
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('NotePage', { title, archiveId: archive.previous })
+                }
+                style={pageStyles.actionButton}
+              >
+                <Icon name="chevron-left" size={16} color={iconColor} />
+              </TouchableOpacity>
+            )}
+            <Text style={[commonStyles.text, { marginLeft: 5, fontStyle: 'italic' }]}>
+              {archive.updated}
+            </Text>
+            {archive.next !== undefined && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('NotePage', { title, archiveId: archive.next })}
+                style={pageStyles.actionButton}
+              >
+                <Icon name="chevron-right" size={16} color={iconColor} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -194,6 +222,7 @@ const styles = StyleSheet.create({
 });
 
 export const pageStyles = StyleSheet.create({
+  //@ts-ignore
   container: { paddingRight: 12, scrollbarGutter: 'stable' },
   contentContainer: { flexGrow: 1 },
   actionButtons: {

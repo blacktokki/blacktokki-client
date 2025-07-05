@@ -31,7 +31,7 @@ function extractHtmlLinksWithQuery(text: string) {
   return matches;
 }
 
-function urlToNoteLink(url: string) {
+export function urlToNoteLink(url: string) {
   const newLocation = new URL(url);
   if (location.origin === newLocation.origin) {
     const params = new URLSearchParams(newLocation.search);
@@ -74,20 +74,19 @@ export function getLinks(pages: Content[], sameTitle?: boolean) {
     .filter((v) => v !== undefined);
 }
 
+const normalize = (text: string) => text.toLowerCase().replace(/ /g, '').normalize('NFKD');
+
 export const getFilteredPages = (pages: Content[], searchText: string) => {
-  const lowerCaseSearch = searchText.toLowerCase().normalize('NFKD');
+  const lowerCaseSearch = normalize(searchText);
   const links = getLinks(pages);
   return [
-    ...pages.filter((page) =>
-      page.title.toLowerCase().normalize('NFKD').startsWith(lowerCaseSearch)
-    ),
-    ...links.filter(
-      (v) =>
-        v.type === '_NOTELINK' && v.name.toLowerCase().normalize('NFKD').startsWith(lowerCaseSearch)
-    ),
-    ...links.filter(
-      (v) => v.type === '_LINK' && v.name.toLowerCase().normalize('NFKD').includes(lowerCaseSearch)
-    ),
+    ...pages.filter((page) => normalize(page.title).startsWith(lowerCaseSearch)),
+    ...pages.filter((page) => {
+      const _title = normalize(page.title);
+      return !_title.startsWith(lowerCaseSearch) && _title.includes(lowerCaseSearch);
+    }),
+    ...links.filter((v) => v.type === '_NOTELINK' && normalize(v.name).startsWith(lowerCaseSearch)),
+    ...links.filter((v) => v.type === '_LINK' && normalize(v.name).includes(lowerCaseSearch)),
   ];
 };
 

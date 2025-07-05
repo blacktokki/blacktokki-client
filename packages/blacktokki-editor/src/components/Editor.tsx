@@ -18,6 +18,7 @@ export default (
         value={props.value}
         setValue={props.setValue}
         autoResize={props?.autoResize}
+        pasteAutocomplete={props?.pasteAutocomplete}
         autoComplete={props?.autoComplete}
         onReady={() => {
           if (!ready) {

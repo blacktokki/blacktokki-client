@@ -1,4 +1,5 @@
 export type AutoCompleteProps = {
+  pasteAutocomplete?: (text: string) => string | undefined;
   autoComplete?: {
     trigger: string;
     getMatchedChars: (pattern: string) => Promise<

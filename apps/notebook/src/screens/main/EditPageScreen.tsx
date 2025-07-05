@@ -5,7 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
-import { getFilteredPages, titleFormat } from '../../components/SearchBar';
+import { getFilteredPages, titleFormat, urlToNoteLink } from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
 import AlertModal from '../../modals/AlertModal';
 import { previewUrl } from '../../services/notebook';
@@ -150,6 +150,16 @@ export const EditPageScreen: React.FC = () => {
           value={content}
           setValue={setContent}
           theme={theme}
+          pasteAutocomplete={(text) => {
+            try {
+              const noteLink = urlToNoteLink(text);
+              if (noteLink) {
+                return `<a href=${text}>${
+                  noteLink.title + (noteLink.paragraph ? ` > ${noteLink.paragraph}` : '')
+                }</a>`;
+              }
+            } catch {}
+          }}
           autoComplete={[
             {
               trigger: '[',

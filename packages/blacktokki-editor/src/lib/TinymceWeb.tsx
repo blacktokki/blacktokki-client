@@ -29,7 +29,7 @@ export const toRaw = (text: string) => {
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
   toolbar:
-    'supercode | blocks | bold italic underline strikethrough | undo redo | bullist numlist | hr link blockquote codesample searchreplace insertdatetime', // alignleft aligncenter alignright charmap removeformat
+    'supercode | blocks | bold italic underline strikethrough | undo redo | searchreplace | bullist numlist | hr link blockquote codesample insertdatetime', // alignleft aligncenter alignright charmap removeformat
 };
 
 let initMarkdown = false;
@@ -118,6 +118,11 @@ export default (
         inline_boundaries: false,
         autoresize_bottom_margin: 10,
         paste_postprocess: (editor, args) => {
+          const replace = props.pasteAutocomplete?.(args.node.innerText);
+          if (replace) {
+            args.node.innerHTML = args.node.innerHTML.replace(args.node.innerText, replace);
+            return;
+          }
           props.autoComplete?.forEach((v) => {
             if (args.node.innerText.startsWith(v.trigger)) {
               editor.fire('keypress');

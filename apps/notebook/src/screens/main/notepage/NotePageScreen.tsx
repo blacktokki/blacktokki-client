@@ -61,13 +61,13 @@ export const NotePageScreen: React.FC = () => {
     setDescription(
       archive
         ? archive.description
-        : paragraph
+        : paragraphItem
         ? fullParagraph
-          ? paragraphDescription(paragraphs, paragraph, true).trim()
+          ? paragraphDescription(paragraphs, paragraphItem.path, true).trim()
           : paragraphItem?.description
         : page?.description?.trim()
     );
-  }, [page, archive, paragraph, fullParagraph]);
+  }, [page, archive, paragraphItem?.path, fullParagraph]);
   useEffect(() => {
     toggleToc(false);
   }, [route]);
@@ -167,7 +167,7 @@ export const NotePageScreen: React.FC = () => {
                 toc={toc}
                 fullParagraph={fullParagraph}
                 root={title}
-                paragraph={paragraph}
+                path={paragraphItem?.path}
                 paragraphs={paragraphs}
                 onPress={(moveParagraph) =>
                   navigation.navigate(

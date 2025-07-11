@@ -140,19 +140,19 @@ export const NotePageSection = ({
 export const NoteBottomSection = ({
   toc,
   fullParagraph,
-  paragraph,
+  path,
   paragraphs,
   root,
   onPress,
 }: {
   toc: boolean;
   fullParagraph: boolean;
-  paragraph?: string;
+  path?: string;
   paragraphs: Paragraph[];
   root: string;
   onPress: (paragraph: Paragraph) => void;
 }) => {
-  const idx = paragraphs.findIndex((v) => v.title === paragraph);
+  const idx = paragraphs.findIndex((v) => v.path === path);
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const iconColor = getIconColor(theme);
@@ -173,9 +173,9 @@ export const NoteBottomSection = ({
     },
   ];
   return toc ? (
-    <HeaderSelectBar data={paragraphs} path={paragraph || ''} root={root} onPress={onPress} />
+    <HeaderSelectBar data={paragraphs} path={path || ''} root={root} onPress={onPress} />
   ) : (
-    !!paragraph && (
+    !!path && (
       <View
         style={{
           flex: 1,
@@ -191,7 +191,12 @@ export const NoteBottomSection = ({
                 key={icon}
                 onPress={() => onPress(moveParagraph)}
                 style={[
-                  { flex: 1, flexDirection: reverse ? 'row-reverse' : 'row', paddingVertical: 16 },
+                  {
+                    flex: 1,
+                    flexDirection: reverse ? 'row-reverse' : 'row',
+                    paddingVertical: 16,
+                    maxWidth: '50%',
+                  },
                 ]}
               >
                 <Icon name={icon} size={16} color={iconColor} style={{ alignSelf: 'center' }} />

@@ -46,7 +46,7 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
         }
         headerStack.push({ level, title });
 
-        const path = headerStack.map((h) => h.title).join(' > ');
+        const path = headerStack.map((h) => btoa(encodeURIComponent(h.title))).join(',');
 
         current = {
           path,

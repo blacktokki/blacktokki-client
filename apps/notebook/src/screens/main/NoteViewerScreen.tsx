@@ -5,12 +5,6 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
-import { SearchBar } from '../../components/SearchBar';
-import { useNoteViewers } from '../../hooks/useNoteStorage';
-import { paragraphDescription } from '../../hooks/useProblem';
-import { createCommonStyles } from '../../styles';
-import { NavigationParamList } from '../../types';
 import {
   getIconColor,
   NoteBottomSection,
@@ -18,6 +12,12 @@ import {
   NotePageSection,
   pageStyles,
 } from './NoteItemSections';
+import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import { SearchBar } from '../../components/SearchBar';
+import { useNoteViewers } from '../../hooks/useNoteStorage';
+import { paragraphDescription } from '../../hooks/useProblem';
+import { createCommonStyles } from '../../styles';
+import { NavigationParamList } from '../../types';
 
 type NoteViewerScreenRouteProp = RouteProp<NavigationParamList, 'NoteViewer'>;
 
@@ -36,16 +36,17 @@ export const NoteViewerScreen: React.FC = () => {
   const page = viewers?.find((v) => v.key === key);
 
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
+  const paragraphItem = paragraphs.find((v) => v.title === paragraph);
   const [description, setDescription] = useState<string>();
   useEffect(() => {
     setDescription(
-      paragraph
+      paragraphItem
         ? fullParagraph
-          ? paragraphDescription(paragraphs, paragraph, true)
-          : paragraphs.find((v) => v.title === paragraph)?.description
+          ? paragraphDescription(paragraphs, paragraphItem.path, true)
+          : paragraphItem.description
         : page?.description?.trim()
     );
-  }, [page, paragraph, fullParagraph]);
+  }, [page, paragraphItem?.path, fullParagraph]);
   useEffect(() => {
     toggleToc(false);
   }, [route]);
@@ -99,7 +100,7 @@ export const NoteViewerScreen: React.FC = () => {
                 toc={toc}
                 fullParagraph={fullParagraph}
                 root={key}
-                paragraph={paragraph}
+                path={paragraphItem?.path}
                 paragraphs={paragraphs}
                 onPress={(paragraph) =>
                   navigation.navigate(

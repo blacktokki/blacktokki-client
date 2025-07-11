@@ -1,6 +1,7 @@
 import { toRaw } from '@blacktokki/editor';
 import { useEffect, useRef, useState } from 'react';
 
+import { KeywordContent } from './useKeywordStorage';
 import { Paragraph, parseHtmlToParagraphs } from '../components/HeaderSelectBar';
 import { getLinks, titleFormat } from '../components/SearchBar';
 import { cleanHtml } from '../components/TimerTag';
@@ -103,15 +104,10 @@ export const getSplitTitle = (title: string) => {
   return [splitTitle.slice(0, splitTitle.length - 1).join('/'), splitTitle[splitTitle.length - 1]];
 };
 
-export const paragraphDescription = (
-  paragraphs: Paragraph[],
-  paragraph: string,
-  rootTitle: boolean
-) => {
-  const path = paragraphs.find((v) => v.title === paragraph)?.path;
+export const paragraphDescription = (paragraphs: Paragraph[], path: string, rootTitle: boolean) => {
   return path
     ? paragraphs
-        .filter((v) => v.path === path || v.path.startsWith(path + ' > '))
+        .filter((v) => v.path === path || v.path.startsWith(path + ','))
         .map((v) => (rootTitle || v.path !== path ? v.header : '') + v.description)
         .join('')
     : '';
@@ -119,12 +115,12 @@ export const paragraphDescription = (
 
 const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
 
-type ProblemItem = [string, string | undefined, string]; // title, paragraph, subtitle
+type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
 type ProblemSource = {
   title: string;
   updated: string;
   raw: string;
-  links: { name: string; title: string; paragraph?: string; origin: string }[];
+  links: (KeywordContent & { type: '_NOTELINK' })[];
   parentTitle: string | undefined;
 };
 
@@ -150,24 +146,22 @@ const getDataLinear = (page: Content) => {
     .filter((v) => v.lists.length > 0);
   paragraphs
     .filter(
-      (v) => v.level !== 0 && trim(paragraphDescription(paragraphs, v.title, false)).length === 0
+      (v) => v.level !== 0 && trim(paragraphDescription(paragraphs, v.path, false)).length === 0
     )
     .forEach((v) =>
-      record.push([page.title, v.level === 0 ? undefined : v.title, 'Empty paragraph'])
+      record.push([page.title, v.level === 0 ? undefined : v.path, 'Empty paragraph'])
     );
   lists
     .filter(
       (v) =>
         v.lists.filter((v2) => v2.items.filter((v2) => trim(v2).length === 0).length > 0).length > 0
     )
-    .forEach((v2) =>
-      record.push([page.title, v2.level === 0 ? undefined : v2.title, 'Empty list'])
-    );
+    .forEach((v2) => record.push([page.title, v2.level === 0 ? undefined : v2.path, 'Empty list']));
 
   // duplicate contents
   paragraphs
     .filter((v) => v !== paragraphs.findLast((v2) => v2.path === v.path))
-    .forEach((v) => record.push([page.title, undefined, `Duplicate paragraphs(${v})`]));
+    .forEach((v) => record.push([page.title, undefined, `Duplicate paragraphs(${v.title})`]));
   paragraphs
     .map((v) => {
       const sentences = cleanHtml(v.description, false, true)
@@ -181,7 +175,7 @@ const getDataLinear = (page: Content) => {
     })
     .forEach((v) =>
       v.duplicates.forEach((v2) =>
-        record.push([page.title, v.level === 0 ? undefined : v.title, `Duplicate contents(${v2})`])
+        record.push([page.title, v.level === 0 ? undefined : v.path, `Duplicate contents(${v2})`])
       )
     );
   // readability
@@ -213,7 +207,10 @@ const getDataLinear = (page: Content) => {
   return problemCache[page.title];
 };
 
-const getDataMatrix = (source: ProblemSource, target: Content) => {
+const getDataMatrix = (
+  source: ProblemSource,
+  target: { title: string; updated: string; description?: string }
+) => {
   if (source.title === target.title) {
     return [];
   }
@@ -236,7 +233,7 @@ const getDataMatrix = (source: ProblemSource, target: Content) => {
           parseHtmlToParagraphs(description).find((v2) => v2.title === link.paragraph) === undefined
       )
       .forEach((link) => {
-        record.push([link.title, link.paragraph, `Unknown paragraph link(${link.origin})`]);
+        record.push([link.origin, undefined, `Unknown paragraph link(${titleFormat(link)})`]);
       });
     //unlinked keyword
     const sourceName = source.title;
@@ -244,7 +241,9 @@ const getDataMatrix = (source: ProblemSource, target: Content) => {
       _target.parentTitle !== source.title &&
       _target.links.find((v) => v.name.toLowerCase() === sourceName.toLowerCase()) === undefined
     ) {
-      const match = _target.raw.match(new RegExp(`\\b${sourceName}\\b`, 'i'));
+      const match = _target.raw.match(
+        new RegExp(`(?:^|[\\s\\p{P}])${sourceName}(?=$|[\\s\\p{P}])`, 'iu')
+      );
       if (match) {
         record.push([target.title, undefined, `Unlinked note keyword: ${match[0]}`]);
       }
@@ -263,7 +262,9 @@ const getDataMatrix = (source: ProblemSource, target: Content) => {
           ) === undefined
       )
       .forEach((link) => {
-        const match = _target.raw.match(new RegExp(`\\b${link.name}\\b`, 'i'));
+        const match = _target.raw.match(
+          new RegExp(`(?:^|[\\s\\p{P}])${link.name}(?=$|[\\s\\p{P}])`, 'iu')
+        );
         if (match) {
           record.push([
             target.title,
@@ -275,7 +276,7 @@ const getDataMatrix = (source: ProblemSource, target: Content) => {
   } else {
     //unknown note
     links.forEach((link) => {
-      record.push([link.title, link.paragraph, `Unknown note link(${link.origin})`]);
+      record.push([link.origin, undefined, `Unknown note link(${titleFormat(link)})`]);
     });
 
     //empty parent note
@@ -289,18 +290,34 @@ const getDataMatrix = (source: ProblemSource, target: Content) => {
 };
 
 const getData = (pages: Content[]) => {
-  const records: { title: string; paragraph: string | undefined; subtitles: string[] }[] = [];
+  const records: {
+    title: string;
+    path: string | undefined;
+    paragraph: string | undefined;
+    subtitles: string[];
+  }[] = [];
+  const titleSet = new Set(pages.map((v) => v.title));
   pages
     .map(getDataLinear)
     .flatMap(({ record, source }) => {
-      return [...pages.flatMap((target) => getDataMatrix(source, target)), ...record];
+      const unknownPages = source.links
+        .filter((v) => !titleSet.has(v.title))
+        .map((v) => ({ title: v.title, updated: '' }));
+      return [
+        ...[...pages, ...unknownPages].flatMap((target) => getDataMatrix(source, target)),
+        ...record,
+      ];
     })
-    .forEach(([title, paragraph, subtitle]) => {
-      const i = records.findIndex((v) => v.title === title && v.paragraph === paragraph);
+    .forEach(([title, path, subtitle]) => {
+      const i = records.findIndex((v) => v.title === title && v.path === path);
       if (i >= 0) {
         records[i].subtitles.push(subtitle);
       } else {
-        records.push({ title, paragraph, subtitles: [subtitle] });
+        const paragraph = path
+          ?.split(',')
+          .map((v) => decodeURIComponent(atob(v)))
+          .reverse()[0];
+        records.push({ title, path, paragraph, subtitles: [subtitle] });
       }
     });
   return records;

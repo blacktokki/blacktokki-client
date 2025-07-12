@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'rea
 import HeaderSelectBar, { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
 import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/useNoteStorage';
+import { paragraphByKey } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
@@ -15,7 +16,7 @@ type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
 
 export const MovePageScreen: React.FC = () => {
   const route = useRoute<MovePageScreenRouteProp>();
-  const { title, paragraph } = route.params;
+  const { title, paragraph, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
@@ -23,7 +24,9 @@ export const MovePageScreen: React.FC = () => {
   const [newTitle, setNewTitle] = useState(title);
   const { data: page, isLoading } = useNotePage(title);
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const path = paragraphs.find((v) => v.title === paragraph)?.path || '';
+  const path =
+    paragraphs.find((v) => paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph }))
+      ?.path || '';
   const { data: newPage } = useNotePage(newTitle);
   const newParagraph = parseHtmlToParagraphs(newPage?.description || '').filter(
     (v) => title !== newTitle || path === v.path || !v.path.startsWith(path)

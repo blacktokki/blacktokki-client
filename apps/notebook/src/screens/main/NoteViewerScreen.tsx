@@ -13,18 +13,18 @@ import {
   pageStyles,
 } from './NoteItemSections';
 import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
-import { SearchBar } from '../../components/SearchBar';
+import { SearchBar, toNoteParams } from '../../components/SearchBar';
 import { useNoteViewers } from '../../hooks/useNoteStorage';
-import { paragraphDescription } from '../../hooks/useProblem';
+import { paragraphByKey, paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
-import { NavigationParamList } from '../../types';
+import { NavigationParamList, ParagraphKey } from '../../types';
 
 type NoteViewerScreenRouteProp = RouteProp<NavigationParamList, 'NoteViewer'>;
 
 export const NoteViewerScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const route = useRoute<NoteViewerScreenRouteProp>();
-  const { key, paragraph } = route.params;
+  const { key, paragraph, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
@@ -36,14 +36,16 @@ export const NoteViewerScreen: React.FC = () => {
   const page = viewers?.find((v) => v.key === key);
 
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const paragraphItem = paragraphs.find((v) => v.title === paragraph);
+  const paragraphItem = paragraphs.find((v) =>
+    paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })
+  );
   const [description, setDescription] = useState<string>();
   useEffect(() => {
     setDescription(
       paragraphItem
         ? fullParagraph
-          ? paragraphDescription(paragraphs, paragraphItem.path, true)
-          : paragraphItem.description
+          ? paragraphDescription(paragraphs, paragraphItem?.path, true)
+          : paragraphItem?.description
         : page?.description?.trim()
     );
   }, [page, paragraphItem?.path, fullParagraph]);
@@ -102,12 +104,15 @@ export const NoteViewerScreen: React.FC = () => {
                 root={key}
                 path={paragraphItem?.path}
                 paragraphs={paragraphs}
-                onPress={(paragraph) =>
-                  navigation.navigate(
-                    'NoteViewer',
-                    paragraph.level === 0 ? { key } : { key, paragraph: paragraph.title }
-                  )
-                }
+                onPress={(moveParagraph) => {
+                  const params: ParagraphKey = toNoteParams(
+                    key,
+                    moveParagraph.level === 0 ? undefined : moveParagraph.title,
+                    moveParagraph.autoSection
+                  );
+                  delete (params as { title?: string }).title;
+                  navigation.navigate('NoteViewer', { key, ...params });
+                }}
               />
             }
           </View>

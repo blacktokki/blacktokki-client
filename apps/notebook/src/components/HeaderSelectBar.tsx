@@ -6,6 +6,7 @@ import { createCommonStyles } from '../styles';
 
 export interface Paragraph {
   path: string;
+  autoSection?: string;
   title: string;
   level: number;
   header: string;
@@ -20,6 +21,8 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
 
   const headings: string[] = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
   const headerStack: { level: number; title: string }[] = [];
+  const titleSet = new Set<string>();
+  const titleDuplicate = new Set<string>();
 
   let current: Paragraph | null = null;
   let cursor = doc.body.firstChild;
@@ -48,6 +51,12 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
 
         const path = headerStack.map((h) => btoa(encodeURIComponent(h.title))).join(',');
 
+        if (!titleSet.has(title)) {
+          titleSet.add(title);
+        } else if (!titleDuplicate.has(title)) {
+          titleDuplicate.add(title);
+        }
+
         current = {
           path,
           title,
@@ -69,6 +78,31 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
   }
 
   flushCurrent();
+  titleDuplicate.forEach((title) => {
+    let parentDuplicate: Set<string | undefined> | undefined;
+    let level = 1;
+    while ((parentDuplicate === undefined || parentDuplicate.size > 0) && level < 6) {
+      const targets = result.filter(
+        (v) =>
+          v.title === title && (v.autoSection === undefined || parentDuplicate?.has(v.autoSection))
+      );
+      const parentSet = new Set<string>();
+      parentDuplicate = new Set<string>();
+      targets.forEach((v) => {
+        const pathReverse = v.path.split(',').reverse();
+        if (pathReverse.length <= level) {
+          return;
+        }
+        v.autoSection = atob(decodeURIComponent(pathReverse[level]));
+        if (!parentSet.has(v.autoSection)) {
+          parentSet.add(v.autoSection);
+        } else if (!parentDuplicate?.has(v.autoSection)) {
+          parentDuplicate?.add(v.autoSection);
+        }
+      });
+      level += 1;
+    }
+  });
   return result;
 }
 

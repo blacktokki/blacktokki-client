@@ -5,7 +5,7 @@ import { KeywordContent } from './useKeywordStorage';
 import { Paragraph, parseHtmlToParagraphs } from '../components/HeaderSelectBar';
 import { getLinks, titleFormat } from '../components/SearchBar';
 import { cleanHtml } from '../components/TimerTag';
-import { Content } from '../types';
+import { Content, ParagraphKey } from '../types';
 import { useNotePages } from './useNoteStorage';
 
 const getReadabilityLevel = (() => {
@@ -113,6 +113,14 @@ export const paragraphDescription = (paragraphs: Paragraph[], path: string, root
     : '';
 };
 
+export const paragraphByKey = (paragraph: Paragraph, key: ParagraphKey) => {
+  return (
+    paragraph.title === key.paragraph &&
+    (key.section === undefined ||
+      paragraph.path.includes(btoa(encodeURIComponent(key.section)) + ','))
+  );
+};
+
 const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
 
 type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
@@ -160,8 +168,17 @@ const getDataLinear = (page: Content) => {
 
   // duplicate contents
   paragraphs
-    .filter((v) => v !== paragraphs.findLast((v2) => v2.path === v.path))
-    .forEach((v) => record.push([page.title, undefined, `Duplicate paragraphs(${v.title})`]));
+    .filter(
+      (v) =>
+        v !== paragraphs.findLast((v2) => v2.title === v.title && v2.autoSection === v.autoSection)
+    )
+    .forEach((v) =>
+      record.push([
+        page.title,
+        undefined,
+        `Duplicate paragraphs(${v.autoSection ? '(' + v.autoSection + ') ' : ''}${v.title})`,
+      ])
+    );
   paragraphs
     .map((v) => {
       const sentences = cleanHtml(v.description, false, true)
@@ -230,7 +247,9 @@ const getDataMatrix = (
       .filter(
         (link) =>
           link.paragraph !== undefined &&
-          parseHtmlToParagraphs(description).find((v2) => v2.title === link.paragraph) === undefined
+          parseHtmlToParagraphs(description).find(
+            (v2) => v2.title === link.paragraph && paragraphByKey(v2, link)
+          ) === undefined
       )
       .forEach((link) => {
         record.push([link.origin, undefined, `Unknown paragraph link(${titleFormat(link)})`]);
@@ -258,7 +277,8 @@ const getDataMatrix = (
             (v) =>
               v.name.toLowerCase() === link.name.toLowerCase() &&
               v.title === link.title &&
-              v.paragraph === link.paragraph
+              v.paragraph === link.paragraph &&
+              (link.section === undefined || v.section === link.section)
           ) === undefined
       )
       .forEach((link) => {

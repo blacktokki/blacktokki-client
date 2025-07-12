@@ -8,7 +8,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
-import { Content, NavigationParamList } from '../types';
+import { Content, NavigationParamList, ParagraphKey } from '../types';
 import { parseHtmlToParagraphs } from './HeaderSelectBar';
 
 let _searchText = '';
@@ -31,14 +31,23 @@ function extractHtmlLinksWithQuery(text: string) {
   return matches;
 }
 
+export function toNoteParams(
+  title: string,
+  paragraph?: string,
+  section?: string
+): { title: string } & ParagraphKey {
+  return paragraph ? (section ? { title, paragraph, section } : { title, paragraph }) : { title };
+}
+
 export function urlToNoteLink(url: string) {
   const newLocation = new URL(url);
   if (location.origin === newLocation.origin) {
     const params = new URLSearchParams(newLocation.search);
     const title = params.get('title');
-    const paragraph = params.get('paragraph') || params.get('section') || undefined;
+    const paragraph = params.get('paragraph') || undefined;
+    const section = params.get('section') || undefined;
     if (title) {
-      return { title, paragraph };
+      return toNoteParams(title, paragraph, section);
     }
   }
 }

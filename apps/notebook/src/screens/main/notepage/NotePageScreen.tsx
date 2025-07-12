@@ -6,9 +6,9 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'rea
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
-import { SearchBar } from '../../../components/SearchBar';
+import { SearchBar, toNoteParams } from '../../../components/SearchBar';
 import { useNotePage, useSnapshotAll } from '../../../hooks/useNoteStorage';
-import { paragraphDescription } from '../../../hooks/useProblem';
+import { paragraphByKey, paragraphDescription } from '../../../hooks/useProblem';
 import { createCommonStyles } from '../../../styles';
 import { NavigationParamList } from '../../../types';
 import {
@@ -25,7 +25,7 @@ type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 export const NotePageScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const route = useRoute<NotePageScreenRouteProp>();
-  const { title, paragraph, archiveId } = route.params;
+  const { title, paragraph, section, archiveId } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
@@ -51,11 +51,13 @@ export const NotePageScreen: React.FC = () => {
   };
 
   const handleMovePage = () => {
-    navigation.navigate('MovePage', { title, paragraph });
+    navigation.navigate('MovePage', paragraph ? { title, paragraph, section } : { title });
   };
 
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const paragraphItem = paragraphs.find((v) => v.title === paragraph);
+  const paragraphItem = paragraphs.find((v) =>
+    paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })
+  );
   const [description, setDescription] = useState<string>();
   useEffect(() => {
     setDescription(
@@ -172,9 +174,11 @@ export const NotePageScreen: React.FC = () => {
                 onPress={(moveParagraph) =>
                   navigation.navigate(
                     'NotePage',
-                    moveParagraph.level === 0
-                      ? { title }
-                      : { title, paragraph: moveParagraph.title }
+                    toNoteParams(
+                      title,
+                      moveParagraph.level === 0 ? undefined : moveParagraph.title,
+                      moveParagraph.autoSection
+                    )
                   )
                 }
               />

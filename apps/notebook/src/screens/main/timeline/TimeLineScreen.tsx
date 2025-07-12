@@ -4,7 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 
-import { SearchBar } from '../../../components/SearchBar';
+import { SearchBar, toNoteParams } from '../../../components/SearchBar';
 import { today } from '../../../components/TimerTag';
 import useTimeLine from '../../../hooks/useTimeLine';
 import { createCommonStyles } from '../../../styles';
@@ -28,7 +28,9 @@ export const TimeLineScreen: React.FC = () => {
       </View>
       <NoteListSection
         contents={data}
-        onPress={(title, paragraph) => navigation.push('NotePage', { title, paragraph })}
+        onPress={(title, paragraph, section) =>
+          navigation.push('NotePage', toNoteParams(title, paragraph, section))
+        }
         isLoading={isLoading}
         emptyMessage="There are no notes."
       />

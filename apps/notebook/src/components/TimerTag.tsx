@@ -165,7 +165,7 @@ export const paragraphsToDatePatterns = (title: string, paragraphs: Paragraph[])
         original: v2,
         matches: extractDates(v2),
       }));
-      return { title, paragraph: paragraph.title, dateMatches };
+      return { title, paragraph: paragraph.title, section: paragraph.autoSection, dateMatches };
     })
     .filter((v) => v.dateMatches.filter((v2) => v2.matches.length > 0).length > 0);
 };

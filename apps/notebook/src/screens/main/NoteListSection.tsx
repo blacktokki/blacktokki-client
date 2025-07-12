@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 
 import { titleFormat } from '../../components/SearchBar';
 import { createCommonStyles } from '../../styles';
+import { ParagraphKey } from '../../types';
 
 export const NoteListSection = ({
   contents,
@@ -12,14 +13,13 @@ export const NoteListSection = ({
   emptyMessage,
   onScrollEnd,
 }: {
-  contents: {
+  contents: ({
     title: string;
-    paragraph?: string;
     subtitles?: string[];
     id?: number;
-  }[];
+  } & ParagraphKey)[];
   isLoading: boolean;
-  onPress: (title: string, paragraph?: string, id?: number) => void;
+  onPress: (title: string, paragraph?: string, section?: string, id?: number) => void;
   emptyMessage: string;
   onScrollEnd?: () => void;
 }) => {
@@ -40,7 +40,7 @@ export const NoteListSection = ({
           renderItem={({ item }) => (
             <TouchableOpacity
               style={commonStyles.card}
-              onPress={() => onPress(item.title, item.paragraph, item.id)}
+              onPress={() => onPress(item.title, item.paragraph, item.section, item.id)}
             >
               <Text style={commonStyles.title}>{titleFormat(item)}</Text>
               {(item.subtitles || []).map((subtitle, index) => (

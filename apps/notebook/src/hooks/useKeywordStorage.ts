@@ -2,6 +2,8 @@ import { useAuthContext } from '@blacktokki/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
+import { ParagraphKey } from '../types';
+
 const KEYWORDS_KEY = '@blacktokki:notebook:keywords:';
 
 export type KeywordContent =
@@ -11,13 +13,12 @@ export type KeywordContent =
       url: string;
       origin: string;
     }
-  | {
+  | ({
       type: '_NOTELINK';
       name: string;
       title: string;
-      paragraph?: string;
       origin: string;
-    }
+    } & ParagraphKey)
   | {
       type: '_KEYWORD';
       title: string;

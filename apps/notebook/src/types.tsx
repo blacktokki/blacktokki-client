@@ -28,11 +28,21 @@ export type Link = {
   imageUrl?: string;
 };
 
+export type ParagraphKey =
+  | {
+      paragraph?: string;
+      section?: undefined;
+    }
+  | {
+      paragraph: string;
+      section?: string;
+    };
+
 export type NavigationParamList = {
   Home: undefined;
-  NotePage: { title: string; paragraph?: string; archiveId?: number };
-  NoteViewer: { key: string; paragraph?: string };
+  NotePage: { title: string; archiveId?: number } & ParagraphKey;
+  NoteViewer: { key: string } & ParagraphKey;
   EditPage: { title: string };
-  MovePage: { title: string; paragraph?: string };
+  MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
 };

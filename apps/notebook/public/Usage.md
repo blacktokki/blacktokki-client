@@ -37,7 +37,7 @@
 ### 🏠 Home
 
 * The main screen that appears upon launch
-* Provides quick access to recently viewed notes, issue notes, and the timeline
+* Provides quick access to recently viewed notes, edit suggestions, and the timeline
 * On mobile, access main menus via the bottom tab; on web, use the left-side drawer menu
 
 ### 📄 Note Page
@@ -57,7 +57,7 @@
 * Lists recently viewed notes in chronological order
 * Click to revisit a note, or remove it from the list if no longer needed
 
-### 🧾 Problem Notes
+### 🧾 Edit Suggestions
 
 * Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content
 * Problem types include:

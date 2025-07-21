@@ -46,7 +46,7 @@ export const ProblemButton = () => {
           {data.length > 0 && <Badge>{data.length}</Badge>}
         </View>
       )}
-      title={lang('Problems')}
+      title={lang('Edit Suggestions')}
       onPress={() => push('Problem')}
     />
   );

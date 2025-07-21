@@ -2,6 +2,7 @@ import { useAuthContext } from '@blacktokki/account';
 import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/core';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 
 import { getContentList, patchContent, postContent } from '../services/notebook';
@@ -161,6 +162,7 @@ export const useSnapshotPages = (parentId?: number) => {
 
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
   const { data: contents = [], isFetching } = useNotePages();
   return useQuery({
     queryKey: ['pageContent', title],
@@ -170,7 +172,7 @@ export const useNotePage = (title: string) => {
       // Add to recent pages
       if (page) {
         const recentPages = await getRecentPages();
-        if (recentPages.find((v) => v === title) === undefined) {
+        if (isFocused && recentPages.find((v) => v === title) === undefined) {
           lastPage = title;
           await queryClient.invalidateQueries({ queryKey: ['lastPage'] });
         }

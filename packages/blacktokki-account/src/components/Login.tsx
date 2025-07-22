@@ -1,3 +1,4 @@
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
 
@@ -49,14 +50,30 @@ export default function Login({ lang }: { lang: (text: string) => string }) {
             <Text style={Styles.guest_footer_text}>{lang('Sign in as local account')}</Text>
           </TouchableOpacity>
         )}
-      </View>
-      <View style={Styles.login_social}>
-        <View style={Styles.login_social_separator}>
-          <View style={Styles.login_social_separator_line} />
-          <Text style={Styles.login_social_separator_text}>{'*'}</Text>
-          <View style={Styles.login_social_separator_line} />
+        <View style={Styles.login_social}>
+          <View style={Styles.login_social_separator}>
+            <View style={Styles.login_social_separator_line} />
+            <Text style={Styles.login_social_separator_text}>{lang('OR')}</Text>
+            <View style={Styles.login_social_separator_line} />
+          </View>
+          <View style={Styles.login_social_buttons}>
+            {/* <TouchableOpacity onPress={() => {}} style={Styles.login_social_button}>
+              <Image
+                style={{ width: 25, height: 25, marginVertical: 15, resizeMode: 'stretch' }}
+                source={{ uri: 'https://react-oauth.vercel.app/images/google-logo.png' }}
+              />
+              <Text style={Styles.guest_footer_text}>{lang('Sign in as Google account')}</Text>
+            </TouchableOpacity> */}
+            <View style={{ height: 15 }}></View>
+            <GoogleOAuthProvider clientId="252515856483-7ko6lgc5sk3ccq46h8adovbejqsgbi65.apps.googleusercontent.com">
+              <GoogleLogin
+                onSuccess={(credentialResponse) => {
+                  dispatch({ type: 'OAUTH_REQUEST', oauth: credentialResponse.credential });
+                }}
+              />
+            </GoogleOAuthProvider>
+          </View>
         </View>
-        <View style={Styles.login_social_buttons}></View>
       </View>
       {/* <>
         <TouchableOpacity onPress={() => navigate("RegistrationScreen")}>
@@ -69,6 +86,8 @@ export default function Login({ lang }: { lang: (text: string) => string }) {
     </View>
   );
 }
+
+const MAX_WIDTH = 320;
 
 const Styles = StyleSheet.create({
   login_container: {
@@ -105,7 +124,7 @@ const Styles = StyleSheet.create({
   },
   form: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: MAX_WIDTH,
   },
   form_error: {
     height: 22,
@@ -136,8 +155,7 @@ const Styles = StyleSheet.create({
   },
   login_social: {
     width: '100%',
-    maxWidth: 280,
-    marginTop: 20,
+    maxWidth: MAX_WIDTH,
   },
   login_social_separator: {
     flexDirection: 'row',
@@ -150,24 +168,18 @@ const Styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   login_social_separator_text: {
-    marginHorizontal: 10,
+    flexDirection: 'row',
+    alignSelf: 'center',
     color: '#808080',
-    fontSize: 16,
+    fontSize: 15,
   },
   login_social_buttons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
+    alignItems: 'center',
   },
   login_social_button: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    width: '100%',
     justifyContent: 'center',
-    width: 60,
-    height: 60,
-    marginHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#E7E7E7',
-    borderRadius: 60,
   },
   login_social_icon: {
     width: 38,
@@ -189,7 +201,7 @@ const Styles = StyleSheet.create({
     alignSelf: 'center',
     color: '#808080',
     fontSize: 15,
-    margin: 15,
+    marginVertical: 15,
   },
   login_footer_link: {
     color: '#208AEC',

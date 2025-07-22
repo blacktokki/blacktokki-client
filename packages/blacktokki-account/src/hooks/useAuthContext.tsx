@@ -8,13 +8,14 @@ import React, {
   useState,
 } from 'react';
 
-import { checkLogin, getLocal, login, logout, setLocal } from '../services/account';
+import { checkLogin, getLocal, login, logout, oauthLogin, setLocal } from '../services/account';
 import { User } from '../types';
 
 type AuthAction = {
   type: string;
   username?: string;
   password?: string;
+  oauth?: string;
   user?: User | null;
 };
 
@@ -28,7 +29,7 @@ export type Auth = (
 };
 type AuthState = {
   user?: User | null;
-  request?: { username: string; password: string } | null;
+  request?: { username: string; password: string } | { username?: undefined; oauth: string } | null;
   useLocal?: boolean;
 };
 
@@ -43,6 +44,11 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
       return {
         ...initialState,
         request: { username: action.username, password: action.password },
+      } as AuthState;
+    case 'OAUTH_REQUEST':
+      return {
+        ...initialState,
+        request: { oauth: action.oauth },
       } as AuthState;
     case 'LOGIN_GUEST':
       return {
@@ -127,7 +133,10 @@ export const AuthProvider = ({
             dispatch({ type: 'LOGOUT_SUCCESS' });
           });
       } else if (authState.user !== undefined && authState.request) {
-        login(authState.request.username, authState.request.password)
+        (authState.request.username === undefined
+          ? oauthLogin(authState.request.oauth)
+          : login(authState.request.username, authState.request.password)
+        )
           .then((user) => {
             dispatch({ type: 'LOGIN_SUCCESS', user });
           })

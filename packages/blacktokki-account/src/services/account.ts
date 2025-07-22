@@ -46,3 +46,11 @@ export async function logout() {
   await setToken(null);
   await account.get('/logout');
 }
+
+export async function oauthLogin(token: string) {
+  const r = await account.post('/api/v1/user/google', { token });
+  if (r.status === 200 && r.data !== '') {
+    setToken(r.data);
+    return await checkLogin();
+  }
+}

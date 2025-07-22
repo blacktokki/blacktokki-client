@@ -3,11 +3,11 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 
+import { NoteListSection } from './NoteListSection';
+import { updatedFormat } from './RecentPageSection';
 import { SearchBar } from '../../components/SearchBar';
 import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
 import { NavigationParamList } from '../../types';
-import { NoteListSection } from './NoteListSection';
-import { updatedFormat } from './RecentPageSection';
 
 type ArchiveScreenRouteProp = RouteProp<NavigationParamList, 'Archive'>;
 
@@ -31,7 +31,7 @@ export const ArchiveScreen: React.FC = () => {
             id: v.id || i,
           }))}
         isLoading={isLoading}
-        onPress={(title, _, id) =>
+        onPress={(title, _, __, id) =>
           (title === undefined ? navigation.push : navigation.navigate)('NotePage', {
             title,
             archiveId: id,

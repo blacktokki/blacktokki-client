@@ -1,4 +1,6 @@
 import { useColorScheme, useModalsContext, Text, useLangContext } from '@blacktokki/core';
+import { useNavigation } from '@react-navigation/core';
+import { StackNavigationProp } from '@react-navigation/stack';
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
@@ -7,6 +9,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { today } from '../../../components/TimerTag';
 import DatePickerModal, { MarkedDateRange } from '../../../modals/DatePikcerModal';
 import { createCommonStyles } from '../../../styles';
+import { NavigationParamList } from '../../../types';
 
 type DateHeaderSectionProps = {
   date: string;
@@ -25,6 +28,7 @@ export default function DateHeaderSection({
   const commonStyles = createCommonStyles(theme);
   const { setModal } = useModalsContext();
   const { lang } = useLangContext();
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const moveDate = (value: number) =>
     setDate(
       dayjs(date)
@@ -90,6 +94,14 @@ export default function DateHeaderSection({
           style={[headerStyles.navButton, themedStyles.navButton]}
         >
           <Icon name="chevron-right" size={16} color={commonStyles.text.color} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.push('NoteViewer', { key: 'Usage', paragraph: '📆 ' + lang('Timeline') })
+          }
+          style={[headerStyles.navButton, themedStyles.navButton]}
+        >
+          <Icon name="help-outline" size={16} color={commonStyles.text.color} />
         </TouchableOpacity>
       </View>
     </View>

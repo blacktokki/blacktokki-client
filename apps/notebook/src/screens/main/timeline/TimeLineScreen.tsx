@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext } from '@blacktokki/core';
+import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
@@ -11,6 +11,7 @@ import { createCommonStyles } from '../../../styles';
 import { NavigationParamList } from '../../../types';
 import { NoteListSection } from '../NoteListSection';
 import DateHeaderSection from './DateHeaderSection';
+import UsageButton from '../../../components/UsageButton';
 
 export const TimeLineScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -20,9 +21,11 @@ export const TimeLineScreen: React.FC = () => {
   const [date, setDate] = useState(today());
   const { data, preData, isLoading } = useTimeLine(date);
   const markedDateRange = preData.flatMap((v) => v.dateMatches.flatMap((v2) => v2.matches));
+  const { lang } = useLangContext();
   return (
     <>
       {_window === 'portrait' && <SearchBar />}
+      <UsageButton paragraph={'📆 ' + lang('Timeline')} />
       <View style={[{ ...commonStyles.container, flex: undefined, paddingBottom: 0 }]}>
         <DateHeaderSection date={date} setDate={setDate} markedDateRange={markedDateRange} />
       </View>

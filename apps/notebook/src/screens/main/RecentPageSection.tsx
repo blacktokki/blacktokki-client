@@ -53,12 +53,14 @@ function removeAllAttributesFromHTML(html: string): string {
 
 const _cardPadding = (isLandscape: boolean) => (isLandscape ? 20 : 4);
 const _cardMaxWidth = (isLandscape: boolean) => (isLandscape ? 250 : 190);
+const _zoomOut = (isLandscape: boolean) => (isLandscape ? 1 : 1);
 
 type Item = (Content & { descriptionComponent: JSX.Element }) | null;
 
 const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => {
   const window = useResizeContext();
   const cardMaxWidth = _cardMaxWidth(window === 'landscape');
+  const zoomOut = _zoomOut(window === 'landscape');
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const fSize = window === 'landscape' ? 2 : 0;
@@ -109,7 +111,16 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
           },
         ]}
       >
-        <Card.Content style={{ padding: 0 }}>{mounted && item.descriptionComponent}</Card.Content>
+        <Card.Content
+          style={{
+            width: (zoomOut * 100 + '%') as `${number}%`,
+            transformOrigin: 'left top',
+            transform: [{ scale: 1 / zoomOut }],
+            padding: 0,
+          }}
+        >
+          {mounted && item.descriptionComponent}
+        </Card.Content>
       </Card>
       <View
         style={{
@@ -143,6 +154,7 @@ export const RecentPagesSection = React.memo(() => {
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const cardMaxWidth = _cardMaxWidth(window === 'landscape');
+  const zoomOut = _zoomOut(window === 'landscape');
   const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
   const contents = useMemo(
     () => [
@@ -150,7 +162,13 @@ export const RecentPagesSection = React.memo(() => {
         ...v,
         descriptionComponent: (
           <RenderHtml
-            source={{ html: removeAllAttributesFromHTML(v.description || '').slice(0, 300) || '' }}
+            source={{
+              html:
+                removeAllAttributesFromHTML(v.description || '').slice(
+                  0,
+                  300 * zoomOut * zoomOut
+                ) || '',
+            }}
             renderersProps={{
               a: { onPress: () => navigation.push('NotePage', { title: v.title }) },
             }}

@@ -78,7 +78,14 @@
 
 ### 📆 Timeline
 
-* A calendar-based view that shows all notes linked to dates
+* This feature lets you view your schedule at a glance based on the dates written in your notes
+* You can use the specified date formats via the 🕒 button while editing a note
+* The following date formats are supported:
+  * `YYYY-MM`
+  * `YYYY-MM-DD`
+  * `YYYY-MM-DD/YYYY-MM-DD`
+  * `MM/DD`
+  * `MM/DD ~ MM/DD`
 * Use the date selector or calendar to browse notes by day
 * View and edit dated sections directly from this screen
 
@@ -108,10 +115,10 @@
 * Links within notes are automatically detected and categorized
 * Internal note links are also suggested during search and autocomplete
 
-### ⏱ Automatic Date Detection
+### ⏱ Automatic Schedule Detection by Note
 
-* Recognizes date patterns like `2024-06-01` or `06/01~06/05`
-* Visualizes dates in the form of a timer bar and integrates with the timeline
+* The system automatically detects and displays schedules from each note using the supported timeline date formats.
+* Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.
 
 ### 🧠 Readability Analysis
 

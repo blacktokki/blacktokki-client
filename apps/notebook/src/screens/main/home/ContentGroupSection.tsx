@@ -29,7 +29,7 @@ export const TimeLineButton = () => {
           {data.length > 0 && <Badge>{data.length}</Badge>}
         </View>
       )}
-      title={lang('TimeLine')}
+      title={lang('Timeline')}
       onPress={() => navigate('TimeLine')}
     />
   );

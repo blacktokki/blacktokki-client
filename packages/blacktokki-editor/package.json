@@ -27,7 +27,7 @@
     "markdown-it": "^14.1.0",
     "react-dom": "*",
     "react-native-builder-bob": "^0.18.3",
-    "supercode": "prathamVaidya/supercode-tinymce-plugin#a692a27",
+    "supercode": "https://github.com/prathamVaidya/supercode-tinymce-plugin.git#a692a27",
     "tinymce": "^6.8.5",
     "turndown": "^7.2.0",
     "typescript": "^5.1.3"

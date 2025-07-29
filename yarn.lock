@@ -8880,9 +8880,9 @@ sucrase@3.35.0:
     pirates "^4.0.1"
     ts-interface-checker "^0.1.9"
 
-supercode@prathamVaidya/supercode-tinymce-plugin#a692a27:
+"supercode@https://github.com/prathamVaidya/supercode-tinymce-plugin.git#a692a27":
   version "1.2.1"
-  resolved "https://codeload.github.com/prathamVaidya/supercode-tinymce-plugin/tar.gz/a692a27c991160248c59030b812cf5b2f124f7d5"
+  resolved "https://github.com/prathamVaidya/supercode-tinymce-plugin.git#a692a27c991160248c59030b812cf5b2f124f7d5"
   dependencies:
     "@rollup/plugin-terser" "^0.4.4"
     "@tinymce/tinymce-react" "^5.0.1"

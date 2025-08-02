@@ -17,8 +17,8 @@
   },
   "devDependencies": {
     "@babel/core": "*",
-    "@blacktokki/eslint-config": "*",
     "@babel/preset-env": "*",
+    "@blacktokki/eslint-config": "*",
     "@react-native-async-storage/async-storage": "^1.17.11",
     "@tsconfig/recommended": "^1.0.1",
     "axios": "^1.8.2",
@@ -42,5 +42,8 @@
       "module",
       "typescript"
     ]
+  },
+  "dependencies": {
+    "@react-oauth/google": "^0.12.2"
   }
 }

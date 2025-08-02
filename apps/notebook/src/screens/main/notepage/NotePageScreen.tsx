@@ -1,6 +1,7 @@
 import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import DiffMatchPatch from 'diff-match-patch';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -21,6 +22,12 @@ import {
 import TimerTagSection from './TimerTagSection';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
+
+const diffToSnapshot = (original: string, delta: string) => {
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_fromDelta(original, delta);
+  return dmp.diff_text2(diffs);
+};
 
 export const NotePageScreen: React.FC = () => {
   const isFocused = useIsFocused();
@@ -45,7 +52,10 @@ export const NotePageScreen: React.FC = () => {
           next: _archives[archiveIndex + 1]?.id,
         }
       : undefined;
-
+  const snapshot =
+    archive?.type === 'DELTA'
+      ? _archives?.find((v) => archive.option.SNAPSHOT_ID === v.id)
+      : undefined;
   const handleEdit = () => {
     navigation.navigate('EditPage', { title });
   };
@@ -62,7 +72,9 @@ export const NotePageScreen: React.FC = () => {
   useEffect(() => {
     setDescription(
       archive
-        ? archive.description
+        ? snapshot?.description && archive.description
+          ? diffToSnapshot(snapshot.description, archive.description)
+          : archive.description
         : paragraphItem
         ? fullParagraph
           ? paragraphDescription(paragraphs, paragraphItem.path, true).trim()

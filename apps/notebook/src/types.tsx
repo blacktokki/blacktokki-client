@@ -1,18 +1,13 @@
 export type PostContent = {
   userId: number;
   parentId: number;
-  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT';
+  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA';
   order: number;
   input: string;
   title: string;
   description?: string;
   option: {
-    //     INPUT?: string,
-    //     IMAGE_URL?: string,
-    //     EXECUTION_COUNT?: string,
-    //     EXECUTION_STATUS?: string,
-    //     INPUT_VISIBLE?:boolean,
-    //     OUTPUT_VISIBLE?:boolean
+    SNAPSHOT_ID?: number;
   };
 };
 

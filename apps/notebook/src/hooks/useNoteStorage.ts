@@ -41,11 +41,11 @@ let lastPage: string | undefined;
 
 const getContents = async (
   data:
-    | { isOnline: true; type: 'NOTE' | 'SNAPSHOT'; page?: number; parentId?: number }
+    | { isOnline: true; types: Content['type'][]; page?: number; parentId?: number }
     | { isOnline: false }
 ): Promise<Content[]> => {
   if (data.isOnline) {
-    return await getContentList(data.parentId, [data.type], data.page);
+    return await getContentList(data.parentId, data.types, data.page);
   }
   const type = 'NOTE';
   try {
@@ -139,7 +139,7 @@ export const useNotePages = () => {
   const { auth } = useAuthContext();
   return useQuery({
     queryKey: ['pageContents', !auth.isLocal],
-    queryFn: async () => await getContents({ isOnline: !auth.isLocal, type: 'NOTE' }),
+    queryFn: async () => await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] }),
   });
 };
 
@@ -150,7 +150,7 @@ export const useSnapshotPages = (parentId?: number) => {
     queryFn: async ({ pageParam }) =>
       await getContents({
         isOnline: !auth.isLocal,
-        type: 'SNAPSHOT',
+        types: ['SNAPSHOT', 'DELTA'],
         parentId,
         page: pageParam || 0,
       }),
@@ -189,7 +189,7 @@ export const useSnapshotAll = (parentId?: number) => {
     queryKey: ['snapshotContentsAll', !auth.isLocal, parentId],
     queryFn: async () =>
       parentId
-        ? await getContents({ isOnline: !auth.isLocal, type: 'SNAPSHOT', parentId })
+        ? await getContents({ isOnline: !auth.isLocal, types: ['SNAPSHOT', 'DELTA'], parentId })
         : undefined,
   });
 };

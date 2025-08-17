@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = 'https://blacktokki.com';
+const API_URL = 'https://blacktokki.kro.kr';
 
 const needRefresh = (response: AxiosResponse<any, any>) => {
   return (

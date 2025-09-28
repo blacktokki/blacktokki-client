@@ -2,9 +2,9 @@ import moment from 'moment';
 import path from 'path';
 
 import { CompanyInfoBlock, CompanyResponse } from '../types';
-import { saveCompress, loadCompress } from '../utils/compress';
 import { load_json, save_json, exists_file, init_folder } from './file';
 import { request_company, request_company_list, INDEX_INFO } from './request';
+import { saveCompress, loadCompress } from '../utils/compress';
 
 const MIN_DATE = moment(new Date()).add(-2, 'year').add(1, 'day').toDate();
 
@@ -160,7 +160,7 @@ function storage({
     if (success) {
       const output_len = j2['output'].length;
       const last_date = output_len
-        ? new Date(j2['CURRENT_DATETIME'])
+        ? new Date(j2.CURRENT_DATETIME.replace(/\./g, '-').substring(0, 10))
         : moment(options.start_date).add(1, 'day').toDate();
       if (options.log_datetime) console.log(options.start_date, last_date, options.end_date);
       if (output_len === 0 || last_date.valueOf() <= options.end_date.valueOf()) {
@@ -175,10 +175,10 @@ function storage({
     return j2;
   }
 
-  async function saveLastDate(data_all: any[]) {
+  async function saveLastDate(data_all: CompanyInfoBlock[]) {
     const last_dates: any = {};
     data_all.forEach((d) => {
-      last_dates[d['full_code']] = d['lastDate'];
+      last_dates[d['ISU_CD']] = d['lastDate'];
     });
     const _path2 = path.join(rootPath, 'last_date.json');
     await save_json(last_dates, _path2);

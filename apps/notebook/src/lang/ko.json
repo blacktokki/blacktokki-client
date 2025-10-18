@@ -67,5 +67,6 @@
   "End date +2d": "종료일 +1d",
   "End date +7d": "종료일 +1d",
   "End date +1M": "종료일 +1M",
-  "Delete": "삭제"
+  "Delete": "삭제",
+  "Kanban": "칸반"
 }

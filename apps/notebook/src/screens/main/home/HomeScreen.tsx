@@ -11,7 +11,11 @@ import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
 import ConfigSection from './ConfigSection';
-import ContentGroupSection, { ProblemButton, TimeLineButton } from './ContentGroupSection';
+import ContentGroupSection, {
+  KanbanButton,
+  ProblemButton,
+  TimeLineButton,
+} from './ContentGroupSection';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
@@ -28,6 +32,7 @@ const NotesTabView = () => {
       </List.Subheader>
       <TimeLineButton />
       <ProblemButton />
+      <KanbanButton />
     </ScrollView>
   );
 };

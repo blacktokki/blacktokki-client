@@ -5,6 +5,7 @@ import { Platform, ScrollView } from 'react-native';
 import { List } from 'react-native-paper';
 
 import ContentGroupSection, {
+  KanbanButton,
   ProblemButton,
   TimeLineButton,
 } from '../screens/main/home/ContentGroupSection';
@@ -20,6 +21,7 @@ export default () => {
       />
       <TimeLineButton />
       <ProblemButton />
+      <KanbanButton />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <List.Subheader style={{}} selectable={false}>
           {lang('Open Notes')}

@@ -44,9 +44,6 @@ export default function DateHeaderSection({
     todayButton: {
       backgroundColor: commonStyles.searchButton.backgroundColor,
     },
-    navButton: {
-      backgroundColor: theme === 'dark' ? '#333333' : '#efefef',
-    },
   });
   return (
     <View style={[headerStyles.container, themedStyles.container]}>
@@ -66,12 +63,9 @@ export default function DateHeaderSection({
         </TouchableOpacity>
       </View>
       {/* Navigation Bar */}
-      <View style={headerStyles.navContainer}>
+      <View style={commonStyles.navContainer}>
         {/* Previous Day Button */}
-        <TouchableOpacity
-          onPress={() => moveDate(-1)}
-          style={[headerStyles.navButton, themedStyles.navButton]}
-        >
+        <TouchableOpacity onPress={() => moveDate(-1)} style={commonStyles.navButton}>
           <Icon name="chevron-left" size={16} color={commonStyles.text.color} />
         </TouchableOpacity>
 
@@ -85,18 +79,13 @@ export default function DateHeaderSection({
         </TouchableOpacity>
 
         {/* Next Day Button */}
-        <TouchableOpacity
-          onPress={() => moveDate(1)}
-          style={[headerStyles.navButton, themedStyles.navButton]}
-        >
+        <TouchableOpacity onPress={() => moveDate(1)} style={commonStyles.navButton}>
           <Icon name="chevron-right" size={16} color={commonStyles.text.color} />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const BUTTON_SIZE = 30;
 
 // Base styles that don't change based on theme
 const headerStyles = StyleSheet.create({
@@ -116,28 +105,13 @@ const headerStyles = StyleSheet.create({
   dateContainer: {
     flex: 1,
     minWidth: 130,
-    height: BUTTON_SIZE,
+    height: createCommonStyles('light').navButton.height,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dateDisplay: {
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  navContainer: {
-    flex: 1,
-    minWidth: 150,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  navButton: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 8,
-    borderRadius: 8,
-    padding: 8,
   },
   todayButton: {
     alignItems: 'center',

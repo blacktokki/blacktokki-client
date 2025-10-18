@@ -48,7 +48,7 @@ export const NotePageHeader = ({
         <Text
           style={[
             commonStyles.title,
-            styles.title,
+            pageStyles.title,
             paragraph || splitTitle.length === 2 ? { color: pressableTextColor } : {},
           ]}
           numberOfLines={1}
@@ -58,12 +58,12 @@ export const NotePageHeader = ({
       </TouchableOpacity>
       {splitTitle.length === 2 && (
         <View style={{ maxWidth: '100%', flexDirection: 'row' }}>
-          <Text style={[commonStyles.title, styles.title, { flex: 0 }]}>/</Text>
+          <Text style={[commonStyles.title, pageStyles.title, { flex: 0 }]}>/</Text>
           <TouchableOpacity onPress={() => onPress(title, false)}>
             <Text
               style={[
                 commonStyles.title,
-                styles.title,
+                pageStyles.title,
                 paragraph ? { color: pressableTextColor } : {},
               ]}
               numberOfLines={1}
@@ -75,7 +75,7 @@ export const NotePageHeader = ({
       )}
       <View style={{ maxWidth: '100%', flexDirection: 'row' }}>
         {!!paragraph && (
-          <Text style={[commonStyles.title, styles.title, { marginLeft: 5 }]} numberOfLines={1}>
+          <Text style={[commonStyles.title, pageStyles.title, { marginLeft: 5 }]} numberOfLines={1}>
             {titleFormat({ title: '', paragraph })}
           </Text>
         )}
@@ -217,16 +217,16 @@ export const NoteBottomSection = ({
 export const getIconColor = (theme: 'light' | 'dark') => (theme === 'dark' ? '#E4E4E4' : '#333333');
 
 const styles = StyleSheet.create({
-  title: {
-    flex: 1,
-    fontSize: 20,
-  },
   updated: { marginLeft: 5, fontStyle: 'italic' },
   card: { padding: 0, marginBottom: 0 },
   inactiveCard: { flex: 1, position: 'absolute' },
 });
 
 export const pageStyles = StyleSheet.create({
+  title: {
+    flex: 1,
+    fontSize: 20,
+  },
   //@ts-ignore
   container: { paddingRight: 12, scrollbarGutter: 'stable' },
   contentContainer: { flexGrow: 1 },

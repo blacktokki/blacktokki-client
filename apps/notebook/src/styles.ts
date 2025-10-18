@@ -92,5 +92,21 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    navContainer: {
+      flex: 1,
+      minWidth: 150,
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    navButton: {
+      width: 30,
+      height: 30,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginHorizontal: 8,
+      borderRadius: 8,
+      padding: 8,
+      backgroundColor: theme === 'dark' ? '#333333' : '#efefef',
+    },
   });
 };

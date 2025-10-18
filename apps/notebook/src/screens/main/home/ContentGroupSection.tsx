@@ -52,6 +52,17 @@ export const ProblemButton = () => {
   );
 };
 
+export const KanbanButton = () => {
+  const { lang } = useLangContext();
+  return (
+    <List.Item
+      left={(_props) => <List.Icon {..._props} icon={'view-dashboard-variant'} />}
+      title={lang('Kanban')}
+      onPress={() => push('Kanban')}
+    />
+  );
+};
+
 export const toRecentContents = (data: Content[]) =>
   data
     .filter((v) => v.description)

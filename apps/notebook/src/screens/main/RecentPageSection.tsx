@@ -1,14 +1,15 @@
 import { useColorScheme, useResizeContext, View, Text, useLangContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { TouchableOpacity, ScrollView } from 'react-native';
 import { Card } from 'react-native-paper';
 
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
-import { Content, NavigationParamList } from '../../types';
+import { NavigationParamList } from '../../types';
 import { toRecentContents } from './home/ContentGroupSection';
+import { Paragraph } from '../../components/HeaderSelectBar';
 
 const updatedOffset = new Date().getTimezoneOffset();
 
@@ -55,7 +56,13 @@ const _cardPadding = (isLandscape: boolean) => (isLandscape ? 20 : 4);
 const _cardMaxWidth = (isLandscape: boolean) => (isLandscape ? 250 : 190);
 const _zoomOut = (isLandscape: boolean) => (isLandscape ? 1 : 1);
 
-type Item = (Content & { descriptionComponent: JSX.Element }) | null;
+type BaseItem = {
+  title: string;
+  description?: string;
+  updated?: string;
+  paragraph?: Paragraph & { origin: string };
+};
+type Item = (BaseItem & { descriptionComponent: JSX.Element; onPress: () => void }) | null;
 
 const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => {
   const window = useResizeContext();
@@ -84,8 +91,6 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
       />
     );
   }
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const onPress = () => navigation.push('NotePage', { title: item.title });
   return (
     <TouchableOpacity
       style={{
@@ -95,10 +100,10 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
         minWidth: cardMaxWidth,
         maxWidth: cardMaxWidth,
       }}
-      onPress={onPress}
+      onPress={item.onPress}
     >
       <Card
-        onPress={onPress}
+        onPress={item.onPress}
         style={[
           commonStyles.card,
           {
@@ -134,17 +139,49 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
         }}
       >
         <Text style={{ fontSize: 14 + fSize, overflow: 'hidden' }}>{item.title}</Text>
-        <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
-          {updatedFormat(item.updated)}
-        </Text>
+        {item.updated && (
+          <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
+            {updatedFormat(item.updated)}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 });
 
-const renderItem = ({ item, index }: { item: Item; index: number }) => (
+export const renderCardPage = ({ item, index }: { item: Item; index: number }) => (
   <CardPage key={index} index={index} item={item} />
 );
+
+export const useToCardPage = (onPress: (item: BaseItem) => void) => {
+  const window = useResizeContext();
+  const cardMaxWidth = _cardMaxWidth(window === 'landscape');
+  const zoomOut = _zoomOut(window === 'landscape');
+  const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
+  return useCallback(
+    (v: BaseItem) => ({
+      ...v,
+      descriptionComponent: (
+        <RenderHtml
+          source={{
+            html:
+              removeAllAttributesFromHTML(v.description || '').slice(0, 300 * zoomOut * zoomOut) ||
+              '',
+          }}
+          renderersProps={{
+            a: { onPress: () => onPress(v) },
+          }}
+          tagsStyles={{ body: { color: commonStyles.text.color } }}
+          contentWidth={cardMaxWidth}
+        />
+      ),
+      onPress: () => onPress(v),
+    }),
+    [zoomOut, onPress, commonStyles, cardMaxWidth]
+  );
+};
 
 export const RecentPagesSection = React.memo(() => {
   const theme = useColorScheme();
@@ -154,32 +191,9 @@ export const RecentPagesSection = React.memo(() => {
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const cardMaxWidth = _cardMaxWidth(window === 'landscape');
-  const zoomOut = _zoomOut(window === 'landscape');
-  const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
+  const toCardPage = useToCardPage((v) => navigation.push('NotePage', { title: v.title }));
   const contents = useMemo(
-    () => [
-      ...toRecentContents(recentPages).map((v) => ({
-        ...v,
-        descriptionComponent: (
-          <RenderHtml
-            source={{
-              html:
-                removeAllAttributesFromHTML(v.description || '').slice(
-                  0,
-                  300 * zoomOut * zoomOut
-                ) || '',
-            }}
-            renderersProps={{
-              a: { onPress: () => navigation.push('NotePage', { title: v.title }) },
-            }}
-            tagsStyles={{ body: { color: commonStyles.text.color } }}
-            contentWidth={cardMaxWidth}
-          />
-        ),
-      })),
-      null,
-      null,
-    ],
+    () => [...toRecentContents(recentPages).map(toCardPage), null, null],
     [recentPages]
   );
   const maxWidth = (cardMaxWidth + 5) * (window === 'landscape' ? 5 : 3);
@@ -203,7 +217,7 @@ export const RecentPagesSection = React.memo(() => {
         justifyContent: window === 'landscape' ? undefined : 'center',
       }}
     >
-      <Suspense>{contents.map((item, index) => renderItem({ item, index }))}</Suspense>
+      <Suspense>{contents.map((item, index) => renderCardPage({ item, index }))}</Suspense>
     </ScrollView>
   ) : (
     <View style={commonStyles.container}>

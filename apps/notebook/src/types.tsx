@@ -1,14 +1,24 @@
+export type BoardOption = {
+  BOARD_NOTE_IDS: number[];
+  BOARD_HEADER_LEVEL: number;
+};
+
 export type PostContent = {
   userId: number;
   parentId: number;
-  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA';
+  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA' | 'BOARD';
   order: number;
   input: string;
   title: string;
   description?: string;
   option: {
     SNAPSHOT_ID?: number;
-  };
+  } & (
+    | BoardOption
+    | {
+        BOARD_NOTE_IDS?: undefined;
+      }
+  );
 };
 
 export type Content = PostContent & {

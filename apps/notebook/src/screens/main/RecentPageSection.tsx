@@ -52,8 +52,6 @@ function removeAllAttributesFromHTML(html: string): string {
   return body.innerHTML;
 }
 
-const _cardPadding = (isLandscape: boolean) => (isLandscape ? 20 : 4);
-const _cardMaxWidth = (isLandscape: boolean) => (isLandscape ? 250 : 190);
 const _zoomOut = (isLandscape: boolean) => (isLandscape ? 1 : 1);
 
 type BaseItem = {
@@ -62,11 +60,21 @@ type BaseItem = {
   updated?: string;
   paragraph?: Paragraph & { origin: string };
 };
-type Item = (BaseItem & { descriptionComponent: JSX.Element; onPress: () => void }) | null;
+
+type Scale = Record<'landscape' | 'portrait', { maxWidth: number; padding: number }>;
+
+type Item = { scale: Scale } & (
+  | (BaseItem & {
+      descriptionComponent: JSX.Element;
+      onPress: () => void;
+    })
+  | { title?: undefined }
+);
 
 const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => {
   const window = useResizeContext();
-  const cardMaxWidth = _cardMaxWidth(window === 'landscape');
+  const cardMaxWidth = item.scale[window].maxWidth;
+  const cardPadding = item.scale[window].padding;
   const zoomOut = _zoomOut(window === 'landscape');
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -80,7 +88,7 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
     }
   }, [item, index, mounted]);
 
-  if (item === null) {
+  if (item.title === undefined) {
     return (
       <View
         style={{
@@ -95,7 +103,7 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
     <TouchableOpacity
       style={{
         flexBasis: window === 'landscape' ? '33%' : '50%',
-        padding: _cardPadding(window === 'landscape'),
+        padding: cardPadding,
         paddingRight: 0,
         minWidth: cardMaxWidth,
         maxWidth: cardMaxWidth,
@@ -107,8 +115,9 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
         style={[
           commonStyles.card,
           {
-            paddingTop: 8,
-            aspectRatio: 1 / Math.sqrt(2),
+            padding: 8 + cardPadding * 0.4,
+            paddingTop: 0,
+            aspectRatio: item.updated || window === 'landscape' ? 1 / Math.sqrt(2) : Math.sqrt(2),
             borderRadius: 6,
             marginVertical: 10,
             marginHorizontal: 8,
@@ -153,9 +162,8 @@ export const renderCardPage = ({ item, index }: { item: Item; index: number }) =
   <CardPage key={index} index={index} item={item} />
 );
 
-export const useToCardPage = (onPress: (item: BaseItem) => void) => {
+export const useToCardPage = (onPress: (item: BaseItem) => void, scale: Scale) => {
   const window = useResizeContext();
-  const cardMaxWidth = _cardMaxWidth(window === 'landscape');
   const zoomOut = _zoomOut(window === 'landscape');
   const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
   const theme = useColorScheme();
@@ -174,13 +182,25 @@ export const useToCardPage = (onPress: (item: BaseItem) => void) => {
             a: { onPress: () => onPress(v) },
           }}
           tagsStyles={{ body: { color: commonStyles.text.color } }}
-          contentWidth={cardMaxWidth}
+          contentWidth={scale[window].maxWidth}
         />
       ),
       onPress: () => onPress(v),
+      scale,
     }),
-    [zoomOut, onPress, commonStyles, cardMaxWidth]
+    [zoomOut, onPress, commonStyles, scale]
   );
+};
+
+const defaultScale: Scale = {
+  landscape: {
+    maxWidth: 250,
+    padding: 20,
+  },
+  portrait: {
+    maxWidth: 190,
+    padding: 4,
+  },
 };
 
 export const RecentPagesSection = React.memo(() => {
@@ -190,13 +210,19 @@ export const RecentPagesSection = React.memo(() => {
   const { lang } = useLangContext();
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const cardMaxWidth = _cardMaxWidth(window === 'landscape');
-  const toCardPage = useToCardPage((v) => navigation.push('NotePage', { title: v.title }));
+  const toCardPage = useToCardPage(
+    (v) => navigation.push('NotePage', { title: v.title }),
+    defaultScale
+  );
   const contents = useMemo(
-    () => [...toRecentContents(recentPages).map(toCardPage), null, null],
+    () => [
+      ...toRecentContents(recentPages).map(toCardPage),
+      { scale: defaultScale },
+      { scale: defaultScale },
+    ],
     [recentPages]
   );
-  const maxWidth = (cardMaxWidth + 5) * (window === 'landscape' ? 5 : 3);
+  const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
   return isLoading ? (
     <View style={commonStyles.container}>
       <View style={[commonStyles.card, commonStyles.centerContent]}>
@@ -213,7 +239,7 @@ export const RecentPagesSection = React.memo(() => {
         maxWidth,
         flexWrap: 'wrap',
         flexDirection: 'row',
-        paddingRight: _cardPadding(window === 'landscape'),
+        paddingRight: defaultScale[window].padding,
         justifyContent: window === 'landscape' ? undefined : 'center',
       }}
     >

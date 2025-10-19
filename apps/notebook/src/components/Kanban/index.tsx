@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { FlatList, StyleProp, ViewStyle, View, ScrollView } from 'react-native';
+import { FlatList, StyleProp, ViewStyle, View } from 'react-native';
 
 import KanbanCard from './KanbanCard';
 
@@ -60,7 +60,6 @@ export default <T,>({
     return false;
   };
   const columnList = useMemo(() => {
-    console.log('!@@');
     return columns.map((_item, itemIndex) =>
       _item.data.map((item, index) => {
         return (
@@ -75,46 +74,54 @@ export default <T,>({
       })
     );
   }, [columns]);
-  const commonPadding = 10;
+  const commonPadding = 20;
   return (
-    <ScrollView
-      horizontal={horizontal}
-      style={{ width: '100%', height: '100%', padding: commonPadding }}
-      contentContainerStyle={{ flexDirection: horizontal ? 'column' : 'row', flex: 1 }}
+    <View
+      //@ts-ignore
+      style={{
+        width: '100%',
+        height: '100%',
+        flexDirection: horizontal ? 'column' : 'row',
+        flex: 1,
+        overflow: 'auto',
+      }}
     >
       {columns.map((item, itemIndex) => (
         <View
           key={itemIndex}
-          style={[
-            {
-              flex: horizontal ? undefined : 1,
-              zIndex: itemIndex === currentColumn ? 5000 : undefined,
-            },
-            columnStyle,
-            nextColumn !== undefined && itemIndex !== currentColumn
-              ? {
-                  borderWidth: itemIndex === nextColumn ? 2 : 1,
-                  padding: (itemIndex === nextColumn ? 0 : 1) + commonPadding,
-                  borderStyle: 'dashed',
-                }
-              : { padding: 2 + commonPadding },
-          ]}
+          style={{
+            zIndex: itemIndex === currentColumn ? 5000 : undefined,
+          }}
           onLayout={(e) => {
             positionRef.current[itemIndex] = horizontal
               ? e.nativeEvent.layout.y
               : e.nativeEvent.layout.x;
           }}
         >
-          {renderHeader({ item, index: itemIndex })}
-          <FlatList
-            horizontal={horizontal}
-            data={item.data}
-            renderItem={({ item, index }) => columnList[itemIndex][index]}
-            CellRendererComponent={cellRendererComponent}
-            style={{ overflow: 'visible', backgroundColor: 'transparent' }}
-          />
+          <View
+            style={[
+              { flexGrow: 1 },
+              columnStyle,
+              nextColumn !== undefined && itemIndex !== currentColumn
+                ? {
+                    borderWidth: itemIndex === nextColumn ? 2 : 1,
+                    padding: (itemIndex === nextColumn ? 0 : 1) + commonPadding,
+                    borderStyle: 'dashed',
+                  }
+                : { padding: 2 + commonPadding },
+            ]}
+          >
+            {renderHeader({ item, index: itemIndex })}
+            <FlatList
+              horizontal={horizontal}
+              data={item.data}
+              renderItem={({ item, index }) => columnList[itemIndex][index]}
+              CellRendererComponent={cellRendererComponent}
+              style={{ overflow: 'visible', backgroundColor: 'transparent' }}
+            />
+          </View>
         </View>
       ))}
-    </ScrollView>
+    </View>
   );
 };

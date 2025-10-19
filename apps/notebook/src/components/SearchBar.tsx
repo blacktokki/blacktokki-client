@@ -283,18 +283,18 @@ export const SearchBar: React.FC<
         }
       }}
     >
-      <View style={styles.searchContainer}>
+      <View style={commonStyles.searchContainer}>
         <TextInput
           ref={(ref) => {
             inputRef.current = ref;
           }}
-          style={[commonStyles.input, styles.searchInput]}
+          style={commonStyles.searchInput}
           value={searchText}
           onChangeText={(text) => {
             setSearchText(text);
           }}
           placeholder={lang('Search')}
-          placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
+          placeholderTextColor={commonStyles.placeholder.color}
           onSubmitEditing={
             focusIndex > -1
               ? () => {
@@ -348,16 +348,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 960,
     zIndex: 999,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-  },
-  searchInput: {
-    flex: 1,
-    height: 36,
-    marginBottom: 0,
-    paddingVertical: 4,
-    fontSize: 14,
   },
   resultsContainer: {
     position: 'absolute',

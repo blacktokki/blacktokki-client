@@ -5,13 +5,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/core';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 
-import { getContentList, patchContent, postContent } from '../services/notebook';
+import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
 
 const DB_NAME = '@Blacktokki:notebook';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-export async function openDB(): Promise<IDBDatabase> {
+async function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -20,9 +20,9 @@ export async function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('NOTE')) {
         db.createObjectStore('NOTE', { keyPath: 'title' });
       }
-      // if (!db.objectStoreNames.contains('SNAPSHOT')) {
-      //   db.createObjectStore('SNAPSHOT', { keyPath: ['title', 'updated'] });
-      // }
+      if (!db.objectStoreNames.contains('BOARD')) {
+        db.createObjectStore('BOARD', { keyPath: 'id' });
+      }
     };
 
     request.onsuccess = () => {
@@ -39,15 +39,18 @@ const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
 
 let lastPage: string | undefined;
 
-const getContents = async (
+export const getContents = async (
   data:
     | { isOnline: true; types: Content['type'][]; page?: number; parentId?: number }
-    | { isOnline: false }
+    | { isOnline: false; types: Content['type'][] }
 ): Promise<Content[]> => {
   if (data.isOnline) {
     return await getContentList(data.parentId, data.types, data.page);
   }
-  const type = 'NOTE';
+  if (data.types.length !== 1 || ['NOTE', 'BOARD'].find((v) => v === data.types[0]) === undefined) {
+    return [];
+  }
+  const type = data.types[0];
   try {
     const db = await openDB();
     return new Promise((resolve) => {
@@ -70,7 +73,7 @@ const getContents = async (
   }
 };
 
-const saveNoteContents = async (
+export const saveContents = async (
   isOnline: boolean,
   contents: (Content | PostContent)[],
   id?: number
@@ -81,13 +84,17 @@ const saveNoteContents = async (
       const savedId = await (id
         ? patchContent({ id, updated: content }).then(() => id)
         : postContent(content));
-      const snapshot: Content | PostContent = {
-        ...content,
-        type: 'SNAPSHOT',
-        id: undefined,
-        parentId: savedId,
-      };
-      await postContent(snapshot);
+      if (content.type === 'NOTE') {
+        const snapshot: Content | PostContent = {
+          ...content,
+          type: 'SNAPSHOT',
+          id: undefined,
+          parentId: savedId,
+        };
+        await postContent(snapshot);
+      }
+    } else if (id) {
+      await deleteContent(id);
     }
     return;
   }
@@ -107,6 +114,9 @@ const saveNoteContents = async (
     //   };
     //   archive.put(snapshot);
     // }
+    if (content === undefined && id) {
+      store.delete(id);
+    }
     await new Promise((resolve, reject) => {
       tx.oncomplete = () => resolve(undefined);
       tx.onerror = () => reject(tx.error);
@@ -250,7 +260,7 @@ export const useCreateOrUpdatePage = () => {
         updatedContents = [...contents, newPage];
       }
 
-      await saveNoteContents(!auth.isLocal, updatedContents, page?.id);
+      await saveContents(!auth.isLocal, updatedContents, page?.id);
       return { title, description, skip: false };
     },
     onSuccess: async (data) => {
@@ -296,7 +306,7 @@ export const useMovePage = () => {
           : c
       );
 
-      await saveNoteContents(!auth.isLocal, updatedContents, page.id);
+      await saveContents(!auth.isLocal, updatedContents, page.id);
 
       // Update recent pages
       const recentPages = await getRecentPages();

@@ -75,7 +75,7 @@ const importMarkdowns = async () => {
   return contents;
 };
 
-const OptionButton = (props: { title: string; onPress: () => void; active: boolean }) => {
+export const OptionButton = (props: { title: string; onPress: () => void; active: boolean }) => {
   const theme = useColorScheme();
   const color = Colors[theme].text;
   return (

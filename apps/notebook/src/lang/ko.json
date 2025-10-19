@@ -68,5 +68,9 @@
   "End date +7d": "종료일 +1d",
   "End date +1M": "종료일 +1M",
   "Delete": "삭제",
-  "Kanban": "칸반"
+  "Kanban": "칸반",
+  "* Header level": "* 헤더 레벨",
+  "* Columns": "* 컬럼",
+  "Add & Rename & Delete": "추가 & 이름변경 & 삭제",
+  "Add": "추가"
 }

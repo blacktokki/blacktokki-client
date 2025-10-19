@@ -66,6 +66,22 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       color: theme === 'dark' ? '#E4E4E4' : '#333333',
       marginBottom: 16,
     },
+    searchInput: {
+      backgroundColor: theme === 'dark' ? '#222222' : '#FFFFFF',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? '#444444' : '#CCCCCC',
+      borderRadius: 4,
+      padding: 10,
+      color: theme === 'dark' ? '#E4E4E4' : '#333333',
+      flex: 1,
+      height: 36,
+      marginBottom: 0,
+      paddingVertical: 4,
+      fontSize: 14,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+    },
     separator: {
       height: 1,
       backgroundColor: theme === 'dark' ? '#333333' : '#EEEEEE',
@@ -107,6 +123,9 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       borderRadius: 8,
       padding: 8,
       backgroundColor: theme === 'dark' ? '#333333' : '#efefef',
+    },
+    placeholder: {
+      color: theme === 'dark' ? '#777777' : '#999999',
     },
   });
 };

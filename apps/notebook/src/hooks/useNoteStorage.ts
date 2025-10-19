@@ -23,6 +23,9 @@ async function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('BOARD')) {
         db.createObjectStore('BOARD', { keyPath: 'id' });
       }
+      getContents({ isOnline: false, types: ['NOTE'] }).then((contents) =>
+        saveContents(false, 'NOTE', contents)
+      );
     };
 
     request.onsuccess = () => {
@@ -75,6 +78,7 @@ export const getContents = async (
 
 export const saveContents = async (
   isOnline: boolean,
+  type: 'NOTE' | 'BOARD',
   contents: (Content | PostContent)[],
   id?: number
 ): Promise<void> => {
@@ -100,11 +104,16 @@ export const saveContents = async (
   }
   try {
     const db = await openDB();
-    const tx = db.transaction(['NOTE' /*, 'SNAPSHOT' */], 'readwrite');
-    const store = tx.objectStore('NOTE');
+    const tx = db.transaction([type /*, 'SNAPSHOT' */], 'readwrite');
+    const store = tx.objectStore(type);
     // const archive = tx.objectStore('SNAPSHOT');
-
-    for (const contentItem of contents) {
+    const ids = contents.map((v) => (v as Content).id).filter((v) => v !== undefined);
+    let maxId = ids.length > 0 ? Math.max(...ids) : 1;
+    for (const contentItem of contents as Content[]) {
+      if (contentItem.id === undefined) {
+        contentItem.id = maxId;
+        maxId += 1;
+      }
       store.put(contentItem); // id를 기준으로 덮어씌움 (없으면 추가)
     }
     // if (content) {
@@ -260,7 +269,7 @@ export const useCreateOrUpdatePage = () => {
         updatedContents = [...contents, newPage];
       }
 
-      await saveContents(!auth.isLocal, updatedContents, page?.id);
+      await saveContents(!auth.isLocal, 'NOTE', updatedContents, page?.id);
       return { title, description, skip: false };
     },
     onSuccess: async (data) => {
@@ -306,7 +315,7 @@ export const useMovePage = () => {
           : c
       );
 
-      await saveContents(!auth.isLocal, updatedContents, page.id);
+      await saveContents(!auth.isLocal, 'NOTE', updatedContents, page.id);
 
       // Update recent pages
       const recentPages = await getRecentPages();

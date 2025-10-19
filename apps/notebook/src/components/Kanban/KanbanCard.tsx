@@ -19,7 +19,9 @@ export default <T,>({ item, renderItem, onStart, onActive, onEnd }: KanbanCardPr
     translateY: 0,
     startX: 0,
     startY: 0,
+    onEnd,
   });
+  contextRef.current.onEnd = onEnd;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -62,7 +64,7 @@ export default <T,>({ item, renderItem, onStart, onActive, onEnd }: KanbanCardPr
         const finalX = dx + context.startX;
         const finalY = dy + context.startY;
 
-        const shouldKeepPosition = onEnd({ x: finalX, y: finalY });
+        const shouldKeepPosition = contextRef.current.onEnd({ x: finalX, y: finalY });
 
         if (!shouldKeepPosition) {
           Animated.spring(translateX, {

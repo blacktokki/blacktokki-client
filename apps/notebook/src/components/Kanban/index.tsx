@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleProp, ViewStyle, View } from 'react-native';
 
 import KanbanCard from './KanbanCard';
@@ -51,14 +51,17 @@ export default <T,>({
     i !== nextColumn && setNextColumn(i);
   };
 
-  const _onEnd = (columnIndex: number, index: number, position: { x: number; y: number }) => {
-    const i = indexResult(columnIndex, horizontal ? position.y : position.x, positionRef.current);
-    setNextColumn(undefined);
-    if (columnIndex !== i) {
-      return onEnd(columns[columnIndex].data[index], columnIndex, i);
-    }
-    return false;
-  };
+  const _onEnd = useCallback(
+    (columnIndex: number, index: number, position: { x: number; y: number }) => {
+      const i = indexResult(columnIndex, horizontal ? position.y : position.x, positionRef.current);
+      setNextColumn(undefined);
+      if (columnIndex !== i) {
+        return onEnd(columns[columnIndex].data[index], columnIndex, i);
+      }
+      return false;
+    },
+    [columns, horizontal, onEnd]
+  );
   const columnList = useMemo(() => {
     return columns.map((_item, itemIndex) =>
       _item.data.map((item, index) => {
@@ -73,7 +76,8 @@ export default <T,>({
         );
       })
     );
-  }, [columns]);
+  }, [columns, horizontal, _onEnd]);
+
   const commonPadding = 20;
   return (
     <View

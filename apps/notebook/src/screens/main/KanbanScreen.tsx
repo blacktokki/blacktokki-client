@@ -2,8 +2,8 @@ import { useColorScheme, useResizeContext, Text, useLangContext } from '@blackto
 import { ConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { Suspense, useMemo, useRef, useEffect, useState } from 'react';
-import { ScrollView, TouchableOpacity, View, TextInput, FlatList } from 'react-native';
+import React, { Suspense, useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import { ScrollView, TouchableOpacity, View, TextInput, FlatList, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { getIconColor, pageStyles } from './NoteItemSections';
@@ -18,11 +18,49 @@ import {
   useRecentBoard,
   useUpdateRecentBoard,
 } from '../../hooks/useBoardStorage';
-import { useNotePages } from '../../hooks/useNoteStorage';
+import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
 import { paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
 import { OptionButton } from './home/ConfigSection';
+
+const move = (page: Content, newPage: Content, path: string) => {
+  const paragraphs = parseHtmlToParagraphs(page?.description || '');
+  const targetParagraph = parseHtmlToParagraphs(newPage?.description || '');
+
+  const moveParagraph = paragraphs.filter((v) => v.path.startsWith(path));
+  const moveParent = paragraphs.findLast(
+    (v) => path.startsWith(v.path) && v.level + 1 === moveParagraph[0].level
+  );
+
+  const sourceParagraph = paragraphs.filter((v) => !v.path.startsWith(path));
+  const sourceDescription = sourceParagraph
+    .map(
+      (v) =>
+        v.header +
+        (moveParent?.path === v.path && v.description.trim().length === 0 ? '-' : v.description)
+    )
+    .join('');
+  const targetParentIndex = targetParagraph.findLastIndex(
+    (v) => v.path === moveParent?.path && v.level === moveParent?.level
+  );
+  const targetFirstParentIndex = targetParagraph.findIndex((v) => v.level === moveParent?.level);
+  const targetParent = targetParentIndex >= 0 ? targetParagraph[targetParentIndex] : undefined;
+  const targetSplit =
+    targetParentIndex >= 0 ? targetParentIndex + 1 : moveParent ? targetFirstParentIndex : 0;
+  const targetDescription = [
+    ...targetParagraph.slice(0, targetSplit).map((v) => v.header + v.description),
+    ...moveParagraph.map(
+      (v, i) =>
+        (moveParent && targetParent === undefined && i === 0 ? moveParent?.header + '\r\n' : '') +
+        v.header +
+        v.description +
+        '\r\n'
+    ),
+    ...targetParagraph.slice(targetSplit).map((v) => v.header + v.description),
+  ].join('');
+  return { sourceDescription, targetDescription };
+};
 
 const KanbanListSection = ({
   pages,
@@ -33,7 +71,7 @@ const KanbanListSection = ({
 }: {
   pages: Content[];
   boards: Content[];
-  board: Content;
+  board?: Content;
   noteColumns: Content[];
   setIsList: (v: boolean) => void;
 }) => {
@@ -51,26 +89,29 @@ const KanbanListSection = ({
       <FlatList
         data={boards}
         renderItem={({ item, index }) => (
-          <View style={[commonStyles.card, { zIndex: item.title === board.title ? 5000 : 0 }]}>
+          <View style={[commonStyles.card, { zIndex: item.title === board?.title ? 5000 : 0 }]}>
             <TouchableOpacity
               onPress={() =>
-                item.title === board.title
+                item.title === board?.title
                   ? setIsList(false)
-                  : recentMutation.mutateAsync({ id: item.id })
+                  : recentMutation
+                      .mutateAsync({ id: item.id })
+                      .then(() => setSearchText(item.title))
               }
             >
               <Text
                 style={[
                   commonStyles.title,
                   { fontSize: 20, fontWeight: '600' },
-                  { textDecorationLine: item.title === board.title ? 'underline' : 'none' },
+                  { textDecorationLine: item.title === board?.title ? 'underline' : 'none' },
                 ]}
               >
                 {item.title}
               </Text>
             </TouchableOpacity>
-            {item.title === board.title && (
+            {board && item.title === board.title && (
               <>
+                <View style={{ height: 16 }} />
                 <ConfigSection title={lang('* Header level')}>
                   <View style={{ flexDirection: 'row' }}>
                     {Array.from(Array(5).keys()).map((v) => {
@@ -94,37 +135,14 @@ const KanbanListSection = ({
                     })}
                   </View>
                 </ConfigSection>
+                <View style={{ height: 16 }} />
                 <ConfigSection title={lang('* Columns')}>
                   <View style={{ paddingHorizontal: 16 }}>
                     <Text
                       style={{
                         fontSize: 16,
                         fontWeight: '600',
-                        paddingVertical: 5,
-                      }}
-                    >
-                      {lang('Delete')}
-                    </Text>
-                    <SearchList
-                      filteredPages={noteColumns}
-                      onPressKeyword={(item) => {
-                        if (item.type === 'NOTE' && option?.BOARD_NOTE_IDS) {
-                          mutation.mutateAsync({
-                            ...board,
-                            description: '',
-                            option: {
-                              ...option,
-                              BOARD_NOTE_IDS: option.BOARD_NOTE_IDS.filter((v) => item.id !== v),
-                            },
-                          });
-                        }
-                      }}
-                    />
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: '600',
-                        paddingVertical: 5,
+                        paddingVertical: 16,
                       }}
                     >
                       {lang('Add')}
@@ -149,6 +167,32 @@ const KanbanListSection = ({
                       }}
                       addKeyword={false}
                       useRandom={false}
+                      newContent={false}
+                      icon="plus"
+                    />
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '600',
+                        paddingVertical: 16,
+                      }}
+                    >
+                      {lang('Delete')}
+                    </Text>
+                    <SearchList
+                      filteredPages={noteColumns.map((v) => ({ ...v, title: '-  ' + v.title }))}
+                      onPressKeyword={(item) => {
+                        if (item.type === 'NOTE' && option?.BOARD_NOTE_IDS) {
+                          mutation.mutateAsync({
+                            ...board,
+                            description: '',
+                            option: {
+                              ...option,
+                              BOARD_NOTE_IDS: option.BOARD_NOTE_IDS.filter((v) => item.id !== v),
+                            },
+                          });
+                        }
+                      }}
                     />
                   </View>
                 </ConfigSection>
@@ -178,16 +222,14 @@ const KanbanListSection = ({
           onPress={
             !searchBoard && searchText !== ''
               ? () =>
-                  mutation
-                    .mutateAsync({
-                      title: searchText,
-                      description: '',
-                      option: {
-                        BOARD_NOTE_IDS: [],
-                        BOARD_HEADER_LEVEL: 3,
-                      },
-                    })
-                    .then(() => setSearchText(''))
+                  mutation.mutateAsync({
+                    title: searchText,
+                    description: '',
+                    option: {
+                      BOARD_NOTE_IDS: [],
+                      BOARD_HEADER_LEVEL: 3,
+                    },
+                  })
               : undefined
           }
         >
@@ -230,10 +272,12 @@ export const KanbanScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const { lang } = useLangContext();
   const accessableRef = useRef(true);
   const { data: pages = [] } = useNotePages();
   const { data: boards } = useBoardPages();
-  const { data: board } = useRecentBoard();
+  const { data: board, isFetched: boardFetched } = useRecentBoard();
+  const mutation = useCreateOrUpdatePage();
   const recentMutation = useUpdateRecentBoard();
   const iconColor = getIconColor(theme);
   const [isList, setIsList] = useState(false);
@@ -295,16 +339,45 @@ export const KanbanScreen: React.FC = () => {
       })
     );
   }, [noteColumns]);
+  const onEnd = useCallback(
+    (data: any, key: number, nextKey: number) => {
+      if (!columns) {
+        return false;
+      }
+      const page = noteColumns.find((v) => v.title === columns[key].name);
+      const newPage = noteColumns.find((v) => v.title === columns[nextKey].name);
+      if (page && newPage) {
+        const { sourceDescription, targetDescription } = move(page, newPage, data.paragraph.path);
+        // console.log(sourceDescription);
+        // console.log(targetDescription);
+        // return false;
+        mutation.mutate(
+          { title: newPage.title, description: targetDescription },
+          {
+            onSuccess: (data) => {
+              mutation.mutate({ title: page.title, description: sourceDescription });
+            },
+            onError: (error: any) => {
+              Alert.alert(
+                lang('error'),
+                error.message || lang('An error occurred while moving note.')
+              );
+            },
+          }
+        );
+      }
+      return false;
+    },
+    [noteColumns, columns]
+  );
   useEffect(() => {
-    if (board === undefined && boards && boards.length === 0) {
+    if ((boardFetched && board === undefined) || (boards && boards.length === 0)) {
       setIsList(true);
     }
-  }, [board, boards, isList]);
-  useEffect(() => {
     if (board === undefined && boards && boards.length > 0) {
       recentMutation.mutateAsync({ id: boards[0].id });
     }
-  }, [board, boards]);
+  }, [board, boards, isList]);
 
   const header = board && (
     <View
@@ -360,10 +433,7 @@ export const KanbanScreen: React.FC = () => {
             onStart={() => {
               accessableRef.current = false;
             }}
-            onEnd={(data, key, nextKey) => {
-              console.log(data, key, nextKey);
-              return false;
-            }}
+            onEnd={onEnd}
           />
         </View>
       )}
@@ -373,7 +443,7 @@ export const KanbanScreen: React.FC = () => {
           contentContainerStyle={pageStyles.contentContainer}
         >
           {header}
-          {boards && board && (
+          {boards && (
             <KanbanListSection
               pages={pages}
               boards={boards}

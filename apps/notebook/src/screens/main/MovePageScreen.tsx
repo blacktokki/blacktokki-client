@@ -1,14 +1,10 @@
-import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
-import { EditorViewer } from '@blacktokki/editor';
+import { useColorScheme, useLangContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, TextInput, Alert, StyleSheet } from 'react-native';
 
-import HeaderSelectBar, { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
-import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
-import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/useNoteStorage';
-import { paragraphByKey } from '../../hooks/useProblem';
+import { useMovePage, useNotePage, useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
@@ -16,95 +12,36 @@ type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
 
 export const MovePageScreen: React.FC = () => {
   const route = useRoute<MovePageScreenRouteProp>();
-  const { title, paragraph, section } = route.params;
+  const { title } = route.params;
+  const [newTitle, setNewTitle] = useState('');
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
-  const _window = useResizeContext();
   const { lang } = useLangContext();
-  const [newTitle, setNewTitle] = useState(title);
   const { data: page, isLoading } = useNotePage(title);
-  const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const path =
-    paragraphs.find((v) => paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph }))
-      ?.path || '';
-  const { data: newPage } = useNotePage(newTitle);
-  const newParagraph = parseHtmlToParagraphs(newPage?.description || '').filter(
-    (v) => title !== newTitle || path === v.path || !v.path.startsWith(path)
-  );
-  const [newPath, setNewPath] = useState('');
-  const [preview, setPreview] = useState<boolean>();
+  const { data: pages } = useNotePages();
   const commonStyles = createCommonStyles(theme);
 
-  const mutation = useCreateOrUpdatePage();
-  const moveMutation = useMovePage();
-  const { sourceDescription, targetDescription } = useMemo(() => {
-    const moveParagraph = paragraphs.filter((v) => v.path.startsWith(path));
-    const isSplit = newPage?.title === page?.title + '/' + moveParagraph[0]?.title;
-    const moveDescription = moveParagraph
-      .map((v, i) => (isSplit && i === 0 ? '' : v.header) + v.description)
-      .join('');
-    const sourceParagraph = paragraphs.filter((v) => !v.path.startsWith(path));
-    const sourceDescription = sourceParagraph.map((v) => v.header + v.description).join('');
-    const targetParagraph = page?.title === newPage?.title ? sourceParagraph : newParagraph;
-    const targetIndex = targetParagraph.findLastIndex((v) => v.path.startsWith(newPath));
-    const targetDescription =
-      newPage?.id === undefined
-        ? moveDescription
-        : [
-            ...targetParagraph.slice(0, targetIndex + 1).map((v) => v.header + v.description),
-            ...moveParagraph.map(
-              (v, i) =>
-                ((v.path === path && v.description === '') || (isSplit && i === 0)
-                  ? ''
-                  : v.header) + v.description
-            ),
-            ...targetParagraph.slice(targetIndex + 1).map((v) => v.header + v.description),
-          ].join('');
-    return { sourceDescription, targetDescription };
-  }, [paragraphs, newParagraph, path, newPath]);
+  const mutation = useMovePage();
 
   const handleMove = () => {
-    if (newPage?.id === undefined) {
-      moveMutation.mutate(
-        {
-          oldTitle: title,
-          newTitle: newTitle.trim(),
-          description: path === '' ? undefined : targetDescription,
+    mutation.mutate(
+      {
+        oldTitle: title,
+        newTitle: newTitle.trim(),
+        description: exists ? page?.description : undefined,
+      },
+      {
+        onSuccess: (data) => {
+          navigation.reset({
+            index: 1,
+            routes: [{ name: 'Home' }, { name: 'NotePage', params: { title: data.newTitle } }],
+          });
         },
-        {
-          onSuccess: (data) => {
-            navigation.navigate({ name: 'NotePage', params: { title: data.newTitle } });
-          },
-          onError: (error: any) => {
-            Alert.alert(
-              lang('error'),
-              error.message || lang('An error occurred while moving note.')
-            );
-          },
-        }
-      );
-    } else {
-      if (page?.title === newPage.title && path === newPath) {
-        handleCancel();
+        onError: (error: any) => {
+          Alert.alert(lang('error'), error.message || lang('An error occurred while moving note.'));
+        },
       }
-      mutation.mutate(
-        { title: newPage.title, description: targetDescription },
-        {
-          onSuccess: (data) => {
-            if (page?.title !== newPage.title) {
-              mutation.mutate({ title, description: sourceDescription });
-            }
-            navigation.navigate({ name: 'NotePage', params: { title: data.title } });
-          },
-          onError: (error: any) => {
-            Alert.alert(
-              lang('error'),
-              error.message || lang('An error occurred while moving note.')
-            );
-          },
-        }
-      );
-    }
+    );
   };
   const handleCancel = () => {
     if (navigation.canGoBack()) {
@@ -118,75 +55,32 @@ export const MovePageScreen: React.FC = () => {
     if (!isLoading && !page) {
       handleCancel();
     }
-    page && setNewTitle(page.title + (paragraph ? `/${paragraph}` : ''));
   }, [page, isLoading]);
-  useEffect(() => {
-    if (!isLoading) {
-      setNewPath(paragraph ? '' : path);
-    }
-  }, [paragraph, isLoading]);
-  const paragraphItem = paragraphs.find((v) => v.path === path);
-  const newParagraphItem = newParagraph.find((v) => v.path === newPath);
-  const moveDisabled = !newTitle.trim() || newParagraphItem === undefined;
+
+  const exists = pages?.find((v) => newTitle.trim() === v.title.trim());
+  const active = newTitle.trim() && newTitle.trim() !== title.trim();
+
   return (
-    <ScrollView style={commonStyles.container}>
+    <View style={commonStyles.container}>
       <View style={commonStyles.card}>
-        <View style={{ flexDirection: _window === 'landscape' ? 'row' : 'column', zIndex: 1 }}>
-          <View style={{ zIndex: 1 }}>
-            <Text style={commonStyles.text}>
-              {lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
-            </Text>
-            <Text style={[commonStyles.title, styles.columns]}>
-              {titleFormat({ title, paragraph })}
-            </Text>
-            <Text style={commonStyles.text}>{lang('New note title and paragraph:')}</Text>
-            <SearchBar onPress={setNewTitle} addKeyword={false} useRandom={false} />
-            <View style={styles.columns}>
-              <HeaderSelectBar
-                path={newPath}
-                onPress={(item) => setNewPath(item.path)}
-                root={newPage?.title || ''}
-                data={newParagraph}
-              />
-            </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={commonStyles.text}> {lang('Preview:')}</Text>
-            <TouchableOpacity
-              style={[
-                commonStyles.button,
-                styles.moveButton,
-                {
-                  flex: 0,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingTop: 24,
-                  paddingBottom: 16,
-                },
-              ]}
-              onPress={() => setPreview(!preview)}
-            >
-              <Text style={commonStyles.title}>
-                {titleFormat({ title, paragraph: paragraphItem?.title })}
-              </Text>
-              <Text style={[commonStyles.text, { marginBottom: 8, fontSize: 14 }]}> ➜ </Text>
-              <Text style={commonStyles.title}>
-                {titleFormat({ title: newTitle, paragraph: newParagraphItem?.title })}
-              </Text>
-            </TouchableOpacity>
-            {preview !== undefined && (
-              <View style={{ display: preview ? 'flex' : 'none' }}>
-                <EditorViewer
-                  active
-                  value={targetDescription}
-                  theme={theme}
-                  onLink={(url) => onLink(url, navigation)}
-                  autoResize
-                />
-              </View>
-            )}
-          </View>
-        </View>
+        <Text style={commonStyles.text}>{lang('Current note title:')}</Text>
+        <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>{title}</Text>
+
+        <Text style={commonStyles.text}>{lang('New note title:')}</Text>
+        <TextInput
+          style={[commonStyles.input, { marginTop: 8 }]}
+          value={newTitle}
+          onChangeText={setNewTitle}
+          placeholder={lang('Enter a new note title')}
+          placeholderTextColor={theme === 'dark' ? '#777777' : '#999999'}
+        />
+
+        {exists && (
+          <Text style={[commonStyles.smallText, { marginBottom: 16 }]}>
+            {lang('This note title already exists.')}
+          </Text>
+        )}
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[commonStyles.button, styles.cancelButton]}
@@ -195,23 +89,24 @@ export const MovePageScreen: React.FC = () => {
             <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[commonStyles.button, moveDisabled ? styles.cancelButton : styles.moveButton]}
+            style={[
+              commonStyles.button,
+              styles.moveButton,
+              active ? {} : { backgroundColor: styles.cancelButton.backgroundColor },
+              exists ? { backgroundColor: '#d9534f' } : {},
+            ]}
             onPress={handleMove}
-            disabled={moveDisabled}
+            disabled={!active}
           >
-            <Text style={commonStyles.buttonText}>{lang('move')}</Text>
+            <Text style={commonStyles.buttonText}>{lang(exists ? 'overwrite' : 'move')}</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  columns: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
   backButton: {
     padding: 8,
   },

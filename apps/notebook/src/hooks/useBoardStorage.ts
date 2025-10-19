@@ -85,8 +85,7 @@ export const useCreateOrUpdateBoard = () => {
         } as PostContent;
         updatedContents = [...contents, newPage];
       }
-
-      await saveContents(!auth.isLocal, updatedContents, page?.id);
+      await saveContents(!auth.isLocal, 'BOARD', updatedContents, page?.id);
       return { id };
     },
     onSuccess: async (data) => {
@@ -102,7 +101,7 @@ export const useDeleteBoard = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const updatedContents = contents.filter((c) => c.id !== id);
-      await saveContents(!auth.isLocal, updatedContents, id);
+      await saveContents(!auth.isLocal, 'BOARD', updatedContents, id);
       return { id };
     },
     onSuccess: async (data) => {

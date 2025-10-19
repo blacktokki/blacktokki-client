@@ -139,21 +139,24 @@ const useOnPressKeyword = ({
 }: PressKeywordOption & { afterPress?: () => void }) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { mutate: addKeywordMutate } = useAddKeyowrd();
-  return useCallback((item: SearchContent) => {
-    if (onPress && (item.type === 'NOTE' || item.type === '_KEYWORD')) {
-      onPress(item.title);
-    } else if (item.type === '_LINK') {
-      window.open(item.url, '_blank');
-      addKeyword && addKeywordMutate(item);
-    } else if (item.type === '_NOTELINK' && item.paragraph) {
-      navigation.push('NotePage', { title: item.title, paragraph: item.paragraph });
-      addKeyword && addKeywordMutate(item);
-    } else {
-      navigation.push('NotePage', { title: item.title });
-      addKeyword && addKeywordMutate({ type: '_KEYWORD', title: item.title });
-    }
-    afterPress?.();
-  }, []);
+  return useCallback(
+    (item: SearchContent) => {
+      if (onPress && (item.type === 'NOTE' || item.type === '_KEYWORD')) {
+        onPress(item.title);
+      } else if (item.type === '_LINK') {
+        window.open(item.url, '_blank');
+        addKeyword && addKeywordMutate(item);
+      } else if (item.type === '_NOTELINK' && item.paragraph) {
+        navigation.push('NotePage', { title: item.title, paragraph: item.paragraph });
+        addKeyword && addKeywordMutate(item);
+      } else {
+        navigation.push('NotePage', { title: item.title });
+        addKeyword && addKeywordMutate({ type: '_KEYWORD', title: item.title });
+      }
+      afterPress?.();
+    },
+    [onPress]
+  );
 };
 
 export const SearchList = ({
@@ -169,11 +172,14 @@ export const SearchList = ({
   const commonStyles = createCommonStyles(theme);
   const onPressDefault = useOnPressKeyword({});
 
-  const pagePressHandlers = useCallback((item: SearchContent) => {
-    return PanResponder.create({
-      onPanResponderStart: () => (onPressKeyword ? onPressKeyword : onPressDefault)(item),
-    }).panHandlers;
-  }, []);
+  const pagePressHandlers = useCallback(
+    (item: SearchContent) => {
+      return PanResponder.create({
+        onPanResponderStart: () => (onPressKeyword ? onPressKeyword : onPressDefault)(item),
+      }).panHandlers;
+    },
+    [onPressKeyword]
+  );
 
   return (
     <FlatList
@@ -218,8 +224,10 @@ export const SearchList = ({
 export const SearchBar: React.FC<
   {
     useRandom?: boolean;
+    newContent?: boolean;
+    icon?: string;
   } & PressKeywordOption
-> = ({ onPress, addKeyword = true, useRandom = true }) => {
+> = ({ onPress, addKeyword = true, useRandom = true, newContent = true, icon = 'search' }) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
@@ -311,7 +319,7 @@ export const SearchBar: React.FC<
           onPress={handleSearch}
           disabled={!searchText.trim()}
         >
-          <Icon name={'search'} size={18} color="#FFFFFF" />
+          <Icon name={icon} size={18} color="#FFFFFF" />
         </TouchableOpacity>
         {useRandom && <RandomButton />}
       </View>
@@ -329,10 +337,10 @@ export const SearchBar: React.FC<
               onPressKeyword={handleKeywordPress}
               focus={focusIndex}
             />
-          ) : searchText.trim() ? (
+          ) : searchText.trim() && newContent ? (
             <TouchableOpacity style={styles.resultItem} {...newNoteHandlers}>
               <Text style={[commonStyles.text, styles.resultText]}>
-                "{searchText}" 새 노트 만들기
+                "{searchText}"{lang(' : Create new note')}
               </Text>
             </TouchableOpacity>
           ) : null}

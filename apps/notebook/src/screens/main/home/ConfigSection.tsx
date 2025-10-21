@@ -150,7 +150,11 @@ export default () => {
             />
             <OptionButton
               title={lang('Import')}
-              onPress={() => importMarkdowns().then((v) => v.forEach((v2) => mutation.mutate(v2)))}
+              onPress={() =>
+                importMarkdowns().then((v) =>
+                  v.forEach((v2, i) => mutation.mutate({ ...v2, isLast: i + 1 === v.length }))
+                )
+              }
               active={false}
             />
             {!auth.isLocal && (

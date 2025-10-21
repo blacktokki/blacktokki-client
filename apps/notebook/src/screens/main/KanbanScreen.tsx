@@ -352,7 +352,7 @@ export const KanbanScreen: React.FC = () => {
         // console.log(targetDescription);
         // return false;
         mutation.mutate(
-          { title: newPage.title, description: targetDescription },
+          { title: newPage.title, description: targetDescription, isLast: false },
           {
             onSuccess: (data) => {
               mutation.mutate({ title: page.title, description: sourceDescription });

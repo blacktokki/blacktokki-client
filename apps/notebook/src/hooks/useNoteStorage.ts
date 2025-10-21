@@ -108,10 +108,10 @@ export const saveContents = async (
     const store = tx.objectStore(type);
     // const archive = tx.objectStore('SNAPSHOT');
     const ids = contents.map((v) => (v as Content).id).filter((v) => v !== undefined);
-    let maxId = ids.length > 0 ? Math.max(...ids) : 1;
+    let maxId = ids.length > 0 ? Math.max(...ids) : 0;
     for (const contentItem of contents as Content[]) {
       if (contentItem.id === undefined) {
-        contentItem.id = maxId;
+        contentItem.id = maxId + 1;
         maxId += 1;
       }
       store.put(contentItem); // id를 기준으로 덮어씌움 (없으면 추가)
@@ -241,9 +241,18 @@ export const useLastPage = () => {
 export const useCreateOrUpdatePage = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const { data: contents = [] } = useNotePages();
+
   return useMutation({
-    mutationFn: async ({ title, description }: { title: string; description: string }) => {
+    mutationFn: async ({
+      title,
+      description,
+      isLast = true,
+    }: {
+      title: string;
+      description: string;
+      isLast?: boolean;
+    }) => {
+      const contents = await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
       const page = contents.find((c) => c.title === title);
       if (page?.description === description) {
         return { title, description, skip: true };
@@ -270,7 +279,7 @@ export const useCreateOrUpdatePage = () => {
       }
 
       await saveContents(!auth.isLocal, 'NOTE', updatedContents, page?.id);
-      return { title, description, skip: false };
+      return { title, description, skip: !isLast };
     },
     onSuccess: async (data) => {
       if (!data.skip) {

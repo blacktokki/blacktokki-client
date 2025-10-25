@@ -323,6 +323,9 @@ const getData = (pages: Content[]) => {
       const unknownPages = source.links
         .filter((v) => !titleSet.has(v.title))
         .map((v) => ({ title: v.title, updated: '' }));
+      if (source.parentTitle && !titleSet.has(source.parentTitle)) {
+        unknownPages.push({ title: source.parentTitle, updated: '' });
+      }
       return [
         ...[...pages, ...unknownPages].flatMap((target) => getDataMatrix(source, target)),
         ...record,

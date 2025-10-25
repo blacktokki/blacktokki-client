@@ -32,7 +32,7 @@ const diffToSnapshot = (original: string, delta: string) => {
 export const NotePageScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const route = useRoute<NotePageScreenRouteProp>();
-  const { title, paragraph, section, archiveId } = route.params;
+  const { title, paragraph, section, archiveId, kanban } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
@@ -100,8 +100,9 @@ export const NotePageScreen: React.FC = () => {
               title={title}
               paragraph={paragraph}
               archive={archive}
+              kanban={kanban}
               onPress={(title, hasChild) =>
-                (hasChild ? navigation.push : navigation.navigate)('NotePage', { title })
+                (hasChild ? navigation.push : navigation.navigate)('NotePage', { title, kanban })
               }
             />
             <View style={pageStyles.actionButtons}>
@@ -184,14 +185,14 @@ export const NotePageScreen: React.FC = () => {
                 path={paragraphItem?.path}
                 paragraphs={paragraphs}
                 onPress={(moveParagraph) =>
-                  navigation.navigate(
-                    'NotePage',
-                    toNoteParams(
+                  navigation.navigate('NotePage', {
+                    ...toNoteParams(
                       title,
                       moveParagraph.level === 0 ? undefined : moveParagraph.title,
                       moveParagraph.autoSection
-                    )
-                  )
+                    ),
+                    kanban,
+                  })
                 }
               />
             ) : (

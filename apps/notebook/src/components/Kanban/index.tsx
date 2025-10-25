@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleProp, ViewStyle, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, StyleProp, ViewStyle, View, Animated } from 'react-native';
 
 import KanbanCard from './KanbanCard';
 
@@ -40,6 +40,10 @@ export default <T,>({
   renderHeader,
 }: KanbanProps<T>) => {
   const positionRef = useRef<number[]>([]);
+  const sizeRef = useRef<[number[], number[]]>([[], []]);
+  const [maxSize, setMaxSize] = useState<number | undefined>(0);
+  const translate = useRef(new Animated.Value(0)).current;
+  const animated = useRef<Animated.CompositeAnimation>();
   const [currentColumn, setCurrentColumn] = useState(0);
   const [nextColumn, setNextColumn] = useState<number | undefined>(undefined);
   const _onStart = (columnIndex: number, index: number) => {
@@ -62,6 +66,17 @@ export default <T,>({
     },
     [columns, horizontal, onEnd]
   );
+  const nextAnimated = () => {
+    if (animated.current) {
+      const now = animated.current;
+      animated.current.start(() => {
+        nextAnimated();
+        if (animated.current === now) {
+          animated.current = undefined;
+        }
+      });
+    }
+  };
   const columnList = useMemo(() => {
     return columns.map((_item, itemIndex) =>
       _item.data.map((item, index) => {
@@ -77,8 +92,11 @@ export default <T,>({
       })
     );
   }, [columns, horizontal, _onEnd]);
-
-  const commonPadding = 20;
+  useEffect(() => {
+    setMaxSize(undefined);
+    sizeRef.current = [[], []];
+  }, [columns, horizontal, _onEnd]);
+  const commonPadding = 5;
   return (
     <View
       //@ts-ignore
@@ -88,6 +106,20 @@ export default <T,>({
         flexDirection: horizontal ? 'column' : 'row',
         flex: 1,
         overflow: 'auto',
+        padding: 20 - commonPadding,
+        paddingTop: 0,
+      }}
+      onScroll={(e: any) => {
+        const value = horizontal ? e.target.scrollLeft : e.target.scrollTop;
+        const isFirst = animated.current === undefined;
+        animated.current = Animated.timing(translate, {
+          toValue: value,
+          duration: 64,
+          useNativeDriver: true,
+        });
+        if (isFirst) {
+          nextAnimated();
+        }
       }}
     >
       {columns.map((item, itemIndex) => (
@@ -95,6 +127,7 @@ export default <T,>({
           key={itemIndex}
           style={{
             zIndex: itemIndex === currentColumn ? 5000 : undefined,
+            flexDirection: horizontal ? 'row' : 'column',
           }}
           onLayout={(e) => {
             positionRef.current[itemIndex] = horizontal
@@ -109,13 +142,34 @@ export default <T,>({
               nextColumn !== undefined && itemIndex !== currentColumn
                 ? {
                     borderWidth: itemIndex === nextColumn ? 2 : 1,
-                    padding: (itemIndex === nextColumn ? 0 : 1) + commonPadding,
+                    padding: (itemIndex === nextColumn ? 1 : 2) + commonPadding,
                     borderStyle: 'dashed',
                   }
-                : { padding: 2 + commonPadding },
+                : { padding: 3 + commonPadding },
+              maxSize ? (horizontal ? { width: maxSize } : { height: maxSize, paddingTop: 0 }) : {},
             ]}
+            onLayout={(e: any) => {
+              const value = horizontal
+                ? e.nativeEvent.target.clientWidth
+                : e.nativeEvent.target.clientHeight;
+              sizeRef.current[sizeRef.current[0][itemIndex] === undefined ? 0 : 1][itemIndex] =
+                value;
+              if (sizeRef.current[1].length === columns.length) {
+                const maxSize0 = Math.max(...sizeRef.current[0]);
+                const maxSize1 = Math.max(...sizeRef.current[1]);
+                setMaxSize(Math.max(maxSize0, maxSize1));
+              }
+            }}
           >
-            {renderHeader({ item, index: itemIndex })}
+            <View style={horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900 }}>
+              <Animated.View
+                style={{
+                  transform: [horizontal ? { translateX: translate } : { translateY: translate }],
+                }}
+              >
+                {renderHeader({ item, index: itemIndex })}
+              </Animated.View>
+            </View>
             <FlatList
               horizontal={horizontal}
               data={item.data}

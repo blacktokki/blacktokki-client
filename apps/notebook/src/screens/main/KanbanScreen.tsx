@@ -287,10 +287,10 @@ export const KanbanScreen: React.FC = () => {
     (v) => {
       if (accessableRef.current) {
         if (v.paragraph) {
-          navigation.push(
-            'NotePage',
-            toNoteParams(v.paragraph.origin, v.paragraph.title, v.paragraph.autoSection)
-          );
+          navigation.push('NotePage', {
+            ...toNoteParams(v.paragraph.origin, v.paragraph.title, v.paragraph.autoSection),
+            kanban: board?.id,
+          });
         }
       } else {
         accessableRef.current = true;
@@ -402,7 +402,7 @@ export const KanbanScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
       </View>
-      <View style={pageStyles.actionButtons}>
+      <View style={[pageStyles.actionButtons, { flexBasis: 39 }]}>
         <TouchableOpacity onPress={() => setIsList(!isList)} style={pageStyles.actionButton}>
           <Icon name="list" size={16} color={iconColor} />
         </TouchableOpacity>
@@ -421,7 +421,10 @@ export const KanbanScreen: React.FC = () => {
             columns={columns}
             columnStyle={{ borderColor: commonStyles.text.color }}
             renderHeader={({ item }) => (
-              <TouchableOpacity onPress={() => navigation.push('NotePage', { title: item.name })}>
+              <TouchableOpacity
+                onPress={() => navigation.push('NotePage', { title: item.name, kanban: board?.id })}
+                style={{ backgroundColor: commonStyles.container.backgroundColor }}
+              >
                 <Text selectable={false} style={commonStyles.title}>
                   {item.name}
                 </Text>

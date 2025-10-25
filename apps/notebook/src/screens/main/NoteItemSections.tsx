@@ -1,10 +1,12 @@
 import { useColorScheme } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
+import { push } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import HeaderSelectBar, { Paragraph } from '../../components/HeaderSelectBar';
 import { onLink, titleFormat } from '../../components/SearchBar';
@@ -17,12 +19,14 @@ export const NotePageHeader = ({
   onPress,
   paragraph,
   archive,
+  kanban,
 }: {
   title: string;
   onPress: (title: string, hasChild: boolean) => void;
   pressable?: boolean;
   paragraph?: string;
   archive?: { updated: string; previous?: number; next?: number };
+  kanban?: number;
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -41,6 +45,18 @@ export const NotePageHeader = ({
         alignItems: 'center',
       }}
     >
+      {kanban && (
+        <TouchableOpacity
+          onPress={() => push('Kanban')}
+          style={[commonStyles.title, { marginRight: 5 }]}
+        >
+          <Icon2
+            name="view-dashboard"
+            size={pageStyles.title.fontSize}
+            color={pressableTextColor}
+          />
+        </TouchableOpacity>
+      )}
       <TouchableOpacity
         onPress={() => onPress(splitTitle[0], splitTitle.length === 2)}
         style={{ maxWidth: '100%' }}

@@ -19,15 +19,15 @@
 
 ### 🔍 Searching and Creating Notes
 
-* Use the top search bar to find existing notes or create new ones
-* Enter a new title and press `Enter` to automatically create and open the note
+* Use the top search bar to find existing notes or create new ones.
+* Enter a new title and press `Enter` to automatically create and open the note.
 
 ### ✏️ Editing Notes
 
-* Use the markdown-based editor to write and format content
+* Use the markdown-based editor to write and format content.
+* Supports both **auto-save and manual save** options.
 * Autocomplete triggers:
-
-  * `[title` → internal note links
+  * `[title` → internal note paragraph titles **within the current note**, and **New sub note creation** (e.g., `CurrentNote/Keyword`).
   * `http` → external link previews
 
 ---
@@ -36,64 +36,75 @@
 
 ### 🏠 Home
 
-* The main screen that appears upon launch
-* Provides quick access to recently viewed notes, edit suggestions, and the timeline
-* On mobile, access main menus via the bottom tab; on web, use the left-side drawer menu
+* The main screen that appears upon launch.
+* Provides quick access to recently viewed notes, edit suggestions, and the timeline.
+* On mobile, access main menus via the **bottom tab**; on web, use the **left-side drawer** for navigation.
 
 ### 📄 Note Page
 
-* Displays the note title, content, and structured section list
-* The section list is auto-generated from headings (H1\~H6); clicking a section jumps to its position
-* Use top buttons to edit the note, rearrange sections, or view edit history
+* Displays the note title, content, and structured section list.
+* The section list is auto-generated from headings (H1–H6); clicking a section jumps to its position.
+* Use top buttons to edit the note, rearrange sections, or view edit history.
 
 ### ✏️ Note Editing
 
-* A flexible editor that supports both markdown and visual (WYSIWYG) modes
-* Allows free editing with both automatic and manual save options
-* Supports internal note links and external link via autocomplete
+* A flexible editor that supports both markdown and WYSIWYG (visual) modes.
+* Allows free editing with automatic or manual saving.
+* Internal and external link autocompletion is supported.
 
 ### 🗂 Recent Notes
 
-* Lists recently viewed notes in chronological order
-* Click to revisit a note, or remove it from the list if no longer needed
+* Lists recently viewed notes in chronological order.
+* Click to revisit a note, or remove it from the list if no longer needed.
 
 ### 🧾 Edit Suggestions
 
-* Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content
+* Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content.
 * Problem types include:
 
 | Problem Type                              | Description                                                      |
 | --------------------------------------- | ---------------------------------------------------------------- |
 | Empty paragraph                         | A section heading exists but its content is empty                |
 | Empty list                              | A list is present in a section, but it has no items              |
-| Duplicate paragraphs (...)              | The same section title appears more than once                |
-| Duplicate contents (...)                | Identical contents are repeated in section            |
+| Duplicate paragraphs (...)              | The same section title appears more than once                    |
+| Duplicate contents (...)                | Identical contents are repeated in a section                     |
 | Too high readability score: X > 3.0     | The reading difficulty score exceeds the recommended threshold   |
 | Unknown note link (...)                 | A link points to a non-existent note                             |
 | Empty parent note (...)                 | The parent note exists but contains no content                   |
 | Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |
 | Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note |
 
-* Click on an problem to jump directly to the problematic section for quick editing
+* Click a problem to jump directly to the problematic section for quick editing.
 
 ### 📆 Timeline
 
-* This feature lets you view your schedule at a glance based on the dates written in your notes
-* You can use the specified date formats via the 🕒 button while editing a note
-* The following date formats are supported:
+* View your schedule at a glance based on dates written in your notes.
+* You can use the specified date formats via the 🕒 button while editing a note.
+* Supported date formats:
   * `YYYY-MM`
   * `YYYY-MM-DD`
   * `YYYY-MM-DD/YYYY-MM-DD`
   * `MM/DD`
   * `MM/DD ~ MM/DD`
-* Use the date selector or calendar to browse notes by day
-* View and edit dated sections directly from this screen
+* Use the date selector or calendar to browse notes by day.
+* View and edit dated sections directly from this screen.
+* Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
+  * `+1 day`, `+1 month`, `Extend`, or `Delete`.
+
+### 🗂 Kanban
+
+* Visualize and manage note sections as a Kanban board.
+* You can create, modify, and delete boards.
+* Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
+* Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
+* Cards can be **dragged and dropped** to another column.
+* When a card is moved, its corresponding section is **physically moved** to the target note.
 
 ### 🗃 Archive
 
-* Shows previous versions (snapshots) of notes
-* Compare historical content over time, sorted by save date
-* Useful for version control and restoring past content
+* Shows previous versions (snapshots) of notes.
+* Compare historical content over time, sorted by save date.
+* Useful for version control and restoring past content.
 
 ---
 
@@ -102,62 +113,69 @@
 ### 📝 Dual Editor Support
 
 * The note editing screen can be freely converted to both WYSIWYG and Markdown methods with the ✏️ button.
-* Changes in one mode are reflected in real-time in the other
-* Ideal for users who prefer visual editing or are familiar with markdown syntax
+* Changes in one mode are reflected in real-time in the other.
+* Ideal for users who prefer visual editing or are familiar with markdown syntax.
 
 ### 📑 Automatic Section Detection
 
-* Headings within notes are automatically structured into a navigable tree view
-* Quickly jump between sections and visualize the overall structure
+* Headings within notes are automatically structured into a navigable tree view.
+* Quickly jump between sections and visualize the overall structure.
+
+### ⌞⌝ Section Content Toggle
+
+  * When focusing on a specific section, you can toggle between:
+    * Viewing only that section’s content, or
+    * Viewing its content **plus all nested sub-sections.**
+  * This helps when you want to read or edit an entire section hierarchy as a single document.
 
 ### 🔗 Link Recognition and Navigation
 
-* Links within notes are automatically detected and categorized
-* Internal note links are also suggested during search and autocomplete
+* Links within notes are automatically detected and categorized.
+* Internal note links are also suggested during search and autocomplete.
 
 ### ⏱ Automatic Schedule Detection by Note
 
-* The system automatically detects and displays schedules from each note using the supported timeline date formats.
+* The system automatically detects and displays schedules from each note using supported timeline date formats.
 * Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.
 
 ### 🧠 Readability Analysis
 
-* Analyzes sentence length and structure to evaluate reading difficulty
-* Helps improve overly complex or lengthy notes
+* Analyzes sentence length and structure to evaluate reading difficulty.
+* Helps improve overly complex or lengthy notes.
 
 ### 🔍 Search History and Autocomplete
 
-* Previously searched keywords are stored for faster reuse
-* Suggestions appear in the search bar to reduce repeat typing
+* Previously searched keywords are stored for faster reuse.
+* Suggestions appear in the search bar to reduce repeat typing.
 
 ### 🔄 Section Rearrangement and Copying
 
-* Move or copy specific sections to other notes to reorganize content
-* Preview changes before confirming to ensure safe editing
+* Move or copy specific sections to other notes to reorganize content.
+* Preview changes before confirming to ensure safe editing.
 
 ### 📦 Backup and Restore
 
-* Export all notes in Markdown or ZIP format for backup
-* Restore notes from saved files when needed
+* Export all notes in Markdown or ZIP format for backup.
+* Restore notes from saved files when needed.
 
 ### 💾 Storage Options and Account Sync
 
-* Choose between local or cloud-based accounts for saving notes
-* Online sync keeps notes up-to-date automatically
+* Choose between local or cloud-based accounts for saving notes.
+* Online sync keeps notes up-to-date automatically.
 
 ### 🗃 Snapshot History and Comparison
 
-* Notes are automatically backed up when saved
-* Compare current content with past versions through the Archive screen
+* Notes are automatically backed up when saved.
+* Compare current content with past versions through the Archive screen.
 
 ### 🎯 Random Note Access
 
-* Open a randomly selected note to discover content from a new perspective
+* Open a randomly selected note to discover content from a new perspective.
 
-### 📌 Pin open notes
+### 📌 Pin Open Notes
 
-* When you double-click or long-click on the first opened note or recent changes, it is fixed to the open note list.
-* You can unfreeze by pressing the X button.
+* Double-click or long-press the first opened or recently changed note to pin it to the open note list.
+* You can unpin it by pressing the X button.
 
 ---
 

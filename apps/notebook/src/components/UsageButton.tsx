@@ -2,24 +2,19 @@ import { useColorScheme, useLangContext, Text } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
+import { createCommonStyles } from '../styles';
 import { NavigationParamList } from '../types';
 
 export default ({ paragraph }: { paragraph: string }) => {
   const { lang } = useLangContext();
   const theme = useColorScheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const iconColor = theme === 'dark' ? '#E4E4E4' : '#333333';
+  const commonStyles = createCommonStyles(theme);
   return (
-    <TouchableOpacity
-      onPress={() =>
-        navigation.push('NoteViewer', {
-          key: 'Usage',
-          paragraph,
-        })
-      }
+    <View
       style={{
         padding: 4,
         paddingBottom: 0,
@@ -28,10 +23,29 @@ export default ({ paragraph }: { paragraph: string }) => {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
+        backgroundColor: commonStyles.container.backgroundColor,
       }}
     >
-      <Text style={{ marginRight: 6 }}>{lang('Usage')}</Text>
-      <Icon name="chevron-right" style={{ marginRight: 20 }} size={12} color={iconColor} />
-    </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() =>
+          navigation.push('NoteViewer', {
+            key: 'Usage',
+            paragraph,
+          })
+        }
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ marginRight: 6 }}>{lang('Usage')}</Text>
+        <Icon
+          name="chevron-right"
+          style={{ marginRight: 20 }}
+          size={12}
+          color={commonStyles.text.color}
+        />
+      </TouchableOpacity>
+    </View>
   );
 };

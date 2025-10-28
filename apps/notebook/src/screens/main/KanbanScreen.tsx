@@ -23,6 +23,7 @@ import { paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
 import { OptionButton } from './home/ConfigSection';
+import UsageButton from '../../components/UsageButton';
 
 const move = (page: Content, newPage: Content, path: string) => {
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
@@ -86,123 +87,131 @@ const KanbanListSection = ({
   const option = board?.option;
   return (
     <View style={commonStyles.container}>
-      <FlatList
-        data={boards}
-        renderItem={({ item, index }) => (
-          <View style={[commonStyles.card, { zIndex: item.title === board?.title ? 5000 : 0 }]}>
-            <TouchableOpacity
-              onPress={() =>
-                item.title === board?.title
-                  ? setIsList(false)
-                  : recentMutation
-                      .mutateAsync({ id: item.id })
-                      .then(() => setSearchText(item.title))
-              }
-            >
-              <Text
-                style={[
-                  commonStyles.title,
-                  { fontSize: 20, fontWeight: '600' },
-                  { textDecorationLine: item.title === board?.title ? 'underline' : 'none' },
-                ]}
+      {boards.length > 0 ? (
+        <FlatList
+          data={boards}
+          renderItem={({ item, index }) => (
+            <View style={[commonStyles.card, { zIndex: item.title === board?.title ? 5000 : 0 }]}>
+              <TouchableOpacity
+                onPress={() =>
+                  item.title === board?.title
+                    ? setIsList(false)
+                    : recentMutation
+                        .mutateAsync({ id: item.id })
+                        .then(() => setSearchText(item.title))
+                }
               >
-                {item.title}
-              </Text>
-            </TouchableOpacity>
-            {board && item.title === board.title && (
-              <>
-                <View style={{ height: 16 }} />
-                <ConfigSection title={lang('* Header level')}>
-                  <View style={{ flexDirection: 'row' }}>
-                    {Array.from(Array(5).keys()).map((v) => {
-                      const level = v + 2;
-                      return (
-                        option?.BOARD_NOTE_IDS && (
-                          <OptionButton
-                            key={v}
-                            title={`H${level}`}
-                            onPress={() =>
-                              mutation.mutateAsync({
-                                ...board,
-                                description: '',
-                                option: { ...option, BOARD_HEADER_LEVEL: level },
-                              })
-                            }
-                            active={option.BOARD_HEADER_LEVEL === level}
-                          />
-                        )
-                      );
-                    })}
-                  </View>
-                </ConfigSection>
-                <View style={{ height: 16 }} />
-                <ConfigSection title={lang('* Columns')}>
-                  <View style={{ paddingHorizontal: 16 }}>
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: '600',
-                        paddingVertical: 16,
-                      }}
-                    >
-                      {lang('Add')}
-                    </Text>
-                    <SearchBar
-                      onPress={(title) => {
-                        const id = pages.find((v) => v.title === title)?.id;
-                        if (
-                          id &&
-                          noteColumns.find((v) => v.id === id) === undefined &&
-                          option?.BOARD_NOTE_IDS
-                        ) {
-                          mutation.mutateAsync({
-                            ...board,
-                            description: '',
-                            option: {
-                              ...option,
-                              BOARD_NOTE_IDS: [...option.BOARD_NOTE_IDS, id],
-                            },
-                          });
-                        }
-                      }}
-                      addKeyword={false}
-                      useRandom={false}
-                      newContent={false}
-                      icon="plus"
-                    />
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: '600',
-                        paddingVertical: 16,
-                      }}
-                    >
-                      {lang('Delete')}
-                    </Text>
-                    <SearchList
-                      filteredPages={noteColumns.map((v) => ({ ...v, title: '-  ' + v.title }))}
-                      onPressKeyword={(item) => {
-                        if (item.type === 'NOTE' && option?.BOARD_NOTE_IDS) {
-                          mutation.mutateAsync({
-                            ...board,
-                            description: '',
-                            option: {
-                              ...option,
-                              BOARD_NOTE_IDS: option.BOARD_NOTE_IDS.filter((v) => item.id !== v),
-                            },
-                          });
-                        }
-                      }}
-                    />
-                  </View>
-                </ConfigSection>
-              </>
-            )}
-          </View>
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        CellRendererComponent={cellRendererComponent}
-      />
+                <Text
+                  style={[
+                    commonStyles.title,
+                    { fontSize: 20, fontWeight: '600' },
+                    { textDecorationLine: item.title === board?.title ? 'underline' : 'none' },
+                  ]}
+                >
+                  {item.title}
+                </Text>
+              </TouchableOpacity>
+              {board && item.title === board.title && (
+                <>
+                  <View style={{ height: 16 }} />
+                  <ConfigSection title={lang('* Header level')}>
+                    <View style={{ flexDirection: 'row' }}>
+                      {Array.from(Array(5).keys()).map((v) => {
+                        const level = v + 2;
+                        return (
+                          option?.BOARD_NOTE_IDS && (
+                            <OptionButton
+                              key={v}
+                              title={`H${level}`}
+                              onPress={() =>
+                                mutation.mutateAsync({
+                                  ...board,
+                                  description: '',
+                                  option: { ...option, BOARD_HEADER_LEVEL: level },
+                                })
+                              }
+                              active={option.BOARD_HEADER_LEVEL === level}
+                            />
+                          )
+                        );
+                      })}
+                    </View>
+                  </ConfigSection>
+                  <View style={{ height: 16 }} />
+                  <ConfigSection title={lang('* Columns')}>
+                    <View style={{ paddingHorizontal: 16 }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: '600',
+                          paddingVertical: 16,
+                        }}
+                      >
+                        {lang('Add')}
+                      </Text>
+                      <SearchBar
+                        onPress={(title) => {
+                          const id = pages.find((v) => v.title === title)?.id;
+                          if (
+                            id &&
+                            noteColumns.find((v) => v.id === id) === undefined &&
+                            option?.BOARD_NOTE_IDS
+                          ) {
+                            mutation.mutateAsync({
+                              ...board,
+                              description: '',
+                              option: {
+                                ...option,
+                                BOARD_NOTE_IDS: [...option.BOARD_NOTE_IDS, id],
+                              },
+                            });
+                          }
+                        }}
+                        addKeyword={false}
+                        useRandom={false}
+                        newContent={false}
+                        icon="plus"
+                      />
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: '600',
+                          paddingVertical: 16,
+                        }}
+                      >
+                        {lang('Delete')}
+                      </Text>
+                      <SearchList
+                        filteredPages={noteColumns.map((v) => ({ ...v, title: '-  ' + v.title }))}
+                        onPressKeyword={(item) => {
+                          if (item.type === 'NOTE' && option?.BOARD_NOTE_IDS) {
+                            mutation.mutateAsync({
+                              ...board,
+                              description: '',
+                              option: {
+                                ...option,
+                                BOARD_NOTE_IDS: option.BOARD_NOTE_IDS.filter((v) => item.id !== v),
+                              },
+                            });
+                          }
+                        }}
+                      />
+                    </View>
+                  </ConfigSection>
+                </>
+              )}
+            </View>
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          CellRendererComponent={cellRendererComponent}
+        />
+      ) : (
+        <View style={[commonStyles.card, commonStyles.centerContent]}>
+          <Text selectable={false} style={commonStyles.text}>
+            {lang('There are no boards.')}
+          </Text>
+        </View>
+      )}
       <View style={[commonStyles.searchContainer, { paddingTop: 16 }]}>
         <TextInput
           style={commonStyles.searchInput}
@@ -413,31 +422,42 @@ export const KanbanScreen: React.FC = () => {
   return (
     <>
       {_window === 'portrait' && <SearchBar />}
+      <UsageButton paragraph={'🗂 ' + lang('Kanban')} />
       {!isList && columns && (
         <View style={[commonStyles.container, { paddingHorizontal: 0, paddingVertical: 0 }]}>
           {header}
-          <Kanban
-            horizontal={_window === 'portrait' && horizontal}
-            columns={columns}
-            columnStyle={{ borderColor: commonStyles.text.color }}
-            renderHeader={({ item }) => (
-              <TouchableOpacity
-                onPress={() => navigation.push('NotePage', { title: item.name, kanban: board?.id })}
-                style={{ backgroundColor: commonStyles.container.backgroundColor }}
-              >
-                <Text selectable={false} style={commonStyles.title}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-            renderItem={({ item, index }) => {
-              return <Suspense>{renderCardPage({ item: toCardPage(item), index })}</Suspense>;
-            }}
-            onStart={() => {
-              accessableRef.current = false;
-            }}
-            onEnd={onEnd}
-          />
+          {columns.length > 0 ? (
+            <Kanban
+              horizontal={_window === 'portrait' && horizontal}
+              columns={columns}
+              columnStyle={{ borderColor: commonStyles.text.color }}
+              renderHeader={({ item }) => (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.push('NotePage', { title: item.name, kanban: board?.id })
+                  }
+                  style={{ backgroundColor: commonStyles.container.backgroundColor }}
+                >
+                  <Text selectable={false} style={commonStyles.title}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              renderItem={({ item, index }) => {
+                return <Suspense>{renderCardPage({ item: toCardPage(item), index })}</Suspense>;
+              }}
+              onStart={() => {
+                accessableRef.current = false;
+              }}
+              onEnd={onEnd}
+            />
+          ) : (
+            <View style={[commonStyles.card, commonStyles.centerContent, { marginHorizontal: 20 }]}>
+              <Text selectable={false} style={commonStyles.text}>
+                {lang('There are no columns.')}
+              </Text>
+            </View>
+          )}
         </View>
       )}
       {isList && (

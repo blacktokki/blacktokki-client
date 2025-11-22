@@ -54,3 +54,21 @@ export async function oauthLogin(token: string) {
     return await checkLogin();
   }
 }
+
+export const patchUser = async (user: {
+  id: number;
+  name: string;
+  is_guest?: boolean;
+  username?: string;
+  password?: string;
+}) => {
+  await account.patch(`/api/v1/user/`, {
+    ids: [user.id],
+    updated: {
+      name: user.name,
+      isGuest: user.is_guest,
+      username: user.username,
+      password: user.password,
+    },
+  });
+};

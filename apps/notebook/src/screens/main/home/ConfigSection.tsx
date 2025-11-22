@@ -1,5 +1,12 @@
 import { useAuthContext } from '@blacktokki/account';
-import { Colors, TextButton, useColorScheme, useLangContext, Text } from '@blacktokki/core';
+import {
+  Colors,
+  TextButton,
+  useColorScheme,
+  useLangContext,
+  Text,
+  useModalsContext,
+} from '@blacktokki/core';
 import { toHtml, toMarkdown } from '@blacktokki/editor';
 import { ConfigSection, LanguageConfigSection, SkinConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
@@ -10,6 +17,7 @@ import { View } from 'react-native';
 import { SearchList } from '../../../components/SearchBar';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../../hooks/useNoteStorage';
+import AccountEditModal from '../../../modals/AccountEditModal';
 import { createCommonStyles } from '../../../styles';
 import { Content, NavigationParamList } from '../../../types';
 
@@ -101,6 +109,7 @@ export default () => {
   const { data: contents } = useNotePages();
   const mutation = useCreateOrUpdatePage();
   const [search, setSearch] = useState(false);
+  const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();
   const resetKeyword = useResetKeyowrd();
   return (
@@ -190,11 +199,18 @@ export default () => {
             active={!!auth.isLocal}
           />
           {auth.user ? (
-            <OptionButton
-              title={lang('Sign out')}
-              onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
-              active={false}
-            />
+            <>
+              <OptionButton
+                title={lang('Edit Account')}
+                onPress={() => setModal(AccountEditModal, {})}
+                active={false}
+              />
+              <OptionButton
+                title={lang('Sign out')}
+                onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
+                active={false}
+              />
+            </>
           ) : (
             <OptionButton
               title={lang('Sign in')}

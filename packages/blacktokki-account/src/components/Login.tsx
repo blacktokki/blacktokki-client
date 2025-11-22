@@ -1,6 +1,13 @@
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import {
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 
 import useAuthContext from '../hooks/useAuthContext';
 
@@ -35,18 +42,28 @@ export default function Login({ lang }: { lang: (text: string) => string }) {
           onChangeText={(text) => setPassword(text)}
           onSubmitEditing={_login}
         />
-        <TouchableOpacity onPress={_login}>
-          <View style={Styles.button}>
-            <Text style={Styles.button_label}>{lang('Sign in')}</Text>
+        <TouchableOpacity onPress={_login} disabled={!!auth.isLoading}>
+          <View style={[Styles.button, auth.isLoading && { opacity: 0.6 }]}>
+            {auth.isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={Styles.button_label}>{lang('Sign in')}</Text>
+            )}
           </View>
         </TouchableOpacity>
         {auth.guestType === 'account' && (
-          <TouchableOpacity onPress={() => dispatch({ type: 'LOGIN_GUEST' })}>
+          <TouchableOpacity
+            onPress={() => dispatch({ type: 'LOGIN_GUEST' })}
+            disabled={!!auth.isLoading}
+          >
             <Text style={Styles.guest_footer_text}>{lang('Sign in as guest')}</Text>
           </TouchableOpacity>
         )}
         {auth.guestType === 'local' && (
-          <TouchableOpacity onPress={() => dispatch({ type: 'LOGIN_LOCAL' })}>
+          <TouchableOpacity
+            onPress={() => dispatch({ type: 'LOGIN_LOCAL' })}
+            disabled={!!auth.isLoading}
+          >
             <Text style={Styles.guest_footer_text}>{lang('Sign in as local account')}</Text>
           </TouchableOpacity>
         )}

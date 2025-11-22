@@ -26,6 +26,7 @@ export type Auth = (
   | { user?: undefined; isLogin?: undefined; isLocal?: undefined }
 ) & {
   guestType?: GuestType;
+  isLoading?: boolean;
 };
 type AuthState = {
   user?: User | null;
@@ -114,6 +115,9 @@ export const AuthProvider = ({
           authState.user !== undefined ? authState.user !== null || authState.useLocal : undefined,
         isLocal: authState.useLocal,
         guestType,
+        isLoading:
+          authState.request !== undefined ||
+          (authState.user === undefined && authState.useLocal !== undefined),
       } as Auth),
     [authState]
   );

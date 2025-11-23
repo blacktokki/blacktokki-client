@@ -12,7 +12,6 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 * **네비게이션:** `@react-navigation`
 * **데이터 저장 (로컬):** IndexedDB (노트/보드 본문), AsyncStorage (키워드, 최근 페이지 등 메타데이터)
 * **데이터 저장 (온라인):** `services/notebook.ts`를 통한 외부 API (axios)
-* **에디터:** `@blacktokki/editor` (WYSIWYG/마크다운 듀얼 에디터)
 * **UI:** `react-native-paper` 및 커스텀 컴포넌트
 
 ---
@@ -153,9 +152,12 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 
 ## 5. 🎨 스타일 및 테마
 
-* **스타일 시트:** `src/styles.ts`
-* `createCommonStyles(theme: 'light' | 'dark')` 함수가 `useColorScheme()` 훅의 결과에 따라 동적으로 스타일 객체를 생성합니다.
-* `commonStyles.card`, `commonStyles.container`, `commonStyles.title` 등이 앱 전반에서 재사용됩니다.
+* **스타일 시트:** `createCommonStyles(theme: 'light' | 'dark')` 함수가 `useColorScheme()` 훅의 결과에 따라 동적으로 스타일 객체를 생성합니다.
+- **공통 스타일 적극 활용:** 가능한 한 컴포넌트에서 `commonStyles.card`, `commonStyles.container`, `commonStyles.title` 등 기존 스타일을 그대로 사용하세요. 새로운 컴포넌트용 스타일을 만들기 전에 반드시 `src/styles.ts`에서 적절한 토큰/유틸이 있는지 확인합니다. 색상, 간격, 폰트 크기 등은 `styles.ts`에 정의하고 `createCommonStyles`에서 참조하세요. 하드코딩된 값 사용을 최소화합니다.
+- **테마와 다크 모드:** 테마별 차이는 `createCommonStyles`에서 처리하고, 컴포넌트에서는 `const styles = createCommonStyles(colorScheme)` 또는 프로젝트의 `useTheme()` 훅을 통해 스타일을 가져오세요. 다크모드에서 대비(contrast)와 가독성을 반드시 확인합니다.
+- **인라인 스타일 최소화:** 인라인 스타일은 유지보수성과 재사용성을 저하시킵니다. 스타일은 가능하면 `styles.ts`나 컴포넌트 로컬 `StyleSheet`로 분리하세요. 플랫폼 특이 스타일은 `Platform.select` 또는 스타일 합성으로 처리합니다.
+- **재사용성 유지:** 프로젝트 전반에서 쓰이는 공통 스타일은 `src/styles.ts`에 추가해 다른 컴포넌트에서 재사용 가능하게 유지하세요. 같은 역할을 하는 유틸이나 스타일이 여러 파일에 중복되지 않도록 합니다.
+- **예시 사용법:** 컴포넌트 내부에서는 `import { createCommonStyles } from '../styles'; const styles = createCommonStyles(colorScheme);` 형태로 사용하고, `style={[styles.container, styles.card, localStyles.custom]}`처럼 조합합니다.
 
 ---
 

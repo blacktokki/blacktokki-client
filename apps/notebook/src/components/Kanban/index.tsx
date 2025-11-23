@@ -125,10 +125,17 @@ export default <T,>({
       {columns.map((item, itemIndex) => (
         <View
           key={itemIndex}
-          style={{
-            zIndex: itemIndex === currentColumn ? 5000 : undefined,
-            flexDirection: horizontal ? 'row' : 'column',
-          }}
+          style={[
+            {
+              zIndex: itemIndex === currentColumn ? 5000 : undefined,
+              flexDirection: horizontal ? 'row' : 'column',
+              borderWidth: 1,
+              borderColor: (columnStyle as ViewStyle)?.borderColor,
+            },
+            nextColumn !== undefined && itemIndex !== currentColumn
+              ? { borderStyle: 'dashed' }
+              : { borderColor: 'transparent' },
+          ]}
           onLayout={(e) => {
             positionRef.current[itemIndex] = horizontal
               ? e.nativeEvent.layout.y
@@ -137,15 +144,17 @@ export default <T,>({
         >
           <View
             style={[
-              { flexGrow: 1 },
+              {
+                flexGrow: 1,
+                borderWidth: 2,
+                paddingHorizontal: commonPadding,
+                paddingBottom: commonPadding,
+                paddingTop: 0,
+              },
               columnStyle,
-              nextColumn !== undefined && itemIndex !== currentColumn
-                ? {
-                    borderWidth: itemIndex === nextColumn ? 2 : 1,
-                    padding: (itemIndex === nextColumn ? 1 : 2) + commonPadding,
-                    borderStyle: 'dashed',
-                  }
-                : { padding: 3 + commonPadding },
+              itemIndex === nextColumn && itemIndex !== currentColumn
+                ? { borderStyle: 'dashed' }
+                : { borderColor: 'transparent' },
               maxSize ? (horizontal ? { width: maxSize } : { height: maxSize, paddingTop: 0 }) : {},
             ]}
             onLayout={(e: any) => {
@@ -161,7 +170,11 @@ export default <T,>({
               }
             }}
           >
-            <View style={horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900 }}>
+            <View
+              style={
+                horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900, top: 0 }
+              }
+            >
               <Animated.View
                 style={{
                   transform: [horizontal ? { translateX: translate } : { translateY: translate }],

@@ -383,7 +383,7 @@ export const KanbanScreen: React.FC = () => {
     if ((boardFetched && board === undefined) || (boards && boards.length === 0)) {
       setIsList(true);
     }
-    if (board === undefined && boards && boards.length > 0) {
+    if (boardFetched && board === undefined && boards && boards.length > 0) {
       recentMutation.mutateAsync({ id: boards[0].id });
     }
   }, [board, boards, isList]);

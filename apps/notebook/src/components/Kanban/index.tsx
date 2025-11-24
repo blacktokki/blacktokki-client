@@ -95,7 +95,11 @@ export default <T,>({
   useEffect(() => {
     setMaxSize(undefined);
     sizeRef.current = [[], []];
-  }, [columns, horizontal, _onEnd]);
+  }, [horizontal]);
+  useEffect(() => {
+    setMaxSize(undefined);
+    sizeRef.current = [sizeRef.current[0], []];
+  }, [columns, _onEnd]);
   const commonPadding = 5;
   return (
     <View
@@ -110,7 +114,9 @@ export default <T,>({
         paddingTop: 0,
       }}
       onScroll={(e: any) => {
-        const value = horizontal ? e.target.scrollLeft : e.target.scrollTop;
+        const value = horizontal
+          ? e.target.scrollLeft
+          : e.target.scrollTop + (e.target.scrollTop > 2 ? -2 : 0);
         const isFirst = animated.current === undefined;
         animated.current = Animated.timing(translate, {
           toValue: value,
@@ -125,17 +131,10 @@ export default <T,>({
       {columns.map((item, itemIndex) => (
         <View
           key={itemIndex}
-          style={[
-            {
-              zIndex: itemIndex === currentColumn ? 5000 : undefined,
-              flexDirection: horizontal ? 'row' : 'column',
-              borderWidth: 1,
-              borderColor: (columnStyle as ViewStyle)?.borderColor,
-            },
-            nextColumn !== undefined && itemIndex !== currentColumn
-              ? { borderStyle: 'dashed' }
-              : { borderColor: 'transparent' },
-          ]}
+          style={{
+            zIndex: itemIndex === currentColumn ? 5000 : undefined,
+            flexDirection: horizontal ? 'row' : 'column',
+          }}
           onLayout={(e) => {
             positionRef.current[itemIndex] = horizontal
               ? e.nativeEvent.layout.y
@@ -144,52 +143,57 @@ export default <T,>({
         >
           <View
             style={[
-              {
-                flexGrow: 1,
-                borderWidth: 2,
-                paddingHorizontal: commonPadding,
-                paddingBottom: commonPadding,
-                paddingTop: 0,
-              },
-              columnStyle,
-              itemIndex === nextColumn && itemIndex !== currentColumn
+              { borderWidth: 1, borderColor: (columnStyle as ViewStyle)?.borderColor },
+              nextColumn !== undefined && itemIndex !== currentColumn
                 ? { borderStyle: 'dashed' }
                 : { borderColor: 'transparent' },
-              maxSize ? (horizontal ? { width: maxSize } : { height: maxSize, paddingTop: 0 }) : {},
             ]}
-            onLayout={(e: any) => {
-              const value = horizontal
-                ? e.nativeEvent.target.clientWidth
-                : e.nativeEvent.target.clientHeight;
-              sizeRef.current[sizeRef.current[0][itemIndex] === undefined ? 0 : 1][itemIndex] =
-                value;
-              if (sizeRef.current[1].length === columns.length) {
-                const maxSize0 = Math.max(...sizeRef.current[0]);
-                const maxSize1 = Math.max(...sizeRef.current[1]);
-                setMaxSize(Math.max(maxSize0, maxSize1));
-              }
-            }}
           >
             <View
-              style={
-                horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900, top: 0 }
-              }
+              style={[
+                {
+                  flexGrow: 1,
+                  borderWidth: 2,
+                  paddingHorizontal: commonPadding,
+                  paddingBottom: commonPadding,
+                  paddingTop: 0,
+                },
+                columnStyle,
+                itemIndex === nextColumn && itemIndex !== currentColumn
+                  ? { borderStyle: 'dashed' }
+                  : { borderColor: 'transparent' },
+                maxSize ? (horizontal ? { width: maxSize } : { height: maxSize }) : {},
+              ]}
+              onLayout={(e: any) => {
+                const value = horizontal
+                  ? e.nativeEvent.target.clientWidth
+                  : e.nativeEvent.target.clientHeight;
+                sizeRef.current[sizeRef.current[0][itemIndex] === undefined ? 0 : 1][itemIndex] =
+                  value;
+                if (sizeRef.current[1].length === columns.length) {
+                  const maxSize0 = Math.max(...sizeRef.current[0]);
+                  const maxSize1 = Math.max(...sizeRef.current[1]) + 3;
+                  setMaxSize(Math.max(maxSize0, maxSize1));
+                }
+              }}
             >
-              <Animated.View
-                style={{
-                  transform: [horizontal ? { translateX: translate } : { translateY: translate }],
-                }}
-              >
-                {renderHeader({ item, index: itemIndex })}
-              </Animated.View>
+              <View style={horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900 }}>
+                <Animated.View
+                  style={{
+                    transform: [horizontal ? { translateX: translate } : { translateY: translate }],
+                  }}
+                >
+                  {renderHeader({ item, index: itemIndex })}
+                </Animated.View>
+              </View>
+              <FlatList
+                horizontal={horizontal}
+                data={item.data}
+                renderItem={({ item, index }) => columnList[itemIndex][index]}
+                CellRendererComponent={cellRendererComponent}
+                style={{ overflow: 'visible', backgroundColor: 'transparent' }}
+              />
             </View>
-            <FlatList
-              horizontal={horizontal}
-              data={item.data}
-              renderItem={({ item, index }) => columnList[itemIndex][index]}
-              CellRendererComponent={cellRendererComponent}
-              style={{ overflow: 'visible', backgroundColor: 'transparent' }}
-            />
           </View>
         </View>
       ))}

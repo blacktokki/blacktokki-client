@@ -27,7 +27,7 @@ export const ArchiveScreen: React.FC = () => {
           .filter((v) => title === undefined || title === v.title)
           .map((v, i) => ({
             ...v,
-            subtitles: [`최근 수정: ${updatedFormat(v.updated as string)}`],
+            subtitles: [`${updatedFormat(v.updated as string)}`],
             id: v.id || i,
           }))}
         isLoading={isLoading}

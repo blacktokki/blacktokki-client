@@ -57,7 +57,7 @@ export const NotePageScreen: React.FC = () => {
       ? _archives?.find((v) => archive.option.SNAPSHOT_ID === v.id)
       : undefined;
   const handleEdit = () => {
-    navigation.navigate('EditPage', { title });
+    navigation.navigate('EditPage', { ...toNoteParams(title, paragraph, section), kanban });
   };
 
   const handleMovePage = () => {
@@ -144,10 +144,6 @@ export const NotePageScreen: React.FC = () => {
                   <TouchableOpacity onPress={handleMovePage} style={pageStyles.actionButton}>
                     <Icon name="exchange" size={16} color={iconColor} />
                   </TouchableOpacity>
-                </>
-              )}
-              {!!(paragraph || description) && !archive && !paragraph && (
-                <>
                   <TouchableOpacity onPress={handleEdit} style={pageStyles.actionButton}>
                     <Icon name="pencil" size={16} color={iconColor} />
                   </TouchableOpacity>

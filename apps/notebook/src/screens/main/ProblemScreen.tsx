@@ -4,7 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 
 import { NoteListSection } from './NoteListSection';
-import { SearchBar } from '../../components/SearchBar';
+import { SearchBar, toNoteParams } from '../../components/SearchBar';
 import UsageButton from '../../components/UsageButton';
 import useProblem from '../../hooks/useProblem';
 import { NavigationParamList } from '../../types';
@@ -21,7 +21,9 @@ export const ProblemsScreen: React.FC = () => {
       <UsageButton paragraph={'🧾 ' + lang('Edit Suggestions')} />
       <NoteListSection
         contents={data}
-        onPress={(title) => navigation.push('EditPage', { title })}
+        onPress={(title, paragraph, section) =>
+          navigation.push('EditPage', toNoteParams(title, paragraph, section))
+        }
         isLoading={isLoading}
         emptyMessage="There are no notes needed to be written."
       />

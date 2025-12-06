@@ -296,7 +296,7 @@ export const KanbanScreen: React.FC = () => {
     (v) => {
       if (accessableRef.current) {
         if (v.paragraph) {
-          navigation.push('NotePage', {
+          navigation.push('EditPage', {
             ...toNoteParams(v.paragraph.origin, v.paragraph.title, v.paragraph.autoSection),
             kanban: board?.id,
           });

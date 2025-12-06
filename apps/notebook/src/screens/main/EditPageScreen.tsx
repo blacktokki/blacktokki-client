@@ -1,12 +1,21 @@
 import { useColorScheme, useLangContext, useModalsContext } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
+import { push } from '@blacktokki/navigation';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { getFilteredPages, titleFormat, urlToNoteLink } from '../../components/SearchBar';
+import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import {
+  getFilteredPages,
+  titleFormat,
+  toNoteParams,
+  urlToNoteLink,
+} from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
+import { paragraphByKey, paragraphDescription } from '../../hooks/useProblem';
 import AlertModal from '../../modals/AlertModal';
 import { previewUrl } from '../../services/notebook';
 import { createCommonStyles } from '../../styles';
@@ -17,11 +26,11 @@ type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
 const useUnsaveEffect = (
   isPrevent: () => boolean,
   handleUnsaved: () => void,
-  currentTitle: () => string | undefined
+  currentNoteParams: () => ReturnType<typeof toNoteParams> | undefined
 ) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<EditPageScreenRouteProp>();
-  const { title } = route.params;
+  const { title, paragraph, section } = route.params;
   useEffect(
     () =>
       navigation.addListener('beforeRemove', (e) => {
@@ -40,8 +49,12 @@ const useUnsaveEffect = (
   );
 
   useEffect(() => {
-    if (isPrevent() && currentTitle() !== title) {
-      navigation.setParams({ title: currentTitle() });
+    if (
+      isPrevent() &&
+      JSON.stringify(currentNoteParams()) !==
+        JSON.stringify(toNoteParams(title, paragraph, section))
+    ) {
+      navigation.setParams(currentNoteParams());
       handleUnsaved();
     }
   }, [navigation, title]);
@@ -61,7 +74,7 @@ const useUnsaveEffect = (
 export const EditPageScreen: React.FC = () => {
   const route = useRoute<EditPageScreenRouteProp>();
   const isFocused = useIsFocused();
-  const { title } = route.params;
+  const { title, paragraph, section, kanban } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -82,25 +95,54 @@ export const EditPageScreen: React.FC = () => {
 
   const mutation = useCreateOrUpdatePage();
   const { setModal } = useModalsContext();
-  const checkedRef = useRef<{ title: string; unsaved: boolean }>();
+  const checkedRef = useRef<{
+    title: string;
+    paragraph?: string;
+    section?: string;
+    initialContent: string;
+    unsaved: boolean;
+  }>();
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('NotePage', { title });
+      navigation.navigate('NotePage', toNoteParams(title, paragraph, section));
     }
   };
 
   const handleSave = () => {
     if (checkedRef.current === undefined) return;
-    const title = checkedRef.current.title;
+    const currentTitle = checkedRef.current.title;
+
+    let finalDescription = content;
+
+    // 문단 편집 모드라면 전체 HTML에 병합하는 과정 필요
+    if (paragraph && page?.description) {
+      const paragraphs = parseHtmlToParagraphs(page.description);
+      const targetItem = paragraphs.find((v) => paragraphByKey(v, { paragraph, section }));
+
+      if (targetItem) {
+        const targetPath = targetItem.path;
+        finalDescription = paragraphs
+          .map((p) => {
+            if (p.path === targetPath) {
+              return content;
+            }
+            if (p.path.startsWith(targetPath + ',')) {
+              return '';
+            }
+            return p.header + p.description;
+          })
+          .join('');
+      }
+    }
     mutation.mutate(
-      { title, description: content },
+      { title: currentTitle, description: finalDescription },
       {
         onSuccess: () => {
           checkedRef.current = undefined;
-          navigation.navigate('NotePage', { title });
+          navigation.navigate('NotePage', toNoteParams(title, paragraph, section));
         },
         onError: (error: any) => {
           Alert.alert('오류', error.message || '문서를 저장하는 중 오류가 발생했습니다.');
@@ -125,25 +167,70 @@ export const EditPageScreen: React.FC = () => {
     });
   };
 
-  if (title === checkedRef.current?.title) {
-    checkedRef.current.unsaved = page?.description !== content;
+  if (
+    checkedRef.current &&
+    title === checkedRef.current.title &&
+    paragraph === checkedRef.current.paragraph &&
+    section === checkedRef.current.section
+  ) {
+    checkedRef.current.unsaved = checkedRef.current.initialContent !== content;
   }
 
   const isPrevent = () => checkedRef.current !== undefined && checkedRef.current.unsaved;
+  const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
 
   useEffect(() => {
     if (!isLoading && page?.description !== undefined && !isPrevent()) {
-      checkedRef.current = { title, unsaved: false };
-      setContent(page.description);
-    }
-  }, [isLoading, page]);
+      let initialContent = page.description;
 
-  useUnsaveEffect(isPrevent, handleUnsaved, () => checkedRef.current?.title);
+      if (paragraph) {
+        const paragraphs = parseHtmlToParagraphs(page.description);
+        const targetItem = paragraphs.find((v) => paragraphByKey(v, { paragraph, section }));
+
+        if (targetItem) {
+          const extractedContent = paragraphDescription(paragraphs, targetItem.path, true);
+
+          initialContent = extractedContent;
+        }
+      }
+      initialContent = initialContent.trim();
+      setContent(initialContent);
+      checkedRef.current = {
+        title,
+        paragraph,
+        section,
+        initialContent,
+        unsaved: false,
+      };
+    }
+  }, [isLoading, page, title, paragraph, section]);
+
+  useUnsaveEffect(
+    isPrevent,
+    handleUnsaved,
+    () =>
+      checkedRef.current &&
+      toNoteParams(
+        checkedRef.current.title,
+        checkedRef.current?.paragraph,
+        checkedRef.current?.section
+      )
+  );
   return (
     isFocused && (
       <View style={commonStyles.container}>
         <View style={commonStyles.header}>
-          <Text style={[commonStyles.title, { flex: 1 }]}>{title} - 편집</Text>
+          {kanban && (
+            <TouchableOpacity
+              onPress={isPrevent() ? handleUnsaved : () => push('Kanban')}
+              style={[commonStyles.title, { marginRight: 5 }]}
+            >
+              <Icon2 name="view-dashboard" size={20} color={pressableTextColor} />
+            </TouchableOpacity>
+          )}
+          <Text style={[commonStyles.title, { flex: 1 }]}>
+            {title} {paragraph ? `> ${paragraph}` : ''} - {lang('Edit')}
+          </Text>
         </View>
         <Editor
           active

@@ -192,14 +192,16 @@ export const NotePageScreen: React.FC = () => {
                 }
               />
             ) : (
-              <View style={[commonStyles.card, commonStyles.centerContent]}>
-                <Text style={commonStyles.text}>
-                  {lang('This note has no content yet. Press the ‘Edit’ button to add content.')}
-                </Text>
-                <TouchableOpacity onPress={handleEdit} style={commonStyles.button}>
-                  <Text style={commonStyles.buttonText}>{lang('Edit')}</Text>
-                </TouchableOpacity>
-              </View>
+              !archive?.previous && (
+                <View style={[commonStyles.card, commonStyles.centerContent]}>
+                  <Text style={commonStyles.text}>
+                    {lang('This note has no content yet. Press the ‘Edit’ button to add content.')}
+                  </Text>
+                  <TouchableOpacity onPress={handleEdit} style={commonStyles.button}>
+                    <Text style={commonStyles.buttonText}>{lang('Edit')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )
             )}
           </View>
         </ScrollView>

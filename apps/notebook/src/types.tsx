@@ -50,4 +50,5 @@ export type NavigationParamList = {
   EditPage: { title: string; kanban?: number } & ParagraphKey;
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
+  KanbanPage: { title: string };
 };

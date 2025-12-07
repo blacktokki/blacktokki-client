@@ -1,6 +1,6 @@
 import { useAuthContext } from '@blacktokki/account';
 import { Colors, ContractFooter, useColorScheme, useLangContext } from '@blacktokki/core';
-import { HomeSection, TabViewOption } from '@blacktokki/navigation';
+import { HomeSection, push, TabViewOption } from '@blacktokki/navigation';
 import { StackScreenProps } from '@react-navigation/stack';
 import React, { useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -11,11 +11,7 @@ import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
 import ConfigSection from './ConfigSection';
-import ContentGroupSection, {
-  KanbanButton,
-  ProblemButton,
-  TimeLineButton,
-} from './ContentGroupSection';
+import ContentGroupSection, { ProblemButton, TimeLineButton } from './ContentGroupSection';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
@@ -32,7 +28,11 @@ const NotesTabView = () => {
       </List.Subheader>
       <TimeLineButton />
       <ProblemButton />
-      <KanbanButton />
+      <List.Item
+        left={(_props) => <List.Icon {..._props} icon={'view-dashboard-variant'} />}
+        title={lang('Kanban')}
+        onPress={() => push('KanbanList')}
+      />
     </ScrollView>
   );
 };

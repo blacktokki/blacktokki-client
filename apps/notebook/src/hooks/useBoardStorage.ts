@@ -1,25 +1,31 @@
 import { useAuthContext } from '@blacktokki/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/core';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { getContents, saveContents } from './useNoteStorage';
 import { BoardOption, Content, PostContent } from '../types';
 
-const RECENT_BOARD_KEY = '@blacktokki:notebook:recent_board';
+const RECENT_BOARD_KEY = '@blacktokki:notebook:last_board:';
+let last_board: number | undefined = -1;
 
-const getRecentBoard = async (): Promise<number | undefined> => {
+const getLastBoard = async (subkey: string): Promise<number | undefined> => {
   try {
-    const id = await AsyncStorage.getItem(RECENT_BOARD_KEY);
-    return id !== null ? parseInt(id, 10) : undefined;
+    if (last_board === -1) {
+      const id = await AsyncStorage.getItem(RECENT_BOARD_KEY + subkey);
+      last_board = id !== null ? parseInt(id, 10) : undefined;
+    }
+    return last_board;
   } catch (e) {
     console.error('Error loading recent notes', e);
     return undefined;
   }
 };
 
-const saveRecentBoard = async (id: number): Promise<void> => {
+const saveLastBoard = async (subkey: string, id: number): Promise<void> => {
   try {
-    await AsyncStorage.setItem(RECENT_BOARD_KEY, `${id}`);
+    last_board = id;
+    await AsyncStorage.setItem(RECENT_BOARD_KEY + subkey, `${id}`);
   } catch (e) {
     console.error('Error saving recent notes', e);
   }
@@ -36,13 +42,39 @@ export const useBoardPages = () => {
   });
 };
 
-export const useRecentBoard = () => {
+export const useBoardPage = (title: string) => {
+  const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
+  const { auth } = useAuthContext();
+  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   const { data: contents = [], isFetching } = useBoardPages();
   return useQuery({
-    queryKey: ['recentBoard'],
+    queryKey: ['boardContent', title],
     queryFn: async () => {
-      const id = await getRecentBoard();
-      return contents.find((c) => c.id === id);
+      const page = contents.find((c) => c.title === title);
+      // Add to recent pages
+      if (page) {
+        if (isFocused) {
+          await saveLastBoard(subkey, page.id);
+          await queryClient.invalidateQueries({ queryKey: ['lastBoard'] });
+        }
+      }
+      return page;
+    },
+    enabled: !isFetching,
+  });
+};
+
+export const useLastBoard = () => {
+  const { auth } = useAuthContext();
+  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const { data: contents = [], isFetching } = useBoardPages();
+  return useQuery({
+    queryKey: ['lastBoard'],
+    queryFn: async () => {
+      const id = await getLastBoard(subkey);
+      const board = contents.find((c) => c.id === id);
+      return board;
     },
     enabled: !isFetching,
   });
@@ -89,6 +121,8 @@ export const useCreateOrUpdateBoard = () => {
       return { id };
     },
     onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['lastBoard'] });
+      await queryClient.invalidateQueries({ queryKey: ['boardContent'] });
       await queryClient.invalidateQueries({ queryKey: ['boardContents'] });
     },
   });
@@ -105,27 +139,9 @@ export const useDeleteBoard = () => {
       return { id };
     },
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['recentBoard'] });
+      await queryClient.invalidateQueries({ queryKey: ['lastBoard'] });
+      await queryClient.invalidateQueries({ queryKey: ['boardContent'] });
       await queryClient.invalidateQueries({ queryKey: ['boardContents'] });
-    },
-  });
-};
-
-export const useUpdateRecentBoard = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id }: { id: number }) => {
-      // Update recent pages
-      const recentBoard = await getRecentBoard();
-      if (recentBoard !== id) {
-        await saveRecentBoard(id);
-      }
-
-      return { id };
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['recentBoard'] });
     },
   });
 };

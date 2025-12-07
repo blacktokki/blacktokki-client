@@ -3,6 +3,7 @@ import { navigate, push } from '@blacktokki/navigation';
 import React, { useRef } from 'react';
 import { List, TouchableRipple, Badge } from 'react-native-paper';
 
+import { useLastBoard } from '../../../hooks/useBoardStorage';
 import {
   useRecentPages,
   useNotePages,
@@ -52,17 +53,6 @@ export const ProblemButton = () => {
   );
 };
 
-export const KanbanButton = () => {
-  const { lang } = useLangContext();
-  return (
-    <List.Item
-      left={(_props) => <List.Icon {..._props} icon={'view-dashboard-variant'} />}
-      title={lang('Kanban')}
-      onPress={() => push('Kanban')}
-    />
-  );
-};
-
 export const toRecentContents = (data: Content[]) =>
   data
     .filter((v) => v.description)
@@ -75,6 +65,7 @@ const ContentGroupSection = (
   const notes = useNotePages();
   const pages = useRecentPages();
   const { data: lastPage } = useLastPage();
+  const { data: lastBoard } = useLastBoard();
   const tabRef = useRef<NodeJS.Timeout>();
   const addRecentPage = useAddRecentPage();
   const deleteRecentPage = useDeleteRecentPage();
@@ -109,20 +100,31 @@ const ContentGroupSection = (
     }
   };
   return (
-    (props.type !== 'LAST' || lastPageExists) && (
+    (props.type !== 'LAST' || lastPageExists || lastBoard) && (
       <List.Section>
         {data &&
           (props.type === 'LAST' ? (
-            lastPageExists && (
-              <List.Item
-                left={(_props) => <List.Icon {..._props} icon={'file-document'} />}
-                title={lastPage.title}
-                onPress={() => noteOnPress(lastPage.title)}
-                onLongPress={() => noteOnLongPress(lastPage.title)}
-                style={{ padding: itemPadding }}
-                titleStyle={{ fontStyle: 'italic' }}
-              />
-            )
+            <>
+              {lastBoard && (
+                <List.Item
+                  left={(_props) => <List.Icon {..._props} icon={'view-dashboard'} />}
+                  title={lastBoard.title}
+                  onPress={() => navigate('KanbanPage', { title: lastBoard.title })}
+                  style={{ padding: itemPadding }}
+                  titleStyle={{ fontStyle: 'italic' }}
+                />
+              )}
+              {lastPageExists && (
+                <List.Item
+                  left={(_props) => <List.Icon {..._props} icon={'file-document'} />}
+                  title={lastPage.title}
+                  onPress={() => noteOnPress(lastPage.title)}
+                  onLongPress={() => noteOnLongPress(lastPage.title)}
+                  style={{ padding: itemPadding }}
+                  titleStyle={{ fontStyle: 'italic' }}
+                />
+              )}
+            </>
           ) : props.type === 'NOTE' ? (
             <>
               {data.slice(0, props.noteCount).map((v) => (

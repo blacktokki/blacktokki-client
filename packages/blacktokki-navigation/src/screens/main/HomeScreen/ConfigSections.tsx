@@ -2,7 +2,7 @@ import {
   Colors,
   useColorScheme,
   useLangContext,
-  setColorScheme,
+  useUserColorScheme,
   TextButton,
   Text,
 } from '@blacktokki/core';
@@ -10,7 +10,6 @@ import React from 'react';
 import {
   TouchableOpacity,
   ColorSchemeName,
-  useColorScheme as useColorConfigScheme,
   View,
 } from 'react-native';
 
@@ -105,26 +104,26 @@ export const LanguageConfigSection = () => {
 export const SkinConfigSection = () => {
   const { lang } = useLangContext();
   const theme = useColorScheme();
-  const configTheme = useColorConfigScheme();
+  const [configTheme, setConfigTheme] = useUserColorScheme();
   const color = Colors[theme].text;
   return (
     <ConfigSection title={lang('* Skin Settings')}>
       <View style={{ flexDirection: 'row' }}>
         {[
-          [lang('Auto'), 'no-preference'],
+          [lang('Auto'), null],
           [lang('Light'), 'light'],
           [lang('Dark'), 'dark'],
         ].map(([title, colorScheme]) => (
           <TextButton
-            key={title}
-            title={title}
+            key={title as string}
+            title={title as string}
             textStyle={{
               fontSize: 16,
               color,
               textDecorationLine: configTheme === colorScheme ? 'underline' : 'none',
             }}
             style={{ borderRadius: 20 }}
-            onPress={() => setColorScheme(colorScheme as ColorSchemeName)}
+            onPress={() => setConfigTheme(colorScheme as ColorSchemeName)}
           />
         ))}
       </View>

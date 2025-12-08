@@ -10,7 +10,7 @@ export * from './components/Themed';
 export { default as Colors } from './constants/Colors';
 export {
   default as useColorScheme,
-  setColorScheme,
+  useUserColorScheme, 
   useInitColorScheme,
 } from './hooks/useColorScheme';
 export { default as useResizeContext, ResizeContextProvider } from './hooks/useResizeContext';

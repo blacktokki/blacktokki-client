@@ -15,8 +15,7 @@
     ],
     "nohoist": [
       "**/tinymce",
-      "**/supercode",
-      "**/ts-node"
+      "**/supercode"
     ]
   },
   "resolutions": {

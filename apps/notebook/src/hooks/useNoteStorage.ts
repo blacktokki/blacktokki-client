@@ -392,7 +392,6 @@ export const useDeleteRecentPage = () => {
       // Update recent pages
       const recentPages = await getRecentPages();
       const updatedRecentPages = recentPages.filter((_title) => title !== _title);
-      lastPage = undefined;
       await saveRecentPages(updatedRecentPages);
 
       return { title };
@@ -400,7 +399,6 @@ export const useDeleteRecentPage = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['recentPages'] });
       queryClient.invalidateQueries({ queryKey: ['pageContent'] });
-      queryClient.invalidateQueries({ queryKey: ['lastPage'] });
     },
   });
 };

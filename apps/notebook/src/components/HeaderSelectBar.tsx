@@ -116,7 +116,7 @@ export default function HeaderSelectBar(props: {
   const commonStyles = createCommonStyles(theme);
   const renderItem = (item: Paragraph) => (
     <TouchableOpacity style={styles.resultItem} onPress={() => props.onPress(item)}>
-      {item.level === 0 && <Icon name="file-text-o" size={18} color="#FFFFFF" />}
+      {item.level === 0 && <Icon name="file-text-o" size={18} color={commonStyles.text.color} />}
       <Text
         style={[
           props.path === item.path

@@ -199,18 +199,20 @@ export default () => {
             active={!!auth.isLocal}
           />
           {auth.user ? (
-            <>
-              <OptionButton
-                title={lang('Edit Account')}
-                onPress={() => setModal(AccountEditModal, {})}
-                active={false}
-              />
-              <OptionButton
-                title={lang('Sign out')}
-                onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
-                active={false}
-              />
-            </>
+            !auth.isLocal && (
+              <>
+                <OptionButton
+                  title={lang('Edit Account')}
+                  onPress={() => setModal(AccountEditModal, {})}
+                  active={false}
+                />
+                <OptionButton
+                  title={lang('Sign out')}
+                  onPress={() => dispatch({ type: 'LOGOUT_REQUEST' })}
+                  active={false}
+                />
+              </>
+            )
           ) : (
             <OptionButton
               title={lang('Sign in')}

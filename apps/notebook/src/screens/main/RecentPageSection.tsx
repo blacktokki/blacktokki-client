@@ -1,10 +1,11 @@
 import { useColorScheme, useResizeContext, View, Text, useLangContext } from '@blacktokki/core';
-import { useNavigation } from '@react-navigation/core';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { TouchableOpacity, ScrollView } from 'react-native';
 import { Card } from 'react-native-paper';
 
+import { NotePageHeader } from './NoteItemSections';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
@@ -203,6 +204,8 @@ const defaultScale: Scale = {
   },
 };
 
+type RecentPagesScreenRouteProp = RouteProp<NavigationParamList, 'RecentPages'>;
+
 export const RecentPagesSection = React.memo(() => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -210,19 +213,39 @@ export const RecentPagesSection = React.memo(() => {
   const { lang } = useLangContext();
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const route = useRoute<RecentPagesScreenRouteProp>();
+  const prefix = route.params?.prefix;
   const toCardPage = useToCardPage(
     (v) => navigation.push('NotePage', { title: v.title }),
     defaultScale
   );
   const contents = useMemo(
     () => [
-      ...toRecentContents(recentPages).map(toCardPage),
+      ...toRecentContents(recentPages)
+        .filter((v) => prefix === undefined || v.title.startsWith(prefix))
+        .map(toCardPage),
       { scale: defaultScale },
       { scale: defaultScale },
     ],
-    [recentPages]
+    [recentPages, prefix]
   );
   const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
+
+  const renderHeader = () => {
+    return (
+      prefix && (
+        <View style={{ height: 31, backgroundColor: 'transparent' }}>
+          <NotePageHeader
+            title={prefix?.slice(0, prefix.length - 1)}
+            onPress={(title, hasChild) =>
+              (hasChild ? navigation.push : navigation.navigate)('NotePage', { title })
+            }
+          />
+        </View>
+      )
+    );
+  };
+
   return isLoading ? (
     <View style={commonStyles.container}>
       <View style={[commonStyles.card, commonStyles.centerContent]}>
@@ -235,26 +258,52 @@ export const RecentPagesSection = React.memo(() => {
       contentContainerStyle={{
         alignSelf: 'center',
         backgroundColor: 'transparent',
-        flexBasis: '100%',
-        maxWidth,
-        flexWrap: 'wrap',
-        flexDirection: 'row',
+        flexGrow: 1,
         paddingRight: defaultScale[window].padding,
-        justifyContent: window === 'landscape' ? undefined : 'center',
+        width: '100%',
       }}
     >
-      <Suspense>{contents.map((item, index) => renderCardPage({ item, index }))}</Suspense>
+      <View
+        style={{
+          paddingTop: commonStyles.container.paddingVertical,
+          paddingHorizontal: commonStyles.container.paddingHorizontal,
+        }}
+      >
+        {renderHeader()}
+      </View>
+      <View
+        style={{
+          alignSelf: 'center',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: window === 'landscape' ? 'flex-start' : 'center',
+          maxWidth,
+        }}
+      >
+        <Suspense fallback={null}>
+          {contents.map((item, index) => renderCardPage({ item, index }))}
+        </Suspense>
+      </View>
     </ScrollView>
   ) : (
     <View style={commonStyles.container}>
-      <View style={[commonStyles.card, commonStyles.centerContent]}>
-        <Text style={commonStyles.text}>{lang('There are no recently modified notes.')}</Text>
-        <TouchableOpacity
-          onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
-          style={commonStyles.button}
-        >
-          <Text style={commonStyles.buttonText}>{lang('Usage')}</Text>
-        </TouchableOpacity>
+      {renderHeader()}
+      <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 18 }]}>
+        <Text style={commonStyles.text}>
+          {lang(
+            prefix
+              ? 'There are no subnotes for this note.'
+              : 'There are no recently modified notes.'
+          )}
+        </Text>
+        {prefix === undefined && (
+          <TouchableOpacity
+            onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
+            style={commonStyles.button}
+          >
+            <Text style={commonStyles.buttonText}>{lang('Usage')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

@@ -38,7 +38,8 @@ export const NotePageScreen: React.FC = () => {
   const _window = useResizeContext();
   const { lang } = useLangContext();
   const commonStyles = createCommonStyles(theme);
-  const [toc, toggleToc] = useState(false);
+  const [_toc, toggleToc] = useState(false);
+  const toc = _window === 'portrait' ? _toc : false;
   const [fullParagraph, toggleFullParagraph] = useState(false);
 
   const { data: page, isFetching } = useNotePage(title);
@@ -136,11 +137,21 @@ export const NotePageScreen: React.FC = () => {
                   </TouchableOpacity>
                 </>
               )}
-              {!!(paragraph || description) && !archive && (
+              {!!(paragraph || description) && !archive && _window === 'portrait' && (
                 <>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('RecentPages', { prefix: title + '/' })}
+                    style={pageStyles.actionButton}
+                  >
+                    <Icon name="sitemap" size={16} color={iconColor} />
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => toggleToc(!toc)} style={pageStyles.actionButton}>
                     <Icon name="list" size={16} color={iconColor} />
                   </TouchableOpacity>
+                </>
+              )}
+              {!!(paragraph || description) && !archive && (
+                <>
                   <TouchableOpacity onPress={handleMovePage} style={pageStyles.actionButton}>
                     <Icon name="exchange" size={16} color={iconColor} />
                   </TouchableOpacity>

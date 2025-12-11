@@ -1,6 +1,7 @@
 import { useAuthContext } from '@blacktokki/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/core';
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { getContents, saveContents } from './useNoteStorage';
@@ -48,21 +49,28 @@ export const useBoardPage = (title: string) => {
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   const { data: contents = [], isFetching } = useBoardPages();
-  return useQuery({
+
+  const query = useQuery({
     queryKey: ['boardContent', title],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
-      // Add to recent pages
-      if (page) {
-        if (isFocused) {
-          await saveLastBoard(subkey, page.id);
-          await queryClient.invalidateQueries({ queryKey: ['lastBoard'] });
-        }
-      }
+      // Side Effect 제거됨
       return page;
     },
     enabled: !isFetching,
   });
+
+  useEffect(() => {
+    if (query.data?.id && isFocused) {
+      const id = query.data?.id;
+      (async () => {
+        await saveLastBoard(subkey, id);
+        await queryClient.invalidateQueries({ queryKey: ['lastBoard'] });
+      })();
+    }
+  }, [query.data, isFocused, subkey, queryClient]);
+
+  return query;
 };
 
 export const useLastBoard = () => {

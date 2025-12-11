@@ -3,6 +3,7 @@ import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/core';
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
@@ -183,23 +184,33 @@ export const useNotePage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
   const { data: contents = [], isFetching } = useNotePages();
-  return useQuery({
+
+  const query = useQuery({
     queryKey: ['pageContent', title],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
-
-      // Add to recent pages
-      if (page) {
-        const recentPages = await getRecentPages();
-        if (isFocused && recentPages.find((v) => v === title) === undefined) {
-          lastPage = title;
-          await queryClient.invalidateQueries({ queryKey: ['lastPage'] });
-        }
-      }
+      // Side Effect 제거됨 (queryFn은 순수하게 데이터만 반환)
       return page || { title, description: '', id: undefined };
     },
     enabled: !isFetching,
   });
+
+  // Side Effect를 useEffect로 분리
+  useEffect(() => {
+    if (query.data?.id && isFocused) {
+      (async () => {
+        const recentPages = await getRecentPages();
+        // 최근 페이지에 없으면 lastPage 갱신
+        if (recentPages.find((v) => v === title) === undefined) {
+          lastPage = title;
+        }
+        // lastPage 쿼리 무효화 (상태 동기화)
+        await queryClient.invalidateQueries({ queryKey: ['lastPage'] });
+      })();
+    }
+  }, [query.data?.id, isFocused, title, queryClient]);
+
+  return query;
 };
 
 export const useSnapshotAll = (parentId?: number) => {
@@ -236,6 +247,13 @@ export const useLastPage = () => {
     },
     enabled: !isFetching,
   });
+};
+
+export const useCurrentPage = (lastPage?: Content) => {
+  const { data: currentNote } = useNotePage(
+    new URLSearchParams(location.search).get('title') || ''
+  );
+  return currentNote?.id ? currentNote : lastPage;
 };
 
 export const useCreateOrUpdatePage = () => {

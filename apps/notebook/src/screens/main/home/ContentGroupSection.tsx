@@ -10,8 +10,9 @@ import {
   useDeleteRecentPage,
   useLastPage,
   useAddRecentPage,
+  useCurrentPage,
 } from '../../../hooks/useNoteStorage';
-import useProblem from '../../../hooks/useProblem';
+import useProblem, { getSplitTitle } from '../../../hooks/useProblem';
 import useTimeLine from '../../../hooks/useTimeLine';
 import { Content } from '../../../types';
 
@@ -59,18 +60,28 @@ export const toRecentContents = (data: Content[]) =>
     .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
 
 const ContentGroupSection = (
-  props: { type: 'PAGE' | 'LAST' } | { type: 'NOTE'; noteCount: number }
+  props: { type: 'PAGE' | 'LAST' | 'SUBNOTE' } | { type: 'NOTE'; noteCount: number }
 ) => {
   const { lang } = useLangContext();
   const notes = useNotePages();
   const pages = useRecentPages();
   const { data: lastPage } = useLastPage();
   const { data: lastBoard } = useLastBoard();
+  const currentPage = useCurrentPage(lastPage);
+  const currentSplitTitle = currentPage ? getSplitTitle(currentPage.title) : undefined;
   const tabRef = useRef<NodeJS.Timeout>();
   const addRecentPage = useAddRecentPage();
   const deleteRecentPage = useDeleteRecentPage();
   const data =
-    props.type === 'NOTE' ? (notes.data ? toRecentContents(notes.data) : []) : pages.data;
+    props.type === 'NOTE'
+      ? notes.data
+        ? toRecentContents(notes.data)
+        : []
+      : props.type === 'SUBNOTE'
+      ? currentPage && notes.data
+        ? toRecentContents(notes.data.filter((v) => v.title.startsWith(currentPage.title + '/')))
+        : []
+      : pages.data;
   const lastPageExists = lastPage && data?.find((v) => v.id === lastPage.id) === undefined;
   const window = useResizeContext();
   const itemPadding = getItemPadding(window === 'landscape');
@@ -125,9 +136,41 @@ const ContentGroupSection = (
                 />
               )}
             </>
-          ) : props.type === 'NOTE' ? (
+          ) : props.type === 'NOTE' || props.type === 'SUBNOTE' ? (
             <>
-              {data.slice(0, props.noteCount).map((v) => (
+              {props.type === 'SUBNOTE' && currentSplitTitle?.length === 2 && (
+                <>
+                  <List.Item
+                    key={currentSplitTitle[0]}
+                    left={(_props) => (
+                      <List.Icon
+                        {..._props}
+                        color="#888B"
+                        icon={
+                          pages.data?.find((v2) => v2.title === currentSplitTitle[0]) === undefined
+                            ? 'notebook'
+                            : 'notebook-edit'
+                        }
+                      />
+                    )}
+                    title={currentSplitTitle[0]}
+                    titleStyle={{ color: '#888B' }}
+                    onPress={() => noteOnPress(currentSplitTitle[0])}
+                    onLongPress={() => noteOnLongPress(currentSplitTitle[0])}
+                    style={{ padding: itemPadding }}
+                  />
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: 'gray',
+                      marginHorizontal: 16,
+                      marginVertical: 4,
+                      opacity: 0.3,
+                    }}
+                  />
+                </>
+              )}
+              {data.slice(0, props.type === 'NOTE' ? props.noteCount : undefined).map((v) => (
                 <List.Item
                   key={v.title}
                   left={(_props) => (
@@ -149,7 +192,11 @@ const ContentGroupSection = (
               <List.Item
                 left={(_props) => <List.Icon {..._props} icon={'notebook-multiple'} />}
                 title={lang('more...')}
-                onPress={() => push('RecentPages')}
+                onPress={() =>
+                  props.type === 'NOTE'
+                    ? push('RecentPages')
+                    : push('RecentPages', { prefix: currentPage?.title + '/' })
+                }
                 style={{ padding: itemPadding }}
               />
             </>

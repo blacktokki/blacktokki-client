@@ -253,6 +253,7 @@ export const pageStyles = StyleSheet.create({
   },
   actionButton: {
     padding: 8,
+    paddingTop: 5,
     marginLeft: 8,
   },
 });

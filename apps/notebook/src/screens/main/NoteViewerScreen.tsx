@@ -29,7 +29,8 @@ export const NoteViewerScreen: React.FC = () => {
   const theme = useColorScheme();
   const _window = useResizeContext();
   const commonStyles = createCommonStyles(theme);
-  const [toc, toggleToc] = useState(false);
+  const [_toc, toggleToc] = useState(false);
+  const toc = _window === 'portrait' ? _toc : false;
   const [fullParagraph, toggleFullParagraph] = useState(false);
   const { data: viewers } = useNoteViewers();
 
@@ -86,7 +87,7 @@ export const NoteViewerScreen: React.FC = () => {
                   </TouchableOpacity>
                 </>
               )}
-              {!!(paragraph || description) && (
+              {!!(paragraph || description || _window === 'portrait') && (
                 <>
                   <TouchableOpacity onPress={() => toggleToc(!toc)} style={pageStyles.actionButton}>
                     <Icon name="list" size={16} color={iconColor} />

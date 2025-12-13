@@ -86,6 +86,11 @@ export const NotePageScreen: React.FC = () => {
   useEffect(() => {
     toggleToc(false);
   }, [route]);
+  useEffect(() => {
+    if (page !== undefined && paragraph !== undefined && paragraphItem === undefined) {
+      navigation.navigate('NotePage', { title, paragraph: undefined });
+    }
+  }, [page, paragraph, paragraphItem]);
   const iconColor = getIconColor(theme);
   return (
     isFocused && (
@@ -113,7 +118,7 @@ export const NotePageScreen: React.FC = () => {
                 fullParagraph={fullParagraph}
                 paragraphs={paragraphs}
               />
-              {!paragraph && (
+              {!paragraphItem && (
                 <>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Archive', { title })}
@@ -140,7 +145,7 @@ export const NotePageScreen: React.FC = () => {
               {!!(paragraph || description) && !archive && _window === 'portrait' && (
                 <>
                   <TouchableOpacity
-                    onPress={() => navigation.navigate('RecentPages', { prefix: title + '/' })}
+                    onPress={() => navigation.navigate('RecentPages', { title })}
                     style={pageStyles.actionButton}
                   >
                     <Icon name="sitemap" size={16} color={iconColor} />

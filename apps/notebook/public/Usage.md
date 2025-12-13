@@ -172,9 +172,9 @@
 
 * Open a randomly selected note to discover content from a new perspective.
 
-### 📌 Pin Open Notes
+### 📌 Pin Tabs
 
-* Double-click or long-press the first opened or recently changed note to pin it to the open note list.
+* Double-click or long-press the current tab or recently changed note to pin it to the tab list.
 * You can unpin it by pressing the X button.
 
 ---

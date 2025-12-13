@@ -11,20 +11,16 @@ import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
 import ConfigSection from './ConfigSection';
-import ContentGroupSection, { ProblemButton, TimeLineButton } from './ContentGroupSection';
+import { ProblemButton, TabsSection, TimeLineButton } from './ContentGroupSection';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
   const { lang } = useLangContext();
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors[theme].background }}>
+      <TabsSection />
       <List.Subheader style={{}} selectable={false}>
-        {lang('Open Notes')}
-      </List.Subheader>
-      <ContentGroupSection type={'LAST'} />
-      <ContentGroupSection type={'PAGE'} />
-      <List.Subheader style={{}} selectable={false}>
-        {lang('Event Notes')}
+        {lang('Menu')}
       </List.Subheader>
       <TimeLineButton />
       <ProblemButton />

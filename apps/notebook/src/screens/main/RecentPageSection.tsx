@@ -214,7 +214,8 @@ export const RecentPagesSection = React.memo(() => {
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<RecentPagesScreenRouteProp>();
-  const prefix = route.params?.prefix;
+  const title = route.params?.title;
+
   const toCardPage = useToCardPage(
     (v) => navigation.push('NotePage', { title: v.title }),
     defaultScale
@@ -222,21 +223,21 @@ export const RecentPagesSection = React.memo(() => {
   const contents = useMemo(
     () => [
       ...toRecentContents(recentPages)
-        .filter((v) => prefix === undefined || v.title.startsWith(prefix))
+        .filter((v) => title === undefined || v.title.startsWith(title + '/'))
         .map(toCardPage),
       { scale: defaultScale },
       { scale: defaultScale },
     ],
-    [recentPages, prefix]
+    [recentPages, title]
   );
   const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
 
   const renderHeader = () => {
     return (
-      prefix && (
+      title && (
         <View style={{ height: 31, backgroundColor: 'transparent' }}>
           <NotePageHeader
-            title={prefix?.slice(0, prefix.length - 1)}
+            title={title}
             onPress={(title, hasChild) =>
               (hasChild ? navigation.push : navigation.navigate)('NotePage', { title })
             }
@@ -291,12 +292,10 @@ export const RecentPagesSection = React.memo(() => {
       <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 18 }]}>
         <Text style={commonStyles.text}>
           {lang(
-            prefix
-              ? 'There are no subnotes for this note.'
-              : 'There are no recently modified notes.'
+            title ? 'There are no subnotes for this note.' : 'There are no recently modified notes.'
           )}
         </Text>
-        {prefix === undefined && (
+        {title === undefined && (
           <TouchableOpacity
             onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
             style={commonStyles.button}

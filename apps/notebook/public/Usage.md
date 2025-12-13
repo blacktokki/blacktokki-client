@@ -177,6 +177,11 @@
 * Double-click or long-press the current tab or recently changed note to pin it to the tab list.
 * You can unpin it by pressing the X button.
 
+### ⇄ Reorder Tabs
+
+* You can freely rearrange the order of items in the Tab List, by simply dragging them up or down.
+* The new order is applied immediately and saved automatically. Position frequently used notes at the top to enhance your workflow efficiency.
+
 ---
 
 ## 📞 Contact

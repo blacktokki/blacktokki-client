@@ -4,7 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 
 import { NoteListSection } from './NoteListSection';
-import { updatedFormat } from './RecentPageSection';
+import { updatedFormat } from './home/ContentGroupSection';
 import { SearchBar } from '../../components/SearchBar';
 import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
 import { NavigationParamList } from '../../types';

@@ -6,22 +6,11 @@ import { TouchableOpacity, ScrollView } from 'react-native';
 import { Card } from 'react-native-paper';
 
 import { NotePageHeader } from './NoteItemSections';
+import { toRecentContents, updatedFormat } from './home/ContentGroupSection';
+import { Paragraph } from '../../components/HeaderSelectBar';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
-import { toRecentContents } from './home/ContentGroupSection';
-import { Paragraph } from '../../components/HeaderSelectBar';
-
-const updatedOffset = new Date().getTimezoneOffset();
-
-export const updatedFormat = (_updated: string) => {
-  const _date = new Date(_updated);
-  _date.setMinutes(_date.getMinutes() - updatedOffset);
-  const updated = _date.toISOString().slice(0, 16);
-  const date = updated.slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
-  return date === today ? updated.slice(11) : date;
-};
 
 function removeAttributesRecursively(element: Element) {
   const attributes = Array.from(element.attributes); // 반복 중 변경 방지용 복사

@@ -18,7 +18,6 @@ import {
 import useTimeLine from '../../../hooks/useTimeLine';
 import { createCommonStyles } from '../../../styles';
 import { Content } from '../../../types';
-import { updatedFormat } from '../RecentPageSection';
 
 // --- Helpers ---
 const RenderIcon = (icon: string, color?: string) => (p: any) =>
@@ -34,6 +33,17 @@ export const toRecentContents = (data: Content[]) =>
   data
     .filter((v) => v.description)
     .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
+
+const updatedOffset = new Date().getTimezoneOffset();
+
+export const updatedFormat = (_updated: string) => {
+  const _date = new Date(_updated);
+  _date.setMinutes(_date.getMinutes() - updatedOffset);
+  const updated = _date.toISOString().slice(0, 16);
+  const date = updated.slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  return date === today ? updated.slice(11) : date;
+};
 
 // --- Exported Buttons ---
 export const TimeLineButton = () => {

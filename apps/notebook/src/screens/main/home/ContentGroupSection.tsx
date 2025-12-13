@@ -5,17 +5,16 @@ import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
-import { useBoardPages, useLastBoard } from '../../../hooks/useBoardStorage';
-import {
-  useRecentPages,
-  useNotePages,
-  useDeleteRecentPage,
-  useLastPage,
-  useAddRecentPage,
-  useCurrentPage,
-  useSnapshotPages,
-} from '../../../hooks/useNoteStorage';
+import { useBoardPages } from '../../../hooks/useBoardStorage';
+import { useNotePages, useSnapshotPages } from '../../../hooks/useNoteStorage';
 import useProblem, { getSplitTitle } from '../../../hooks/useProblem';
+import {
+  useAddRecentTab,
+  useCurrentPage,
+  useDeleteRecentTab,
+  useLastTab,
+  useRecentTabs,
+} from '../../../hooks/useTabStorage';
 import useTimeLine from '../../../hooks/useTimeLine';
 import { createCommonStyles } from '../../../styles';
 import { Content } from '../../../types';
@@ -76,16 +75,15 @@ const ContentGroupSection = (props: Props) => {
 
   // Data Hooks
   const notes = useNotePages();
-  const pages = useRecentPages();
+  const tabs = useRecentTabs();
   const { data: boards = [] } = useBoardPages();
-  const { data: lastPage } = useLastPage();
-  const { data: lastBoard } = useLastBoard();
-  const currentPage = useCurrentPage(lastPage);
+  const { data: lastTab } = useLastTab();
+  const currentPage = useCurrentPage(lastTab);
   const { data: snapshots } = useSnapshotPages(currentPage?.id);
 
   // Actions
-  const addRecent = useAddRecentPage();
-  const deleteRecent = useDeleteRecentPage();
+  const addRecent = useAddRecentTab();
+  const deleteRecent = useDeleteRecentTab();
 
   // Derived Data
   const currentSplitTitle = currentPage ? getSplitTitle(currentPage.title) : undefined;
@@ -97,10 +95,12 @@ const ContentGroupSection = (props: Props) => {
         notes.data.filter((v) => v.title.startsWith(currentPage.title + '/'))
       );
     }
-    if (props.type === 'PAGE' || props.type === 'LAST') return pages.data || [];
+    if (props.type === 'LAST') {
+      return lastTab && tabs.data?.find((v) => v.id === lastTab.id) === undefined ? [lastTab] : [];
+    }
+    if (props.type === 'PAGE') return tabs.data || [];
     return [];
-  }, [props.type, notes.data, pages.data, currentPage]);
-
+  }, [props.type, notes.data, tabs.data, currentPage, boards, lastTab]);
   const tocList = useMemo(
     () =>
       props.type === 'TOC' && currentPage?.description
@@ -115,24 +115,28 @@ const ContentGroupSection = (props: Props) => {
   );
 
   // Interaction Handlers
-  const onNotePress = (title: string) => {
-    if (title === lastPage?.title) {
+  const toggleRecent = (id: number) => {
+    if (!tabs.data?.some((v) => v.id === id)) addRecent.mutate({ id, direct: true });
+    else deleteRecent.mutate(id);
+  };
+
+  const onNotePress = (content: Content) => {
+    if (content.id === lastTab?.id) {
       if (tabRef.current) {
         clearTimeout(tabRef.current);
         tabRef.current = undefined;
-        addRecent.mutate({ title });
+        toggleRecent(content.id);
       } else tabRef.current = setTimeout(() => (tabRef.current = undefined), 500);
     }
-    navigate('NotePage', { title });
+    navigate(content.type === 'BOARD' ? 'KanbanPage' : 'NotePage', { title: content.title });
   };
 
-  const onNoteLongPress = (title: string) => {
+  const onNoteLongPress = (content: Content) => {
     if (tabRef.current) clearTimeout(tabRef.current);
-    if (!pages.data?.some((v) => v.title === title)) addRecent.mutate({ title, direct: true });
-    else deleteRecent.mutate(title);
+    toggleRecent(content.id);
   };
 
-  const isLinked = (title: string) => pages.data?.some((v) => v.title === title);
+  const isLinked = (title: string) => tabs.data?.some((v) => v.title === title);
 
   // --- Render Sections ---
 
@@ -144,7 +148,8 @@ const ContentGroupSection = (props: Props) => {
             key={b.id}
             title={b.title}
             left={RenderIcon('view-dashboard')}
-            onPress={() => navigate('KanbanPage', { title: b.title })}
+            onPress={() => onNotePress(b)}
+            onLongPress={() => onNoteLongPress(b)}
           />
         ))}
         <List.Item
@@ -218,27 +223,17 @@ const ContentGroupSection = (props: Props) => {
   }
 
   if (props.type === 'LAST') {
-    const lastPageExists = lastPage && !listData?.some((v) => v.id === lastPage.id);
-    if (!lastPageExists && !lastBoard) return null;
+    if (!lastTab) return null;
     return (
       <List.Section>
-        {lastBoard && (
+        {listData.length > 0 && lastTab && (
           <List.Item
-            title={lastBoard.title}
+            title={lastTab.title}
             titleStyle={{ fontStyle: 'italic' }}
             style={{ padding: itemPadding }}
-            left={RenderIcon('view-dashboard')}
-            onPress={() => navigate('KanbanPage', { title: lastBoard.title })}
-          />
-        )}
-        {lastPageExists && lastPage && (
-          <List.Item
-            title={lastPage.title}
-            titleStyle={{ fontStyle: 'italic' }}
-            style={{ padding: itemPadding }}
-            left={RenderIcon('file-document')}
-            onPress={() => onNotePress(lastPage.title)}
-            onLongPress={() => onNoteLongPress(lastPage.title)}
+            left={RenderIcon(lastTab.type === 'BOARD' ? 'view-dashboard' : 'file-document')}
+            onPress={() => onNotePress(lastTab)}
+            onLongPress={() => onNoteLongPress(lastTab)}
           />
         )}
       </List.Section>
@@ -247,20 +242,25 @@ const ContentGroupSection = (props: Props) => {
 
   // Generic List Render (RECENT, SUBNOTE, PAGE)
   if (!listData) return null;
-  const parentTitle =
-    props.type === 'SUBNOTE' && currentSplitTitle?.length === 2 ? currentSplitTitle[0] : null;
+  const parentContent =
+    props.type === 'SUBNOTE' && currentSplitTitle?.length === 2
+      ? notes.data?.find((v) => v.title === currentSplitTitle[0])
+      : null;
 
   return (
     <List.Section>
-      {parentTitle && (
+      {parentContent && (
         <>
           <List.Item
-            title={parentTitle}
+            title={parentContent.title}
             titleStyle={{ color: '#888B' }}
             style={{ padding: itemPadding }}
-            left={RenderIcon(!isLinked(parentTitle) ? 'notebook' : 'notebook-edit', '#888B')}
-            onPress={() => onNotePress(parentTitle)}
-            onLongPress={() => onNoteLongPress(parentTitle)}
+            left={RenderIcon(
+              !isLinked(parentContent.title) ? 'notebook' : 'notebook-edit',
+              '#888B'
+            )}
+            onPress={() => onNotePress(parentContent)}
+            onLongPress={() => onNoteLongPress(parentContent)}
           />
           <View
             style={{
@@ -280,7 +280,9 @@ const ContentGroupSection = (props: Props) => {
           style={{ padding: itemPadding }}
           left={RenderIcon(
             props.type === 'PAGE'
-              ? 'file-document-edit'
+              ? v.type === 'BOARD'
+                ? 'view-dashboard'
+                : 'file-document-edit'
               : !isLinked(v.title)
               ? 'notebook'
               : 'notebook-edit'
@@ -289,7 +291,7 @@ const ContentGroupSection = (props: Props) => {
             props.type === 'PAGE'
               ? () => (
                   <TouchableRipple
-                    onPress={() => deleteRecent.mutate(v.title)}
+                    onPress={() => deleteRecent.mutate(v.id)}
                     style={{
                       justifyContent: 'center',
                       borderRadius: itemPadding,
@@ -303,10 +305,8 @@ const ContentGroupSection = (props: Props) => {
                 )
               : undefined
           }
-          onPress={() =>
-            props.type === 'PAGE' ? navigate('NotePage', { title: v.title }) : onNotePress(v.title)
-          }
-          onLongPress={props.type !== 'PAGE' ? () => onNoteLongPress(v.title) : undefined}
+          onPress={() => onNotePress(v)}
+          onLongPress={() => onNoteLongPress(v)}
         />
       ))}
       {(props.type === 'RECENT' || props.type === 'SUBNOTE') && (

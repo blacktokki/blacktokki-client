@@ -1,10 +1,9 @@
 import { useAuthContext } from '@blacktokki/account';
 import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/core';
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } from 'react-query';
 
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
@@ -39,9 +38,7 @@ async function openDB(): Promise<IDBDatabase> {
   });
 }
 
-const RECENT_PAGES_KEY = '@blacktokki:notebook:recent_pages';
-
-let lastPage: string | undefined;
+export const focusListener: ((queryClient: QueryClient, id: number) => Promise<void>)[] = [];
 
 export const getContents = async (
   data:
@@ -115,7 +112,7 @@ export const saveContents = async (
         contentItem.id = maxId + 1;
         maxId += 1;
       }
-      store.put(contentItem); // id를 기준으로 덮어씌움 (없으면 추가)
+      store.put(contentItem);
     }
     // if (content) {
     //   const snapshot: Content | PostContent = {
@@ -133,25 +130,6 @@ export const saveContents = async (
     });
   } catch (e) {
     console.error('Error saving contents to IndexedDB', e);
-  }
-};
-
-const getRecentPages = async (): Promise<string[]> => {
-  try {
-    const jsonValue = await AsyncStorage.getItem(RECENT_PAGES_KEY);
-    return jsonValue ? JSON.parse(jsonValue) : [];
-  } catch (e) {
-    console.error('Error loading recent notes', e);
-    return [];
-  }
-};
-
-const saveRecentPages = async (titles: string[]): Promise<void> => {
-  try {
-    const jsonValue = JSON.stringify(titles);
-    await AsyncStorage.setItem(RECENT_PAGES_KEY, jsonValue);
-  } catch (e) {
-    console.error('Error saving recent notes', e);
   }
 };
 
@@ -189,24 +167,15 @@ export const useNotePage = (title: string) => {
     queryKey: ['pageContent', title],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
-      // Side Effect 제거됨 (queryFn은 순수하게 데이터만 반환)
       return page || { title, description: '', id: undefined };
     },
     enabled: !isFetching,
   });
 
-  // Side Effect를 useEffect로 분리
   useEffect(() => {
-    if (query.data?.id && isFocused) {
-      (async () => {
-        const recentPages = await getRecentPages();
-        // 최근 페이지에 없으면 lastPage 갱신
-        if (recentPages.find((v) => v === title) === undefined) {
-          lastPage = title;
-        }
-        // lastPage 쿼리 무효화 (상태 동기화)
-        await queryClient.invalidateQueries({ queryKey: ['lastPage'] });
-      })();
+    const id = query.data?.id;
+    if (id && isFocused) {
+      focusListener.forEach((f) => f(queryClient, id));
     }
   }, [query.data?.id, isFocused, title, queryClient]);
 
@@ -222,38 +191,6 @@ export const useSnapshotAll = (parentId?: number) => {
         ? await getContents({ isOnline: !auth.isLocal, types: ['SNAPSHOT', 'DELTA'], parentId })
         : undefined,
   });
-};
-
-export const useRecentPages = () => {
-  const { data: contents = [], isFetching } = useNotePages();
-  return useQuery({
-    queryKey: ['recentPages'],
-    queryFn: async () => {
-      const recentTitles = await getRecentPages();
-      return recentTitles
-        .map((title) => contents.find((c) => c.title === title))
-        .filter((c) => c !== undefined) as Content[];
-    },
-    enabled: !isFetching,
-  });
-};
-
-export const useLastPage = () => {
-  const { data: contents = [], isFetching } = useNotePages();
-  return useQuery({
-    queryKey: ['lastPage'],
-    queryFn: async () => {
-      return contents.find((v) => v.title === lastPage);
-    },
-    enabled: !isFetching,
-  });
-};
-
-export const useCurrentPage = (lastPage?: Content) => {
-  const { data: currentNote } = useNotePage(
-    new URLSearchParams(location.search).get('title') || ''
-  );
-  return currentNote?.id ? currentNote : lastPage;
 };
 
 export const useCreateOrUpdatePage = () => {
@@ -305,7 +242,8 @@ export const useCreateOrUpdatePage = () => {
         await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
         await queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
         await queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
-        await queryClient.invalidateQueries({ queryKey: ['recentPages'] });
+        await queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+        await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
       }
     },
   });
@@ -344,61 +282,16 @@ export const useMovePage = () => {
 
       await saveContents(!auth.isLocal, 'NOTE', updatedContents, page.id);
 
-      // Update recent pages
-      const recentPages = await getRecentPages();
-      const updatedRecentPages = recentPages.map((title) =>
-        title === oldTitle ? newTitle : title
-      );
-      await saveRecentPages(updatedRecentPages);
-
       return { oldTitle, newTitle };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['pageContents'] });
-      queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
-      queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
-      queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
-      queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
-      queryClient.invalidateQueries({ queryKey: ['recentPages'] });
-    },
-  });
-};
-
-export const useAddRecentPage = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ title, direct }: { title: string; direct?: boolean }) => {
-      // Update recent pages
-      const recentPages = await getRecentPages();
-      if (recentPages.find((v) => v === title) === undefined || direct) {
-        const updatedRecentPages = [title, ...recentPages];
-        await saveRecentPages(updatedRecentPages);
-      }
-
-      return { title };
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['recentPages'] });
-    },
-  });
-};
-
-export const useDeleteRecentPage = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (title: string) => {
-      // Update recent pages
-      const recentPages = await getRecentPages();
-      const updatedRecentPages = recentPages.filter((_title) => title !== _title);
-      await saveRecentPages(updatedRecentPages);
-
-      return { title };
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['recentPages'] });
-      queryClient.invalidateQueries({ queryKey: ['pageContent'] });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+      await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
+      await queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
+      await queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
+      await queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
+      await queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+      await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
     },
   });
 };

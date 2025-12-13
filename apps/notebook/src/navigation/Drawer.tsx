@@ -5,7 +5,7 @@ import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-
 import { List, TouchableRipple } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { useCurrentPage, useLastPage } from '../hooks/useNoteStorage';
+import { useCurrentPage, useLastTab } from '../hooks/useTabStorage';
 import ContentGroupSection, {
   ProblemButton,
   TimeLineButton,
@@ -16,8 +16,8 @@ import ContentGroupSection, {
 export default () => {
   const { lang } = useLangContext();
   const theme = useColorScheme();
-  const { data: lastPage } = useLastPage();
-  const currentPage = useCurrentPage(lastPage);
+  const { data: lastTab } = useLastTab();
+  const currentPage = useCurrentPage(lastTab);
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [expanded, setExpanded] = useState(false);
   const isNoteMode = ['SUBNOTE', 'TOC', 'HISTORY'].includes(currentView);

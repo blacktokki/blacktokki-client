@@ -1,6 +1,7 @@
 import { useColorScheme, useLangContext, useResizeContext, View } from '@blacktokki/core';
 import { navigate, push } from '@blacktokki/navigation';
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, StyleProp, ViewStyle } from 'react-native';
 import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 
@@ -14,6 +15,7 @@ import {
   useDeleteRecentTab,
   useLastTab,
   useRecentTabs,
+  useReorderRecentTabs,
 } from '../../../hooks/useTabStorage';
 import useTimeLine from '../../../hooks/useTimeLine';
 import { createCommonStyles } from '../../../styles';
@@ -71,6 +73,126 @@ export const ProblemButton = () => {
     />
   );
 };
+// --- Sortable Item Component (Updated) ---
+const DraggableTabItem = ({
+  index,
+  totalCount,
+  onReorder,
+  children,
+  style,
+}: {
+  index: number;
+  totalCount: number;
+  onReorder: (fromIndex: number, toIndex: number) => void;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) => {
+  const pan = useRef(new Animated.ValueXY()).current;
+  const theme = useColorScheme();
+  const [isDragging, setIsDragging] = useState(false);
+  const itemHeight = useRef(0);
+
+  // 1. 최신 props를 참조하기 위한 Ref 생성 (Stale Closure 문제 해결)
+  const propsRef = useRef({ index, totalCount, onReorder });
+
+  // 렌더링될 때마다 최신 값으로 업데이트
+  propsRef.current = { index, totalCount, onReorder };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // 수직 이동이 유의미할 때만 드래그 시작
+        return Math.abs(gestureState.dy) > 10;
+      },
+      onPanResponderGrant: () => {
+        setIsDragging(true);
+        // 드래그 시작 시 오프셋 설정 (연속 드래그 보정)
+        pan.setOffset({
+          x: 0,
+          y: (pan.y as any)._value,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      // 2. 이동 범위 제한 (Clamping)
+      onPanResponderMove: (_, gestureState) => {
+        const { index: currentIndex, totalCount: currentCount } = propsRef.current;
+        const h = itemHeight.current || 50; // 높이값이 없으면 기본값 사용
+
+        // 위로 갈 수 있는 최대 거리 (음수) = 현재 인덱스 * 높이
+        const minDy = -currentIndex * h;
+        // 아래로 갈 수 있는 최대 거리 (양수) = (전체 개수 - 1 - 현재 인덱스) * 높이
+        const maxDy = (currentCount - 1 - currentIndex) * h;
+
+        // 이동 범위를 제한
+        const clampedDy = Math.max(minDy, Math.min(maxDy, gestureState.dy));
+
+        pan.y.setValue(clampedDy);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        setIsDragging(false);
+        pan.flattenOffset();
+
+        // Ref를 통해 최신 index와 함수 가져오기
+        const {
+          index: currentIndex,
+          totalCount: currentCount,
+          onReorder: currentOnReorder,
+        } = propsRef.current;
+        const h = itemHeight.current || 50;
+
+        // 제한된 범위 내에서의 최종 dy 다시 계산 (안전장치)
+        const minDy = -currentIndex * h;
+        const maxDy = (currentCount - 1 - currentIndex) * h;
+        const clampedDy = Math.max(minDy, Math.min(maxDy, gestureState.dy));
+
+        // 이동 거리 기반 인덱스 변화량 계산
+        const movedCount = Math.round(clampedDy / h);
+        const newIndex = Math.max(0, Math.min(currentCount - 1, currentIndex + movedCount));
+
+        if (newIndex !== currentIndex) {
+          currentOnReorder(currentIndex, newIndex);
+        }
+
+        // 제자리로 애니메이션 복귀 (데이터가 변경되면서 리렌더링되어 위치가 잡힘)
+        if (newIndex !== currentIndex) {
+          pan.setValue({ x: 0, y: 0 });
+          currentOnReorder(currentIndex, newIndex);
+        } else {
+          Animated.spring(pan, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            friction: 5,
+            tension: 40,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <Animated.View
+      onLayout={(e) => {
+        itemHeight.current = e.nativeEvent.layout.height;
+      }}
+      style={[
+        style,
+        {
+          transform: [{ translateY: pan.y }],
+          zIndex: isDragging ? 999 : 1,
+          opacity: isDragging ? 0.8 : 1,
+          // 드래그 중일 때 위/아래 경계선 표시 등으로 시각적 피드백 강화
+          backgroundColor: isDragging ? (theme === 'dark' ? '#333' : '#eee') : 'transparent',
+          shadowOpacity: isDragging ? 0.2 : 0,
+          elevation: isDragging ? 5 : 0,
+        },
+      ]}
+      {...panResponder.panHandlers}
+    >
+      {children}
+    </Animated.View>
+  );
+};
 
 // --- Main Component Types ---
 type GroupType = 'SUBNOTE' | 'KANBAN' | 'TOC' | 'HISTORY';
@@ -94,6 +216,7 @@ const ContentGroupSection = (props: Props) => {
   // Actions
   const addRecent = useAddRecentTab();
   const deleteRecent = useDeleteRecentTab();
+  const reorderRecent = useReorderRecentTabs();
 
   // Derived Data
   const currentSplitTitle = currentPage ? getSplitTitle(currentPage.title) : undefined;
@@ -144,6 +267,15 @@ const ContentGroupSection = (props: Props) => {
   const onNoteLongPress = (content: Content) => {
     if (tabRef.current) clearTimeout(tabRef.current);
     toggleRecent(content.id);
+  };
+
+  const handleReorder = (fromIndex: number, toIndex: number) => {
+    if (!tabs.data) return;
+    const currentList = [...tabs.data];
+    const [movedItem] = currentList.splice(fromIndex, 1);
+    currentList.splice(toIndex, 0, movedItem);
+    // ID 배열로 변환하여 저장
+    reorderRecent.mutate(currentList.map((item) => item.id));
   };
 
   const isLinked = (title: string) => tabs.data?.some((v) => v.title === title);
@@ -260,6 +392,7 @@ const ContentGroupSection = (props: Props) => {
   return (
     <List.Section>
       {parentContent && (
+        // ... (parentContent 렌더링 유지)
         <>
           <List.Item
             title={parentContent.title}
@@ -283,42 +416,63 @@ const ContentGroupSection = (props: Props) => {
           />
         </>
       )}
-      {(props.type === 'RECENT' ? listData.slice(0, props.noteCount) : listData).map((v) => (
-        <List.Item
-          key={v.title}
-          title={v.title}
-          style={{ padding: itemPadding }}
-          left={RenderIcon(
-            props.type === 'PAGE'
-              ? v.type === 'BOARD'
-                ? 'view-dashboard'
-                : 'file-document-edit'
-              : !isLinked(v.title)
-              ? 'notebook'
-              : 'notebook-edit'
-          )}
-          right={
-            props.type === 'PAGE'
-              ? () => (
-                  <TouchableRipple
-                    onPress={() => deleteRecent.mutate(v.id)}
-                    style={{
-                      justifyContent: 'center',
-                      borderRadius: itemPadding,
-                      width: 40 + itemPadding * 2,
-                      height: 40 + itemPadding * 2,
-                      margin: -itemPadding,
-                    }}
-                  >
-                    <List.Icon style={{ left: itemPadding - 7 }} icon={'close'} />
-                  </TouchableRipple>
-                )
-              : undefined
-          }
-          onPress={() => onNotePress(v)}
-          onLongPress={() => onNoteLongPress(v)}
-        />
-      ))}
+      {(props.type === 'RECENT' ? listData.slice(0, props.noteCount) : listData).map((v, index) => {
+        // 공통 아이템 렌더링
+        const itemContent = (
+          <List.Item
+            // PAGE 타입일 경우 DraggableWrapper에서 key를 처리하므로 여기서는 index를 key로 쓰거나 생략 가능하지만,
+            // DraggableWrapper 내부가 아니면 key 필수.
+            // Draggable 내부에서는 key를 Draggable에 부여.
+            title={v.title}
+            style={{ padding: itemPadding }}
+            left={RenderIcon(
+              props.type === 'PAGE'
+                ? v.type === 'BOARD'
+                  ? 'view-dashboard'
+                  : 'file-document-edit'
+                : !isLinked(v.title)
+                ? 'notebook'
+                : 'notebook-edit'
+            )}
+            right={
+              props.type === 'PAGE'
+                ? () => (
+                    <TouchableRipple
+                      onPress={() => deleteRecent.mutate(v.id)}
+                      style={{
+                        justifyContent: 'center',
+                        borderRadius: itemPadding,
+                        width: 40 + itemPadding * 2,
+                        height: 40 + itemPadding * 2,
+                        margin: -itemPadding,
+                      }}
+                    >
+                      <List.Icon style={{ left: itemPadding - 7 }} icon={'close'} />
+                    </TouchableRipple>
+                  )
+                : undefined
+            }
+            onPress={() => onNotePress(v)}
+            onLongPress={() => onNoteLongPress(v)}
+          />
+        );
+
+        if (props.type === 'PAGE') {
+          return (
+            <DraggableTabItem
+              key={v.id || v.title}
+              index={index}
+              totalCount={listData.length}
+              onReorder={handleReorder}
+            >
+              {itemContent}
+            </DraggableTabItem>
+          );
+        }
+
+        return <React.Fragment key={v.title}>{itemContent}</React.Fragment>;
+      })}
+      {/* ... (더보기 버튼 유지) */}
       {(props.type === 'RECENT' || props.type === 'SUBNOTE') && (
         <List.Item
           title={lang('more...')}

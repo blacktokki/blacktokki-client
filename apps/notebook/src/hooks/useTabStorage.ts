@@ -98,6 +98,20 @@ export const useDeleteRecentTab = () => {
   });
 };
 
+export const useReorderRecentTabs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      await saveRecentTabs(ids);
+      return ids;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+    },
+  });
+};
+
 focusListener.push(async (queryClient, id) => {
   const recentTabs = await getRecentTabs();
   if (recentTabs.find((v) => v === id) === undefined) {

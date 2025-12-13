@@ -22,7 +22,7 @@ import { createCommonStyles } from '../../../styles';
 import { Content } from '../../../types';
 
 // --- Helpers ---
-const RenderIcon = (icon: string, color?: string) => (p: any) =>
+export const RenderIcon = (icon: string, color?: string) => (p: any) =>
   <List.Icon {...p} icon={icon} color={color || p.color} style={[p.style, { margin: 0 }]} />;
 
 const CountBadge = ({ count }: { count: number }) => (

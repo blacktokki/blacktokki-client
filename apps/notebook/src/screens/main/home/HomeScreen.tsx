@@ -7,11 +7,11 @@ import { ScrollView, View } from 'react-native';
 import { List } from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
+import ConfigSection from './ConfigSection';
+import { ProblemButton, RenderIcon, TabsSection, TimeLineButton } from './ContentGroupSection';
 import { SearchBar } from '../../../components/SearchBar';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
-import ConfigSection from './ConfigSection';
-import { ProblemButton, TabsSection, TimeLineButton } from './ContentGroupSection';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
@@ -25,7 +25,7 @@ const NotesTabView = () => {
       <TimeLineButton />
       <ProblemButton />
       <List.Item
-        left={(_props) => <List.Icon {..._props} icon={'view-dashboard-variant'} />}
+        left={RenderIcon('view-dashboard-variant')}
         title={lang('Kanban')}
         onPress={() => push('KanbanList')}
       />

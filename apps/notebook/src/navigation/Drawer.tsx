@@ -11,6 +11,7 @@ import ContentGroupSection, {
   TimeLineButton,
   ContentGroupType,
   TabsSection,
+  RenderIcon,
 } from '../screens/main/home/ContentGroupSection';
 
 export default () => {
@@ -87,11 +88,7 @@ export default () => {
 
   return (
     <View style={{ flex: 1 }}>
-      <List.Item
-        left={(_props) => <List.Icon {..._props} icon={'home'} />}
-        title={lang('Home')}
-        onPress={() => push('Home')}
-      />
+      <List.Item left={RenderIcon('home')} title={lang('Home')} onPress={() => push('Home')} />
       <TimeLineButton />
       <ProblemButton />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>

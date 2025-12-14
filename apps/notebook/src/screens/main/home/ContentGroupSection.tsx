@@ -8,6 +8,7 @@ import Icon2 from 'react-native-vector-icons/FontAwesome';
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
 import { useNotePages, useSnapshotPages } from '../../../hooks/useNoteStorage';
+import { usePrivacy } from '../../../hooks/usePrivacy';
 import useProblem, { getSplitTitle } from '../../../hooks/useProblem';
 import {
   useAddRecentTab,
@@ -500,6 +501,7 @@ const ContentGroupSection = (props: Props) => {
 
 export const TabsSection = () => {
   const { lang } = useLangContext();
+  const { isPrivacyMode } = usePrivacy();
   return (
     <>
       <List.Subheader style={{}} selectable={false}>
@@ -507,7 +509,7 @@ export const TabsSection = () => {
       </List.Subheader>
       <ContentGroupSection type={'LAST'} />
       <List.Subheader style={{}} selectable={false}>
-        {lang('Tab List')}
+        {isPrivacyMode ? lang('Tab List - Privacy Mode') : lang('Tab List')}
       </List.Subheader>
       <ContentGroupSection type={'PAGE'} />
     </>

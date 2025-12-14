@@ -9,13 +9,13 @@ import { isHiddenTitle, usePrivacy } from './usePrivacy';
 
 export const useBoardPages = () => {
   const { auth } = useAuthContext();
-  const { isPrivacyMode } = usePrivacy(); // 프라이버시 상태 가져오기
+  const { isPrivacyMode } = usePrivacy();
 
   return useQuery({
-    queryKey: ['boardContents', !auth.isLocal, isPrivacyMode], // queryKey에 상태 추가
+    queryKey: ['boardContents', !auth.isLocal, isPrivacyMode],
     queryFn: async () =>
       (await getContents({ isOnline: !auth.isLocal, types: ['BOARD'] }))
-        .filter((v) => isPrivacyMode || !isHiddenTitle(v.title)) // 필터링 로직 추가
+        .filter((v) => isPrivacyMode || !isHiddenTitle(v.title))
         .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()),
   });
 };
@@ -23,6 +23,7 @@ export const useBoardPages = () => {
 export const useBoardPage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
+  const { isPrivacyMode } = usePrivacy();
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   const { data: contents = [], isFetching } = useBoardPages();
@@ -31,7 +32,6 @@ export const useBoardPage = (title: string) => {
     queryKey: ['boardContent', title],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
-      // Side Effect 제거됨
       return page;
     },
     enabled: !isFetching,
@@ -40,7 +40,7 @@ export const useBoardPage = (title: string) => {
   useEffect(() => {
     const id = query.data?.id;
     if (id && isFocused) {
-      focusListener.forEach((f) => f(queryClient, id));
+      focusListener.forEach((f) => f(queryClient, isPrivacyMode, id));
     }
   }, [query.data, isFocused, subkey, queryClient]);
 

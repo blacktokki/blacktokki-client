@@ -190,6 +190,9 @@
 * **Mode Settings:** You can toggle this feature On or Off in **Home > Config > * Note Settings > Privacy Mode**.
     * **Off (Default):** Protected notes are completely hidden from lists, search results, Kanban boards, and the timeline.
     * **On:** Hidden notes become visible again, allowing full access and editing.
+* **Independent Tab List:** When Privacy Mode is enabled, the 'Tab List' on the Home screen switches to **'Tab List - Privacy Mode'**.
+    * The history of notes viewed in this mode (tabs) is **completely separated and stored independently** from the normal mode's tab list.
+    * Turning off Privacy Mode restores the regular tab list. This allows you to manage your private work history so that it does not appear on the standard screen.
 * If you attempt to access a hidden note directly (e.g., via URL) while the mode is **Off**, a warning message will appear, and the content will remain hidden.
 
 ---

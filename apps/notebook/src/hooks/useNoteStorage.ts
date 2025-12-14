@@ -39,7 +39,11 @@ async function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export const focusListener: ((queryClient: QueryClient, id: number) => Promise<void>)[] = [];
+export const focusListener: ((
+  queryClient: QueryClient,
+  isPrivacy: boolean,
+  id: number
+) => Promise<void>)[] = [];
 
 export const getContents = async (
   data:
@@ -136,13 +140,12 @@ export const saveContents = async (
 
 export const useNotePages = () => {
   const { auth } = useAuthContext();
-  const { isPrivacyMode } = usePrivacy(); // 프라이버시 상태 가져오기
+  const { isPrivacyMode } = usePrivacy();
 
   return useQuery({
-    queryKey: ['pageContents', !auth.isLocal, isPrivacyMode], // queryKey에 상태 추가
+    queryKey: ['pageContents', !auth.isLocal, isPrivacyMode],
     queryFn: async () => {
       const contents = await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
-      // 프라이버시 모드가 꺼져있으면 필터링
       return isPrivacyMode ? contents : contents.filter((v) => !isHiddenTitle(v.title));
     },
   });
@@ -168,6 +171,7 @@ export const useSnapshotPages = (parentId?: number) => {
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
+  const { isPrivacyMode } = usePrivacy();
   const { data: contents = [], isFetching } = useNotePages();
 
   const query = useQuery({
@@ -182,7 +186,7 @@ export const useNotePage = (title: string) => {
   useEffect(() => {
     const id = query.data?.id;
     if (id && isFocused) {
-      focusListener.forEach((f) => f(queryClient, id));
+      focusListener.forEach((f) => f(queryClient, isPrivacyMode, id));
     }
   }, [query.data?.id, isFocused, title, queryClient]);
 

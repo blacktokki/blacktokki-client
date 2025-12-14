@@ -182,6 +182,16 @@
 * You can freely rearrange the order of items in the Tab List, by simply dragging them up or down.
 * The new order is applied immediately and saved automatically. Position frequently used notes at the top to enhance your workflow efficiency.
 
+### 🔐 Privacy Mode
+
+* This feature allows you to hide sensitive information when viewing notes in public spaces or sharing your screen.
+* **How to hide notes:** If a note title (or the title in a sub-path) starts with a `.` (dot), that note and its sub-notes are automatically treated as privacy-protected.
+    * Examples: `.SecretDiary`, `Project/.Confidential`, `PersonalInfo/.Finance`
+* **Mode Settings:** You can toggle this feature On or Off in **Home > Config > * Note Settings > Privacy Mode**.
+    * **Off (Default):** Protected notes are completely hidden from lists, search results, Kanban boards, and the timeline.
+    * **On:** Hidden notes become visible again, allowing full access and editing.
+* If you attempt to access a hidden note directly (e.g., via URL) while the mode is **Off**, a warning message will appear, and the content will remain hidden.
+
 ---
 
 ## 📞 Contact

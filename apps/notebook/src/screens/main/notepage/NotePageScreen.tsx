@@ -20,6 +20,7 @@ import {
   pageStyles,
 } from '../NoteItemSections';
 import TimerTagSection from './TimerTagSection';
+import { isHiddenTitle, usePrivacy, useSetPrivacy } from '../../../hooks/usePrivacy';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
@@ -44,6 +45,8 @@ export const NotePageScreen: React.FC = () => {
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
+  const { isPrivacyMode } = usePrivacy();
+  const setPrivacy = useSetPrivacy();
   const archiveIndex = _archives?.findIndex((v) => v.id === archiveId);
   const archive =
     _archives && archiveIndex && archiveIndex > 0
@@ -92,6 +95,21 @@ export const NotePageScreen: React.FC = () => {
     }
   }, [page, paragraph, paragraphItem]);
   const iconColor = getIconColor(theme);
+  if (!isPrivacyMode && isHiddenTitle(title)) {
+    return (
+      <>
+        {_window === 'portrait' && <SearchBar />}
+        <View style={commonStyles.container}>
+          <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 20 }]}>
+            <Text style={commonStyles.text}>{lang('This note is hidden by Privacy Mode.')}</Text>
+            <TouchableOpacity onPress={() => setPrivacy.mutate(true)} style={commonStyles.button}>
+              <Text style={commonStyles.buttonText}>{lang('Enable Privacy Mode')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </>
+    );
+  }
   return (
     isFocused && (
       <>

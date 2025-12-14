@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } 
 
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
+import { isHiddenTitle, usePrivacy } from './usePrivacy';
 
 const DB_NAME = '@Blacktokki:notebook';
 const DB_VERSION = 2;
@@ -135,9 +136,15 @@ export const saveContents = async (
 
 export const useNotePages = () => {
   const { auth } = useAuthContext();
+  const { isPrivacyMode } = usePrivacy(); // 프라이버시 상태 가져오기
+
   return useQuery({
-    queryKey: ['pageContents', !auth.isLocal],
-    queryFn: async () => await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] }),
+    queryKey: ['pageContents', !auth.isLocal, isPrivacyMode], // queryKey에 상태 추가
+    queryFn: async () => {
+      const contents = await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
+      // 프라이버시 모드가 꺼져있으면 필터링
+      return isPrivacyMode ? contents : contents.filter((v) => !isHiddenTitle(v.title));
+    },
   });
 };
 

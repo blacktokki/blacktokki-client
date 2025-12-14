@@ -5,15 +5,18 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { focusListener, getContents, saveContents } from './useNoteStorage';
 import { BoardOption, Content, PostContent } from '../types';
+import { isHiddenTitle, usePrivacy } from './usePrivacy';
 
 export const useBoardPages = () => {
   const { auth } = useAuthContext();
+  const { isPrivacyMode } = usePrivacy(); // 프라이버시 상태 가져오기
+
   return useQuery({
-    queryKey: ['boardContents', !auth.isLocal],
+    queryKey: ['boardContents', !auth.isLocal, isPrivacyMode], // queryKey에 상태 추가
     queryFn: async () =>
-      (await getContents({ isOnline: !auth.isLocal, types: ['BOARD'] })).sort(
-        (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
-      ),
+      (await getContents({ isOnline: !auth.isLocal, types: ['BOARD'] }))
+        .filter((v) => isPrivacyMode || !isHiddenTitle(v.title)) // 필터링 로직 추가
+        .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()),
   });
 };
 

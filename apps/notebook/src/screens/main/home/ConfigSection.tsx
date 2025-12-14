@@ -17,6 +17,7 @@ import { View } from 'react-native';
 import { SearchList } from '../../../components/SearchBar';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../../hooks/useNoteStorage';
+import { usePrivacy, useSetPrivacy } from '../../../hooks/usePrivacy';
 import AccountEditModal from '../../../modals/AccountEditModal';
 import { createCommonStyles } from '../../../styles';
 import { Content, NavigationParamList } from '../../../types';
@@ -108,10 +109,12 @@ export default () => {
   const commonStyles = createCommonStyles(theme);
   const { data: contents } = useNotePages();
   const mutation = useCreateOrUpdatePage();
-  const [search, setSearch] = useState(false);
+  const [noteConfig, setNoteConfig] = useState<'search' | 'privacy'>();
   const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();
   const resetKeyword = useResetKeyowrd();
+  const { isPrivacyMode } = usePrivacy();
+  const setPrivacy = useSetPrivacy();
   return (
     <View>
       <View style={commonStyles.card}>
@@ -127,25 +130,54 @@ export default () => {
         <SkinConfigSection />
       </View>
       <View style={commonStyles.card}>
-        <ConfigSection title={lang('* Search Settings')}>
+        <ConfigSection title={lang('* Note Settings')}>
           <View style={{ flexDirection: 'row' }}>
             <OptionButton
               title={lang('Search History')}
-              onPress={() => setSearch(!search)}
-              active={search}
+              onPress={() => setNoteConfig(noteConfig === 'search' ? undefined : 'search')}
+              active={noteConfig === 'search'}
             />
-            {search && !!keywords.length && (
-              <OptionButton
-                title={lang('Clear')}
-                onPress={() => resetKeyword.mutate()}
-                active={false}
-              />
-            )}
+            <OptionButton
+              title={lang('Privacy Mode')}
+              onPress={() => setNoteConfig(noteConfig === 'privacy' ? undefined : 'privacy')}
+              active={noteConfig === 'privacy'}
+            />
           </View>
-          {search && (
-            <View style={[commonStyles.card, { padding: 0 }]}>
-              <SearchList filteredPages={keywords} />
-            </View>
+          {noteConfig === 'search' && (
+            <>
+              <View style={[commonStyles.card, { padding: 0, marginTop: 16 }]}>
+                <SearchList filteredPages={keywords} />
+              </View>
+              <View style={{ flexDirection: 'row' }}>
+                <OptionButton
+                  title={lang('Clear')}
+                  onPress={() => resetKeyword.mutate()}
+                  active={false}
+                />
+              </View>
+            </>
+          )}
+          {noteConfig === 'privacy' && (
+            <>
+              <Text
+                selectable={false}
+                style={[commonStyles.smallText, { paddingVertical: 8, fontStyle: 'italic' }]}
+              >
+                {lang('Toggle visibility of notes starting with "."')}
+              </Text>
+              <View style={{ flexDirection: 'row' }}>
+                <OptionButton
+                  title={lang('On')}
+                  onPress={() => setPrivacy.mutate(true)}
+                  active={isPrivacyMode}
+                />
+                <OptionButton
+                  title={lang('Off')}
+                  onPress={() => setPrivacy.mutate(false)}
+                  active={!isPrivacyMode}
+                />
+              </View>
+            </>
           )}
         </ConfigSection>
       </View>

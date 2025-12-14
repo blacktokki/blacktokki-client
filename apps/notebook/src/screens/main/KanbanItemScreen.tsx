@@ -15,11 +15,11 @@ import { SearchBar, SearchList, toNoteParams } from '../../components/SearchBar'
 import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
+import { isHiddenTitle, usePrivacy, useSetPrivacy } from '../../hooks/usePrivacy';
 import { paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
 
-// 문단 이동 로직 (이전 KanbanScreen에서 가져옴)
 const move = (page: Content, newPage: Content, path: string) => {
   const paragraphs = parseHtmlToParagraphs(page?.description || '');
   const targetParagraph = parseHtmlToParagraphs(newPage?.description || '');
@@ -78,7 +78,9 @@ export const KanbanItemScreen: React.FC = () => {
   const boardMutation = useCreateOrUpdateBoard();
 
   const accessableRef = useRef(true);
-  const [showConfig, setShowConfig] = useState(false); // 설정 화면 토글 상태
+  const [showConfig, setShowConfig] = useState(false);
+  const { isPrivacyMode } = usePrivacy();
+  const setPrivacy = useSetPrivacy();
   const horizontal = true;
   const option = board?.option;
 
@@ -193,6 +195,22 @@ export const KanbanItemScreen: React.FC = () => {
       </View>
     </View>
   );
+
+  if (!isPrivacyMode && isHiddenTitle(title)) {
+    return (
+      <>
+        {_window === 'portrait' && <SearchBar />}
+        <View style={commonStyles.container}>
+          <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 20 }]}>
+            <Text style={commonStyles.text}>{lang('This note is hidden by Privacy Mode.')}</Text>
+            <TouchableOpacity onPress={() => setPrivacy.mutate(true)} style={commonStyles.button}>
+              <Text style={commonStyles.buttonText}>{lang('Enable Privacy Mode')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </>
+    );
+  }
 
   if (!board) {
     return (

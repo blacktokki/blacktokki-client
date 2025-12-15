@@ -163,7 +163,7 @@ export default () => {
                 selectable={false}
                 style={[commonStyles.smallText, { paddingVertical: 8, fontStyle: 'italic' }]}
               >
-                {lang('Toggle visibility of notes starting with "."')}
+                {lang('Toggle visibility of notes and subnotes starting with "."')}
               </Text>
               <View style={{ flexDirection: 'row' }}>
                 <OptionButton

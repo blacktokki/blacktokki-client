@@ -5,8 +5,7 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 const PRIVACY_KEY = '@blacktokki:notebook:privacy:';
 
 export const isHiddenTitle = (title: string) => {
-  const parts = title.split('/');
-  return (parts.pop() || '').startsWith('.');
+  return title.startsWith('.') || title.includes('/.');
 };
 
 const getPrivacyMode = async (subkey: string | undefined): Promise<boolean> => {

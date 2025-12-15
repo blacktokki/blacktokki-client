@@ -222,7 +222,7 @@ export const EditPageScreen: React.FC = () => {
         <View style={commonStyles.header}>
           {kanban && (
             <TouchableOpacity
-              onPress={isPrevent() ? handleUnsaved : () => push('Kanban')}
+              onPress={isPrevent() ? handleUnsaved : () => push('KanbanPage', { title: kanban })}
               style={[commonStyles.title, { marginRight: 5 }]}
             >
               <Icon2 name="view-dashboard" size={20} color={pressableTextColor} />

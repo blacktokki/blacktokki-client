@@ -90,7 +90,7 @@ export const KanbanItemScreen: React.FC = () => {
         if (v.paragraph) {
           navigation.push('EditPage', {
             ...toNoteParams(v.paragraph.origin, v.paragraph.title, v.paragraph.autoSection),
-            kanban: board?.id,
+            kanban: board?.title,
           });
         }
       } else {
@@ -320,7 +320,7 @@ export const KanbanItemScreen: React.FC = () => {
               renderHeader={({ item }) => (
                 <TouchableOpacity
                   onPress={() =>
-                    navigation.push('NotePage', { title: item.name, kanban: board.id })
+                    navigation.push('NotePage', { title: item.name, kanban: board.title })
                   }
                   style={{ backgroundColor: commonStyles.container.backgroundColor }}
                 >

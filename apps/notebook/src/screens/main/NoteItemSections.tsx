@@ -26,7 +26,7 @@ export const NotePageHeader = ({
   pressable?: boolean;
   paragraph?: string;
   archive?: { updated: string; previous?: number; next?: number };
-  kanban?: number;
+  kanban?: string;
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -47,7 +47,7 @@ export const NotePageHeader = ({
     >
       {kanban && (
         <TouchableOpacity
-          onPress={() => push('Kanban')}
+          onPress={() => push('KanbanPage', { title: kanban })}
           style={[commonStyles.title, { marginRight: 5 }]}
         >
           <Icon2

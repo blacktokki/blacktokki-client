@@ -68,7 +68,7 @@ export const ProblemButton = () => {
   return (
     <List.Item
       title={lang('Edit Suggestions')}
-      onPress={() => push('Problem')}
+      onPress={() => navigate('Problem')}
       left={RenderIcon('note-alert')}
       right={() => <CountBadge count={data.length} />}
     />
@@ -204,9 +204,11 @@ const DraggableTabItem = ({
 };
 
 // --- Main Component Types ---
-type GroupType = 'SUBNOTE' | 'KANBAN' | 'TOC' | 'HISTORY';
-export type ContentGroupType = GroupType | 'RECENT';
-type Props = { type: GroupType | 'PAGE' | 'LAST' } | { type: 'RECENT'; noteCount: number };
+export type ContentGroupType = 'KANBAN' | 'RECENT' | 'CURRENT_NOTE';
+export type ContentGroupSubType = 'TOC' | 'SUBNOTE' | 'HISTORY';
+type Props =
+  | { type: 'KANBAN' | ContentGroupSubType | 'PAGE' | 'LAST' }
+  | { type: 'RECENT'; noteCount: number };
 
 const ContentGroupSection = (props: Props) => {
   const { lang } = useLangContext();
@@ -298,6 +300,7 @@ const ContentGroupSection = (props: Props) => {
           <List.Item
             key={b.id}
             title={b.title}
+            style={{ padding: itemPadding }}
             left={RenderIcon('view-dashboard')}
             onPress={() => onNotePress(b)}
             onLongPress={() => onNoteLongPress(b)}
@@ -499,15 +502,23 @@ const ContentGroupSection = (props: Props) => {
   );
 };
 
+export const CurrentTabSection = () => {
+  const { lang } = useLangContext();
+  return (
+    <View>
+      <List.Subheader style={{}} selectable={false}>
+        {lang('Current Tab')}
+      </List.Subheader>
+      <ContentGroupSection type={'LAST'} />
+    </View>
+  );
+};
+
 export const TabsSection = () => {
   const { lang } = useLangContext();
   const { isPrivacyMode } = usePrivacy();
   return (
     <>
-      <List.Subheader style={{}} selectable={false}>
-        {lang('Current Tab')}
-      </List.Subheader>
-      <ContentGroupSection type={'LAST'} />
       <List.Subheader style={{}} selectable={false}>
         {isPrivacyMode ? lang('Tab List - Privacy Mode') : lang('Tab List')}
       </List.Subheader>

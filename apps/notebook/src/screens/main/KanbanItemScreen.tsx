@@ -2,8 +2,8 @@ import { useColorScheme, useResizeContext, Text, useLangContext } from '@blackto
 import { ConfigSection } from '@blacktokki/navigation';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { Suspense, useMemo, useRef, useState, useCallback } from 'react';
-import { ScrollView, TouchableOpacity, View, Alert } from 'react-native';
+import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { ScrollView, TouchableOpacity, View, Alert, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { getIconColor, pageStyles } from './NoteItemSections';
@@ -79,10 +79,17 @@ export const KanbanItemScreen: React.FC = () => {
 
   const accessableRef = useRef(true);
   const [showConfig, setShowConfig] = useState(false);
+  const [editTitle, setEditTitle] = useState(title);
   const { isPrivacyMode } = usePrivacy();
   const setPrivacy = useSetPrivacy();
   const horizontal = true;
   const option = board?.option;
+
+  useEffect(() => {
+    if (board?.title) {
+      setEditTitle(board.title);
+    }
+  }, [board?.title]);
 
   const toCardPage = useToCardPage(
     (v) => {
@@ -233,6 +240,48 @@ export const KanbanItemScreen: React.FC = () => {
           {header}
           <View style={commonStyles.container}>
             <View style={commonStyles.card}>
+              <ConfigSection title={lang('* Kanban Title')}>
+                <View style={commonStyles.searchContainer}>
+                  <TextInput
+                    style={[commonStyles.searchInput, { marginTop: 16 }]}
+                    value={editTitle}
+                    onChangeText={setEditTitle}
+                    placeholder={lang('Enter board title')}
+                    placeholderTextColor={commonStyles.placeholder.color}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      commonStyles.searchButton,
+                      editTitle === board?.title || !editTitle.trim()
+                        ? { backgroundColor: 'gray' }
+                        : {},
+                    ]}
+                    disabled={editTitle === board?.title || !editTitle.trim()}
+                    onPress={() => {
+                      if (board && option?.BOARD_NOTE_IDS) {
+                        boardMutation.mutate(
+                          {
+                            ...board,
+                            description: '',
+                            title: editTitle.trim(),
+                            option,
+                          },
+                          {
+                            onSuccess: () => {
+                              navigation.setParams({ title: editTitle.trim() });
+                              Alert.alert(lang('Saved'));
+                            },
+                          }
+                        );
+                      }
+                    }}
+                  >
+                    <Icon name="check" size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </ConfigSection>
+
+              <View style={{ height: 16 }} />
               <ConfigSection title={lang('* Header level')}>
                 <View style={{ flexDirection: 'row' }}>
                   {Array.from(Array(5).keys()).map((v) => {

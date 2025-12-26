@@ -2,7 +2,7 @@ import { useLangContext, View, useColorScheme, Colors } from '@blacktokki/core';
 import { push } from '@blacktokki/navigation';
 import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { List, TouchableRipple } from 'react-native-paper';
+import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useCurrentPage, useLastTab } from '../hooks/useTabStorage';
@@ -12,6 +12,8 @@ import ContentGroupSection, {
   ContentGroupType,
   TabsSection,
   RenderIcon,
+  ContentGroupSubType,
+  CurrentTabSection,
 } from '../screens/main/home/ContentGroupSection';
 
 export default () => {
@@ -20,38 +22,11 @@ export default () => {
   const { data: lastTab } = useLastTab();
   const currentPage = useCurrentPage(lastTab);
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
-  const [expanded, setExpanded] = useState(false);
-  const isNoteMode = ['SUBNOTE', 'TOC', 'HISTORY'].includes(currentView);
+  const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');
+  const currentNote = currentPage?.type === 'NOTE' ? currentPage : undefined;
 
-  const getCurrentViewLabel = () => {
-    if (isNoteMode && currentPage) {
-      return currentPage.title;
-    }
-    switch (currentView) {
-      case 'RECENT':
-        return lang('Recent Changes');
-      case 'KANBAN':
-        return lang('Kanban');
-      default:
-        return undefined;
-    }
-  };
-
-  const renderOption = (type: ContentGroupType, icon: string, label: string) => (
-    <TouchableRipple
-      onPress={() => {
-        setCurrentView(type);
-        setExpanded(false);
-      }}
-    >
-      <List.Subheader style={{ paddingLeft: 32 }} selectable={false}>
-        <Icon name={icon} size={14} style={{ marginRight: 8 }} /> {label}
-      </List.Subheader>
-    </TouchableRipple>
-  );
-
-  const renderBadge = (type: ContentGroupType, label: string, icon: string) => {
-    const isActive = currentView === type;
+  const renderBadge = (type: ContentGroupSubType, label: string, icon: string) => {
+    const isActive = currentSubView === type;
     const activeColor = Colors[theme].text;
     const inactiveColor = theme === 'dark' ? '#888888' : '#666666';
     const backgroundColor = isActive ? (theme === 'dark' ? '#333333' : '#e0e0e0') : 'transparent';
@@ -59,7 +34,7 @@ export default () => {
     return (
       <TouchableOpacity
         style={[styles.badge, { backgroundColor, borderColor: inactiveColor }]}
-        onPress={() => setCurrentView(type)}
+        onPress={() => setCurrentSubView(type)}
       >
         <Icon
           name={icon}
@@ -80,52 +55,75 @@ export default () => {
     );
   };
 
+  const renderTab = (
+    type: ContentGroupType,
+    label: string,
+    icon: string,
+    isActive: boolean,
+    disabled?: boolean
+  ) => {
+    const activeColor = Colors[theme].text;
+    const inactiveColor = theme === 'dark' ? '#888888' : '#999999';
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.tabItem,
+          isActive && { borderBottomColor: activeColor, borderBottomWidth: 2 },
+          disabled && { opacity: 0.33 },
+        ]}
+        disabled={disabled}
+        onPress={() => setCurrentView(type)}
+      >
+        <Icon
+          name={icon}
+          size={16}
+          color={isActive ? activeColor : inactiveColor}
+          style={{ marginBottom: 4 }}
+        />
+        <Text
+          style={{
+            fontSize: 13,
+            textAlign: 'center',
+            fontWeight: isActive ? 'bold' : 'normal',
+            color: isActive ? activeColor : inactiveColor,
+          }}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // 현재 페이지가 없는데 노트 모드라면 RECENT로 리셋
   useEffect(() => {
-    if (getCurrentViewLabel() === undefined) {
+    if (!currentNote && currentView === 'CURRENT_NOTE') {
       setCurrentView('RECENT');
     }
-  }, [isNoteMode, currentPage, currentView]);
+  }, [currentNote, currentView === 'CURRENT_NOTE']);
 
   return (
     <View style={{ flex: 1 }}>
       <List.Item left={RenderIcon('home')} title={lang('Home')} onPress={() => push('Home')} />
       <TimeLineButton />
       <ProblemButton />
+      <CurrentTabSection />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <TabsSection />
-
-        {/* Selector Header */}
-        <TouchableRipple onPress={() => setExpanded(!expanded)}>
-          <List.Subheader style={{}} selectable={false}>
-            {getCurrentViewLabel()}{' '}
-            <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
-          </List.Subheader>
-        </TouchableRipple>
-
-        {/* Dropdown Options */}
-        {expanded && (
-          <View style={{ backgroundColor: theme === 'dark' ? '#333333' : '#f0f0f0' }}>
-            {currentPage && (
-              <>
-                {renderOption('TOC', 'file-document', currentPage.title)}
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: '#888888',
-                    marginHorizontal: 16,
-                    marginVertical: 4,
-                    opacity: 0.3,
-                  }}
-                />
-              </>
-            )}
-            {renderOption('RECENT', 'notebook', lang('Recent Changes'))}
-            {renderOption('KANBAN', 'view-dashboard', lang('Kanban'))}
-          </View>
-        )}
-
-        {/* Note View Mode Badges */}
-        {isNoteMode && currentPage && (
+        <View
+          style={[styles.tabContainer, { borderBottomColor: theme === 'dark' ? '#333' : '#eee' }]}
+        >
+          {renderTab('RECENT', lang('All Notes'), 'notebook', currentView === 'RECENT')}
+          {renderTab('KANBAN', lang('Kanban'), 'view-dashboard', currentView === 'KANBAN')}
+          {renderTab(
+            'CURRENT_NOTE',
+            currentNote ? currentNote.title : lang('Current Note'),
+            'file-document',
+            currentView === 'CURRENT_NOTE',
+            currentNote === undefined
+          )}
+        </View>
+        {currentView === 'CURRENT_NOTE' && currentNote && (
           <View style={styles.badgeContainer}>
             {renderBadge('TOC', lang('Table of Contents'), 'format-list-bulleted')}
             {renderBadge('SUBNOTE', lang('Sub Notes'), 'file-tree')}
@@ -135,7 +133,9 @@ export default () => {
         {currentView === 'RECENT' ? (
           <ContentGroupSection type={'RECENT'} noteCount={10} />
         ) : (
-          <ContentGroupSection type={currentView} />
+          <ContentGroupSection
+            type={currentView === 'CURRENT_NOTE' ? currentSubView : currentView}
+          />
         )}
       </ScrollView>
     </View>
@@ -143,10 +143,22 @@ export default () => {
 };
 
 const styles = StyleSheet.create({
+  tabContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    borderBottomWidth: 1,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
   badgeContainer: {
     flexDirection: 'row',
     paddingLeft: 13,
     paddingTop: 16,
+    paddingBottom: 8,
     flexWrap: 'wrap',
   },
   badge: {

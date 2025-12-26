@@ -24,7 +24,6 @@ export const KanbanListScreen: React.FC = () => {
 
   const [searchText, setSearchText] = useState('');
   const searchBoard = boards?.find((v) => v.title === searchText);
-  const option = searchBoard?.option;
 
   return (
     <>
@@ -85,29 +84,6 @@ export const KanbanListScreen: React.FC = () => {
             }
           >
             <Icon name={'plus'} size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-          {/* 보드 이름 변경 (선택 기능 삭제됨, 직접 이름 입력 후 수정은 ItemScreen에서 처리하거나 여기서 이름만 매칭되면 수정 가능하게 유지) */}
-          <TouchableOpacity
-            style={[
-              commonStyles.searchButton,
-              searchText !== '' ? {} : { backgroundColor: 'gray' },
-            ]}
-            disabled={searchText === ''}
-            onPress={
-              // 이름 기반 검색 후 수정 로직 유지
-              searchText !== '' && searchBoard
-                ? () =>
-                    option?.BOARD_NOTE_IDS &&
-                    mutation.mutateAsync({
-                      ...searchBoard,
-                      option,
-                      title: searchText,
-                      description: '',
-                    })
-                : undefined
-            }
-          >
-            <Icon name={'pencil'} size={18} color="#FFFFFF" />
           </TouchableOpacity>
           {/* 보드 삭제 */}
           <TouchableOpacity

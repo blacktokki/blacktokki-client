@@ -187,6 +187,11 @@ export const useNotePage = (title: string) => {
     const id = query.data?.id;
     if (id && isFocused) {
       focusListener.forEach((f) => f(queryClient, isPrivacyMode, id));
+      (async () => {
+        for (const f of focusListener) {
+          await f(queryClient, isPrivacyMode, id);
+        }
+      })();
     }
   }, [query.data?.id, isFocused, title, queryClient]);
 

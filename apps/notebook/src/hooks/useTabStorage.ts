@@ -24,10 +24,13 @@ export const useLastTab = () => {
 };
 
 export const useCurrentPage = (lastPage?: Content) => {
-  const { data: currentNote } = useNotePage(
-    new URLSearchParams(location.search).get('title') || ''
-  );
-  return currentNote?.id ? currentNote : lastPage;
+  const title = new URLSearchParams(location.search).get('title') || '';
+  const { data: currentNote } = useNotePage(title);
+  return currentNote?.id && currentNote.title === title
+    ? currentNote
+    : lastPage?.type === 'NOTE'
+    ? lastPage
+    : undefined;
 };
 
 const getRecentTabs = async (isPrivacy: boolean): Promise<number[]> => {

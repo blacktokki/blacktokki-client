@@ -142,7 +142,7 @@ export const EditPageScreen: React.FC = () => {
       {
         onSuccess: () => {
           checkedRef.current = undefined;
-          navigation.navigate('NotePage', toNoteParams(title, paragraph, section));
+          navigation.navigate('NotePage', { ...toNoteParams(title, paragraph, section), kanban });
         },
         onError: (error: any) => {
           Alert.alert('오류', error.message || '문서를 저장하는 중 오류가 발생했습니다.');

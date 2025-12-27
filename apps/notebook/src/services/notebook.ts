@@ -1,6 +1,6 @@
 import { axiosCreate } from '@blacktokki/account';
 
-import { Content, PostContent, Link } from '../types';
+import { Content, PostContent, Link, Pat } from '../types';
 
 const axios = axiosCreate('notebook');
 
@@ -37,4 +37,16 @@ export const deleteContent = async (id: number) => {
 
 export const previewUrl = async (preview: { query: string }) => {
   return (await axios.get(`/api/v1/preview/autocomplete?query=${preview.query}`)).data as Link;
+};
+
+export const postPat = async () => {
+  return (await axios.post(`/api/v1/pat`)).data as string;
+};
+
+export const getPatList = async () => {
+  return (await axios.get(`/api/v1/pat`)).data as Pat[];
+};
+
+export const deletePat = async (id: number) => {
+  await axios.delete(`/api/v1/pat/${id}`);
 };

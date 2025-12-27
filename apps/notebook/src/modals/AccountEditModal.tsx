@@ -8,12 +8,24 @@ import {
   useModalsContext,
 } from '@blacktokki/core';
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+
+import { usePat, usePatMutation } from '../hooks/usePat';
+import { createCommonStyles } from '../styles';
 
 // Modal is rendered by ModalsProvider. This component accepts an empty props object when opened via setModal(..., {}).
 export default function AccountEditModal(_: object = {}) {
   const { lang } = useLangContext();
   const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
   const colors = Colors[theme];
   const mutation = useUserMutation();
   const { setModal } = useModalsContext();
@@ -27,6 +39,10 @@ export default function AccountEditModal(_: object = {}) {
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const { data: pats = [] } = usePat();
+  const { createPat, deletePat } = usePatMutation();
+  const [showPat, setShowPat] = useState(false);
+  const [newToken, setNewToken] = useState<string | null>(null);
 
   const validateName = (v: string) => {
     const l = v.trim().length;
@@ -152,6 +168,85 @@ export default function AccountEditModal(_: object = {}) {
           </View>
           {passwordError && <Text style={styles.error}>{passwordError}</Text>}
 
+          <View style={{ marginTop: 10 }}>
+            <TouchableOpacity
+              style={[styles.patToggle, { borderTopColor: theme === 'dark' ? '#333' : '#eee' }]}
+              onPress={() => setShowPat(!showPat)}
+            >
+              <Text style={[styles.label, { color: colors.text, flex: 1 }]}>
+                {lang('Personal Access Token')}
+              </Text>
+              <Icon name={showPat ? 'chevron-up' : 'chevron-down'} size={14} color={colors.text} />
+            </TouchableOpacity>
+
+            {showPat && (
+              <View style={{ paddingLeft: 10, marginBottom: 10 }}>
+                <View style={styles.patHeader}>
+                  <Text style={[commonStyles.smallText, { flex: 1 }]}>
+                    {lang('Manage your access tokens')}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      createPat.mutate(undefined, { onSuccess: (t) => setNewToken(t) })
+                    }
+                  >
+                    <Text style={styles.generateText}>{lang('Generate New Token')}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 새 토큰 박스: 다크 모드 가독성 대응 */}
+                {newToken && (
+                  <View
+                    style={[
+                      styles.newTokenBox,
+                      {
+                        backgroundColor: theme === 'dark' ? '#2c2500' : '#fffbe6',
+                        borderColor: theme === 'dark' ? '#594a00' : '#ffe58f',
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 12, color: theme === 'dark' ? '#ffd666' : '#856404' }}>
+                      {lang("Copy your new token now. It won't be shown again.")}
+                    </Text>
+                    <Text
+                      selectable
+                      style={{
+                        fontWeight: 'bold',
+                        marginVertical: 8,
+                        color: theme === 'dark' ? '#fff' : '#000',
+                      }}
+                    >
+                      {newToken}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 토큰 목록: 테마별 구분선 적용 */}
+                {pats.map((pat) => (
+                  <View
+                    key={pat.id}
+                    style={[
+                      styles.patRow,
+                      { borderBottomColor: theme === 'dark' ? '#333' : '#eee' },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[commonStyles.text, { fontSize: 14 }]}>
+                        {pat.description || lang('No Description')}
+                      </Text>
+                      <Text style={commonStyles.smallText}>
+                        {lang('Expires')}: {pat.expired}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => deletePat.mutate(pat.id)}>
+                      <Icon name="trash" size={16} color="#d9534f" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
           <View style={styles.actions}>
             <CommonButton
               title={lang('cancel')}
@@ -261,5 +356,37 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.6)',
     borderRadius: 12,
     zIndex: 20,
+  },
+  patToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  patHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  generateText: {
+    color: '#3498DB',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  newTokenBox: {
+    backgroundColor: '#fffbe6',
+    padding: 10,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#ffe58f',
+    marginBottom: 10,
+  },
+  patRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });

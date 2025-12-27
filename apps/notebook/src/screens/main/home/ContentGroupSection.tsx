@@ -12,7 +12,6 @@ import { usePrivacy } from '../../../hooks/usePrivacy';
 import useProblem, { getSplitTitle } from '../../../hooks/useProblem';
 import {
   useAddRecentTab,
-  useCurrentPage,
   useDeleteRecentTab,
   useLastTab,
   useRecentTabs,
@@ -221,8 +220,7 @@ const ContentGroupSection = (props: Props) => {
   const tabs = useRecentTabs();
   const { data: boards = [] } = useBoardPages();
   const { data: lastTab } = useLastTab();
-  const currentPage = useCurrentPage(lastTab);
-  const { data: snapshots } = useSnapshotPages(currentPage?.id);
+  const { data: snapshots } = useSnapshotPages(lastTab?.id);
 
   // Actions
   const addRecent = useAddRecentTab();
@@ -230,27 +228,25 @@ const ContentGroupSection = (props: Props) => {
   const reorderRecent = useReorderRecentTabs();
 
   // Derived Data
-  const currentSplitTitle = currentPage ? getSplitTitle(currentPage.title) : undefined;
+  const currentSplitTitle = lastTab ? getSplitTitle(lastTab.title) : undefined;
 
   const listData = useMemo(() => {
     if (props.type === 'RECENT') return notes.data ? toRecentContents(notes.data) : [];
-    if (props.type === 'SUBNOTE' && currentPage && notes.data) {
-      return toRecentContents(
-        notes.data.filter((v) => v.title.startsWith(currentPage.title + '/'))
-      );
+    if (props.type === 'SUBNOTE' && lastTab && notes.data) {
+      return toRecentContents(notes.data.filter((v) => v.title.startsWith(lastTab.title + '/')));
     }
     if (props.type === 'LAST') {
       return lastTab && tabs.data?.find((v) => v.id === lastTab.id) === undefined ? [lastTab] : [];
     }
     if (props.type === 'PAGE') return tabs.data || [];
     return [];
-  }, [props.type, notes.data, tabs.data, currentPage, boards, lastTab]);
+  }, [props.type, notes.data, tabs.data, lastTab, boards, lastTab]);
   const tocList = useMemo(
     () =>
-      props.type === 'TOC' && currentPage?.description
-        ? parseHtmlToParagraphs(currentPage.description).filter((p) => p.level > 0)
+      props.type === 'TOC' && lastTab?.description
+        ? parseHtmlToParagraphs(lastTab.description).filter((p) => p.level > 0)
         : [],
-    [props.type, currentPage]
+    [props.type, lastTab]
   );
 
   const historyList = useMemo(
@@ -316,11 +312,11 @@ const ContentGroupSection = (props: Props) => {
   }
 
   if (props.type === 'TOC') {
-    if (!currentPage) return null;
+    if (!lastTab) return null;
     return (
       <List.Section>
         <List.Item
-          title={currentPage.title}
+          title={lastTab.title}
           style={{ padding: 5, paddingLeft: 8 }}
           titleStyle={{ fontWeight: 'bold', fontSize: 14 }}
           left={() => (
@@ -331,7 +327,7 @@ const ContentGroupSection = (props: Props) => {
               style={{ paddingTop: 8, paddingLeft: 5 }}
             />
           )}
-          onPress={() => navigate('NotePage', { title: currentPage.title })}
+          onPress={() => navigate('NotePage', { title: lastTab.title })}
         />
         {tocList.map((p, i) => (
           <List.Item
@@ -341,7 +337,7 @@ const ContentGroupSection = (props: Props) => {
             style={{ padding: 5, paddingLeft: 3 + p.level * 5 }}
             onPress={() =>
               navigate('NotePage', {
-                title: currentPage.title,
+                title: lastTab.title,
                 paragraph: p.title,
                 section: p.autoSection,
               })
@@ -353,7 +349,7 @@ const ContentGroupSection = (props: Props) => {
   }
 
   if (props.type === 'HISTORY') {
-    if (!currentPage) return null;
+    if (!lastTab) return null;
     return (
       <List.Section>
         {historyList.slice(0, 20).map((h, i) => (
@@ -363,14 +359,14 @@ const ContentGroupSection = (props: Props) => {
             description={updatedFormat(h.updated)}
             left={RenderIcon('history')}
             style={{ padding: 5 }}
-            onPress={() => navigate('NotePage', { title: currentPage.title, archiveId: h.id })}
+            onPress={() => navigate('NotePage', { title: lastTab.title, archiveId: h.id })}
           />
         ))}
         <List.Item
           title={lang('more...')}
           left={RenderIcon('history')}
           style={{ paddingLeft: 5 }}
-          onPress={() => navigate('Archive', { title: currentPage.title })}
+          onPress={() => navigate('Archive', { title: lastTab.title })}
         />
       </List.Section>
     );
@@ -491,10 +487,7 @@ const ContentGroupSection = (props: Props) => {
           left={RenderIcon('notebook-multiple')}
           style={{ padding: itemPadding }}
           onPress={() =>
-            push(
-              'RecentPages',
-              props.type === 'SUBNOTE' ? { title: currentPage?.title } : undefined
-            )
+            push('RecentPages', props.type === 'SUBNOTE' ? { title: lastTab?.title } : undefined)
           }
         />
       )}

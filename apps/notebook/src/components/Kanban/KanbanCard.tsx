@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet, Animated, PanResponder } from 'react-native';
+import { View, StyleSheet, Animated, PanResponder, Platform } from 'react-native';
 
 type KanbanCardProps<T> = {
   item: T;
@@ -26,7 +26,9 @@ export default <T,>({ item, renderItem, onStart, onActive, onEnd }: KanbanCardPr
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+      },
       onPanResponderGrant: (event) => {
         const { locationX, locationY } = event.nativeEvent;
 
@@ -107,6 +109,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      web: {
+        userSelect: 'none',
+        touchAction: 'none',
+      } as any,
+    }),
   },
   dropzone: {
     backgroundColor: 'transparent',

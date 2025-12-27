@@ -151,20 +151,25 @@ export const KanbanItemScreen: React.FC = () => {
       const newPage = noteColumns.find((v) => v.title === columns[nextKey].name);
       if (page && newPage) {
         const { sourceDescription, targetDescription } = move(page, newPage, data.paragraph.path);
-        mutation.mutate(
-          { title: newPage.title, description: targetDescription, isLast: false },
-          {
-            onSuccess: () => {
-              mutation.mutate({ title: page.title, description: sourceDescription });
-            },
-            onError: (error: any) => {
-              Alert.alert(
-                lang('error'),
-                error.message || lang('An error occurred while moving note.')
-              );
-            },
+        (async () => {
+          try {
+            await mutation.mutateAsync({
+              title: newPage.title,
+              description: targetDescription,
+              isLast: false,
+            });
+            await mutation.mutateAsync({
+              title: page.title,
+              description: sourceDescription,
+              isLast: true,
+            });
+          } catch (error) {
+            Alert.alert(
+              lang('error'),
+              error ? `${error}` : lang('An error occurred while moving note.')
+            );
           }
-        );
+        })();
       }
       return false;
     },

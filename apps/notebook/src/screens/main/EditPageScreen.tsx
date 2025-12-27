@@ -266,11 +266,12 @@ export const EditPageScreen: React.FC = () => {
                       : v.type === '_CHILDNOTE'
                       ? `(${v.title})`
                       : '';
-                  const url = encodeURI(
-                    v.type === '_NOTELINK' && v.paragraph
-                      ? `?title=${v.title}&paragraph=${v.paragraph}`
-                      : `?title=${v.title}`
-                  );
+                  const params = new URLSearchParams();
+                  params.append('title', v.title);
+                  if (v.type === '_NOTELINK' && v.paragraph) {
+                    params.append('paragraph', v.paragraph);
+                  }
+                  const url = `?${params.toString()}`;
                   return {
                     text: name + description,
                     value: `<a href=${url}>${name}</a>`,

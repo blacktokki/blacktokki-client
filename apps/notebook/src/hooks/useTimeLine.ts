@@ -1,11 +1,13 @@
+import dayjs from 'dayjs';
 import { useMemo } from 'react';
 
+import { useNotePages } from './useNoteStorage';
 import { parseHtmlToParagraphs } from '../components/HeaderSelectBar';
 import { matchDateRange, paragraphsToDatePatterns, today } from '../components/TimerTag';
-import { useNotePages } from './useNoteStorage';
 
 export default (date?: string) => {
-  const dateNum = new Date(date || today()).getTime();
+  const targetDate = dayjs(date || today()).startOf('day');
+  const dateNum = targetDate.valueOf();
 
   const { data: notes = [], isLoading } = useNotePages();
   const preData = useMemo(

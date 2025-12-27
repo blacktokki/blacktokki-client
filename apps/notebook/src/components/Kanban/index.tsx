@@ -51,14 +51,14 @@ export default <T,>({
   };
   const onActive = (columnIndex: number, index: number, position: { x: number; y: number }) => {
     const i = indexResult(columnIndex, horizontal ? position.y : position.x, positionRef.current);
-    i !== nextColumn && setNextColumn(i);
+    i >= 0 && i !== nextColumn && setNextColumn(i);
   };
 
   const _onEnd = useCallback(
     (columnIndex: number, index: number, position: { x: number; y: number }) => {
       const i = indexResult(columnIndex, horizontal ? position.y : position.x, positionRef.current);
       setNextColumn(undefined);
-      if (columnIndex !== i) {
+      if (i >= 0 && columnIndex !== i) {
         return onEnd(columns[columnIndex].data[index], columnIndex, i);
       }
       return false;

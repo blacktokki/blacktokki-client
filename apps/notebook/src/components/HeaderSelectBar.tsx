@@ -13,6 +13,18 @@ export interface Paragraph {
   description: string;
 }
 
+export const base64Encode = (str: string): string => {
+  const bytes = new TextEncoder().encode(str);
+  const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+  return btoa(binString);
+};
+
+export const base64Decode = (base64: string): string => {
+  const binString = atob(base64);
+  const bytes = Uint8Array.from(binString, (m) => m.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+};
+
 export function parseHtmlToParagraphs(html: string): Paragraph[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -49,7 +61,7 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
         }
         headerStack.push({ level, title });
 
-        const path = headerStack.map((h) => btoa(encodeURIComponent(h.title))).join(',');
+        const path = headerStack.map((h) => base64Encode(h.title)).join(',');
 
         if (!titleSet.has(title)) {
           titleSet.add(title);
@@ -93,7 +105,7 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
         if (pathReverse.length <= level) {
           return;
         }
-        v.autoSection = atob(decodeURIComponent(pathReverse[level]));
+        v.autoSection = base64Decode(pathReverse[level]);
         if (!parentSet.has(v.autoSection)) {
           parentSet.add(v.autoSection);
         } else if (!parentDuplicate?.has(v.autoSection)) {

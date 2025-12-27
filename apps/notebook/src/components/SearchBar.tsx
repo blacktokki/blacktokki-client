@@ -15,8 +15,9 @@ let _searchText = '';
 
 type SearchContent = Content | KeywordContent;
 
+const parser = new DOMParser();
+
 function extractHtmlLinksWithQuery(text: string) {
-  const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'text/html');
 
   // 모든 a 태그 선택
@@ -184,7 +185,9 @@ export const SearchList = ({
   return (
     <FlatList
       data={filteredPages}
-      keyExtractor={(item: any) => JSON.stringify([item.title, item.name, item.paragraph])}
+      keyExtractor={(item: any) =>
+        JSON.stringify([item.title, item.name, item.paragraph, item.origin, item.type])
+      }
       renderItem={({ item, index }) => (
         <TouchableOpacity
           style={[

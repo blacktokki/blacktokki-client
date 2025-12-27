@@ -196,7 +196,8 @@ const TimerTag = (props: {
 }) => {
   const start = dayjs(props.data.dateStart);
   const end = dayjs(props.data.dateEnd).add(1, 'day');
-  const ratio = start.diff(props.now) / start.diff(end);
+  const diffTotal = start.diff(end);
+  const ratio = diffTotal === 0 ? 1 : start.diff(props.now) / diffTotal;
   const { lang } = useLangContext();
   return (
     <TouchableOpacity onPress={() => props.toggleExpand()}>

@@ -29,8 +29,11 @@ export const useBoardPage = (title: string) => {
   const { data: contents = [], isFetching } = useBoardPages();
 
   const query = useQuery({
-    queryKey: ['boardContent', title],
+    queryKey: ['boardContent', title, isPrivacyMode],
     queryFn: async () => {
+      if (isPrivacyMode && isHiddenTitle(title)) {
+        return undefined;
+      }
       const page = contents.find((c) => c.title === title);
       return page;
     },
@@ -42,7 +45,7 @@ export const useBoardPage = (title: string) => {
     if (id && isFocused) {
       (async () => {
         for (const f of focusListener) {
-          await f(queryClient, isPrivacyMode, id);
+          await f(queryClient, id);
         }
       })();
     }
@@ -68,14 +71,12 @@ export const useCreateOrUpdateBoard = () => {
       option: BoardOption;
     }) => {
       const page = contents.find((c) => c.id === id);
-      let updatedContents: (Content | PostContent)[];
+      let updatedContent: Content | PostContent;
       const updated = auth.isLocal ? new Date().toISOString() : undefined;
       if (page) {
-        updatedContents = contents.map((c, i) =>
-          c.id === page.id ? ({ ...c, title, description, updated, option } as PostContent) : c
-        );
+        updatedContent = { ...page, title, description, updated, option } as PostContent;
       } else {
-        const newPage = {
+        updatedContent = {
           title,
           description,
           input: title,
@@ -86,9 +87,8 @@ export const useCreateOrUpdateBoard = () => {
           updated,
           option,
         } as PostContent;
-        updatedContents = [...contents, newPage];
       }
-      await saveContents(!auth.isLocal, 'BOARD', updatedContents, page?.id);
+      await saveContents(!auth.isLocal, 'BOARD', [updatedContent], page?.id);
       return { id };
     },
     onSuccess: async (data) => {
@@ -102,11 +102,9 @@ export const useCreateOrUpdateBoard = () => {
 export const useDeleteBoard = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const { data: contents = [] } = useBoardPages();
   return useMutation({
     mutationFn: async (id: number) => {
-      const updatedContents = contents.filter((c) => c.id !== id);
-      await saveContents(!auth.isLocal, 'BOARD', updatedContents, id);
+      await saveContents(!auth.isLocal, 'BOARD', [], id);
       return { id };
     },
     onSuccess: async (data) => {

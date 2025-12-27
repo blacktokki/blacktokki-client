@@ -12,8 +12,11 @@ import { isHiddenTitle, usePrivacy } from './usePrivacy';
 const DB_NAME = '@Blacktokki:notebook';
 const DB_VERSION = 2;
 
-async function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+let dbInstance: IDBDatabase | undefined;
+
+async function getDB(): Promise<IDBDatabase> {
+  if (dbInstance) return dbInstance;
+  dbInstance = await new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
@@ -24,9 +27,6 @@ async function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('BOARD')) {
         db.createObjectStore('BOARD', { keyPath: 'id' });
       }
-      getContents({ isOnline: false, types: ['NOTE'] }).then((contents) =>
-        saveContents(false, 'NOTE', contents)
-      );
     };
 
     request.onsuccess = () => {
@@ -37,13 +37,10 @@ async function openDB(): Promise<IDBDatabase> {
       reject(request.error);
     };
   });
+  return dbInstance!;
 }
 
-export const focusListener: ((
-  queryClient: QueryClient,
-  isPrivacy: boolean,
-  id: number
-) => Promise<void>)[] = [];
+export const focusListener: ((queryClient: QueryClient, id: number) => Promise<void>)[] = [];
 
 export const getContents = async (
   data:
@@ -57,8 +54,8 @@ export const getContents = async (
     return [];
   }
   const type = data.types[0];
+  const db = await getDB();
   try {
-    const db = await openDB();
     return new Promise((resolve) => {
       const transaction = db.transaction(type, 'readonly');
       const store = transaction.objectStore(type);
@@ -83,11 +80,12 @@ export const saveContents = async (
   isOnline: boolean,
   type: 'NOTE' | 'BOARD',
   contents: (Content | PostContent)[],
-  id?: number
+  deleteId?: number
 ): Promise<void> => {
-  const content = contents.find((v) => id === (v as { id?: number }).id);
+  const content = contents.length === 1 ? contents[0] : undefined;
   if (isOnline) {
     if (content) {
+      const id = (content as Content).id;
       const savedId = await (id
         ? patchContent({ id, updated: content }).then(() => id)
         : postContent(content));
@@ -100,35 +98,54 @@ export const saveContents = async (
         };
         await postContent(snapshot);
       }
-    } else if (id) {
-      await deleteContent(id);
+    } else if (deleteId) {
+      await deleteContent(deleteId);
     }
     return;
   }
+  const db = await getDB();
   try {
-    const db = await openDB();
     const tx = db.transaction([type /*, 'SNAPSHOT' */], 'readwrite');
     const store = tx.objectStore(type);
     // const archive = tx.objectStore('SNAPSHOT');
-    const ids = contents.map((v) => (v as Content).id).filter((v) => v !== undefined);
-    let maxId = ids.length > 0 ? Math.max(...ids) : 0;
-    for (const contentItem of contents as Content[]) {
+    let nextId = 1;
+    const newItems = contents.filter((c) => (c as Content).id === undefined);
+
+    if (newItems.length > 0) {
+      const cursorRequest = store.openCursor(null, 'prev'); // 역순 정렬 커서
+      const lastItem = await new Promise((resolve) => {
+        cursorRequest.onsuccess = () => resolve(cursorRequest.result?.value);
+        cursorRequest.onerror = () => resolve(null);
+      });
+      if (lastItem) {
+        nextId = (lastItem as Content).id + 1;
+      }
+    }
+
+    for (const item of contents) {
+      const contentItem = item as Content;
       if (contentItem.id === undefined) {
-        contentItem.id = maxId + 1;
-        maxId += 1;
+        contentItem.id = nextId++;
       }
       store.put(contentItem);
     }
-    // if (content) {
-    //   const snapshot: Content | PostContent = {
-    //     ...content,
-    //     type: 'SNAPSHOT',
-    //   };
-    //   archive.put(snapshot);
-    // }
-    if (content === undefined && id) {
-      store.delete(id);
+
+    if (contents.length === 0 && deleteId) {
+      if (type === 'NOTE') {
+        const titleToDelete = await new Promise<string | undefined>((resolve) => {
+          const getRequest = store.get(deleteId);
+          getRequest.onsuccess = () => resolve(getRequest.result?.title);
+          getRequest.onerror = () => resolve(undefined);
+        });
+
+        if (titleToDelete) {
+          store.delete(titleToDelete);
+        }
+      } else {
+        store.delete(deleteId);
+      }
     }
+
     await new Promise((resolve, reject) => {
       tx.oncomplete = () => resolve(undefined);
       tx.onerror = () => reject(tx.error);
@@ -177,6 +194,9 @@ export const useNotePage = (title: string) => {
   const query = useQuery({
     queryKey: ['pageContent', title],
     queryFn: async () => {
+      if (isPrivacyMode && isHiddenTitle(title)) {
+        return undefined;
+      }
       const page = contents.find((c) => c.title === title);
       return page || { title, description: '', id: undefined };
     },
@@ -186,10 +206,9 @@ export const useNotePage = (title: string) => {
   useEffect(() => {
     const id = query.data?.id;
     if (id && isFocused) {
-      focusListener.forEach((f) => f(queryClient, isPrivacyMode, id));
       (async () => {
         for (const f of focusListener) {
-          await f(queryClient, isPrivacyMode, id);
+          await f(queryClient, id);
         }
       })();
     }
@@ -228,14 +247,12 @@ export const useCreateOrUpdatePage = () => {
       if (page?.description === description) {
         return { title, description, skip: true };
       }
-      let updatedContents: (Content | PostContent)[];
+      let updatedContent: Content | PostContent;
       const updated = auth.isLocal ? new Date().toISOString() : undefined;
       if (page) {
-        updatedContents = contents.map((c, i) =>
-          c.id === page.id ? ({ ...c, description, updated } as PostContent) : c
-        );
+        updatedContent = { ...page, description, updated } as PostContent;
       } else {
-        const newPage = {
+        updatedContent = {
           title,
           description,
           input: title,
@@ -246,10 +263,9 @@ export const useCreateOrUpdatePage = () => {
           updated,
           option: {},
         } as PostContent;
-        updatedContents = [...contents, newPage];
       }
 
-      await saveContents(!auth.isLocal, 'NOTE', updatedContents, page?.id);
+      await saveContents(!auth.isLocal, 'NOTE', [updatedContent], page?.id);
       return { title, description, skip: !isLast };
     },
     onSuccess: async (data) => {
@@ -290,14 +306,16 @@ export const useMovePage = () => {
         throw new Error('Page with new title already exists');
       }
 
-      const updatedContents = contents.map((c) =>
-        c.title === oldTitle
-          ? { ...c, title: newTitle, description: description || page.description }
-          : c
-      );
+      const updatedContent = {
+        ...page,
+        title: newTitle,
+        description: description || page.description,
+      };
 
-      await saveContents(!auth.isLocal, 'NOTE', updatedContents, page.id);
-
+      await saveContents(!auth.isLocal, 'NOTE', [updatedContent], page.id);
+      if (auth.isLocal) {
+        await saveContents(false, 'NOTE', [], page.id);
+      }
       return { oldTitle, newTitle };
     },
     onSuccess: async (data) => {

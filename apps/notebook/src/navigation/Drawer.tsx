@@ -5,7 +5,7 @@ import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-
 import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { useCurrentPage, useLastTab } from '../hooks/useTabStorage';
+import { useLastTab } from '../hooks/useTabStorage';
 import ContentGroupSection, {
   ProblemButton,
   TimeLineButton,
@@ -20,10 +20,9 @@ export default () => {
   const { lang } = useLangContext();
   const theme = useColorScheme();
   const { data: lastTab } = useLastTab();
-  const currentPage = useCurrentPage(lastTab);
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');
-  const currentNote = currentPage?.type === 'NOTE' ? currentPage : undefined;
+  const currentNote = lastTab?.type === 'NOTE' ? lastTab : undefined;
 
   const renderBadge = (type: ContentGroupSubType, label: string, icon: string) => {
     const isActive = currentSubView === type;

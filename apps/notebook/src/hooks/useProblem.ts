@@ -1,8 +1,14 @@
+import { useAuthContext } from '@blacktokki/account';
 import { toRaw } from '@blacktokki/editor';
 import { useEffect, useRef, useState } from 'react';
 
 import { KeywordContent } from './useKeywordStorage';
-import { Paragraph, parseHtmlToParagraphs } from '../components/HeaderSelectBar';
+import {
+  base64Decode,
+  base64Encode,
+  Paragraph,
+  parseHtmlToParagraphs,
+} from '../components/HeaderSelectBar';
 import { getLinks, titleFormat } from '../components/SearchBar';
 import { cleanHtml } from '../components/TimerTag';
 import { Content, ParagraphKey } from '../types';
@@ -116,12 +122,16 @@ export const paragraphDescription = (paragraphs: Paragraph[], path: string, root
 export const paragraphByKey = (paragraph: Paragraph, key: ParagraphKey) => {
   return (
     paragraph.title === key.paragraph &&
-    (key.section === undefined ||
-      paragraph.path.includes(btoa(encodeURIComponent(key.section)) + ','))
+    (key.section === undefined || paragraph.path.includes(base64Encode(key.section) + ','))
   );
 };
 
 const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
+
+const matchUnlinkedKeyword = (text: string, keyword: string) => {
+  const escpaedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.match(new RegExp(`(?:^|[\\s\\p{P}])${escpaedKeyword}(?=$|[\\s\\p{P}])`, 'iu'));
+};
 
 type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
 type ProblemSource = {
@@ -132,7 +142,8 @@ type ProblemSource = {
   parentTitle: string | undefined;
 };
 
-const problemCache: Record<
+let problemCacheUserId: number | undefined;
+let problemCache: Record<
   string,
   {
     record: ProblemItem[];
@@ -260,9 +271,7 @@ const getDataMatrix = (
       _target.parentTitle !== source.title &&
       _target.links.find((v) => v.name.toLowerCase() === sourceName.toLowerCase()) === undefined
     ) {
-      const match = _target.raw.match(
-        new RegExp(`(?:^|[\\s\\p{P}])${sourceName}(?=$|[\\s\\p{P}])`, 'iu')
-      );
+      const match = matchUnlinkedKeyword(_target.raw, sourceName);
       if (match) {
         record.push([target.title, undefined, `Unlinked note keyword: ${match[0]}`]);
       }
@@ -282,9 +291,7 @@ const getDataMatrix = (
           ) === undefined
       )
       .forEach((link) => {
-        const match = _target.raw.match(
-          new RegExp(`(?:^|[\\s\\p{P}])${link.name}(?=$|[\\s\\p{P}])`, 'iu')
-        );
+        const match = matchUnlinkedKeyword(_target.raw, link.name);
         if (match) {
           record.push([
             target.title,
@@ -309,13 +316,17 @@ const getDataMatrix = (
   return record;
 };
 
-const getData = (pages: Content[]) => {
+const getData = (userId: number | undefined, pages: Content[]) => {
   const records: {
     title: string;
     path: string | undefined;
     paragraph: string | undefined;
     subtitles: string[];
   }[] = [];
+  if (userId !== problemCacheUserId) {
+    problemCache = {};
+    problemCacheUserId = userId;
+  }
   const titleSet = new Set(pages.map((v) => v.title));
   pages
     .map(getDataLinear)
@@ -338,7 +349,7 @@ const getData = (pages: Content[]) => {
       } else {
         const paragraph = path
           ?.split(',')
-          .map((v) => decodeURIComponent(atob(v)))
+          .map((v) => base64Decode(v))
           .reverse()[0];
         records.push({ title, path, paragraph, subtitles: [subtitle] });
       }
@@ -347,15 +358,16 @@ const getData = (pages: Content[]) => {
 };
 
 export default (delay?: number) => {
+  const { auth } = useAuthContext();
   const { data: pages = [], isLoading } = useNotePages();
   const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
   const timeoutRef = useRef<NodeJS.Timeout>();
   useEffect(() => {
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setData(getData(pages));
+      setData(getData(auth.user?.id, pages));
       timeoutRef.current = undefined;
     }, delay || 500);
-  }, [pages]);
+  }, [pages, auth.user]);
   return { data: data || [], isLoading: isLoading || data === undefined };
 };

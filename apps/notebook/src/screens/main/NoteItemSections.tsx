@@ -35,16 +35,7 @@ export const NotePageHeader = ({
   const iconColor = getIconColor(theme);
   const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        maxWidth: '100%',
-        flexBasis: 0,
-        flexGrow: 1,
-        flexWrap: 'wrap',
-        alignItems: 'center',
-      }}
-    >
+    <View style={styles.header}>
       {kanban && (
         <TouchableOpacity
           onPress={() => push('KanbanPage', { title: kanban })}
@@ -59,7 +50,7 @@ export const NotePageHeader = ({
       )}
       <TouchableOpacity
         onPress={() => onPress(splitTitle[0], splitTitle.length === 2)}
-        style={{ maxWidth: '100%' }}
+        style={styles.headerItem}
       >
         <Text
           style={[
@@ -73,7 +64,7 @@ export const NotePageHeader = ({
         </Text>
       </TouchableOpacity>
       {splitTitle.length === 2 && (
-        <View style={{ maxWidth: '100%', flexDirection: 'row' }}>
+        <View style={styles.headerItem}>
           <Text style={[commonStyles.title, pageStyles.title, { flex: 0 }]}>/</Text>
           <TouchableOpacity onPress={() => onPress(title, false)}>
             <Text
@@ -89,16 +80,14 @@ export const NotePageHeader = ({
           </TouchableOpacity>
         </View>
       )}
-      <View style={{ maxWidth: '100%', flexDirection: 'row' }}>
+      <View style={styles.headerItem}>
         {!!paragraph && (
           <Text style={[commonStyles.title, pageStyles.title, { marginLeft: 5 }]} numberOfLines={1}>
             {titleFormat({ title: '', paragraph })}
           </Text>
         )}
         {archive && (
-          <View
-            style={[commonStyles.header, { zIndex: 1, alignItems: 'flex-start', marginBottom: 0 }]}
-          >
+          <View style={[commonStyles.header, styles.archiveHeader]}>
             {archive.previous !== undefined && (
               <TouchableOpacity
                 onPress={() =>
@@ -140,7 +129,13 @@ export const NotePageSection = ({
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   return (
-    <View style={active && description ? [commonStyles.card, styles.card] : styles.inactiveCard}>
+    <View
+      style={
+        active && description
+          ? [commonStyles.card, { padding: 0, marginBottom: 0 }]
+          : { flex: 1, position: 'absolute' }
+      }
+    >
       <EditorViewer
         active
         value={description || ''}
@@ -192,28 +187,14 @@ export const NoteBottomSection = ({
     <HeaderSelectBar data={paragraphs} path={path || ''} root={root} onPress={onPress} />
   ) : (
     !!path && (
-      <View
-        style={{
-          flex: 1,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-        }}
-      >
+      <View style={styles.bottomContainer}>
         {moveParagraphs.map(
           ({ moveParagraph, icon, reverse }) =>
             moveParagraph !== undefined && (
               <TouchableOpacity
                 key={icon}
                 onPress={() => onPress(moveParagraph)}
-                style={[
-                  {
-                    flex: 1,
-                    flexDirection: reverse ? 'row-reverse' : 'row',
-                    paddingVertical: 16,
-                    maxWidth: '50%',
-                  },
-                ]}
+                style={[styles.bottomButton, { flexDirection: reverse ? 'row-reverse' : 'row' }]}
               >
                 <Icon name={icon} size={16} color={iconColor} style={{ alignSelf: 'center' }} />
                 <Text
@@ -233,9 +214,27 @@ export const NoteBottomSection = ({
 export const getIconColor = (theme: 'light' | 'dark') => (theme === 'dark' ? '#E4E4E4' : '#333333');
 
 const styles = StyleSheet.create({
-  updated: { marginLeft: 5, fontStyle: 'italic' },
-  card: { padding: 0, marginBottom: 0 },
-  inactiveCard: { flex: 1, position: 'absolute' },
+  header: {
+    flexDirection: 'row',
+    maxWidth: '100%',
+    flexBasis: 0,
+    flexGrow: 1,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  headerItem: { maxWidth: '100%', flexDirection: 'row' },
+  archiveHeader: { zIndex: 1, alignItems: 'flex-start', marginBottom: 0 },
+  bottomContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  bottomButton: {
+    flex: 1,
+    paddingVertical: 16,
+    maxWidth: '50%',
+  },
 });
 
 export const pageStyles = StyleSheet.create({

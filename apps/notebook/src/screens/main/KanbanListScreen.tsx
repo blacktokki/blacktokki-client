@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext, useResizeContext, Text } from '@blacktokki/core';
+import { useColorScheme, useLangContext, useResizeContext, Text, Spacer } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
@@ -43,7 +43,7 @@ export const KanbanListScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
-            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            ItemSeparatorComponent={() => <Spacer height={8} />}
           />
         ) : (
           <View style={[commonStyles.card, commonStyles.centerContent]}>

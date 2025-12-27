@@ -100,7 +100,7 @@ export const NotePageScreen: React.FC = () => {
       <>
         {_window === 'portrait' && <SearchBar />}
         <View style={commonStyles.container}>
-          <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 20 }]}>
+          <View style={commonStyles.statusCard}>
             <Text style={commonStyles.text}>{lang('This note is hidden by Privacy Mode.')}</Text>
             <TouchableOpacity onPress={() => setPrivacy.mutate(true)} style={commonStyles.button}>
               <Text style={commonStyles.buttonText}>{lang('Enable Privacy Mode')}</Text>

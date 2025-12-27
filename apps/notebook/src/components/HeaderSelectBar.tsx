@@ -167,10 +167,6 @@ const styles = StyleSheet.create({
   resultText: {
     fontSize: 14,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   resultsContainer: {
     borderWidth: 1,
     borderRadius: 4,

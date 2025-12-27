@@ -254,7 +254,15 @@ export const MovePageScreen: React.FC = () => {
             <Text style={commonStyles.text}>
               {lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
             </Text>
-            <Text style={[commonStyles.title, styles.columns]}>
+            <Text
+              style={[
+                commonStyles.title,
+                {
+                  marginTop: 8,
+                  marginBottom: 16,
+                },
+              ]}
+            >
               {titleFormat({ title, paragraph })}
             </Text>
             <Text style={commonStyles.text}>{lang('New note title:')}</Text>
@@ -308,11 +316,8 @@ export const MovePageScreen: React.FC = () => {
             </View>
           )}
         </View>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[commonStyles.button, styles.cancelButton]}
-            onPress={handleCancel}
-          >
+        <View style={commonStyles.buttonContainer}>
+          <TouchableOpacity style={commonStyles.secondaryButton} onPress={handleCancel}>
             <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -320,7 +325,7 @@ export const MovePageScreen: React.FC = () => {
               commonStyles.button,
               styles.moveButton,
               moveDisabled
-                ? { backgroundColor: styles.cancelButton.backgroundColor }
+                ? { backgroundColor: commonStyles.secondaryButton.backgroundColor }
                 : exists
                 ? { backgroundColor: '#d9534f' }
                 : {},
@@ -337,22 +342,6 @@ export const MovePageScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  columns: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  backButton: {
-    padding: 8,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: '#95A5A6',
-  },
   moveButton: {
     flex: 1,
     marginLeft: 8,

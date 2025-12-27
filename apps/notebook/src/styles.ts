@@ -1,6 +1,19 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ViewStyle } from 'react-native';
 
 export const createCommonStyles = (theme: 'light' | 'dark') => {
+  const card: ViewStyle = {
+    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme === 'dark' ? '#333333' : '#EEEEEE',
+    shadowColor: theme === 'dark' ? '#000000' : '#888888',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  };
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -8,19 +21,7 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       paddingHorizontal: 24,
       paddingVertical: 16,
     },
-    card: {
-      backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-      borderRadius: 8,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: theme === 'dark' ? '#333333' : '#EEEEEE',
-      shadowColor: theme === 'dark' ? '#000000' : '#888888',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
-    },
+    card,
     title: {
       fontSize: 18,
       fontWeight: 'bold',
@@ -39,10 +40,21 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       alignItems: 'center',
       marginVertical: 8,
     },
+    secondaryButton: {
+      backgroundColor: theme === 'dark' ? '#4A4A4A' : '#95A5A6',
+      borderRadius: 4,
+      padding: 12,
+      alignItems: 'center',
+      marginVertical: 8,
+    },
     buttonText: {
       color: '#FFFFFF',
       fontWeight: '500',
       fontSize: 16,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
     },
     searchButton: {
       backgroundColor: '#3498DB',
@@ -107,6 +119,12 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
     centerContent: {
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    statusCard: {
+      ...card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 20,
     },
     navContainer: {
       flex: 1,

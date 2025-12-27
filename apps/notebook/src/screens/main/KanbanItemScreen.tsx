@@ -1,9 +1,9 @@
-import { useColorScheme, useResizeContext, Text, useLangContext } from '@blacktokki/core';
+import { useColorScheme, useResizeContext, Text, useLangContext, Spacer } from '@blacktokki/core';
 import { ConfigSection } from '@blacktokki/navigation';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import { ScrollView, TouchableOpacity, View, Alert, TextInput } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, View, Alert, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { getIconColor, pageStyles } from './NoteItemSections';
@@ -177,22 +177,8 @@ export const KanbanItemScreen: React.FC = () => {
   );
 
   const header = board && (
-    <View
-      style={[
-        commonStyles.header,
-        { zIndex: 1, alignItems: 'flex-start', marginHorizontal: 24, marginVertical: 16 },
-      ]}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          maxWidth: '100%',
-          flexBasis: 0,
-          flexGrow: 1,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-        }}
-      >
+    <View style={[commonStyles.header, styles.header]}>
+      <View style={styles.titleContainer}>
         <Text style={[commonStyles.title, pageStyles.title]} numberOfLines={1}>
           {board.title}
         </Text>
@@ -213,7 +199,7 @@ export const KanbanItemScreen: React.FC = () => {
       <>
         {_window === 'portrait' && <SearchBar />}
         <View style={commonStyles.container}>
-          <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 20 }]}>
+          <View style={commonStyles.statusCard}>
             <Text style={commonStyles.text}>{lang('This note is hidden by Privacy Mode.')}</Text>
             <TouchableOpacity onPress={() => setPrivacy.mutate(true)} style={commonStyles.button}>
               <Text style={commonStyles.buttonText}>{lang('Enable Privacy Mode')}</Text>
@@ -286,7 +272,7 @@ export const KanbanItemScreen: React.FC = () => {
                 </View>
               </ConfigSection>
 
-              <View style={{ height: 16 }} />
+              <Spacer height={16} />
               <ConfigSection title={lang('* Header level')}>
                 <View style={{ flexDirection: 'row' }}>
                   {Array.from(Array(5).keys()).map((v) => {
@@ -310,12 +296,10 @@ export const KanbanItemScreen: React.FC = () => {
                   })}
                 </View>
               </ConfigSection>
-              <View style={{ height: 16 }} />
+              <Spacer height={16} />
               <ConfigSection title={lang('* Columns')}>
                 <View style={{ paddingHorizontal: 16 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', paddingVertical: 16 }}>
-                    {lang('Add')}
-                  </Text>
+                  <Text style={styles.buttonText}>{lang('Add')}</Text>
                   <SearchBar
                     onPress={(title) => {
                       const id = pages.find((v) => v.title === title)?.id;
@@ -339,9 +323,7 @@ export const KanbanItemScreen: React.FC = () => {
                     newContent={false}
                     icon="plus"
                   />
-                  <Text style={{ fontSize: 16, fontWeight: '600', paddingVertical: 16 }}>
-                    {lang('Delete')}
-                  </Text>
+                  <Text style={styles.buttonText}>{lang('Delete')}</Text>
                   <SearchList
                     filteredPages={noteColumns.map((v) => ({ ...v, title: '-  ' + v.title }))}
                     onPressKeyword={(item) => {
@@ -392,7 +374,7 @@ export const KanbanItemScreen: React.FC = () => {
               onEnd={onEnd}
             />
           ) : (
-            <View style={[commonStyles.card, commonStyles.centerContent, { marginHorizontal: 20 }]}>
+            <View style={commonStyles.statusCard}>
               <Text selectable={false} style={commonStyles.text}>
                 {lang('There are no columns.')}
               </Text>
@@ -403,3 +385,16 @@ export const KanbanItemScreen: React.FC = () => {
     </>
   );
 };
+
+const styles = StyleSheet.create({
+  header: { zIndex: 1, alignItems: 'flex-start', marginHorizontal: 24, marginVertical: 16 },
+  titleContainer: {
+    flexDirection: 'row',
+    maxWidth: '100%',
+    flexBasis: 0,
+    flexGrow: 1,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  buttonText: { fontSize: 16, fontWeight: '600', paddingVertical: 16 },
+});

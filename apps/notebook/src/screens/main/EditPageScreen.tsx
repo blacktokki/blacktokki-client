@@ -4,7 +4,7 @@ import { push } from '@blacktokki/navigation';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
@@ -306,14 +306,17 @@ export const EditPageScreen: React.FC = () => {
           ]}
         />
 
-        <View style={styles.buttonContainer}>
+        <View style={commonStyles.buttonContainer}>
           <TouchableOpacity
-            style={[commonStyles.button, styles.cancelButton]}
+            style={[commonStyles.secondaryButton]}
             onPress={isPrevent() ? handleUnsaved : handleBack}
           >
             <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[commonStyles.button, styles.saveButton]} onPress={handleSave}>
+          <TouchableOpacity
+            style={[commonStyles.button, { flex: 1, marginLeft: 8 }]}
+            onPress={handleSave}
+          >
             <Text style={commonStyles.buttonText}>{lang('save')}</Text>
           </TouchableOpacity>
         </View>
@@ -321,19 +324,3 @@ export const EditPageScreen: React.FC = () => {
     )
   );
 };
-
-const styles = StyleSheet.create({
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: '#95A5A6',
-  },
-  saveButton: {
-    flex: 1,
-    marginLeft: 8,
-  },
-});

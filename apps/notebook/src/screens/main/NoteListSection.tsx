@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext } from '@blacktokki/core';
+import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 
@@ -50,7 +50,7 @@ export const NoteListSection = ({
               ))}
             </TouchableOpacity>
           )}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          ItemSeparatorComponent={() => <Spacer height={8} />}
           onScroll={(e) => {
             if (
               e.nativeEvent.contentSize.height - height.current - e.nativeEvent.contentOffset.y <

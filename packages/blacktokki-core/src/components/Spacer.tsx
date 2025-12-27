@@ -1,0 +1,4 @@
+import React from 'react';
+import { View } from 'react-native';
+
+export default (props: { height: number }) => <View style={props} />;

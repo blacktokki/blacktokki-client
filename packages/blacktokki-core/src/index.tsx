@@ -5,12 +5,13 @@ export { default as CommonButton } from './components/CommonButton';
 export { default as ContractFooter } from './components/ContractFooter';
 export { default as TextButton } from './components/TextButton';
 export { default as TabView } from './components/TabView';
+export { default as Spacer } from './components/Spacer';
 export const Calendar = React.lazy(() => import('./components/Calendar'));
 export * from './components/Themed';
 export { default as Colors } from './constants/Colors';
 export {
   default as useColorScheme,
-  useUserColorScheme, 
+  useUserColorScheme,
   useInitColorScheme,
 } from './hooks/useColorScheme';
 export { default as useResizeContext, ResizeContextProvider } from './hooks/useResizeContext';

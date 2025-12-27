@@ -2,7 +2,7 @@ import { useColorScheme, useResizeContext, View, Text, useLangContext } from '@b
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { TouchableOpacity, ScrollView } from 'react-native';
+import { TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Card } from 'react-native-paper';
 
 import { NotePageHeader } from './NoteItemSections';
@@ -104,14 +104,10 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
         onPress={item.onPress}
         style={[
           commonStyles.card,
+          styles.card,
           {
             padding: 8 + cardPadding * 0.4,
-            paddingTop: 0,
             aspectRatio: item.updated || window === 'landscape' ? 1 / Math.sqrt(2) : Math.sqrt(2),
-            borderRadius: 6,
-            marginVertical: 10,
-            marginHorizontal: 8,
-            overflow: 'hidden',
           },
         ]}
       >
@@ -126,17 +122,7 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
           {mounted && item.descriptionComponent}
         </Card.Content>
       </Card>
-      <View
-        style={{
-          flexDirection: 'row',
-          marginTop: 10,
-          padding: 0,
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: '100%',
-          backgroundColor: 'transparent',
-        }}
-      >
+      <View style={styles.cardLabel}>
         <Text style={{ fontSize: 14 + fSize, overflow: 'hidden' }}>{item.title}</Text>
         {item.updated && (
           <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
@@ -245,13 +231,12 @@ export const RecentPagesSection = React.memo(() => {
   ) : contents.length > 2 ? (
     <ScrollView
       key={window}
-      contentContainerStyle={{
-        alignSelf: 'center',
-        backgroundColor: 'transparent',
-        flexGrow: 1,
-        paddingRight: defaultScale[window].padding,
-        width: '100%',
-      }}
+      contentContainerStyle={[
+        styles.contentContainer,
+        {
+          paddingRight: defaultScale[window].padding,
+        },
+      ]}
     >
       <View
         style={{
@@ -262,13 +247,13 @@ export const RecentPagesSection = React.memo(() => {
         {renderHeader()}
       </View>
       <View
-        style={{
-          alignSelf: 'center',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: window === 'landscape' ? 'flex-start' : 'center',
-          maxWidth,
-        }}
+        style={[
+          styles.suspenseContainer,
+          {
+            justifyContent: window === 'landscape' ? 'flex-start' : 'center',
+            maxWidth,
+          },
+        ]}
       >
         <Suspense fallback={null}>
           {contents.map((item, index) => renderCardPage({ item, index }))}
@@ -278,7 +263,7 @@ export const RecentPagesSection = React.memo(() => {
   ) : (
     <View style={commonStyles.container}>
       {renderHeader()}
-      <View style={[commonStyles.card, commonStyles.centerContent, { marginTop: 18 }]}>
+      <View style={[commonStyles.statusCard, { marginTop: 18 }]}>
         <Text style={commonStyles.text}>
           {lang(
             title ? 'There are no subnotes for this note.' : 'There are no recently modified notes.'
@@ -295,4 +280,34 @@ export const RecentPagesSection = React.memo(() => {
       </View>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  card: {
+    paddingTop: 0,
+    borderRadius: 6,
+    marginVertical: 10,
+    marginHorizontal: 8,
+    overflow: 'hidden',
+  },
+  cardLabel: {
+    flexDirection: 'row',
+    marginTop: 10,
+    padding: 0,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
+  contentContainer: {
+    alignSelf: 'center',
+    backgroundColor: 'transparent',
+    flexGrow: 1,
+    width: '100%',
+  },
+  suspenseContainer: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
 });

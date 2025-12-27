@@ -499,9 +499,7 @@ export const CurrentTabSection = () => {
   const { lang } = useLangContext();
   return (
     <View>
-      <List.Subheader style={{}} selectable={false}>
-        {lang('Current Tab')}
-      </List.Subheader>
+      <List.Subheader selectable={false}>{lang('Current Tab')}</List.Subheader>
       <ContentGroupSection type={'LAST'} />
     </View>
   );
@@ -512,7 +510,7 @@ export const TabsSection = () => {
   const { isPrivacyMode } = usePrivacy();
   return (
     <>
-      <List.Subheader style={{}} selectable={false}>
+      <List.Subheader selectable={false}>
         {isPrivacyMode ? lang('Tab List - Privacy Mode') : lang('Tab List')}
       </List.Subheader>
       <ContentGroupSection type={'PAGE'} />

@@ -1,3 +1,4 @@
+import { useAuthContext } from '@blacktokki/account';
 import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -38,6 +39,7 @@ export const NotePageScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
+  const { auth } = useAuthContext();
   const { lang } = useLangContext();
   const commonStyles = createCommonStyles(theme);
   const [_toc, toggleToc] = useState(false);
@@ -135,7 +137,7 @@ export const NotePageScreen: React.FC = () => {
                 fullParagraph={fullParagraph}
                 paragraphs={paragraphs}
               />
-              {!paragraphItem && (
+              {!paragraphItem && !auth.isLocal && (
                 <HeaderIconButton
                   name="history"
                   onPress={() => navigation.navigate('Archive', { title })}

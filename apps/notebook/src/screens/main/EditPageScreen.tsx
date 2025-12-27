@@ -308,7 +308,7 @@ export const EditPageScreen: React.FC = () => {
 
         <View style={commonStyles.buttonContainer}>
           <TouchableOpacity
-            style={[commonStyles.secondaryButton]}
+            style={[commonStyles.secondaryButton, { flex: 1 }]}
             onPress={isPrevent() ? handleUnsaved : handleBack}
           >
             <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>

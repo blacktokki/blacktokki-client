@@ -1,19 +1,6 @@
-import { StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export const createCommonStyles = (theme: 'light' | 'dark') => {
-  const card: ViewStyle = {
-    backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: theme === 'dark' ? '#333333' : '#EEEEEE',
-    shadowColor: theme === 'dark' ? '#000000' : '#888888',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  };
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -21,7 +8,19 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
       paddingHorizontal: 24,
       paddingVertical: 16,
     },
-    card,
+    card: {
+      backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+      borderRadius: 8,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? '#333333' : '#EEEEEE',
+      shadowColor: theme === 'dark' ? '#000000' : '#888888',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
     title: {
       fontSize: 18,
       fontWeight: 'bold',
@@ -119,12 +118,6 @@ export const createCommonStyles = (theme: 'light' | 'dark') => {
     centerContent: {
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    statusCard: {
-      ...card,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 20,
     },
     navContainer: {
       flex: 1,

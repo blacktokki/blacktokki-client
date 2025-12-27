@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext, View, Text, useLangContext } from '@blacktokki/core';
+import { useColorScheme, useResizeContext, View, Text } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
@@ -8,6 +8,8 @@ import { Card } from 'react-native-paper';
 import { NotePageHeader } from './NoteItemSections';
 import { toRecentContents, updatedFormat } from './home/ContentGroupSection';
 import { Paragraph } from '../../components/HeaderSelectBar';
+import LoadingView from '../../components/LoadingView';
+import StatusCard from '../../components/StatusCard';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
@@ -185,7 +187,6 @@ export const RecentPagesSection = React.memo(() => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const window = useResizeContext();
-  const { lang } = useLangContext();
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<RecentPagesScreenRouteProp>();
@@ -224,9 +225,7 @@ export const RecentPagesSection = React.memo(() => {
 
   return isLoading ? (
     <View style={commonStyles.container}>
-      <View style={[commonStyles.card, commonStyles.centerContent]}>
-        <Text style={commonStyles.text}>로딩 중...</Text>
-      </View>
+      <LoadingView />
     </View>
   ) : contents.length > 2 ? (
     <ScrollView
@@ -263,21 +262,16 @@ export const RecentPagesSection = React.memo(() => {
   ) : (
     <View style={commonStyles.container}>
       {renderHeader()}
-      <View style={[commonStyles.statusCard, { marginTop: 18 }]}>
-        <Text style={commonStyles.text}>
-          {lang(
-            title ? 'There are no subnotes for this note.' : 'There are no recently modified notes.'
-          )}
-        </Text>
-        {title === undefined && (
-          <TouchableOpacity
-            onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
-            style={commonStyles.button}
-          >
-            <Text style={commonStyles.buttonText}>{lang('Usage')}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <StatusCard
+        style={{ marginTop: 18 }}
+        message={
+          title ? 'There are no subnotes for this note.' : 'There are no recently modified notes.'
+        }
+        buttonTitle={title === undefined ? 'Usage' : undefined}
+        onButtonPress={
+          title === undefined ? () => navigation.push('NoteViewer', { key: 'Usage' }) : undefined
+        }
+      />
     </View>
   );
 });

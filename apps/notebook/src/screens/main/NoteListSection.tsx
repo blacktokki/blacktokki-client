@@ -2,6 +2,7 @@ import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 
+import LoadingView from '../../components/LoadingView';
 import { titleFormat } from '../../components/SearchBar';
 import { createCommonStyles } from '../../styles';
 import { ParagraphKey } from '../../types';
@@ -30,9 +31,7 @@ export const NoteListSection = ({
   return (
     <View style={commonStyles.container}>
       {isLoading ? (
-        <View style={[commonStyles.card, commonStyles.centerContent]}>
-          <Text style={commonStyles.text}>로딩 중...</Text>
-        </View>
+        <LoadingView />
       ) : contents.length > 0 ? (
         <FlatList
           data={contents}

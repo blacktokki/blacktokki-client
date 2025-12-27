@@ -4,7 +4,7 @@ import { push } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -32,7 +32,6 @@ export const NotePageHeader = ({
   const commonStyles = createCommonStyles(theme);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const splitTitle = getSplitTitle(title);
-  const iconColor = getIconColor(theme);
   const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
   return (
     <View style={styles.header}>
@@ -89,30 +88,44 @@ export const NotePageHeader = ({
         {archive && (
           <View style={[commonStyles.header, styles.archiveHeader]}>
             {archive.previous !== undefined && (
-              <TouchableOpacity
+              <HeaderIconButton
                 onPress={() =>
                   navigation.navigate('NotePage', { title, archiveId: archive.previous })
                 }
-                style={pageStyles.actionButton}
-              >
-                <Icon name="chevron-left" size={16} color={iconColor} />
-              </TouchableOpacity>
+                name="chevron-left"
+              />
             )}
             <Text style={[commonStyles.text, { marginLeft: 5, fontStyle: 'italic' }]}>
               {archive.updated}
             </Text>
             {archive.next !== undefined && (
-              <TouchableOpacity
+              <HeaderIconButton
                 onPress={() => navigation.navigate('NotePage', { title, archiveId: archive.next })}
-                style={pageStyles.actionButton}
-              >
-                <Icon name="chevron-right" size={16} color={iconColor} />
-              </TouchableOpacity>
+                name="chevron-right"
+              />
             )}
           </View>
         )}
       </View>
     </View>
+  );
+};
+
+const getIconColor = (theme: 'light' | 'dark') => (theme === 'dark' ? '#E4E4E4' : '#333333');
+
+export const HeaderIconButton: React.FC<{
+  name: string;
+  onPress: (event: GestureResponderEvent) => void;
+  size?: number;
+  color?: string;
+}> = ({ name, onPress, size = 16, color }) => {
+  const theme = useColorScheme();
+  const iconColor = color || getIconColor(theme);
+
+  return (
+    <TouchableOpacity onPress={onPress} style={pageStyles.actionButton}>
+      <Icon name={name} size={size} color={iconColor} />
+    </TouchableOpacity>
   );
 };
 
@@ -210,8 +223,6 @@ export const NoteBottomSection = ({
     )
   );
 };
-
-export const getIconColor = (theme: 'light' | 'dark') => (theme === 'dark' ? '#E4E4E4' : '#333333');
 
 const styles = StyleSheet.create({
   header: {

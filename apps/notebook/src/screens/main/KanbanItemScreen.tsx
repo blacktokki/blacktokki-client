@@ -6,12 +6,18 @@ import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } fr
 import { StyleSheet, ScrollView, TouchableOpacity, View, Alert, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { getIconColor, pageStyles } from './NoteItemSections';
+import { HeaderIconButton, pageStyles } from './NoteItemSections';
 import { renderCardPage, useToCardPage } from './RecentPageSection';
 import { OptionButton } from './home/ConfigSection';
 import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import Kanban from '../../components/Kanban';
-import { SearchBar, SearchList, toNoteParams } from '../../components/SearchBar';
+import {
+  ResponsiveSearchBar,
+  SearchBar,
+  SearchList,
+  toNoteParams,
+} from '../../components/SearchBar';
+import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
@@ -69,7 +75,6 @@ export const KanbanItemScreen: React.FC = () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { lang } = useLangContext();
-  const iconColor = getIconColor(theme);
 
   const { data: pages = [] } = useNotePages();
   const { data: board } = useBoardPage(title);
@@ -184,12 +189,7 @@ export const KanbanItemScreen: React.FC = () => {
         </Text>
       </View>
       <View style={[pageStyles.actionButtons, { flexBasis: 39 }]}>
-        <TouchableOpacity
-          onPress={() => setShowConfig(!showConfig)}
-          style={pageStyles.actionButton}
-        >
-          <Icon name="cog" size={16} color={iconColor} />
-        </TouchableOpacity>
+        <HeaderIconButton name="cog" onPress={() => setShowConfig(!showConfig)} />
       </View>
     </View>
   );
@@ -197,14 +197,13 @@ export const KanbanItemScreen: React.FC = () => {
   if (!isPrivacyMode && isHiddenTitle(title)) {
     return (
       <>
-        {_window === 'portrait' && <SearchBar />}
+        <ResponsiveSearchBar />
         <View style={commonStyles.container}>
-          <View style={commonStyles.statusCard}>
-            <Text style={commonStyles.text}>{lang('This note is hidden by Privacy Mode.')}</Text>
-            <TouchableOpacity onPress={() => setPrivacy.mutate(true)} style={commonStyles.button}>
-              <Text style={commonStyles.buttonText}>{lang('Enable Privacy Mode')}</Text>
-            </TouchableOpacity>
-          </View>
+          <StatusCard
+            message="This kanban is hidden by Privacy Mode."
+            buttonTitle="Enable Privacy Mode"
+            onButtonPress={() => setPrivacy.mutate(true)}
+          />
         </View>
       </>
     );
@@ -220,7 +219,7 @@ export const KanbanItemScreen: React.FC = () => {
 
   return (
     <>
-      {_window === 'portrait' && <SearchBar />}
+      <ResponsiveSearchBar />
       <UsageButton paragraph={'🗂 ' + lang('Kanban')} />
       {/* 설정 화면 (보드 옵션 수정) */}
       {showConfig ? (
@@ -374,11 +373,7 @@ export const KanbanItemScreen: React.FC = () => {
               onEnd={onEnd}
             />
           ) : (
-            <View style={commonStyles.statusCard}>
-              <Text selectable={false} style={commonStyles.text}>
-                {lang('There are no columns.')}
-              </Text>
-            </View>
+            <StatusCard message="There are no columns." />
           )}
         </View>
       )}

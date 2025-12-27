@@ -1,11 +1,12 @@
-import { useColorScheme, useLangContext, useResizeContext, Text, Spacer } from '@blacktokki/core';
+import { useColorScheme, useLangContext, Text, Spacer } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import { View, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { SearchBar } from '../../components/SearchBar';
+import { ResponsiveSearchBar } from '../../components/SearchBar';
+import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPages, useCreateOrUpdateBoard, useDeleteBoard } from '../../hooks/useBoardStorage';
 import { createCommonStyles } from '../../styles';
@@ -16,7 +17,6 @@ export const KanbanListScreen: React.FC = () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { lang } = useLangContext();
-  const _window = useResizeContext();
 
   const { data: boards = [] } = useBoardPages();
   const mutation = useCreateOrUpdateBoard();
@@ -27,7 +27,7 @@ export const KanbanListScreen: React.FC = () => {
 
   return (
     <>
-      {_window === 'portrait' && <SearchBar />}
+      <ResponsiveSearchBar />
       <UsageButton paragraph={'🗂 ' + lang('Kanban')} />
       <View style={commonStyles.container}>
         {boards.length > 0 ? (
@@ -38,19 +38,13 @@ export const KanbanListScreen: React.FC = () => {
                 style={commonStyles.card}
                 onPress={() => navigation.push('KanbanPage', { title: item.title })}
               >
-                <Text style={[commonStyles.title, { fontSize: 20, fontWeight: '600' }]}>
-                  {item.title}
-                </Text>
+                <Text style={commonStyles.title}>{item.title}</Text>
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <Spacer height={8} />}
           />
         ) : (
-          <View style={[commonStyles.card, commonStyles.centerContent]}>
-            <Text selectable={false} style={commonStyles.text}>
-              {lang('There are no boards.')}
-            </Text>
-          </View>
+          <StatusCard message="There are no boards." />
         )}
 
         {/* 하단 보드 생성/검색/삭제 바 */}

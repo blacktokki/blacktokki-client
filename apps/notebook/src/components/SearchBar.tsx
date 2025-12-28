@@ -1,4 +1,11 @@
-import { useColorScheme, useLangContext, View, Text, Colors } from '@blacktokki/core';
+import {
+  useColorScheme,
+  useLangContext,
+  View,
+  Text,
+  Colors,
+  useResizeContext,
+} from '@blacktokki/core';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -351,6 +358,14 @@ export const SearchBar: React.FC<
       )}
     </View>
   );
+};
+
+export const ResponsiveSearchBar: React.FC = () => {
+  const windowType = useResizeContext();
+  if (windowType !== 'portrait') {
+    return null;
+  }
+  return <SearchBar />;
 };
 
 const styles = StyleSheet.create({

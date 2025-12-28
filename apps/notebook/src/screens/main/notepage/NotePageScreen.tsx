@@ -3,17 +3,18 @@ import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigat
 import { StackNavigationProp } from '@react-navigation/stack';
 import DiffMatchPatch from 'diff-match-patch';
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
-import { SearchBar, toNoteParams } from '../../../components/SearchBar';
+import LoadingView from '../../../components/LoadingView';
+import { ResponsiveSearchBar, toNoteParams } from '../../../components/SearchBar';
+import StatusCard from '../../../components/StatusCard';
 import { useNotePage, useSnapshotAll } from '../../../hooks/useNoteStorage';
 import { paragraphByKey, paragraphDescription } from '../../../hooks/useProblem';
 import { createCommonStyles } from '../../../styles';
 import { NavigationParamList } from '../../../types';
 import {
-  getIconColor,
+  HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
   NotePageSection,
@@ -94,18 +95,16 @@ export const NotePageScreen: React.FC = () => {
       navigation.navigate('NotePage', { title, paragraph: undefined });
     }
   }, [page, paragraph, paragraphItem]);
-  const iconColor = getIconColor(theme);
   if (!isPrivacyMode && isHiddenTitle(title)) {
     return (
       <>
-        {_window === 'portrait' && <SearchBar />}
+        <ResponsiveSearchBar />
         <View style={commonStyles.container}>
-          <View style={commonStyles.statusCard}>
-            <Text style={commonStyles.text}>{lang('This note is hidden by Privacy Mode.')}</Text>
-            <TouchableOpacity onPress={() => setPrivacy.mutate(true)} style={commonStyles.button}>
-              <Text style={commonStyles.buttonText}>{lang('Enable Privacy Mode')}</Text>
-            </TouchableOpacity>
-          </View>
+          <StatusCard
+            message="This note is hidden by Privacy Mode."
+            buttonTitle="Enable Privacy Mode"
+            onButtonPress={() => setPrivacy.mutate(true)}
+          />
         </View>
       </>
     );
@@ -113,7 +112,7 @@ export const NotePageScreen: React.FC = () => {
   return (
     isFocused && (
       <>
-        {_window === 'portrait' && <SearchBar />}
+        <ResponsiveSearchBar />
         <ScrollView
           //@ts-ignore
           style={[commonStyles.container, pageStyles.container]}
@@ -137,50 +136,30 @@ export const NotePageScreen: React.FC = () => {
                 paragraphs={paragraphs}
               />
               {!paragraphItem && (
-                <>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('Archive', { title })}
-                    style={pageStyles.actionButton}
-                  >
-                    <Icon name="history" size={16} color={iconColor} />
-                  </TouchableOpacity>
-                </>
+                <HeaderIconButton
+                  name="history"
+                  onPress={() => navigation.navigate('Archive', { title })}
+                />
               )}
               {!!paragraph && (
-                <>
-                  <TouchableOpacity
-                    onPress={() => toggleFullParagraph(!fullParagraph)}
-                    style={pageStyles.actionButton}
-                  >
-                    <Icon
-                      name={fullParagraph ? 'compress' : 'expand'}
-                      size={16}
-                      color={iconColor}
-                    />
-                  </TouchableOpacity>
-                </>
+                <HeaderIconButton
+                  name={fullParagraph ? 'compress' : 'expand'}
+                  onPress={() => toggleFullParagraph(!fullParagraph)}
+                />
               )}
               {!!(paragraph || description) && !archive && _window === 'portrait' && (
                 <>
-                  <TouchableOpacity
+                  <HeaderIconButton
+                    name="sitemap"
                     onPress={() => navigation.navigate('RecentPages', { title })}
-                    style={pageStyles.actionButton}
-                  >
-                    <Icon name="sitemap" size={16} color={iconColor} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => toggleToc(!toc)} style={pageStyles.actionButton}>
-                    <Icon name="list" size={16} color={iconColor} />
-                  </TouchableOpacity>
+                  />
+                  <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
                 </>
               )}
               {!!(paragraph || description) && !archive && (
                 <>
-                  <TouchableOpacity onPress={handleMovePage} style={pageStyles.actionButton}>
-                    <Icon name="exchange" size={16} color={iconColor} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleEdit} style={pageStyles.actionButton}>
-                    <Icon name="pencil" size={16} color={iconColor} />
-                  </TouchableOpacity>
+                  <HeaderIconButton name="exchange" onPress={handleMovePage} />
+                  <HeaderIconButton name="pencil" onPress={handleEdit} />
                 </>
               )}
             </View>
@@ -204,9 +183,7 @@ export const NotePageScreen: React.FC = () => {
               )}
             </NotePageSection>
             {isFetching || description === undefined ? (
-              <View style={[commonStyles.card, commonStyles.centerContent]}>
-                <ActivityIndicator size="large" color="#3498DB" />
-              </View>
+              <LoadingView />
             ) : page?.description ? (
               <NoteBottomSection
                 toc={toc}
@@ -227,14 +204,12 @@ export const NotePageScreen: React.FC = () => {
               />
             ) : (
               !archive?.previous && (
-                <View style={[commonStyles.card, commonStyles.centerContent]}>
-                  <Text style={commonStyles.text}>
-                    {lang('This note has no content yet. Press the ‘Edit’ button to add content.')}
-                  </Text>
-                  <TouchableOpacity onPress={handleEdit} style={commonStyles.button}>
-                    <Text style={commonStyles.buttonText}>{lang('Edit')}</Text>
-                  </TouchableOpacity>
-                </View>
+                <StatusCard
+                  style={{ marginTop: 0 }}
+                  message="This note has no content yet. Press the ‘Edit’ button to add content."
+                  buttonTitle="Edit"
+                  onButtonPress={handleEdit}
+                />
               )
             )}
           </View>

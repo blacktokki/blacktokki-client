@@ -2,18 +2,17 @@ import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { View, ScrollView } from 'react-native';
 
 import {
-  getIconColor,
+  HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
   NotePageSection,
   pageStyles,
 } from './NoteItemSections';
 import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
-import { SearchBar, toNoteParams } from '../../components/SearchBar';
+import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import { useNoteViewers } from '../../hooks/useNoteStorage';
 import { paragraphByKey, paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
@@ -53,11 +52,10 @@ export const NoteViewerScreen: React.FC = () => {
   useEffect(() => {
     toggleToc(false);
   }, [route]);
-  const iconColor = getIconColor(theme);
   return (
     isFocused && (
       <>
-        {_window === 'portrait' && <SearchBar />}
+        <ResponsiveSearchBar />
         <ScrollView
           //@ts-ignore
           style={[commonStyles.container, pageStyles.container]}
@@ -74,25 +72,13 @@ export const NoteViewerScreen: React.FC = () => {
             />
             <View style={pageStyles.actionButtons}>
               {!!paragraph && (
-                <>
-                  <TouchableOpacity
-                    onPress={() => toggleFullParagraph(!fullParagraph)}
-                    style={pageStyles.actionButton}
-                  >
-                    <Icon
-                      name={fullParagraph ? 'compress' : 'expand'}
-                      size={16}
-                      color={iconColor}
-                    />
-                  </TouchableOpacity>
-                </>
+                <HeaderIconButton
+                  name={fullParagraph ? 'compress' : 'expand'}
+                  onPress={() => toggleFullParagraph(!fullParagraph)}
+                />
               )}
               {!!(paragraph || description || _window === 'portrait') && (
-                <>
-                  <TouchableOpacity onPress={() => toggleToc(!toc)} style={pageStyles.actionButton}>
-                    <Icon name="list" size={16} color={iconColor} />
-                  </TouchableOpacity>
-                </>
+                <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
               )}
             </View>
           </View>

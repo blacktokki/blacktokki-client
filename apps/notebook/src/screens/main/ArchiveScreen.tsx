@@ -1,11 +1,10 @@
-import { useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 
 import { NoteListSection } from './NoteListSection';
 import { updatedFormat } from './home/ContentGroupSection';
-import { SearchBar } from '../../components/SearchBar';
+import { ResponsiveSearchBar } from '../../components/SearchBar';
 import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
 import { NavigationParamList } from '../../types';
 
@@ -14,13 +13,12 @@ type ArchiveScreenRouteProp = RouteProp<NavigationParamList, 'Archive'>;
 export const ArchiveScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<ArchiveScreenRouteProp>();
-  const _window = useResizeContext();
   const title = route.params?.title;
   const { data: note } = useNotePage(title || '');
   const { data: archives = { pages: [] }, isLoading, fetchNextPage } = useSnapshotPages(note?.id);
   return (
     <>
-      {_window === 'portrait' && <SearchBar />}
+      <ResponsiveSearchBar />
       <NoteListSection
         contents={archives.pages
           .flat()

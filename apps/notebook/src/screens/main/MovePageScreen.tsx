@@ -317,7 +317,10 @@ export const MovePageScreen: React.FC = () => {
           )}
         </View>
         <View style={commonStyles.buttonContainer}>
-          <TouchableOpacity style={commonStyles.secondaryButton} onPress={handleCancel}>
+          <TouchableOpacity
+            style={[commonStyles.secondaryButton, { flex: 1 }]}
+            onPress={handleCancel}
+          >
             <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity

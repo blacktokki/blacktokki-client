@@ -111,7 +111,7 @@ export const EditPageScreen: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (checkedRef.current === undefined) return;
     const currentTitle = checkedRef.current.title;
 
@@ -137,7 +137,7 @@ export const EditPageScreen: React.FC = () => {
           .join('');
       }
     }
-    mutation.mutate(
+    await mutation.mutateAsync(
       { title: currentTitle, description: finalDescription },
       {
         onSuccess: () => {

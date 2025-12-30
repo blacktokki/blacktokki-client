@@ -1,19 +1,25 @@
-import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
+import { Spacer, useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import DiffMatchPatch from 'diff-match-patch';
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
-import { useCreateOrUpdatePage, useMovePage, useNotePage } from '../../hooks/useNoteStorage';
+import {
+  useCreateOrUpdatePage,
+  useMovePage,
+  useNotePage,
+  useNotePages,
+} from '../../hooks/useNoteStorage';
 import { paragraphByKey } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
-export const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 'dark'): string => {
+const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 'dark'): string => {
   const dmp = new DiffMatchPatch();
 
   // 1. Tokenizer: HTML 태그와 텍스트 분리
@@ -90,7 +96,7 @@ export const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 
   // 4. HTML 스타일 및 생성 로직
   // inline style을 사용하여 별도의 CSS 파일 없이 동작하도록 함
   const rowStyle = `display: flex; flex-direction: row; align-items: stretch; border-bottom: 1px solid ${colors.border}; background-color: ${colors.containerBg};`;
-  const cellStyle = `flex: 1; padding: 4px; overflow: hidden; word-wrap: break-word; color: ${colors.text};`;
+  const cellStyle = `flex: 1; padding: 1rem; overflow: hidden; word-wrap: break-word; color: ${colors.text};`;
 
   const createRow = (
     leftContent: string,
@@ -139,10 +145,8 @@ export const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 
   }
 
   // 최종 컨테이너 반환
-  return `<div class="diff-container" style="width: 100%; border: 1px solid ${colors.border}; background-color: ${colors.containerBg};">${resultHtml}</div>`;
+  return `<div class="diff-container" style="width: 100%; background-color: ${colors.containerBg};">${resultHtml}</div>`;
 };
-
-type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
 
 const DiffPreview = React.memo(
   ({ source, target, theme }: { source?: string; target: string; theme: 'light' | 'dark' }) => {
@@ -161,26 +165,145 @@ const DiffPreview = React.memo(
   }
 );
 
+export const DiffBlock = ({
+  item,
+}: {
+  item: {
+    title: string;
+    paragraph?: string;
+    newTitle?: string;
+    existingContent?: string;
+    targetDescription: string;
+  };
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme); // 공통 스타일 가져오기
+  const { lang } = useLangContext();
+
+  const alreadyExists = !!item.existingContent;
+
+  // 에러 발생 시(노트 중복 등) 강조 색상
+  const errorColor = '#d9534f';
+
+  return (
+    <View
+      style={[
+        commonStyles.card, // 기본 카드 스타일 적용
+        { padding: 0, overflow: 'hidden' }, // 내부 여백 제거 및 테두리 정제
+        !item.paragraph && alreadyExists ? { borderColor: errorColor } : {},
+      ]}
+    >
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setIsExpanded(!isExpanded)}
+        style={[
+          commonStyles.row,
+          {
+            padding: 12,
+            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F9F9F9', // 헤더 구분용 배경
+            borderBottomWidth: isExpanded ? 1 : 0,
+            borderBottomColor: commonStyles.card.borderColor,
+          },
+        ]}
+      >
+        <Icon
+          name={isExpanded ? 'chevron-down' : 'chevron-right'}
+          size={12}
+          color={commonStyles.text.color}
+          style={{ width: 16 }}
+        />
+        <Icon
+          name="file-text-o"
+          size={14}
+          color={commonStyles.text.color}
+          style={{ marginLeft: 8 }}
+        />
+        <Text
+          style={[commonStyles.text, { fontWeight: 'bold', marginLeft: 8, flex: 1, fontSize: 14 }]}
+          numberOfLines={1}
+        >
+          {item.title}
+          {item.newTitle ? ' ➜ ' + item.newTitle : ''}
+        </Text>
+
+        {!item.paragraph && alreadyExists && (
+          <Text
+            style={[
+              commonStyles.smallText,
+              { color: errorColor, fontWeight: 'bold', marginLeft: 8 },
+            ]}
+          >
+            {lang('This note already exists.')}
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {isExpanded && (
+        <View style={{ backgroundColor: 'transparent' }}>
+          {alreadyExists ? (
+            <DiffPreview
+              source={item.existingContent}
+              target={item.targetDescription}
+              theme={theme}
+            />
+          ) : (
+            <EditorViewer
+              active
+              value={item.targetDescription}
+              theme={theme}
+              onLink={(url) => onLink(url, navigation)}
+              autoResize
+            />
+          )}
+        </View>
+      )}
+    </View>
+  );
+};
+
+type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
+
 export const MovePageScreen: React.FC = () => {
   const route = useRoute<MovePageScreenRouteProp>();
   const { title, paragraph, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
-  const _window = useResizeContext();
   const { lang } = useLangContext();
-  const [newTitle, setNewTitle] = useState(title);
-  const { data: page, isLoading } = useNotePage(title);
-  const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const path =
-    paragraphs.find((v) => paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph }))
-      ?.path || '';
-  const { data: newPage } = useNotePage(newTitle);
-  const [preview, setPreview] = useState<boolean>();
   const commonStyles = createCommonStyles(theme);
 
-  const mutation = useCreateOrUpdatePage();
+  const [newTitle, setNewTitle] = useState(title);
+  const [includeSubNotes, setIncludeSubNotes] = useState(true);
+
+  const { data: page, isLoading } = useNotePage(title);
+  const { data: pages = [] } = useNotePages();
+  const newPage = pages.find((v) => v.title === newTitle);
+  const mainNewTitle = newTitle.trim();
+
   const moveMutation = useMovePage();
-  const { sourceDescription, targetDescription } = useMemo(() => {
+  const mutation = useCreateOrUpdatePage();
+
+  const paragraphs = parseHtmlToParagraphs(page?.description || '');
+  const paragraphItem = paragraphs.find((v) =>
+    paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })
+  );
+  const path = paragraphItem?.path || '';
+
+  const subNotes = useMemo(
+    () =>
+      pages.filter(
+        (p) => p.title.startsWith(title + '/') && p.description && p.description.length > 0
+      ),
+    [pages, title]
+  );
+
+  const previewData = useMemo(() => {
+    const checkExisting = (t: string) => pages.find((p) => p.title === t.trim());
+    const data = [];
+
+    // 1. 메인 노트 데이터
+    const existingMain = checkExisting(mainNewTitle);
     const moveParagraph = paragraphs.filter((v) => v.path.startsWith(path));
     const isSplit = newPage?.title === page?.title + '/' + moveParagraph[0]?.title;
     const moveDescription = moveParagraph
@@ -188,45 +311,64 @@ export const MovePageScreen: React.FC = () => {
       .join('');
     const sourceParagraph = paragraphs.filter((v) => !v.path.startsWith(path));
     const sourceDescription = sourceParagraph.map((v) => v.header + v.description).join('');
-    return { sourceDescription, targetDescription: moveDescription };
-  }, [paragraphs, path]);
 
-  const handleMove = () => {
-    if (newPage?.id === undefined) {
-      moveMutation.mutate(
-        {
-          oldTitle: title,
-          newTitle: newTitle.trim(),
-          description: path === '' ? undefined : targetDescription,
-        },
-        {
-          onSuccess: (data) => {
-            navigation.navigate({ name: 'NotePage', params: { title: data.newTitle } });
-          },
-          onError: (error: any) => {
-            Alert.alert(
-              lang('error'),
-              error.message || lang('An error occurred while moving note.')
-            );
-          },
+    data.push({
+      title,
+      paragraph,
+      newTitle: mainNewTitle,
+      sourceDescription,
+      targetDescription: moveDescription,
+      oldContent: paragraph ? page?.description : '',
+      existingContent:
+        existingMain && mainNewTitle !== title ? existingMain.description : undefined,
+    });
+
+    // 2. 하위 노트 데이터 (문단 이동이 아닐 때만 포함)
+    if (!paragraphItem && includeSubNotes) {
+      subNotes.forEach((sn) => {
+        const snNewTitle = mainNewTitle + sn.title.substring(title.length);
+        const existingSub = checkExisting(snNewTitle);
+        data.push({
+          title: sn.title,
+          newTitle: snNewTitle,
+          sourceDescription: '',
+          targetDescription: sn.description || '',
+          existingContent:
+            existingSub && mainNewTitle !== title ? existingSub?.description : undefined,
+        });
+      });
+    }
+    return data;
+  }, [pages, title, newTitle, page, subNotes, includeSubNotes, paragraphItem]);
+  const anyExists = useMemo(() => previewData.some((v) => !!v.existingContent), [previewData]);
+
+  const handleMove = async () => {
+    try {
+      for (const [i, item] of previewData.entries()) {
+        const isLast = i === previewData.length - 1;
+        if (item.existingContent !== undefined || item.paragraph) {
+          await mutation.mutateAsync({
+            title: item.newTitle,
+            description: item.targetDescription,
+            isLast: false,
+          });
+          await mutation.mutateAsync({
+            title: item.title,
+            description: item.sourceDescription,
+            isLast,
+          });
+        } else {
+          await moveMutation.mutateAsync({
+            oldTitle: item.title,
+            newTitle: item.newTitle,
+            description: path === '' ? undefined : item.targetDescription,
+            isLast,
+          });
         }
-      );
-    } else {
-      mutation.mutate(
-        { title: newPage.title, description: targetDescription, isLast: false },
-        {
-          onSuccess: (data) => {
-            mutation.mutate({ title, description: sourceDescription });
-            navigation.navigate({ name: 'NotePage', params: { title: data.title } });
-          },
-          onError: (error: any) => {
-            Alert.alert(
-              lang('error'),
-              error.message || lang('An error occurred while moving note.')
-            );
-          },
-        }
-      );
+      }
+      navigation.push('NotePage', { title: mainNewTitle });
+    } catch (error: any) {
+      Alert.alert(lang('error'), error.message || lang('An error occurred while moving note.'));
     }
   };
   const handleCancel = () => {
@@ -242,80 +384,77 @@ export const MovePageScreen: React.FC = () => {
       handleCancel();
     }
     page && setNewTitle(page.title + (paragraph ? `/${paragraph}` : ''));
-  }, [page, isLoading]);
-  const paragraphItem = paragraphs.find((v) => v.path === path);
-  const moveDisabled = !newTitle.trim() || newTitle.trim() === title.trim();
-  const exists = !moveDisabled && newPage?.id !== undefined;
+  }, [page, paragraph, isLoading]);
+  const moveDisabled = !mainNewTitle || mainNewTitle === title;
   return (
     <ScrollView style={commonStyles.container}>
       <View style={commonStyles.card}>
-        <View style={{ flexDirection: _window === 'landscape' ? 'row' : 'column', zIndex: 1 }}>
-          <View style={{ zIndex: 1 }}>
-            <Text style={commonStyles.text}>
-              {lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
-            </Text>
-            <Text
-              style={[
-                commonStyles.title,
-                {
-                  marginTop: 8,
-                  marginBottom: 16,
-                },
-              ]}
+        <View style={{ zIndex: 1 }}>
+          <Text style={commonStyles.text}>
+            {lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
+          </Text>
+          <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>
+            {titleFormat({ title, paragraph })}
+          </Text>
+          <Text style={commonStyles.text}>{lang('New note title:')}</Text>
+          {newTitle && title !== mainNewTitle && (
+            <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>{newTitle}</Text>
+          )}
+          <SearchBar onPress={setNewTitle} addKeyword={false} useRandom={false} />
+          <Spacer height={12} />
+          {!paragraphItem && subNotes.length > 0 && (
+            <TouchableOpacity
+              style={styles.optionContainer}
+              onPress={() => setIncludeSubNotes(!includeSubNotes)}
             >
-              {titleFormat({ title, paragraph })}
-            </Text>
-            <Text style={commonStyles.text}>{lang('New note title:')}</Text>
-            <SearchBar onPress={setNewTitle} addKeyword={false} useRandom={false} />
-          </View>
-          {!moveDisabled && (
-            <View style={{ flex: 1 }}>
-              <Text style={commonStyles.text}>
-                {' '}
-                {lang('Preview:')} {exists ? lang('This note already exists.') : ''}
+              <Icon
+                name={includeSubNotes ? 'check-square-o' : 'square-o'}
+                size={20}
+                color={commonStyles.text.color}
+              />
+              <Text style={[commonStyles.text, { marginLeft: 8, fontSize: 14 }]}>
+                {lang('Move sub-notes')} ({subNotes.length})
               </Text>
-              <TouchableOpacity
-                style={[
-                  commonStyles.button,
-                  styles.moveButton,
-                  {
-                    flex: 0,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingTop: 24,
-                    paddingBottom: 16,
-                  },
-                ]}
-                onPress={() => setPreview(!preview)}
-              >
-                <Text style={commonStyles.title}>
-                  {titleFormat({ title, paragraph: paragraphItem?.title })}
-                </Text>
-                <Text style={[commonStyles.text, { marginBottom: 8, fontSize: 14 }]}> ➜ </Text>
-                <Text style={commonStyles.title}>{newTitle}</Text>
-              </TouchableOpacity>
-              {preview !== undefined && (
-                <View style={{ display: preview ? 'flex' : 'none' }}>
-                  {exists ? (
-                    <DiffPreview
-                      source={newPage.description}
-                      target={targetDescription}
-                      theme={theme}
-                    />
+            </TouchableOpacity>
+          )}
+
+          {!moveDisabled && (
+            <>
+              <Text style={commonStyles.text}>
+                {lang('Notes changed')} (
+                {previewData.length + previewData.filter((v) => v.paragraph).length})
+              </Text>
+              <View style={styles.prPreviewContainer}>
+                {previewData.map((item, idx) =>
+                  item.paragraph ? (
+                    <>
+                      <DiffBlock
+                        key={idx}
+                        item={{
+                          title: item.title,
+                          paragraph: item.paragraph,
+                          existingContent: item.oldContent,
+                          targetDescription: item.sourceDescription,
+                        }}
+                      />
+                      <DiffBlock
+                        key={idx + 0.5}
+                        item={{
+                          title: item.newTitle,
+                          existingContent: item.existingContent,
+                          targetDescription: item.targetDescription,
+                        }}
+                      />
+                    </>
                   ) : (
-                    <EditorViewer
-                      active
-                      value={targetDescription}
-                      theme={theme}
-                      onLink={(url) => onLink(url, navigation)}
-                      autoResize
-                    />
-                  )}
-                </View>
-              )}
-            </View>
+                    <DiffBlock key={idx} item={item} />
+                  )
+                )}
+              </View>
+            </>
           )}
         </View>
+
         <View style={commonStyles.buttonContainer}>
           <TouchableOpacity
             style={[commonStyles.secondaryButton, { flex: 1 }]}
@@ -328,15 +467,15 @@ export const MovePageScreen: React.FC = () => {
               commonStyles.button,
               styles.moveButton,
               moveDisabled
-                ? { backgroundColor: commonStyles.secondaryButton.backgroundColor }
-                : exists
+                ? { backgroundColor: 'gray' }
+                : anyExists
                 ? { backgroundColor: '#d9534f' }
                 : {},
             ]}
             onPress={handleMove}
             disabled={moveDisabled}
           >
-            <Text style={commonStyles.buttonText}>{lang(exists ? 'overwrite' : 'move')}</Text>
+            <Text style={commonStyles.buttonText}>{lang(anyExists ? 'overwrite' : 'move')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -345,8 +484,7 @@ export const MovePageScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  moveButton: {
-    flex: 1,
-    marginLeft: 8,
-  },
+  optionContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  moveButton: { flex: 1, marginLeft: 8 },
+  prPreviewContainer: { marginTop: 12 },
 });

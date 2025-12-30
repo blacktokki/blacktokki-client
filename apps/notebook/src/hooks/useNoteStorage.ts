@@ -273,7 +273,7 @@ export const useCreateOrUpdatePage = () => {
         await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
         await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
         await queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
-        await queryClient.invalidateQueries({ queryKey: ['pageContent', data.title] });
+        await queryClient.invalidateQueries({ queryKey: ['pageContent'] });
         await queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
         await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
       }
@@ -291,10 +291,12 @@ export const useMovePage = () => {
       oldTitle,
       newTitle,
       description,
+      isLast = true,
     }: {
       oldTitle: string;
       newTitle: string;
       description?: string;
+      isLast?: boolean;
     }) => {
       const page = contents.find((c) => c.title === oldTitle);
 
@@ -316,16 +318,17 @@ export const useMovePage = () => {
       if (auth.isLocal) {
         await saveContents(false, 'NOTE', [], page.id);
       }
-      return { oldTitle, newTitle };
+      return { oldTitle, newTitle, skip: !isLast };
     },
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
-      await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
-      await queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
-      await queryClient.invalidateQueries({ queryKey: ['pageContent', data.oldTitle] });
-      await queryClient.invalidateQueries({ queryKey: ['pageContent', data.newTitle] });
-      await queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
-      await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
+      if (!data.skip) {
+        await queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+        await queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
+        await queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
+        await queryClient.invalidateQueries({ queryKey: ['pageContent'] });
+        await queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+        await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
+      }
     },
   });
 };

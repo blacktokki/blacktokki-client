@@ -1,3 +1,4 @@
+import { useAuthContext } from '@blacktokki/account';
 import { useLangContext, View, useColorScheme, Colors } from '@blacktokki/core';
 import { push } from '@blacktokki/navigation';
 import React, { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import ContentGroupSection, {
 
 export default () => {
   const { lang } = useLangContext();
+  const { auth } = useAuthContext();
   const theme = useColorScheme();
   const { data: lastTab } = useLastTab();
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
@@ -94,12 +96,16 @@ export default () => {
     );
   };
 
-  // 현재 페이지가 없는데 노트 모드라면 RECENT로 리셋
   useEffect(() => {
     if (!currentNote && currentView === 'CURRENT_NOTE') {
       setCurrentView('RECENT');
     }
   }, [currentNote, currentView === 'CURRENT_NOTE']);
+  useEffect(() => {
+    if (auth.isLocal && currentSubView === 'HISTORY') {
+      setCurrentSubView('TOC');
+    }
+  }, [auth.isLocal && currentSubView]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -126,7 +132,7 @@ export default () => {
           <View style={styles.badgeContainer}>
             {renderBadge('TOC', lang('Table of Contents'), 'format-list-bulleted')}
             {renderBadge('SUBNOTE', lang('Sub Notes'), 'file-tree')}
-            {renderBadge('HISTORY', lang('Changelog'), 'clock-outline')}
+            {!auth.isLocal && renderBadge('HISTORY', lang('Changelog'), 'clock-outline')}
           </View>
         )}
         {currentView === 'RECENT' ? (

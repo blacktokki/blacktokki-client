@@ -231,9 +231,9 @@ export const KanbanItemScreen: React.FC = () => {
           <View style={commonStyles.container}>
             <View style={commonStyles.card}>
               <ConfigSection title={lang('* Kanban Title')}>
-                <View style={commonStyles.searchContainer}>
+                <View style={[commonStyles.searchContainer, { marginTop: 16 }]}>
                   <TextInput
-                    style={[commonStyles.searchInput, { marginTop: 16 }]}
+                    style={[commonStyles.searchInput]}
                     value={editTitle}
                     onChangeText={setEditTitle}
                     placeholder={lang('Enter board title')}

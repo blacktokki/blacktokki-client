@@ -165,24 +165,44 @@ const DiffPreview = React.memo(
   }
 );
 
-export const DiffBlock = ({
-  item,
-}: {
-  item: {
-    title: string;
-    paragraph?: string;
-    newTitle?: string;
-    existingContent?: string;
-    targetDescription: string;
-  };
-}) => {
+type ChangedItem = {
+  title: string;
+  newDescription: string;
+} & (
+  | {
+      renderType: 'diff';
+      fetchType: 'part';
+      paragraph: string;
+      description: string;
+    }
+  | {
+      renderType: 'plain';
+      fetchType: 'part';
+    }
+  | {
+      renderType: 'override';
+      fetchType: 'part';
+      description: string;
+    }
+  | {
+      renderType: 'plain';
+      fetchType: 'move' | 'override';
+      newTitle: string;
+    }
+  | {
+      renderType: 'override';
+      fetchType: 'override';
+      description: string;
+      newTitle: string;
+    }
+);
+
+export const ChangedBlock = ({ item }: { item: ChangedItem }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme); // 공통 스타일 가져오기
   const { lang } = useLangContext();
-
-  const alreadyExists = !!item.existingContent;
 
   // 에러 발생 시(노트 중복 등) 강조 색상
   const errorColor = '#d9534f';
@@ -192,7 +212,7 @@ export const DiffBlock = ({
       style={[
         commonStyles.card, // 기본 카드 스타일 적용
         { padding: 0, overflow: 'hidden' }, // 내부 여백 제거 및 테두리 정제
-        !item.paragraph && alreadyExists ? { borderColor: errorColor } : {},
+        item.renderType === 'override' ? { borderColor: errorColor } : {},
       ]}
     >
       <TouchableOpacity
@@ -202,7 +222,7 @@ export const DiffBlock = ({
           commonStyles.row,
           {
             padding: 12,
-            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F9F9F9', // 헤더 구분용 배경
+            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F9F9F9',
             borderBottomWidth: isExpanded ? 1 : 0,
             borderBottomColor: commonStyles.card.borderColor,
           },
@@ -220,45 +240,30 @@ export const DiffBlock = ({
           color={commonStyles.text.color}
           style={{ marginLeft: 8 }}
         />
-        <Text
-          style={[commonStyles.text, { fontWeight: 'bold', marginLeft: 8, flex: 1, fontSize: 14 }]}
-          numberOfLines={1}
-        >
+        <Text style={[commonStyles.smallText, { marginLeft: 8, flex: 1 }]} numberOfLines={1}>
           {item.title}
-          {item.newTitle ? ' ➜ ' + item.newTitle : ''}
+          {item.fetchType !== 'part' && ` ➜ ${item.newTitle}`}
         </Text>
 
-        {!item.paragraph && alreadyExists && (
-          <Text
-            style={[
-              commonStyles.smallText,
-              { color: errorColor, fontWeight: 'bold', marginLeft: 8 },
-            ]}
-          >
+        {item.renderType === 'override' && (
+          <Text style={[commonStyles.smallText, { color: errorColor, marginLeft: 8 }]}>
             {lang('This note already exists.')}
           </Text>
         )}
       </TouchableOpacity>
 
-      {isExpanded && (
-        <View style={{ backgroundColor: 'transparent' }}>
-          {alreadyExists ? (
-            <DiffPreview
-              source={item.existingContent}
-              target={item.targetDescription}
-              theme={theme}
-            />
-          ) : (
-            <EditorViewer
-              active
-              value={item.targetDescription}
-              theme={theme}
-              onLink={(url) => onLink(url, navigation)}
-              autoResize
-            />
-          )}
-        </View>
-      )}
+      {isExpanded &&
+        ('description' in item ? (
+          <DiffPreview source={item.description} target={item.newDescription} theme={theme} />
+        ) : (
+          <EditorViewer
+            active
+            value={item.newDescription}
+            theme={theme}
+            onLink={(url) => onLink(url, navigation)}
+            autoResize
+          />
+        ))}
     </View>
   );
 };
@@ -278,7 +283,6 @@ export const MovePageScreen: React.FC = () => {
 
   const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();
-  const newPage = pages.find((v) => v.title === newTitle);
   const mainNewTitle = newTitle.trim();
 
   const moveMutation = useMovePage();
@@ -300,70 +304,131 @@ export const MovePageScreen: React.FC = () => {
 
   const previewData = useMemo(() => {
     const checkExisting = (t: string) => pages.find((p) => p.title === t.trim());
-    const data = [];
-
-    // 1. 메인 노트 데이터
+    const data: ChangedItem[] = [];
     const existingMain = checkExisting(mainNewTitle);
-    const moveParagraph = paragraphs.filter((v) => v.path.startsWith(path));
-    const isSplit = newPage?.title === page?.title + '/' + moveParagraph[0]?.title;
-    const moveDescription = moveParagraph
-      .map((v, i) => (isSplit && i === 0 ? '' : v.header) + v.description)
-      .join('');
-    const sourceParagraph = paragraphs.filter((v) => !v.path.startsWith(path));
-    const sourceDescription = sourceParagraph.map((v) => v.header + v.description).join('');
 
-    data.push({
-      title,
-      paragraph,
-      newTitle: mainNewTitle,
-      sourceDescription,
-      targetDescription: moveDescription,
-      oldContent: paragraph ? page?.description : '',
-      existingContent:
-        existingMain && mainNewTitle !== title ? existingMain.description : undefined,
-    });
-
-    // 2. 하위 노트 데이터 (문단 이동이 아닐 때만 포함)
-    if (!paragraphItem && includeSubNotes) {
-      subNotes.forEach((sn) => {
-        const snNewTitle = mainNewTitle + sn.title.substring(title.length);
-        const existingSub = checkExisting(snNewTitle);
-        data.push({
-          title: sn.title,
-          newTitle: snNewTitle,
-          sourceDescription: '',
-          targetDescription: sn.description || '',
-          existingContent:
-            existingSub && mainNewTitle !== title ? existingSub?.description : undefined,
-        });
+    if (paragraph && path.length > 0) {
+      const moveParagraph = paragraphs.filter((v) => v.path.startsWith(path));
+      const isSplit = existingMain?.title === page?.title + '/' + moveParagraph[0]?.title;
+      const moveDescription = moveParagraph
+        .map((v, i) => (isSplit && i === 0 ? '' : v.header) + v.description)
+        .join('');
+      const sourceParagraph = paragraphs.filter((v) => !v.path.startsWith(path));
+      const sourceDescription = sourceParagraph.map((v) => v.header + v.description).join('');
+      data.push({
+        renderType: 'diff',
+        fetchType: 'part',
+        title,
+        paragraph,
+        description: page?.description || '',
+        newDescription: sourceDescription,
       });
+
+      if (existingMain) {
+        data.push({
+          renderType: 'override',
+          fetchType: 'part',
+          title: mainNewTitle,
+          description: existingMain.description || '',
+          newDescription: moveDescription,
+        });
+      } else {
+        data.push({
+          renderType: 'plain',
+          fetchType: 'part',
+          title: mainNewTitle,
+          newDescription: moveDescription,
+        });
+      }
+    } else {
+      const existingMainDesciption = (existingMain?.description || '').length > 0;
+      console.log(existingMain);
+      if (existingMain && existingMainDesciption) {
+        data.push({
+          renderType: 'override',
+          fetchType: 'override',
+          title,
+          newTitle: mainNewTitle,
+          description: existingMain.description || '',
+          newDescription: page?.description || '',
+        });
+      } else {
+        data.push({
+          renderType: 'plain',
+          fetchType: existingMain ? 'override' : 'move',
+          title,
+          newTitle: mainNewTitle,
+          newDescription: page?.description || '',
+        });
+      }
+
+      // 하위 노트 포함 로직
+      if (includeSubNotes) {
+        subNotes.forEach((sn) => {
+          const snNewTitle = mainNewTitle + sn.title.substring(title.length);
+          const existingSub = checkExisting(snNewTitle);
+          const existingSubDescription = (existingSub?.description || '').length > 0;
+          if (existingSub && existingSubDescription) {
+            data.push({
+              renderType: 'override',
+              fetchType: 'override',
+              title: sn.title,
+              newTitle: snNewTitle,
+              description: existingSub.description || '',
+              newDescription: sn.description || '',
+            });
+          } else {
+            data.push({
+              renderType: 'plain',
+              fetchType: existingMain ? 'override' : 'move',
+              title: sn.title,
+              newTitle: snNewTitle,
+              newDescription: sn.description || '',
+            });
+          }
+        });
+      }
     }
     return data;
-  }, [pages, title, newTitle, page, subNotes, includeSubNotes, paragraphItem]);
-  const anyExists = useMemo(() => previewData.some((v) => !!v.existingContent), [previewData]);
+  }, [pages, title, mainNewTitle, page, subNotes, includeSubNotes]);
+  const anyExists = useMemo(
+    () => previewData.some((item) => item.renderType === 'override'),
+    [previewData]
+  );
 
   const handleMove = async () => {
     try {
       for (const [i, item] of previewData.entries()) {
         const isLast = i === previewData.length - 1;
-        if (item.existingContent !== undefined || item.paragraph) {
-          await mutation.mutateAsync({
-            title: item.newTitle,
-            description: item.targetDescription,
-            isLast: false,
-          });
-          await mutation.mutateAsync({
-            title: item.title,
-            description: item.sourceDescription,
-            isLast,
-          });
-        } else {
-          await moveMutation.mutateAsync({
-            oldTitle: item.title,
-            newTitle: item.newTitle,
-            description: path === '' ? undefined : item.targetDescription,
-            isLast,
-          });
+
+        switch (item.fetchType) {
+          case 'move':
+            await moveMutation.mutateAsync({
+              oldTitle: item.title,
+              newTitle: item.newTitle,
+              isLast,
+            });
+            break;
+          case 'override':
+            await mutation.mutateAsync({
+              title: item.newTitle,
+              description: item.newDescription,
+              isLast: false,
+            });
+            await mutation.mutateAsync({
+              title: item.title,
+              description: '',
+              isLast,
+            });
+            break;
+
+          case 'part':
+            await mutation.mutateAsync({
+              title: item.title,
+              description: item.newDescription,
+              isLast,
+            });
+            break;
         }
       }
       navigation.push('NotePage', { title: mainNewTitle });
@@ -402,7 +467,7 @@ export const MovePageScreen: React.FC = () => {
           )}
           <SearchBar onPress={setNewTitle} addKeyword={false} useRandom={false} />
           <Spacer height={12} />
-          {!paragraphItem && subNotes.length > 0 && (
+          {path.length === 0 && subNotes.length > 0 && (
             <TouchableOpacity
               style={styles.optionContainer}
               onPress={() => setIncludeSubNotes(!includeSubNotes)}
@@ -421,35 +486,12 @@ export const MovePageScreen: React.FC = () => {
           {!moveDisabled && (
             <>
               <Text style={commonStyles.text}>
-                {lang('Notes changed')} (
-                {previewData.length + previewData.filter((v) => v.paragraph).length})
+                {lang('Notes changed')} ({previewData.length})
               </Text>
               <View style={styles.prPreviewContainer}>
-                {previewData.map((item, idx) =>
-                  item.paragraph ? (
-                    <>
-                      <DiffBlock
-                        key={idx}
-                        item={{
-                          title: item.title,
-                          paragraph: item.paragraph,
-                          existingContent: item.oldContent,
-                          targetDescription: item.sourceDescription,
-                        }}
-                      />
-                      <DiffBlock
-                        key={idx + 0.5}
-                        item={{
-                          title: item.newTitle,
-                          existingContent: item.existingContent,
-                          targetDescription: item.targetDescription,
-                        }}
-                      />
-                    </>
-                  ) : (
-                    <DiffBlock key={idx} item={item} />
-                  )
-                )}
+                {previewData.map((item, idx) => (
+                  <ChangedBlock key={idx} item={item} />
+                ))}
               </View>
             </>
           )}
@@ -475,7 +517,9 @@ export const MovePageScreen: React.FC = () => {
             onPress={handleMove}
             disabled={moveDisabled}
           >
-            <Text style={commonStyles.buttonText}>{lang(anyExists ? 'overwrite' : 'move')}</Text>
+            <Text style={commonStyles.buttonText}>
+              {lang(!moveDisabled && anyExists ? 'overwrite' : 'move')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

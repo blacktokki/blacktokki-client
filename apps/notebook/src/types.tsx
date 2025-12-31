@@ -33,6 +33,12 @@ export type Link = {
   imageUrl?: string;
 };
 
+export type Pat = {
+  id: number;
+  description: string;
+  expired: string;
+};
+
 export type ParagraphKey =
   | {
       paragraph?: string;

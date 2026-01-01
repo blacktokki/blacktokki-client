@@ -1,6 +1,7 @@
 export type BoardOption = {
   BOARD_NOTE_IDS: number[];
   BOARD_HEADER_LEVEL: number;
+  PAT_DESCRIPTION?: undefined;
 };
 
 export type PostContent = {
@@ -17,6 +18,7 @@ export type PostContent = {
     | BoardOption
     | {
         BOARD_NOTE_IDS?: undefined;
+        PAT_DESCRIPTION?: string;
       }
   );
 };

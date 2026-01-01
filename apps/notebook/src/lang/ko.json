@@ -102,5 +102,13 @@
   "Generate New Token": "새 토큰 생성",
   "Copy your new token now. It won't be shown again.": "지금 새 토큰을 복사하세요. 다시 표시되지 않습니다.",
   "Expires": "만료일",
-  "Search Results": "검색 결과"
+  "Search Results": "검색 결과",
+  "In Use": "사용 중",
+  "OTP (2-Factor Auth)": "OTP (2단계 인증)",
+  "Register the key below in your authenticator app and enter the 6-digit code.": "인증 앱(Google Authenticator 등)에 아래 키를 등록하고 6자리 코드를 입력하세요.",
+  "OTP Secret Key": "OTP 비밀키",
+  "Scan QR Code": "QR 코드를 스캔하세요",
+  "The code does not match.": "코드가 일치하지 않습니다.",
+  "Disabling OTP will log you out for security. Continue?": "OTP를 해제하면 보안 유지를 위해 로그아웃됩니다. 계속하시겠습니까?",
+  "close": "닫기"
 }

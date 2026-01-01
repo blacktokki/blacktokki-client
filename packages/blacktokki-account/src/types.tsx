@@ -8,8 +8,23 @@ type BaseUser = {
 
 export type User = BaseUser & {
   id: number;
+  otpDeletionRequested?: boolean;
 };
 
 export type CreateUser = BaseUser & {
   password: string;
+};
+
+export type OtpResponse =
+  | {
+      secretKey: string;
+      otpAuthUrl: string;
+    }
+  | {
+      secretKey?: undefined;
+    };
+
+export type OtpVerify = {
+  secretKey?: string;
+  code: number;
 };

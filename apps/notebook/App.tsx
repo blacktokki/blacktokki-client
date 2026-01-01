@@ -44,7 +44,9 @@ const ignoreErrors = ['Support for defaultProps will be removed'];
 
 const error = console.error;
 console.error = (...arg) => {
-  for (const error of ignoreErrors) if (arg[0].includes(error)) return;
+  try {
+    for (const error of ignoreErrors) if (arg[0].includes(error)) return;
+  } catch {}
   error(...arg);
 };
 

@@ -1,4 +1,4 @@
-import { User } from '../types';
+import { OtpResponse, OtpVerify, User } from '../types';
 import account, { getToken, setToken } from './axios';
 export { getLocal, setLocal } from './axios';
 
@@ -42,9 +42,28 @@ export async function login(username: string, password: string) {
     return await checkLogin();
   }
 }
-export async function logout() {
+
+export async function createOtp() {
+  return (await account.post('/api/v1/otp')).data as OtpResponse;
+}
+
+export async function verifyOtp(otpVerify: OtpVerify) {
+  try {
+    return (await account.post('/api/v1/otp/verify', otpVerify)).status === 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function logout(resetOtp?: boolean) {
+  if (resetOtp) {
+    if ((await account.delete('/api/v1/otp')).status !== 204) {
+      return false;
+    }
+  }
   await setToken(null);
   await account.get('/logout');
+  return true;
 }
 
 export async function oauthLogin(token: string) {

@@ -19,8 +19,8 @@
 
 ### 🔍 Searching and Creating Notes
 
-* Use the top search bar to find existing notes or create new ones.
-* Enter a new title and press `Enter` to automatically create and open the note.
+* Full-text Search: Enter a keyword in the search bar and click the 🔍 button or press Enter to navigate to the full-text search results page, which searches through both note titles and their entire content.
+* Direct Navigation and Creation: Click the ➔ button to the right of the search bar to immediately jump to a note with that exact title.
 
 ### ✏️ Editing Notes
 

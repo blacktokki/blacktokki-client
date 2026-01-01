@@ -35,7 +35,7 @@ export const NoteListSection = ({
       ) : contents.length > 0 ? (
         <FlatList
           data={contents}
-          keyExtractor={(item) => JSON.stringify([item.title, item.paragraph, item.id])}
+          keyExtractor={(item, i) => `${i}`}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={commonStyles.card}

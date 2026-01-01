@@ -10,6 +10,7 @@ import { MovePageScreen } from './main/MovePageScreen';
 import { NoteViewerScreen } from './main/NoteViewerScreen';
 import { ProblemsScreen } from './main/ProblemScreen';
 import { RecentPagesScreen } from './main/RecentPageScreen';
+import { SearchPageScreen } from './main/SearchPageScreen';
 import HomeScreen from './main/home/HomeScreen';
 import { NotePageScreen } from './main/notepage/NotePageScreen';
 import { TimeLineScreen } from './main/timeline/TimeLineScreen';
@@ -66,6 +67,11 @@ export const main = {
     title,
     component: KanbanItemScreen,
     path: 'kanban',
+  },
+  SearchPage: {
+    title,
+    component: SearchPageScreen,
+    path: 'search',
   },
   NoteViewer: {
     title,

@@ -1,3 +1,4 @@
+import { useAuthContext } from '@blacktokki/account';
 import {
   useColorScheme,
   useLangContext,
@@ -120,10 +121,11 @@ const RandomButton = () => {
         onPress={() => {
           const page = randomPages[Math.floor(Math.random() * randomPages.length)];
           const paragraphs = parseHtmlToParagraphs(page.description || '');
-          navigation.push('NotePage', {
-            title: page.title,
-            paragraph: paragraphs[Math.floor(Math.random() * paragraphs.length)].title,
-          });
+          const paragraph = paragraphs[Math.floor(Math.random() * paragraphs.length)].title;
+          navigation.push(
+            'NotePage',
+            toNoteParams(page.title, paragraph.length >= 0 ? paragraph : undefined)
+          );
         }}
       >
         <Icon name={'random'} size={18} color="#FFFFFF" />
@@ -156,6 +158,9 @@ const useOnPressKeyword = ({
         addKeyword && addKeywordMutate(item);
       } else if (item.type === '_NOTELINK' && item.paragraph) {
         navigation.push('NotePage', { title: item.title, paragraph: item.paragraph });
+        addKeyword && addKeywordMutate(item);
+      } else if (item.type === '_QUERY') {
+        navigation.push('SearchPage', { query: item.query });
         addKeyword && addKeywordMutate(item);
       } else {
         navigation.push('NotePage', { title: item.title });
@@ -193,7 +198,7 @@ export const SearchList = ({
     <FlatList
       data={filteredPages}
       keyExtractor={(item: any) =>
-        JSON.stringify([item.title, item.name, item.paragraph, item.origin, item.type])
+        JSON.stringify([item.title, item.name, item.query, item.paragraph, item.origin, item.type])
       }
       renderItem={({ item, index }) => (
         <TouchableOpacity
@@ -203,9 +208,31 @@ export const SearchList = ({
           ]}
           {...pagePressHandlers(item)}
         >
-          <Text style={[commonStyles.text, styles.resultText, { flexShrink: 0 }]}>
-            {item.type === '_NOTELINK' || item.type === '_LINK' ? item.name : item.title}
-          </Text>
+          <View style={{ flexDirection: 'row', backgroundColor: 'transparent' }}>
+            {item.type === '_LINK' && (
+              <Icon
+                style={{ top: 6, paddingRight: 6 }}
+                name={'external-link'}
+                size={12}
+                color={commonStyles.text.color}
+              />
+            )}
+            {item.type === '_QUERY' && (
+              <Icon
+                style={{ top: 6, paddingRight: 6 }}
+                name={'search'}
+                size={12}
+                color={commonStyles.text.color}
+              />
+            )}
+            <Text style={[commonStyles.text, styles.resultText, { flexShrink: 0 }]}>
+              {item.type === '_NOTELINK' || item.type === '_LINK'
+                ? item.name
+                : item.type === '_QUERY'
+                ? item.query
+                : item.title}
+            </Text>
+          </View>
           {item.type === '_NOTELINK' && (
             <Text
               numberOfLines={1}
@@ -234,19 +261,29 @@ export const SearchList = ({
 export const SearchBar: React.FC<
   {
     useRandom?: boolean;
+    useTextSearch?: boolean;
     newContent?: boolean;
     icon?: string;
   } & PressKeywordOption
-> = ({ onPress, addKeyword = true, useRandom = true, newContent = true, icon = 'search' }) => {
+> = ({
+  onPress,
+  addKeyword = true,
+  useRandom = true,
+  useTextSearch = true,
+  newContent = true,
+  icon = 'search',
+}) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const { lang } = useLangContext();
+  const { auth } = useAuthContext();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const inputRef = useRef<TextInput | null>();
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();
+  const useTextSearchExact = !auth.isLocal && useTextSearch;
   const filteredPages: SearchContent[] = (
     searchText.length > 0 ? getFilteredPages(pages, searchText) : keywords
   )
@@ -259,6 +296,13 @@ export const SearchBar: React.FC<
     afterPress: () => setSearchText(''),
   });
 
+  const handleTextSearch = () => {
+    const query = searchText.trim();
+    if (query) {
+      handleKeywordPress({ type: '_QUERY', query });
+    }
+  };
+
   const handleSearch = () => {
     const title = searchText.trim();
     if (title) {
@@ -270,6 +314,14 @@ export const SearchBar: React.FC<
     () =>
       PanResponder.create({
         onPanResponderStart: handleSearch,
+      }).panHandlers,
+    [searchText]
+  );
+
+  const textSearchHandlers = useMemo(
+    () =>
+      PanResponder.create({
+        onPanResponderStart: handleTextSearch,
       }).panHandlers,
     [searchText]
   );
@@ -319,17 +371,29 @@ export const SearchBar: React.FC<
                   handleKeywordPress(filteredPages[focusIndex]);
                   setFocusIndex(-1);
                 }
+              : useTextSearchExact
+              ? handleTextSearch
               : handleSearch
           }
           onFocus={() => setShowResults(true)}
           onBlur={() => setShowResults(false)}
         />
+        {useTextSearchExact && (
+          <TouchableOpacity
+            style={commonStyles.searchButton}
+            onPress={handleTextSearch}
+            disabled={!searchText.trim()}
+          >
+            <Icon name="search" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
-          style={commonStyles.searchButton}
+          style={[commonStyles.searchButton]}
           onPress={handleSearch}
           disabled={!searchText.trim()}
         >
-          <Icon name={icon} size={18} color="#FFFFFF" />
+          <Icon name="arrow-right" size={18} color="#FFFFFF" />
         </TouchableOpacity>
         {useRandom && <RandomButton />}
       </View>
@@ -348,11 +412,20 @@ export const SearchBar: React.FC<
               focus={focusIndex}
             />
           ) : searchText.trim() && newContent ? (
-            <TouchableOpacity style={styles.resultItem} {...newNoteHandlers}>
-              <Text style={[commonStyles.text, styles.resultText]}>
-                "{searchText}"{lang(' : Create new note')}
-              </Text>
-            </TouchableOpacity>
+            <>
+              {useTextSearchExact && (
+                <TouchableOpacity style={styles.resultItem} {...textSearchHandlers}>
+                  <Text style={[commonStyles.text, styles.resultText]}>
+                    "{searchText}"{lang(' : Search')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.resultItem} {...newNoteHandlers}>
+                <Text style={[commonStyles.text, styles.resultText]}>
+                  "{searchText}"{lang(' : Create new note')}
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : null}
         </View>
       )}

@@ -465,7 +465,12 @@ export const MovePageScreen: React.FC = () => {
           {newTitle && title !== mainNewTitle && (
             <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>{newTitle}</Text>
           )}
-          <SearchBar onPress={setNewTitle} addKeyword={false} useRandom={false} />
+          <SearchBar
+            onPress={setNewTitle}
+            addKeyword={false}
+            useRandom={false}
+            useTextSearch={false}
+          />
           <Spacer height={12} />
           {path.length === 0 && subNotes.length > 0 && (
             <TouchableOpacity

@@ -91,6 +91,7 @@
   "Add & Rename & Delete": "추가 & 이름변경 & 삭제",
   "Add": "추가",
   " : Create new note": " : 새 노트 만들기",
+  " : Search": " : 검색하기",
   "Privacy Mode": "프라이버시 모드",
   "Enable Privacy Mode": "프라이버시 모드 활성화",
   "This note is hidden by Privacy Mode.": "프라이버시 모드에 의해 숨겨진 노트입니다.",
@@ -100,5 +101,6 @@
   "Manage your access tokens": "액세스 토큰 관리",
   "Generate New Token": "새 토큰 생성",
   "Copy your new token now. It won't be shown again.": "지금 새 토큰을 복사하세요. 다시 표시되지 않습니다.",
-  "Expires": "만료일"
+  "Expires": "만료일",
+  "Search Results": "검색 결과"
 }

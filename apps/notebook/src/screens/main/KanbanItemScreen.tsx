@@ -319,6 +319,7 @@ export const KanbanItemScreen: React.FC = () => {
                     }}
                     addKeyword={false}
                     useRandom={false}
+                    useTextSearch={false}
                     newContent={false}
                     icon="plus"
                   />

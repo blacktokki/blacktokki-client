@@ -58,4 +58,5 @@ export type NavigationParamList = {
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
   KanbanPage: { title: string };
+  SearchPage: { query: string };
 };

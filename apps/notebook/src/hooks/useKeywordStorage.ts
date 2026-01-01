@@ -23,6 +23,10 @@ export type KeywordContent =
   | {
       type: '_KEYWORD';
       title: string;
+    }
+  | {
+      type: '_QUERY';
+      query: string;
     };
 
 const getKeywords = async (subkey: string | undefined): Promise<KeywordContent[]> => {
@@ -61,7 +65,8 @@ export const useKeywords = () => {
             (v) =>
               (v.type === '_KEYWORD' && !isHiddenTitle(v.title)) ||
               (v.type === '_NOTELINK' && !isHiddenTitle(v.origin) && !isHiddenTitle(v.title)) ||
-              (v.type === '_LINK' && !isHiddenTitle(v.origin))
+              (v.type === '_LINK' && !isHiddenTitle(v.origin)) ||
+              v.type === '_QUERY'
           );
     },
   });

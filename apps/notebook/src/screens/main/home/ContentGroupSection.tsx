@@ -80,14 +80,15 @@ const DraggableTabItem = ({
   onReorder,
   children,
   style,
+  draggingColor,
 }: {
   index: number;
   totalCount: number;
   onReorder: (fromIndex: number, toIndex: number) => void;
   children: React.ReactNode;
+  draggingColor: string;
   style?: StyleProp<ViewStyle>;
 }) => {
-  const theme = useColorScheme();
   const pan = useRef(new Animated.ValueXY()).current;
   const [isDragging, setIsDragging] = useState(false);
   const itemHeight = useRef(0);
@@ -183,7 +184,7 @@ const DraggableTabItem = ({
           transform: [{ translateY: pan.y }],
           zIndex: isDragging ? 999 : 1,
           opacity: isDragging ? 0.9 : 1,
-          backgroundColor: isDragging ? (theme === 'dark' ? '#333' : '#fff') : 'transparent',
+          backgroundColor: isDragging ? draggingColor : 'transparent',
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: isDragging ? 0.2 : 0,
@@ -472,6 +473,7 @@ const ContentGroupSection = (props: Props) => {
               index={index}
               totalCount={listData.length}
               onReorder={handleReorder}
+              draggingColor={styles.activeTab.backgroundColor}
             >
               {itemContent}
             </DraggableTabItem>

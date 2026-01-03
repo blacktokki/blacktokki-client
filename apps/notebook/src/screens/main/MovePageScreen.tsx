@@ -73,26 +73,25 @@ const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 'dark')
   }
 
   // 3. 테마별 색상 정의
-  // 다크모드: 눈이 편안한 어두운 회색 배경 + 채도가 낮은 적색/녹색 사용
   const colors =
     theme === 'dark'
       ? {
-          containerBg: '#1e1e1e', // VS Code 스타일 어두운 배경
-          text: '#d4d4d4', // 밝은 회색 텍스트
-          border: '#333333', // 어두운 테두리
-          delBg: '#451818', // 어두운 붉은색 (가독성 확보)
-          insBg: '#183818', // 어두운 초록색 (가독성 확보)
-          emptyBg: '#252526', // 빈 공간 (패턴용)
+          containerBg: '#1e1e1e',
+          text: '#d4d4d4',
+          border: '#333333',
+          delBg: '#451818',
+          insBg: '#183818',
+          emptyBg: '#252526',
         }
       : {
-          containerBg: '#ffffff',
-          text: '#333333',
-          border: '#eeeeee',
-          delBg: '#ffe6e6', // 밝은 붉은색
-          insBg: '#e6ffe6', // 밝은 초록색
-          emptyBg: '#f9f9f9',
+          // 수정: 눈이 편안한 배경색과 대비가 낮은 강조색 적용
+          containerBg: '#FAFAFA',
+          text: '#454545',
+          border: '#E0E0E0',
+          delBg: '#F2D7D7', // 채도를 낮춘 Red
+          insBg: '#D7F2D7', // 채도를 낮춘 Green
+          emptyBg: '#F5F5F5',
         };
-
   // 4. HTML 스타일 및 생성 로직
   // inline style을 사용하여 별도의 CSS 파일 없이 동작하도록 함
   const rowStyle = `display: flex; flex-direction: row; align-items: stretch; border-bottom: 1px solid ${colors.border}; background-color: ${colors.containerBg};`;
@@ -222,7 +221,7 @@ export const ChangedBlock = ({ item }: { item: ChangedItem }) => {
           commonStyles.row,
           {
             padding: 12,
-            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F9F9F9',
+            backgroundColor: commonStyles.card.backgroundColor,
             borderBottomWidth: isExpanded ? 1 : 0,
             borderBottomColor: commonStyles.card.borderColor,
           },
@@ -342,7 +341,6 @@ export const MovePageScreen: React.FC = () => {
       }
     } else {
       const existingMainDesciption = (existingMain?.description || '').length > 0;
-      console.log(existingMain);
       if (existingMain && existingMainDesciption) {
         data.push({
           renderType: 'override',

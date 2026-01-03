@@ -18,7 +18,7 @@ export default ({ paragraph }: { paragraph: string }) => {
       style={{
         padding: 4,
         paddingBottom: 0,
-        top: 6,
+        paddingTop: 10,
         zIndex: 1,
         flexDirection: 'row',
         alignItems: 'center',

@@ -34,7 +34,7 @@ export default function DateHeaderSection({
 
   const themedStyles = StyleSheet.create({
     container: {
-      backgroundColor: commonStyles.container.backgroundColor,
+      backgroundColor: commonStyles.card.backgroundColor,
       shadowColor: commonStyles.text.color,
       borderColor: commonStyles.card.borderColor,
     },

@@ -1,5 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
-import { useLangContext, View, useColorScheme, Colors } from '@blacktokki/core';
+import { useLangContext, View, useColorScheme } from '@blacktokki/core';
 import { push } from '@blacktokki/navigation';
 import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-native';
@@ -16,11 +16,13 @@ import ContentGroupSection, {
   ContentGroupSubType,
   CurrentTabSection,
 } from '../screens/main/home/ContentGroupSection';
+import { createCommonStyles } from '../styles';
 
 export default () => {
   const { lang } = useLangContext();
   const { auth } = useAuthContext();
   const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
   const { data: lastTab } = useLastTab();
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');
@@ -28,25 +30,18 @@ export default () => {
 
   const renderBadge = (type: ContentGroupSubType, label: string, icon: string) => {
     const isActive = currentSubView === type;
-    const activeColor = Colors[theme].text;
-    const inactiveColor = theme === 'dark' ? '#888888' : '#666666';
-    const backgroundColor = isActive ? (theme === 'dark' ? '#333333' : '#e0e0e0') : 'transparent';
-
+    const tabStyles = commonStyles[isActive ? 'activeTab' : 'inactiveTab'];
+    const borderColor = commonStyles.inactiveTab.color;
     return (
       <TouchableOpacity
-        style={[styles.badge, { backgroundColor, borderColor: inactiveColor }]}
+        style={[styles.badge, { backgroundColor: tabStyles.backgroundColor, borderColor }]}
         onPress={() => setCurrentSubView(type)}
       >
-        <Icon
-          name={icon}
-          size={14}
-          color={isActive ? activeColor : inactiveColor}
-          style={{ marginRight: 6 }}
-        />
+        <Icon name={icon} size={14} color={tabStyles.color} style={{ marginRight: 6 }} />
         <Text
           style={{
             fontSize: 12,
-            color: isActive ? activeColor : inactiveColor,
+            color: tabStyles.color,
             fontWeight: isActive ? 'bold' : 'normal',
           }}
         >
@@ -63,31 +58,26 @@ export default () => {
     isActive: boolean,
     disabled?: boolean
   ) => {
-    const activeColor = Colors[theme].text;
-    const inactiveColor = theme === 'dark' ? '#888888' : '#999999';
+    const tabStyles = commonStyles[isActive ? 'activeTab' : 'inactiveTab'];
+    const borderBottomColor = commonStyles.activeTab.color;
 
     return (
       <TouchableOpacity
         style={[
           styles.tabItem,
-          isActive && { borderBottomColor: activeColor, borderBottomWidth: 2 },
+          isActive && { borderBottomColor, borderBottomWidth: 2 },
           disabled && { opacity: 0.33 },
         ]}
         disabled={disabled}
         onPress={() => setCurrentView(type)}
       >
-        <Icon
-          name={icon}
-          size={16}
-          color={isActive ? activeColor : inactiveColor}
-          style={{ marginBottom: 4 }}
-        />
+        <Icon name={icon} size={16} color={tabStyles.color} style={{ marginBottom: 4 }} />
         <Text
           style={{
             fontSize: 13,
             textAlign: 'center',
             fontWeight: isActive ? 'bold' : 'normal',
-            color: isActive ? activeColor : inactiveColor,
+            color: tabStyles.color,
           }}
         >
           {label}
@@ -116,7 +106,10 @@ export default () => {
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <TabsSection />
         <View
-          style={[styles.tabContainer, { borderBottomColor: theme === 'dark' ? '#333' : '#eee' }]}
+          style={[
+            styles.tabContainer,
+            { borderBottomColor: commonStyles.separator.backgroundColor },
+          ]}
         >
           {renderTab('RECENT', lang('All Notes'), 'notebook', currentView === 'RECENT')}
           {renderTab('KANBAN', lang('Kanban'), 'view-dashboard', currentView === 'KANBAN')}

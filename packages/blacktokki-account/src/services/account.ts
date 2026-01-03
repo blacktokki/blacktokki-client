@@ -49,9 +49,9 @@ export async function createOtp() {
 
 export async function verifyOtp(otpVerify: OtpVerify) {
   try {
-    return (await account.post('/api/v1/otp/verify', otpVerify)).status === 200;
+    return (await account.post('/api/v1/otp/verify', otpVerify)).data as string;
   } catch (e) {
-    return false;
+    return '';
   }
 }
 

@@ -113,8 +113,9 @@ export default () => {
   const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();
   const resetKeyword = useResetKeyowrd();
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacyConfig } = usePrivacy();
   const setPrivacy = useSetPrivacy();
+
   return (
     <View>
       <View style={commonStyles.card}>
@@ -158,26 +159,90 @@ export default () => {
             </>
           )}
           {noteConfig === 'privacy' && (
-            <>
-              <Text
-                selectable={false}
-                style={[commonStyles.smallText, { paddingVertical: 8, fontStyle: 'italic' }]}
-              >
-                {lang('Toggle visibility of notes and subnotes starting with "."')}
+            <View style={{ marginTop: 12 }}>
+              <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
+                {lang('Privacy Mode')}
+                {' : '}
+                {lang('Visibility of notes and subnotes starting with "."')}
               </Text>
-              <View style={{ flexDirection: 'row' }}>
+              <View style={{ flexDirection: 'row', marginBottom: 12 }}>
                 <OptionButton
                   title={lang('On')}
-                  onPress={() => setPrivacy.mutate(true)}
-                  active={isPrivacyMode}
+                  onPress={() => setPrivacy.mutate({ enabled: true })}
+                  active={privacyConfig.enabled}
                 />
                 <OptionButton
                   title={lang('Off')}
-                  onPress={() => setPrivacy.mutate(false)}
-                  active={!isPrivacyMode}
+                  onPress={() => setPrivacy.mutate({ enabled: false })}
+                  active={!privacyConfig.enabled}
                 />
               </View>
-            </>
+
+              {!privacyConfig.enabled && !auth.isLocal && (
+                <>
+                  <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
+                    {lang('Require OTP for Privacy Mode')}
+                  </Text>
+                  {auth.useOtp ? (
+                    <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                      <OptionButton
+                        title={lang('On')}
+                        onPress={() => setPrivacy.mutate({ otpRequired: true })}
+                        active={privacyConfig.otpRequired}
+                      />
+                      <OptionButton
+                        title={lang('Off')}
+                        onPress={() => setPrivacy.mutate({ otpRequired: false })}
+                        active={!privacyConfig.otpRequired}
+                      />
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                      <OptionButton
+                        title={lang('OTP (2단계 인증)')}
+                        onPress={() => setModal(AccountEditModal, { openOtp: true })}
+                        active={false}
+                      />
+                    </View>
+                  )}
+                </>
+              )}
+
+              {!privacyConfig.enabled && (
+                <>
+                  <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
+                    {lang('Auto-unlock (10 mins)')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                    <OptionButton
+                      title={lang('On')}
+                      onPress={() => setPrivacy.mutate({ autoUnlock: true })}
+                      active={privacyConfig.autoUnlock}
+                    />
+                    <OptionButton
+                      title={lang('Off')}
+                      onPress={() => setPrivacy.mutate({ autoUnlock: false })}
+                      active={!privacyConfig.autoUnlock}
+                    />
+                  </View>
+                  <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
+                    {lang('Disable on refresh or new access')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                    <OptionButton
+                      title={lang('On')}
+                      onPress={() => setPrivacy.mutate({ resetOnSession: true })}
+                      active={privacyConfig.resetOnSession}
+                    />
+                    <OptionButton
+                      title={lang('Off')}
+                      onPress={() => setPrivacy.mutate({ resetOnSession: false })}
+                      active={!privacyConfig.resetOnSession}
+                    />
+                  </View>
+                </>
+              )}
+            </View>
           )}
         </ConfigSection>
       </View>

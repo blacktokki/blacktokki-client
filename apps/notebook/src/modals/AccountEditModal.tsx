@@ -232,7 +232,7 @@ const ExtraAuthSection = React.memo(
                           }}
                         >
                           <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>
-                            {lang('Sign out') + ' & ' + lang('Delete')}
+                            {lang('Sign out') + ' & ' + lang('Reset OTP')}
                           </Text>
                         </TouchableOpacity>
                       </View>

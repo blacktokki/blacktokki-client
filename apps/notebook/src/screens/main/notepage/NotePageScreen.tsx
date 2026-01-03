@@ -48,7 +48,7 @@ export const NotePageScreen: React.FC = () => {
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacyConfig } = usePrivacy();
   const setPrivacy = useSetPrivacy();
   const archiveIndex = _archives?.findIndex((v) => v.id === archiveId);
   const archive =
@@ -97,7 +97,8 @@ export const NotePageScreen: React.FC = () => {
       navigation.navigate('NotePage', { title, paragraph: undefined });
     }
   }, [page, paragraph, paragraphItem]);
-  if (!isPrivacyMode && isHiddenTitle(title)) {
+
+  if (!privacyConfig.enabled && isHiddenTitle(title)) {
     return (
       <>
         <ResponsiveSearchBar />
@@ -105,7 +106,7 @@ export const NotePageScreen: React.FC = () => {
           <StatusCard
             message="This note is hidden by Privacy Mode."
             buttonTitle="Enable Privacy Mode"
-            onButtonPress={() => setPrivacy.mutate(true)}
+            onButtonPress={() => setPrivacy.mutate({ enabled: true })}
           />
         </View>
       </>

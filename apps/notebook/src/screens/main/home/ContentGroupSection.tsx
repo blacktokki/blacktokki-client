@@ -507,11 +507,11 @@ export const CurrentTabSection = () => {
 
 export const TabsSection = () => {
   const { lang } = useLangContext();
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacyConfig } = usePrivacy();
   return (
     <>
       <List.Subheader selectable={false}>
-        {isPrivacyMode ? lang('Tab List - Privacy Mode') : lang('Tab List')}
+        {privacyConfig.enabled ? lang('Tab List - Privacy Mode') : lang('Tab List')}
       </List.Subheader>
       <ContentGroupSection type={'PAGE'} />
     </>

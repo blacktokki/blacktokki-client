@@ -7,7 +7,7 @@ export type BoardOption = {
 export type PostContent = {
   userId: number;
   parentId: number;
-  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA' | 'BOARD';
+  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA' | 'BOARD' | 'CONFIG';
   order: number;
   input: string;
   title: string;
@@ -50,6 +50,13 @@ export type ParagraphKey =
       paragraph: string;
       section?: string;
     };
+
+export type FetchPrivacyConfig = {
+  enabled?: [number | undefined, boolean];
+  otpRequired?: [number | undefined, boolean];
+  autoUnlock?: [number | undefined, boolean];
+  resetOnSession?: [number | undefined, boolean];
+};
 
 export type NavigationParamList = {
   Home: undefined;

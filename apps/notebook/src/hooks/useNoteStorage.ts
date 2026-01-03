@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } 
 
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
-import { isHiddenTitle, usePrivacy } from './usePrivacy';
+import { usePrivacy } from './usePrivacy';
 
 const DB_NAME = '@Blacktokki:notebook';
 const DB_VERSION = 2;
@@ -86,9 +86,7 @@ export const saveContents = async (
   if (isOnline) {
     if (content) {
       const id = (content as Content).id;
-      const savedId = await (id
-        ? patchContent({ id, updated: content }).then(() => id)
-        : postContent(content));
+      const savedId = await (id ? patchContent(id, content).then(() => id) : postContent(content));
       if (content.type === 'NOTE') {
         const snapshot: Content | PostContent = {
           ...content,
@@ -157,13 +155,12 @@ export const saveContents = async (
 
 export const useNotePages = () => {
   const { auth } = useAuthContext();
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacy } = usePrivacy();
 
   return useQuery({
-    queryKey: ['pageContents', !auth.isLocal, isPrivacyMode],
+    queryKey: ['pageContents', !auth.isLocal, privacy.enabled],
     queryFn: async () => {
-      const contents = await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
-      return isPrivacyMode ? contents : contents.filter((v) => !isHiddenTitle(v.title));
+      return await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
     },
   });
 };
@@ -188,15 +185,12 @@ export const useSnapshotPages = (parentId?: number) => {
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacy } = usePrivacy();
   const { data: contents = [], isFetching } = useNotePages();
 
   const query = useQuery({
-    queryKey: ['pageContent', title],
+    queryKey: ['pageContent', title, privacy.enabled],
     queryFn: async () => {
-      if (isPrivacyMode && isHiddenTitle(title)) {
-        return undefined;
-      }
       const page = contents.find((c) => c.title === title);
       return page || { title, description: '', id: undefined };
     },

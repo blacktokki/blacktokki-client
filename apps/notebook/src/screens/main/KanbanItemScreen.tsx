@@ -85,7 +85,7 @@ export const KanbanItemScreen: React.FC = () => {
   const accessableRef = useRef(true);
   const [showConfig, setShowConfig] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacyConfig } = usePrivacy();
   const setPrivacy = useSetPrivacy();
   const horizontal = true;
   const option = board?.option;
@@ -194,7 +194,7 @@ export const KanbanItemScreen: React.FC = () => {
     </View>
   );
 
-  if (!isPrivacyMode && isHiddenTitle(title)) {
+  if (!privacyConfig.enabled && isHiddenTitle(title)) {
     return (
       <>
         <ResponsiveSearchBar />
@@ -202,7 +202,7 @@ export const KanbanItemScreen: React.FC = () => {
           <StatusCard
             message="This kanban is hidden by Privacy Mode."
             buttonTitle="Enable Privacy Mode"
-            onButtonPress={() => setPrivacy.mutate(true)}
+            onButtonPress={() => setPrivacy.mutate({ enabled: true })}
           />
         </View>
       </>

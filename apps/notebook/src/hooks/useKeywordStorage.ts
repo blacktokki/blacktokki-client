@@ -53,13 +53,13 @@ const saveKeywords = async (
 
 export const useKeywords = () => {
   const { auth } = useAuthContext();
-  const { isPrivacyMode } = usePrivacy();
+  const { data: privacyConfig } = usePrivacy();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   return useQuery({
-    queryKey: ['keywords', subkey, isPrivacyMode],
+    queryKey: ['keywords', subkey, privacyConfig.enabled],
     queryFn: async () => {
       const keywords = await getKeywords(subkey);
-      return isPrivacyMode
+      return privacyConfig.enabled
         ? keywords
         : keywords.filter(
             (v) =>

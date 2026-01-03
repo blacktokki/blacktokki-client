@@ -57,7 +57,7 @@ const AuthContext = createContext<{
   dispatch: Dispatch<AuthAction>;
   otp?: {
     create: () => Promise<OtpResponse>;
-    verify: (code: number) => Promise<boolean>;
+    verify: (code: number) => Promise<string>;
   };
 }>({
   auth: {},

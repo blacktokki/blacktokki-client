@@ -31,10 +31,7 @@ export const axiosCreate = (service: string) => {
       return response;
     },
     async (error: any) => {
-      if (
-        needRefresh(error.response) ||
-        (error.response.status === 403 && error.response.config.url !== '/api/v1/otp/verify')
-      ) {
+      if (needRefresh(error.response) || error.response.status === 403) {
         await refreshToken();
       }
       return Promise.reject(error);

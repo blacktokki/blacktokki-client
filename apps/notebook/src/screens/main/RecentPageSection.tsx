@@ -1,4 +1,5 @@
 import { useColorScheme, useResizeContext, View, Text } from '@blacktokki/core';
+import { cleanHtml } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
@@ -13,36 +14,6 @@ import StatusCard from '../../components/StatusCard';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
-
-function removeAttributesRecursively(element: Element) {
-  const attributes = Array.from(element.attributes); // 반복 중 변경 방지용 복사
-
-  for (const attr of attributes) {
-    if (attr.name === 'href') {
-      element.setAttribute('href', '');
-    } else {
-      element.removeAttribute(attr.name);
-    }
-  }
-
-  // 자식 요소들에 대해 재귀 호출
-  for (const child of element.children as unknown as Element[]) {
-    removeAttributesRecursively(child);
-  }
-}
-
-function removeAllAttributesFromHTML(html: string): string {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  // body 하위 요소에 대해서만 처리
-  const body = doc.body;
-  for (const child of body.children as unknown as Element[]) {
-    removeAttributesRecursively(child);
-  }
-
-  return body.innerHTML;
-}
 
 const _zoomOut = (isLandscape: boolean) => (isLandscape ? 1 : 1);
 
@@ -153,8 +124,10 @@ export const useToCardPage = (onPress: (item: BaseItem) => void, scale: Scale) =
         <RenderHtml
           source={{
             html:
-              removeAllAttributesFromHTML(v.description || '').slice(0, 300 * zoomOut * zoomOut) ||
-              '',
+              cleanHtml(v.description || '', false, false, false).slice(
+                0,
+                300 * zoomOut * zoomOut
+              ) || '',
           }}
           renderersProps={{
             a: { onPress: () => onPress(v) },

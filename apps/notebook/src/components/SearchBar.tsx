@@ -7,6 +7,7 @@ import {
   Colors,
   useResizeContext,
 } from '@blacktokki/core';
+import { extractHtmlLinks } from '@blacktokki/editor';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,23 +23,6 @@ import { parseHtmlToParagraphs } from './HeaderSelectBar';
 let _searchText = '';
 
 type SearchContent = Content | KeywordContent;
-
-const parser = new DOMParser();
-
-function extractHtmlLinksWithQuery(text: string) {
-  const doc = parser.parseFromString(text, 'text/html');
-
-  // 모든 a 태그 선택
-  const links = doc.querySelectorAll('a');
-
-  // 이름과 주소 추출
-  const matches = Array.from(links).map((a) => ({
-    text: a.textContent?.trim() || a.href,
-    url: a.href,
-  }));
-
-  return matches;
-}
 
 export function toNoteParams(
   title: string,
@@ -73,7 +57,7 @@ export function onLink(url: string, navigation: StackNavigationProp<NavigationPa
 export function getLinks(pages: Content[], sameTitle?: boolean) {
   return pages
     .flatMap((v) =>
-      extractHtmlLinksWithQuery(v.description || '').map((v2) => {
+      extractHtmlLinks(v.description || '').map((v2) => {
         const noteLink = urlToNoteLink(v2.url);
         if (noteLink) {
           if (sameTitle || v2.text !== noteLink.title) {

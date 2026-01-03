@@ -1,8 +1,9 @@
 import { useAuthContext } from '@blacktokki/account';
-import { toRaw } from '@blacktokki/editor';
+import { cleanHtml, findLists, toRaw } from '@blacktokki/editor';
 import { useEffect, useRef, useState } from 'react';
 
 import { KeywordContent } from './useKeywordStorage';
+import { useNotePages } from './useNoteStorage';
 import {
   base64Decode,
   base64Encode,
@@ -10,9 +11,7 @@ import {
   parseHtmlToParagraphs,
 } from '../components/HeaderSelectBar';
 import { getLinks, titleFormat } from '../components/SearchBar';
-import { cleanHtml } from '../components/TimerTag';
 import { Content, ParagraphKey } from '../types';
-import { useNotePages } from './useNoteStorage';
 
 const getReadabilityLevel = (() => {
   function getKoreanRatio(text: string): number {
@@ -69,38 +68,6 @@ const getReadabilityLevel = (() => {
   }
   return _getReadabilityLevel;
 })();
-
-function findLists(html: string): { type: 'ul' | 'ol'; items: string[] }[] {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  const results: { type: 'ul' | 'ol'; items: string[] }[] = [];
-
-  const listTags = ['ul', 'ol'] as const;
-
-  listTags.forEach((tag) => {
-    const lists = Array.from(doc.querySelectorAll(tag));
-
-    lists.forEach((list) => {
-      const items: string[] = [];
-
-      const liElements = list.querySelectorAll('li');
-      liElements.forEach((li) => {
-        // li 요소 내 중첩 리스트는 제거하고 텍스트만 추출
-        const cloned = li.cloneNode(true) as HTMLElement;
-
-        // 중첩된 리스트 제거
-        cloned.querySelectorAll('ul, ol').forEach((nested) => nested.remove());
-
-        items.push(cloned.textContent?.trim() || '');
-      });
-
-      results.push({ type: tag, items });
-    });
-  });
-
-  return results;
-}
 
 export const getSplitTitle = (title: string) => {
   const splitTitle = title.split('/');
@@ -192,7 +159,7 @@ const getDataLinear = (page: Content) => {
     );
   paragraphs
     .map((v) => {
-      const sentences = cleanHtml(v.description, false, true)
+      const sentences = cleanHtml(v.description, true, true, true)
         .split('\n')
         .map((v2) => toRaw(v2).trim())
         .filter((v) => v.includes(' ') && v.length > 4);
@@ -226,7 +193,7 @@ const getDataLinear = (page: Content) => {
   const links = getLinks([page], true).filter((v) => v.type === '_NOTELINK');
   const splitTitle = getSplitTitle(page.title);
   const parentTitle = page.description && splitTitle.length === 2 ? splitTitle[0] : undefined;
-  const raw = toRaw(cleanHtml(page.description || '', true, false));
+  const raw = toRaw(cleanHtml(page.description || '', true, true, false));
   problemCache[page.title] = {
     record,
     source: { title: page.title, updated: page.updated, links, parentTitle, raw },

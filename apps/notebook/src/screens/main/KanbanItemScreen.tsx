@@ -348,11 +348,16 @@ export const KanbanItemScreen: React.FC = () => {
         // 칸반 보드 화면
         <View style={[commonStyles.container, { paddingHorizontal: 0, paddingVertical: 0 }]}>
           {header}
+          <View
+            style={{ width: '100%', height: 2, backgroundColor: commonStyles.card.borderColor }}
+          />
           {columns && columns.length > 0 ? (
             <Kanban
               horizontal={_window === 'portrait' && horizontal}
               columns={columns}
-              columnStyle={{ borderColor: commonStyles.text.color }}
+              columnStyle={{
+                borderColor: commonStyles.card.borderColor,
+              }}
               renderHeader={({ item }) => (
                 <TouchableOpacity
                   onPress={() =>
@@ -383,7 +388,7 @@ export const KanbanItemScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  header: { zIndex: 1, alignItems: 'flex-start', marginHorizontal: 24, marginVertical: 16 },
+  header: { zIndex: 1, alignItems: 'center', marginHorizontal: 24, marginTop: 8, marginBottom: 0 },
   titleContainer: {
     flexDirection: 'row',
     maxWidth: '100%',

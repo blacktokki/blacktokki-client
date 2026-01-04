@@ -1,9 +1,9 @@
-import { useColorScheme, useResizeContext, View, Text } from '@blacktokki/core';
+import { useColorScheme, useResizeContext, Text } from '@blacktokki/core';
 import { cleanHtml } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { TouchableOpacity, ScrollView, StyleSheet, View } from 'react-native';
 import { Card } from 'react-native-paper';
 
 import { NotePageHeader } from './NoteItemSections';
@@ -80,6 +80,7 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
           styles.card,
           {
             padding: 8 + cardPadding * 0.4,
+            paddingTop: 0,
             aspectRatio: item.updated || window === 'landscape' ? 1 / Math.sqrt(2) : Math.sqrt(2),
           },
         ]}
@@ -206,7 +207,9 @@ export const RecentPagesSection = React.memo(() => {
       contentContainerStyle={[
         styles.contentContainer,
         {
+          backgroundColor: commonStyles.container.backgroundColor,
           paddingRight: defaultScale[window].padding,
+          paddingBottom: defaultScale[window].padding,
         },
       ]}
     >
@@ -251,7 +254,6 @@ export const RecentPagesSection = React.memo(() => {
 
 const styles = StyleSheet.create({
   card: {
-    paddingTop: 0,
     borderRadius: 6,
     marginVertical: 10,
     marginHorizontal: 8,
@@ -259,8 +261,6 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     flexDirection: 'row',
-    marginTop: 10,
-    padding: 0,
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',

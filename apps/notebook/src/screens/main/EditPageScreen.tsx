@@ -177,7 +177,6 @@ export const EditPageScreen: React.FC = () => {
   }
 
   const isPrevent = () => checkedRef.current !== undefined && checkedRef.current.unsaved;
-  const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
 
   useEffect(() => {
     if (!isLoading && page?.description !== undefined && !isPrevent()) {
@@ -225,7 +224,7 @@ export const EditPageScreen: React.FC = () => {
               onPress={isPrevent() ? handleUnsaved : () => push('KanbanPage', { title: kanban })}
               style={[commonStyles.title, { marginRight: 5 }]}
             >
-              <Icon2 name="view-dashboard" size={20} color={pressableTextColor} />
+              <Icon2 name="view-dashboard" size={20} color={commonStyles.pressibleText.color} />
             </TouchableOpacity>
           )}
           <Text style={[commonStyles.title, { flex: 1 }]}>

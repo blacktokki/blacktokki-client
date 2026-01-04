@@ -383,12 +383,7 @@ export const SearchBar: React.FC<
       </View>
 
       {showResults && (
-        <View
-          style={[
-            styles.resultsContainer,
-            theme === 'dark' ? styles.darkResults : styles.lightResults,
-          ]}
-        >
+        <View style={[commonStyles.resultsContainer, styles.resultsContainer]}>
           {filteredPages.length > 0 ? (
             <SearchList
               filteredPages={filteredPages}
@@ -438,8 +433,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     maxHeight: 500,
-    borderWidth: 1,
-    borderRadius: 4,
     zIndex: 999,
     elevation: 5,
   },

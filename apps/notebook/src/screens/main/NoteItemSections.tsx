@@ -32,7 +32,6 @@ export const NotePageHeader = ({
   const commonStyles = createCommonStyles(theme);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const splitTitle = getSplitTitle(title);
-  const pressableTextColor = theme === 'dark' ? '#FFFFFF88' : '#00000088';
   return (
     <View style={styles.header}>
       {kanban && (
@@ -43,7 +42,7 @@ export const NotePageHeader = ({
           <Icon2
             name="view-dashboard"
             size={pageStyles.title.fontSize}
-            color={pressableTextColor}
+            color={commonStyles.pressibleText.color}
           />
         </TouchableOpacity>
       )}
@@ -55,7 +54,7 @@ export const NotePageHeader = ({
           style={[
             commonStyles.title,
             pageStyles.title,
-            paragraph || splitTitle.length === 2 ? { color: pressableTextColor } : {},
+            paragraph || splitTitle.length === 2 ? commonStyles.pressibleText : {},
           ]}
           numberOfLines={1}
         >
@@ -70,7 +69,7 @@ export const NotePageHeader = ({
               style={[
                 commonStyles.title,
                 pageStyles.title,
-                paragraph ? { color: pressableTextColor } : {},
+                paragraph ? commonStyles.pressibleText : {},
               ]}
               numberOfLines={1}
             >
@@ -111,8 +110,6 @@ export const NotePageHeader = ({
   );
 };
 
-const getIconColor = (theme: 'light' | 'dark') => (theme === 'dark' ? '#E4E4E4' : '#333333');
-
 export const HeaderIconButton: React.FC<{
   name: string;
   onPress: (event: GestureResponderEvent) => void;
@@ -120,7 +117,8 @@ export const HeaderIconButton: React.FC<{
   color?: string;
 }> = ({ name, onPress, size = 16, color }) => {
   const theme = useColorScheme();
-  const iconColor = color || getIconColor(theme);
+  const commonStyles = createCommonStyles(theme);
+  const iconColor = color || commonStyles.icon.color;
 
   return (
     <TouchableOpacity onPress={onPress} style={pageStyles.actionButton}>
@@ -179,7 +177,6 @@ export const NoteBottomSection = ({
   const idx = paragraphs.findIndex((v) => v.path === path);
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  const iconColor = getIconColor(theme);
   const moveParagraphs = [
     {
       icon: 'arrow-left',
@@ -209,7 +206,12 @@ export const NoteBottomSection = ({
                 onPress={() => onPress(moveParagraph)}
                 style={[styles.bottomButton, { flexDirection: reverse ? 'row-reverse' : 'row' }]}
               >
-                <Icon name={icon} size={16} color={iconColor} style={{ alignSelf: 'center' }} />
+                <Icon
+                  name={icon}
+                  size={16}
+                  color={commonStyles.icon.color}
+                  style={{ alignSelf: 'center' }}
+                />
                 <Text
                   ellipsizeMode="tail"
                   style={[commonStyles.text, { fontWeight: 'bold', marginHorizontal: 16 }]}

@@ -143,9 +143,7 @@ export default function HeaderSelectBar(props: {
     </TouchableOpacity>
   );
   return (
-    <View
-      style={[styles.resultsContainer, theme === 'dark' ? styles.darkResults : styles.lightResults]}
-    >
+    <View style={commonStyles.resultsContainer}>
       <FlatList
         data={props.data}
         keyExtractor={(item) => item.path}
@@ -166,17 +164,5 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: 14,
-  },
-  resultsContainer: {
-    borderWidth: 1,
-    borderRadius: 4,
-  },
-  lightResults: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CCCCCC',
-  },
-  darkResults: {
-    backgroundColor: '#222222',
-    borderColor: '#444444',
   },
 });

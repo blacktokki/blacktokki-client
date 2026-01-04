@@ -1,5 +1,5 @@
 import { CommonButton, useLangContext } from '@blacktokki/core';
-import { toRaw } from '@blacktokki/editor';
+import { cleanHtml, toRaw } from '@blacktokki/editor';
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
@@ -15,88 +15,87 @@ type DatePattern = {
   index: number;
 };
 
+// 정규식 패턴들
+const patterns: {
+  regex: RegExp;
+  parse: (match: RegExpExecArray, currentYear: number) => DatePattern;
+}[] = [
+  {
+    regex: /\b(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})\b/g,
+    parse: (match) => ({
+      // YYYY-MM-DD/YYYY-MM-DD
+      pattern: 'YYYY-MM-DD',
+      format: (s, e) => `${s}/${e}`,
+      text: match[0],
+      dateStart: match[1],
+      dateEnd: match[2],
+      index: match.index,
+    }),
+  },
+  {
+    regex: /\b(\d{4}-\d{2}-\d{2})\b/g,
+    parse: (match) => ({
+      pattern: 'YYYY-MM-DD',
+      text: match[0],
+      dateStart: match[1],
+      dateEnd: match[1],
+      index: match.index,
+    }),
+  },
+  {
+    regex: /\b\d{4}-\d{2}(?!-)\b/g,
+    parse: (match) => {
+      const split = match[0].split('-');
+      const year = parseInt(split[0], 10);
+      const month = parseInt(split[1], 10);
+      const lastDay = new Date(year, month, 0).getDate();
+      return {
+        pattern: 'YYYY-MM',
+        text: match[0],
+        dateStart: `${year}-${String(month).padStart(2, '0')}-01`,
+        dateEnd: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+        index: match.index,
+      };
+    },
+  },
+  {
+    regex: /\b(\d{2})\/(\d{2})\s*~\s*(\d{2})\/(\d{2})\b/g,
+    parse: (match, currentYear) => {
+      const mm = parseInt(match[1], 10);
+      const dd = parseInt(match[2], 10);
+      const mm2 = parseInt(match[3], 10);
+      const dd2 = parseInt(match[4], 10);
+      return {
+        // MM/DD ~ MM/DD
+        pattern: 'MM/DD',
+        format: (s, e) => `${s} ~ ${e}`,
+        text: match[0],
+        dateStart: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
+        dateEnd: `${currentYear}-${String(mm2).padStart(2, '0')}-${String(dd2).padStart(2, '0')}`,
+        index: match.index,
+      };
+    },
+  },
+  {
+    regex: /\b(?<!\d)(\d{2})\/(\d{2})(?!\d)\b/g,
+    parse: (match, currentYear) => {
+      const mm = parseInt(match[1], 10);
+      const dd = parseInt(match[2], 10);
+      return {
+        pattern: 'MM/DD',
+        text: match[0],
+        dateStart: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
+        dateEnd: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
+        index: match.index,
+      };
+    },
+  },
+];
+
 function extractDates(input: string) {
   const now = new Date();
   const currentYear = now.getFullYear();
-  // 정규식 패턴들
-  const patterns: {
-    regex: RegExp;
-    parse: (match: RegExpExecArray) => DatePattern;
-  }[] = [
-    {
-      regex: /\b(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})\b/g,
-      parse: (match) => ({
-        // YYYY-MM-DD/YYYY-MM-DD
-        pattern: 'YYYY-MM-DD',
-        format: (s, e) => `${s}/${e}`,
-        text: match[0],
-        dateStart: match[1],
-        dateEnd: match[2],
-        index: match.index,
-      }),
-    },
-    {
-      regex: /\b(\d{4}-\d{2}-\d{2})\b/g,
-      parse: (match) => ({
-        pattern: 'YYYY-MM-DD',
-        text: match[0],
-        dateStart: match[1],
-        dateEnd: match[1],
-        index: match.index,
-      }),
-    },
-    {
-      regex: /\b\d{4}-\d{2}(?!-)\b/g,
-      parse: (match) => {
-        const split = match[0].split('-');
-        const year = parseInt(split[0], 10);
-        const month = parseInt(split[1], 10);
-        const lastDay = new Date(year, month, 0).getDate();
-        return {
-          pattern: 'YYYY-MM',
-          text: match[0],
-          dateStart: `${year}-${String(month).padStart(2, '0')}-01`,
-          dateEnd: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
-          index: match.index,
-        };
-      },
-    },
-    {
-      regex: /\b(\d{2})\/(\d{2})\s*~\s*(\d{2})\/(\d{2})\b/g,
-      parse: (match) => {
-        const mm = parseInt(match[1], 10);
-        const dd = parseInt(match[2], 10);
-        const mm2 = parseInt(match[3], 10);
-        const dd2 = parseInt(match[4], 10);
-        return {
-          // MM/DD ~ MM/DD
-          pattern: 'MM/DD',
-          format: (s, e) => `${s} ~ ${e}`,
-          text: match[0],
-          dateStart: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
-          dateEnd: `${currentYear}-${String(mm2).padStart(2, '0')}-${String(dd2).padStart(2, '0')}`,
-          index: match.index,
-        };
-      },
-    },
-    {
-      regex: /\b(?<!\d)(\d{2})\/(\d{2})(?!\d)\b/g,
-      parse: (match) => {
-        const mm = parseInt(match[1], 10);
-        const dd = parseInt(match[2], 10);
-        return {
-          pattern: 'MM/DD',
-          text: match[0],
-          dateStart: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
-          dateEnd: `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
-          index: match.index,
-        };
-      },
-    },
-  ];
-
   const results: DatePattern[] = [];
-
   const usedRanges: [number, number][] = [];
 
   for (const pattern of patterns) {
@@ -109,48 +108,12 @@ function extractDates(input: string) {
       // 이미 처리된 범위에 속하면 skip
       if (results.some((result) => start < result.index + result.text.length && end > result.index))
         continue;
-      results.push(pattern.parse(match));
+      results.push(pattern.parse(match, currentYear));
       usedRanges.push([start, end]);
     }
   }
 
   return results;
-}
-export function cleanHtml(html: string, cleanAnchors: boolean, mergeTds: boolean): string {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  // 1. <code> 태그 내부 비우기
-  const codeTags = doc.querySelectorAll('code');
-  codeTags.forEach((code) => {
-    code.textContent = '';
-  });
-  // 2. <a> 태그 내부 비우기
-  const aTags = doc.querySelectorAll('a');
-  aTags.forEach((a) => {
-    a.textContent = '';
-  });
-  if (mergeTds) {
-    // 3. 각 <tr> 안의 <td> 병합
-    const trList = doc.querySelectorAll('tr');
-    trList.forEach((tr) => {
-      const tdList = tr.querySelectorAll('td');
-      if (tdList.length > 1) {
-        const mergedText = Array.from(tdList)
-          .map((td) => td.textContent?.trim() || '')
-          .join(' ');
-
-        // 첫 td에 병합된 텍스트 설정
-        const newTd = document.createElement('td');
-        newTd.textContent = mergedText;
-
-        // 기존 td 모두 제거 후 병합 td 삽입
-        tr.innerHTML = '';
-        tr.appendChild(newTd);
-      }
-    });
-  }
-  return doc.body.innerHTML;
 }
 
 export const paragraphsToDatePatterns = (title: string, paragraphs: Paragraph[]) => {
@@ -158,7 +121,7 @@ export const paragraphsToDatePatterns = (title: string, paragraphs: Paragraph[])
     .map((paragraph) => {
       const dateMatches = [
         toRaw(paragraph.header),
-        ...toRaw(cleanHtml(paragraph.description, false, true)).split('\n'),
+        ...toRaw(cleanHtml(paragraph.description, true, true, true)).split('\n'),
       ].map((v2, i) => ({
         path: paragraph.path,
         isHeader: i === 0,
@@ -177,8 +140,8 @@ export const matchDateRange = (
   return dateMatches.filter((dateMatch) =>
     dateMatch.matches.find(
       (match) =>
-        new Date(match.dateStart).getTime() <= dateNum &&
-        dateNum <= new Date(match.dateEnd).getTime()
+        dayjs(match.dateStart).startOf('day').valueOf() <= dateNum &&
+        dateNum <= dayjs(match.dateEnd).startOf('day').valueOf()
     )
   );
 };

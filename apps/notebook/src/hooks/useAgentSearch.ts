@@ -1,17 +1,17 @@
 import { useInfiniteQuery } from 'react-query';
 
-import { isHiddenTitle } from './usePrivacy';
+import { usePrivate } from './usePrivate';
 import { search } from '../services/agent';
 
 export const useAgentSearch = (query: string) => {
+  const { data: privateConfig } = usePrivate();
   return useInfiniteQuery({
-    queryKey: ['agentSearch', query],
-    queryFn: ({ pageParam = 0 }) =>
-      search(query, pageParam).then((r) => r.filter((v) => !isHiddenTitle(v.title))),
+    queryKey: ['agentSearch', query, privateConfig.enabled],
+    queryFn: ({ pageParam = 0 }) => search(query, pageParam, privateConfig.enabled),
     getNextPageParam: (lastPage, allPages) => {
       return allPages.length;
     },
     enabled: !!query,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 5,
   });
 };

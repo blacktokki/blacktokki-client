@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } 
 
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
-import { usePrivacy } from './usePrivacy';
+import { isHiddenTitle, usePrivate } from './usePrivate';
 
 const DB_NAME = '@Blacktokki:notebook';
 const DB_VERSION = 2;
@@ -44,11 +44,17 @@ export const focusListener: ((queryClient: QueryClient, id: number) => Promise<v
 
 export const getContents = async (
   data:
-    | { isOnline: true; types: Content['type'][]; page?: number; parentId?: number }
-    | { isOnline: false; types: Content['type'][] }
+    | {
+        isOnline: true;
+        types: Content['type'][];
+        withHidden: boolean;
+        page?: number;
+        parentId?: number;
+      }
+    | { isOnline: false; types: Content['type'][]; withHidden: boolean }
 ): Promise<Content[]> => {
   if (data.isOnline) {
-    return await getContentList(data.parentId, data.types, data.page);
+    return await getContentList(data.parentId, data.types, data.page, data.withHidden);
   }
   if (data.types.length !== 1 || ['NOTE', 'BOARD'].find((v) => v === data.types[0]) === undefined) {
     return [];
@@ -63,7 +69,9 @@ export const getContents = async (
       const request = store.getAll();
 
       request.onsuccess = () => {
-        resolve(request.result as Content[]);
+        resolve(
+          (request.result as Content[]).filter((v) => data.withHidden || !isHiddenTitle(v.title))
+        );
       };
       request.onerror = () => {
         console.error('Error loading contents from IndexedDB:', request.error);
@@ -155,24 +163,30 @@ export const saveContents = async (
 
 export const useNotePages = () => {
   const { auth } = useAuthContext();
-  const { data: privacy } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
 
   return useQuery({
-    queryKey: ['pageContents', !auth.isLocal, privacy.enabled],
+    queryKey: ['pageContents', !auth.isLocal, privateConfig.enabled],
     queryFn: async () => {
-      return await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
+      return await getContents({
+        isOnline: !auth.isLocal,
+        types: ['NOTE'],
+        withHidden: privateConfig.enabled,
+      });
     },
   });
 };
 
 export const useSnapshotPages = (parentId?: number) => {
   const { auth } = useAuthContext();
+  const { data: privateConfig } = usePrivate();
   return useInfiniteQuery<Content[], number>({
-    queryKey: ['snapshotContents', !auth.isLocal, parentId],
+    queryKey: ['snapshotContents', !auth.isLocal, privateConfig.enabled, parentId],
     queryFn: async ({ pageParam }) =>
       await getContents({
         isOnline: !auth.isLocal,
         types: ['SNAPSHOT', 'DELTA'],
+        withHidden: privateConfig.enabled,
         parentId,
         page: pageParam || 0,
       }),
@@ -185,11 +199,11 @@ export const useSnapshotPages = (parentId?: number) => {
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
-  const { data: privacy } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
   const { data: contents = [], isFetching } = useNotePages();
 
   const query = useQuery({
-    queryKey: ['pageContent', title, privacy.enabled],
+    queryKey: ['pageContent', title, privateConfig.enabled],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
       return page || { title, description: '', id: undefined };
@@ -213,11 +227,17 @@ export const useNotePage = (title: string) => {
 
 export const useSnapshotAll = (parentId?: number) => {
   const { auth } = useAuthContext();
+  const { data: privateConfig } = usePrivate();
   return useQuery({
     queryKey: ['snapshotContentsAll', !auth.isLocal, parentId],
     queryFn: async () =>
       parentId
-        ? await getContents({ isOnline: !auth.isLocal, types: ['SNAPSHOT', 'DELTA'], parentId })
+        ? await getContents({
+            isOnline: !auth.isLocal,
+            types: ['SNAPSHOT', 'DELTA'],
+            withHidden: privateConfig.enabled,
+            parentId,
+          })
         : undefined,
   });
 };
@@ -225,6 +245,7 @@ export const useSnapshotAll = (parentId?: number) => {
 export const useCreateOrUpdatePage = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
+  const { data: privateConfig } = usePrivate();
 
   return useMutation({
     mutationFn: async ({
@@ -236,7 +257,11 @@ export const useCreateOrUpdatePage = () => {
       description: string;
       isLast?: boolean;
     }) => {
-      const contents = await getContents({ isOnline: !auth.isLocal, types: ['NOTE'] });
+      const contents = await getContents({
+        isOnline: !auth.isLocal,
+        types: ['NOTE'],
+        withHidden: privateConfig.enabled,
+      });
       const page = contents.find((c) => c.title === title);
       if (page?.description === description) {
         return { title, description, skip: true };

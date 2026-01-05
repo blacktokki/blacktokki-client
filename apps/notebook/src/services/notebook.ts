@@ -1,6 +1,6 @@
 import { axiosCreate } from '@blacktokki/account';
 
-import { Content, PostContent, Link, Pat, FetchPrivacyConfig } from '../types';
+import { Content, PostContent, Link, Pat } from '../types';
 
 const axios = axiosCreate('notebook');
 
@@ -11,39 +11,36 @@ export const getContentOne = async (id: number) => {
 export const getContentList = async (
   parentId?: number,
   types?: Content['type'][],
-  page?: number
+  page?: number,
+  withHidden?: boolean
 ) => {
   const parentIdParam = parentId !== undefined ? `&parentId=${parentId}` : '';
   const typeParam = types !== undefined ? `&types=${types.join(',')}` : '';
   const pageParam = page !== undefined ? `&size=20&page=${page}` : '&size=256';
-  return (await axios.get(`/api/v1/content?sort=id,DESC${parentIdParam}${typeParam}${pageParam}`))
-    .data.value as Content[];
+  const withHiddenParam = withHidden ? `&withHidden=true` : `&withHidden=false`;
+  return (
+    await axios.get(
+      `/api/v1/content?sort=id,DESC${parentIdParam}${typeParam}${pageParam}${withHiddenParam}`
+    )
+  ).data.value as Content[];
 };
 
-export const getPrivacyConfigs = async () => {
+export const getPrivateConfigs = async () => {
   const configs = (await axios.get('/api/v1/content?types=CONFIG&size=256')).data
     .value as Content[];
   return Object.fromEntries(
     configs
-      .filter((v) => v.title.startsWith('privacy.'))
-      .map((v) => [v.title.substring(8), [v.id, v.description === 'true']])
-  ) as FetchPrivacyConfig;
+      .filter((v) => v.title.startsWith('private.'))
+      .map((v) => [v.title.substring(8), { id: v.id, value: v.description === 'true' }])
+  );
 };
 
-export const postContent = async (postContent: PostContent, token?: string) => {
-  let config = undefined;
-  if (token) {
-    config = { headers: { Authorization: `JWT ${token}` } };
-  }
-  return ((await axios.post(`/api/v1/content`, postContent, config)).data as Content).id;
+export const postContent = async (postContent: PostContent) => {
+  return ((await axios.post(`/api/v1/content`, postContent)).data as Content).id;
 };
 
-export const patchContent = async (id: number, updated: PostContent, token?: string) => {
-  let config = undefined;
-  if (token) {
-    config = { headers: { Authorization: `JWT ${token}` } };
-  }
-  await axios.patch(`/api/v1/content`, { ids: [id], updated }, config);
+export const patchContent = async (id: number, updated: PostContent) => {
+  await axios.patch(`/api/v1/content`, { ids: [id], updated });
 };
 
 export const deleteContent = async (id: number) => {

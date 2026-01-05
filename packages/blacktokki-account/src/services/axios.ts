@@ -43,12 +43,12 @@ export const axiosCreate = (service: string) => {
 
 const account = axiosCreate('account');
 
-const refreshToken = async () => {
+export const refreshToken = async (resetRoles?: boolean) => {
   return getToken().then(async (token) => {
     if (token) {
       const r = await account.post(
         '/api/v1/user/token/refresh/',
-        { token },
+        { token, resetRoles },
         { headers: { Authorization: '' } }
       );
       if (r.status === 200 && r.data !== '') {

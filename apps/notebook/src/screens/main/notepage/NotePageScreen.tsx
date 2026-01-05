@@ -22,7 +22,7 @@ import {
   pageStyles,
 } from '../NoteItemSections';
 import TimerTagSection from './TimerTagSection';
-import { isHiddenTitle, usePrivacy, useSetPrivacy } from '../../../hooks/usePrivacy';
+import { isHiddenTitle, usePrivate, useSetPrivate } from '../../../hooks/usePrivate';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 
@@ -48,8 +48,8 @@ export const NotePageScreen: React.FC = () => {
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
-  const { data: privacyConfig } = usePrivacy();
-  const setPrivacy = useSetPrivacy();
+  const { data: privateConfig } = usePrivate();
+  const setPrivate = useSetPrivate();
   const archiveIndex = _archives?.findIndex((v) => v.id === archiveId);
   const archive =
     _archives && archiveIndex && archiveIndex > 0
@@ -98,15 +98,15 @@ export const NotePageScreen: React.FC = () => {
     }
   }, [page, paragraph, paragraphItem]);
 
-  if (!privacyConfig.enabled && isHiddenTitle(title)) {
+  if (!privateConfig.enabled && isHiddenTitle(title)) {
     return (
       <>
         <ResponsiveSearchBar />
         <View style={commonStyles.container}>
           <StatusCard
-            message="This note is hidden by Privacy Mode."
-            buttonTitle="Enable Privacy Mode"
-            onButtonPress={() => setPrivacy.mutate({ enabled: true })}
+            message="This note is hidden by Private Mode."
+            buttonTitle="Enable Private Mode"
+            onButtonPress={() => setPrivate.mutate({ enabled: true })}
           />
         </View>
       </>

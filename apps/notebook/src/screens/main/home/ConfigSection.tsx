@@ -17,7 +17,12 @@ import { View } from 'react-native';
 import { SearchList } from '../../../components/SearchBar';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../../hooks/useNoteStorage';
-import { usePrivacy, useSetPrivacy } from '../../../hooks/usePrivacy';
+import {
+  usePrivate,
+  usePrivateOtp,
+  useSetPrivate,
+  useSetPrivateOtp,
+} from '../../../hooks/usePrivate';
 import AccountEditModal from '../../../modals/AccountEditModal';
 import { createCommonStyles } from '../../../styles';
 import { Content, NavigationParamList } from '../../../types';
@@ -109,12 +114,14 @@ export default () => {
   const commonStyles = createCommonStyles(theme);
   const { data: contents } = useNotePages();
   const mutation = useCreateOrUpdatePage();
-  const [noteConfig, setNoteConfig] = useState<'search' | 'privacy'>();
+  const [noteConfig, setNoteConfig] = useState<'search' | 'private'>();
   const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();
   const resetKeyword = useResetKeyowrd();
-  const { data: privacyConfig } = usePrivacy();
-  const setPrivacy = useSetPrivacy();
+  const { data: privateConfig } = usePrivate();
+  const { data: privateOtp } = usePrivateOtp();
+  const setPrivate = useSetPrivate();
+  const setPrivateOtp = useSetPrivateOtp();
 
   return (
     <View>
@@ -139,9 +146,9 @@ export default () => {
               active={noteConfig === 'search'}
             />
             <OptionButton
-              title={lang('Privacy Mode')}
-              onPress={() => setNoteConfig(noteConfig === 'privacy' ? undefined : 'privacy')}
-              active={noteConfig === 'privacy'}
+              title={lang('Private Mode')}
+              onPress={() => setNoteConfig(noteConfig === 'private' ? undefined : 'private')}
+              active={noteConfig === 'private'}
             />
           </View>
           {noteConfig === 'search' && (
@@ -158,42 +165,42 @@ export default () => {
               </View>
             </>
           )}
-          {noteConfig === 'privacy' && (
+          {noteConfig === 'private' && (
             <View style={{ marginTop: 12 }}>
               <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
-                {lang('Privacy Mode')}
+                {lang('Private Mode')}
                 {' : '}
                 {lang('Visibility of notes and subnotes starting with "."')}
               </Text>
               <View style={{ flexDirection: 'row', marginBottom: 12 }}>
                 <OptionButton
                   title={lang('On')}
-                  onPress={() => setPrivacy.mutate({ enabled: true })}
-                  active={privacyConfig.enabled}
+                  onPress={() => setPrivate.mutate({ enabled: true })}
+                  active={privateConfig.enabled}
                 />
                 <OptionButton
                   title={lang('Off')}
-                  onPress={() => setPrivacy.mutate({ enabled: false })}
-                  active={!privacyConfig.enabled}
+                  onPress={() => setPrivate.mutate({ enabled: false })}
+                  active={!privateConfig.enabled}
                 />
               </View>
 
-              {!privacyConfig.enabled && !auth.isLocal && (
+              {!privateConfig.enabled && !auth.isLocal && (
                 <>
                   <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
-                    {lang('Require OTP for Privacy Mode')}
+                    {lang('Require OTP for Private Mode')}
                   </Text>
-                  {auth.useOtp ? (
+                  {auth.hasOtp ? (
                     <View style={{ flexDirection: 'row', marginBottom: 12 }}>
                       <OptionButton
                         title={lang('On')}
-                        onPress={() => setPrivacy.mutate({ otpRequired: true })}
-                        active={privacyConfig.otpRequired}
+                        onPress={() => setPrivateOtp.mutate(true)}
+                        active={!!privateOtp?.value}
                       />
                       <OptionButton
                         title={lang('Off')}
-                        onPress={() => setPrivacy.mutate({ otpRequired: false })}
-                        active={!privacyConfig.otpRequired}
+                        onPress={() => setPrivateOtp.mutate(false)}
+                        active={!privateOtp?.value}
                       />
                     </View>
                   ) : (
@@ -208,7 +215,7 @@ export default () => {
                 </>
               )}
 
-              {!privacyConfig.enabled && (
+              {!privateConfig.enabled && (
                 <>
                   <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
                     {lang('Auto-unlock (10 mins)')}
@@ -216,28 +223,13 @@ export default () => {
                   <View style={{ flexDirection: 'row', marginBottom: 12 }}>
                     <OptionButton
                       title={lang('On')}
-                      onPress={() => setPrivacy.mutate({ autoUnlock: true })}
-                      active={privacyConfig.autoUnlock}
+                      onPress={() => setPrivate.mutate({ autoUnlock: true })}
+                      active={privateConfig.autoUnlock}
                     />
                     <OptionButton
                       title={lang('Off')}
-                      onPress={() => setPrivacy.mutate({ autoUnlock: false })}
-                      active={!privacyConfig.autoUnlock}
-                    />
-                  </View>
-                  <Text style={[commonStyles.smallText, { marginBottom: 8, fontStyle: 'italic' }]}>
-                    {lang('Disable on refresh or new access')}
-                  </Text>
-                  <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-                    <OptionButton
-                      title={lang('On')}
-                      onPress={() => setPrivacy.mutate({ resetOnSession: true })}
-                      active={privacyConfig.resetOnSession}
-                    />
-                    <OptionButton
-                      title={lang('Off')}
-                      onPress={() => setPrivacy.mutate({ resetOnSession: false })}
-                      active={!privacyConfig.resetOnSession}
+                      onPress={() => setPrivate.mutate({ autoUnlock: false })}
+                      active={!privateConfig.autoUnlock}
                     />
                   </View>
                 </>

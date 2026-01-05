@@ -1,5 +1,5 @@
-import { OtpResponse, OtpVerify, User } from '../types';
-import account, { getToken, setToken } from './axios';
+import { OtpResponse, User } from '../types';
+import account, { getToken, refreshToken, setToken } from './axios';
 export { getLocal, setLocal } from './axios';
 
 const checkLoginToken = async () => {
@@ -47,12 +47,21 @@ export async function createOtp() {
   return (await account.post('/api/v1/otp')).data as OtpResponse;
 }
 
-export async function verifyOtp(otpVerify: OtpVerify) {
+export async function verifyOtp(otpVerify: { secretKey?: string; code: number }) {
   try {
-    return (await account.post('/api/v1/otp/verify', otpVerify)).data as string;
-  } catch (e) {
-    return '';
-  }
+    const token = (await account.post('/api/v1/otp/verify', otpVerify)).data as string;
+    if (token.length > 0) {
+      if (!otpVerify.secretKey) {
+        setToken(token);
+      }
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+export async function deactivateOtpToken() {
+  return await refreshToken(true);
 }
 
 export async function logout(resetOtp?: boolean) {

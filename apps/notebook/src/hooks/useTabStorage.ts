@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 
 import { useBoardPages } from './useBoardStorage';
 import { focusListener, useNotePages } from './useNoteStorage';
-import { usePrivacy } from './usePrivacy';
+import { usePrivate } from './usePrivate';
 
 const RECENT_TABS_KEY = '@blacktokki:notebook:recent_tabs';
-const RECENT_TABS_PRIVACY_KEY = '@blacktokki:notebook:recent_tabs_privacy';
+const RECENT_TABS_PRIVACY_KEY = '@blacktokki:notebook:recent_tabs_private';
 
 let lastTab: number | undefined;
 
@@ -22,9 +22,9 @@ export const useLastTab = () => {
   });
 };
 
-const getRecentTabs = async (isPrivacy: boolean): Promise<number[]> => {
+const getRecentTabs = async (isPrivate: boolean): Promise<number[]> => {
   try {
-    const key = isPrivacy ? RECENT_TABS_PRIVACY_KEY : RECENT_TABS_KEY;
+    const key = isPrivate ? RECENT_TABS_PRIVACY_KEY : RECENT_TABS_KEY;
     const jsonValue = await AsyncStorage.getItem(key);
     return jsonValue ? JSON.parse(jsonValue) : [];
   } catch (e) {
@@ -33,9 +33,9 @@ const getRecentTabs = async (isPrivacy: boolean): Promise<number[]> => {
   }
 };
 
-const saveRecentTabs = async (ids: number[], isPrivacy: boolean): Promise<void> => {
+const saveRecentTabs = async (ids: number[], isPrivate: boolean): Promise<void> => {
   try {
-    const key = isPrivacy ? RECENT_TABS_PRIVACY_KEY : RECENT_TABS_KEY;
+    const key = isPrivate ? RECENT_TABS_PRIVACY_KEY : RECENT_TABS_KEY;
     const jsonValue = JSON.stringify(ids);
     await AsyncStorage.setItem(key, jsonValue);
   } catch (e) {
@@ -45,12 +45,12 @@ const saveRecentTabs = async (ids: number[], isPrivacy: boolean): Promise<void> 
 export const useRecentTabs = () => {
   const { data: contents = [], isFetching } = useNotePages();
   const { data: boards = [], isFetching: isFetchingBoard } = useBoardPages();
-  const { data: privacyConfig } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
 
   return useQuery({
-    queryKey: ['recentTabs', privacyConfig.enabled],
+    queryKey: ['recentTabs', privateConfig.enabled],
     queryFn: async () => {
-      const recentTabs = await getRecentTabs(privacyConfig.enabled);
+      const recentTabs = await getRecentTabs(privateConfig.enabled);
       return recentTabs
         .map((id) => [...contents, ...boards].find((c) => id === c.id))
         .filter((c) => c !== undefined);
@@ -61,14 +61,14 @@ export const useRecentTabs = () => {
 
 export const useAddRecentTab = () => {
   const queryClient = useQueryClient();
-  const { data: privacyConfig } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
 
   return useMutation({
     mutationFn: async ({ id, direct }: { id: number; direct?: boolean }) => {
-      const recentTabs = await getRecentTabs(privacyConfig.enabled);
+      const recentTabs = await getRecentTabs(privateConfig.enabled);
       if (recentTabs.find((v) => v === id) === undefined || direct) {
         const updatedRecentTabs = [id, ...recentTabs];
-        await saveRecentTabs(updatedRecentTabs, privacyConfig.enabled);
+        await saveRecentTabs(updatedRecentTabs, privateConfig.enabled);
       }
 
       return { id };
@@ -81,13 +81,13 @@ export const useAddRecentTab = () => {
 
 export const useDeleteRecentTab = () => {
   const queryClient = useQueryClient();
-  const { data: privacyConfig } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const recentTabs = await getRecentTabs(privacyConfig.enabled);
+      const recentTabs = await getRecentTabs(privateConfig.enabled);
       const updatedRecentTabs = recentTabs.filter((v) => id !== v);
-      await saveRecentTabs(updatedRecentTabs, privacyConfig.enabled);
+      await saveRecentTabs(updatedRecentTabs, privateConfig.enabled);
 
       return { id };
     },
@@ -100,11 +100,11 @@ export const useDeleteRecentTab = () => {
 
 export const useReorderRecentTabs = () => {
   const queryClient = useQueryClient();
-  const { data: privacyConfig } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
 
   return useMutation({
     mutationFn: async (ids: number[]) => {
-      await saveRecentTabs(ids, privacyConfig.enabled);
+      await saveRecentTabs(ids, privateConfig.enabled);
       return ids;
     },
     onSuccess: () => {

@@ -182,15 +182,14 @@
 * You can freely rearrange the order of items in the Tab List, by simply dragging them up or down.
 * The new order is applied immediately and saved automatically. Position frequently used notes at the top to enhance your workflow efficiency.
 
-### 🔐 Privacy Mode
+### 🔐 Private Mode
 
 * This feature allows you to hide sensitive information when viewing notes in public spaces or sharing your screen.
 * **How to hide notes:** If a note title (or the title in a sub-path) starts with a `.` (dot), that note and its sub-notes are automatically treated as privacy-protected.
     * Examples: `.SecretDiary`, `Project/.Confidential`, `PersonalInfo/.Finance`
-* **Independent Tab List:** When Privacy Mode is active, the 'Tab List' on the Home screen switches to **'Tab List - Privacy Mode'**, keeping your private browsing history completely separate from the standard mode.
-* **Enhanced Security (OTP):** By enabling 'Require OTP for Privacy Mode', the system will prompt for an OTP via a secure modal whenever you enter the mode or attempt to disable this security setting. (This feature is supported for online accounts with OTP enabled.)
-* **Auto-unlock Timer:** If the 'Auto-unlock (10 mins)' option is enabled, Privacy Mode will automatically turn off after 10 minutes of inactivity to ensure your data remains secure.
-* **Session Reset Option:** When the 'Disable Privacy Mode on refresh or new access' option is enabled, Privacy Mode will automatically start in the 'Off' state whenever the web page is refreshed or the app is restarted after being completely closed.
+* **Independent Tab List:** When Private Mode is active, the 'Tab List' on the Home screen switches to **'Tab List - Private Mode'**, keeping your private browsing history completely separate from the standard mode.
+* **Enhanced Security (OTP):** By enabling 'Require OTP for Private Mode', the system will prompt for an OTP via a secure modal whenever you enter the mode or attempt to disable this security setting. (This feature is supported for online accounts with OTP enabled.)
+* **Auto-unlock Timer:** If the 'Auto-unlock (10 mins)' option is enabled, Private Mode will automatically turn off after 10 minutes of inactivity to ensure your data remains secure.
 * If you attempt to access a hidden note directly (e.g., via URL) while the mode is **Off**, a warning message will appear, and the content will remain hidden.
 
 ### 🔐 Personal Access Token (PAT) Management

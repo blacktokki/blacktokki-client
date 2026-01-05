@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { ParagraphKey } from '../types';
-import { isHiddenTitle, usePrivacy } from './usePrivacy';
+import { isHiddenTitle, usePrivate } from './usePrivate';
 
 const KEYWORDS_KEY = '@blacktokki:notebook:keywords:';
 
@@ -53,13 +53,13 @@ const saveKeywords = async (
 
 export const useKeywords = () => {
   const { auth } = useAuthContext();
-  const { data: privacyConfig } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   return useQuery({
-    queryKey: ['keywords', subkey, privacyConfig.enabled],
+    queryKey: ['keywords', subkey, privateConfig.enabled],
     queryFn: async () => {
       const keywords = await getKeywords(subkey);
-      return privacyConfig.enabled
+      return privateConfig.enabled
         ? keywords
         : keywords.filter(
             (v) =>

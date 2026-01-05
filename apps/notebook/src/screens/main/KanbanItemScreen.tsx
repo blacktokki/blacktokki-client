@@ -21,7 +21,7 @@ import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
-import { isHiddenTitle, usePrivacy, useSetPrivacy } from '../../hooks/usePrivacy';
+import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
 import { paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
@@ -85,8 +85,8 @@ export const KanbanItemScreen: React.FC = () => {
   const accessableRef = useRef(true);
   const [showConfig, setShowConfig] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
-  const { data: privacyConfig } = usePrivacy();
-  const setPrivacy = useSetPrivacy();
+  const { data: privateConfig } = usePrivate();
+  const setPrivate = useSetPrivate();
   const horizontal = true;
   const option = board?.option;
 
@@ -194,15 +194,15 @@ export const KanbanItemScreen: React.FC = () => {
     </View>
   );
 
-  if (!privacyConfig.enabled && isHiddenTitle(title)) {
+  if (!privateConfig.enabled && isHiddenTitle(title)) {
     return (
       <>
         <ResponsiveSearchBar />
         <View style={commonStyles.container}>
           <StatusCard
-            message="This kanban is hidden by Privacy Mode."
-            buttonTitle="Enable Privacy Mode"
-            onButtonPress={() => setPrivacy.mutate({ enabled: true })}
+            message="This kanban is hidden by Private Mode."
+            buttonTitle="Enable Private Mode"
+            onButtonPress={() => setPrivate.mutate({ enabled: true })}
           />
         </View>
       </>

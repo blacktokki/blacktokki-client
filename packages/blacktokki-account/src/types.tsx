@@ -23,8 +23,3 @@ export type OtpResponse =
   | {
       secretKey?: undefined;
     };
-
-export type OtpVerify = {
-  secretKey?: string;
-  code: number;
-};

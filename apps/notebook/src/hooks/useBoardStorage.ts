@@ -5,31 +5,35 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { focusListener, getContents, saveContents } from './useNoteStorage';
 import { BoardOption, Content, PostContent } from '../types';
-import { usePrivacy } from './usePrivacy';
+import { usePrivate } from './usePrivate';
 
 export const useBoardPages = () => {
   const { auth } = useAuthContext();
-  const { data: privacy } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
 
   return useQuery({
-    queryKey: ['boardContents', !auth.isLocal, privacy.enabled],
+    queryKey: ['boardContents', !auth.isLocal, privateConfig.enabled],
     queryFn: async () =>
-      (await getContents({ isOnline: !auth.isLocal, types: ['BOARD'] })).sort(
-        (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
-      ),
+      (
+        await getContents({
+          isOnline: !auth.isLocal,
+          types: ['BOARD'],
+          withHidden: privateConfig.enabled,
+        })
+      ).sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()),
   });
 };
 
 export const useBoardPage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
-  const { data: privacy } = usePrivacy();
+  const { data: privateConfig } = usePrivate();
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   const { data: contents = [], isFetching } = useBoardPages();
 
   const query = useQuery({
-    queryKey: ['boardContent', title, privacy.enabled],
+    queryKey: ['boardContent', title, privateConfig.enabled],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
       return page;

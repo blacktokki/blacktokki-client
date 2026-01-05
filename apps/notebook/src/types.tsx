@@ -51,13 +51,6 @@ export type ParagraphKey =
       section?: string;
     };
 
-export type FetchPrivacyConfig = {
-  enabled?: [number | undefined, boolean];
-  otpRequired?: [number | undefined, boolean];
-  autoUnlock?: [number | undefined, boolean];
-  resetOnSession?: [number | undefined, boolean];
-};
-
 export type NavigationParamList = {
   Home: undefined;
   RecentPages: { title?: string };

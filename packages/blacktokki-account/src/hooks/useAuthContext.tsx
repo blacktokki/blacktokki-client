@@ -17,8 +17,9 @@ import {
   oauthLogin,
   setLocal,
   verifyOtp,
+  deactivateOtpToken,
 } from '../services/account';
-import { User, OtpVerify, OtpResponse } from '../types';
+import { User, OtpResponse } from '../types';
 
 type AuthAction = {
   type: string;
@@ -37,13 +38,16 @@ export type Auth = (
   | { user: User | null; isLogin: boolean; isLocal: boolean }
   | { user?: undefined; isLogin?: undefined; isLocal?: undefined }
 ) & {
-  useOtp?: boolean | null;
+  hasOtp?: boolean | null;
   guestType?: GuestType;
   isLoading?: boolean;
 };
 type AuthState = {
   user?: User | null;
-  otpRequest?: OtpVerify;
+  otpRequest?: {
+    secretKey: string;
+    code: number;
+  };
   request?:
     | { type: 'login'; username: string; password: string }
     | { type: 'oauth'; oauth: string }
@@ -57,7 +61,7 @@ const AuthContext = createContext<{
   dispatch: Dispatch<AuthAction>;
   otp?: {
     create: () => Promise<OtpResponse>;
-    verify: (code: number) => Promise<string>;
+    verify: (code?: number) => Promise<boolean>;
   };
 }>({
   auth: {},
@@ -100,7 +104,10 @@ const authReducer = (initialState: AuthState, action: AuthAction) => {
     case 'OTP_REQUEST':
       return {
         ...initialState,
-        otpRequest: { secretKey: action.otpSecretKey, code: action.otpCode },
+        otpRequest: {
+          secretKey: action.otpSecretKey,
+          code: action.otpCode,
+        },
       } as AuthState;
     case 'OTP_SUCCESS':
       return {
@@ -150,7 +157,7 @@ export const AuthProvider = ({
         isLogin:
           authState.user !== undefined ? authState.user !== null || authState.useLocal : undefined,
         isLocal: authState.useLocal,
-        useOtp:
+        hasOtp:
           authState.user && !authState.useLocal
             ? authState.user.otpDeletionRequested !== undefined
             : authState.otpRequest
@@ -167,7 +174,13 @@ export const AuthProvider = ({
     if (authState.user && !authState.useLocal) {
       return {
         create: createOtp,
-        verify: (code: number) => verifyOtp({ code }),
+        verify: async (code?: number) => {
+          if (code === undefined) {
+            await deactivateOtpToken();
+            return false;
+          }
+          return await verifyOtp({ code });
+        },
       };
     }
   }, [authState]);
@@ -208,10 +221,10 @@ export const AuthProvider = ({
         );
       } else if (authState.user && authState.otpRequest) {
         const user = authState.user;
-        verifyOtp(authState.otpRequest).then((isSuccess) => {
+        verifyOtp(authState.otpRequest).then((success) => {
           dispatch({
             type: 'OTP_SUCCESS',
-            user: { ...user, otpDeletionRequested: isSuccess ? false : undefined },
+            user: success ? { ...user, otpDeletionRequested: false } : user,
           });
         });
       }

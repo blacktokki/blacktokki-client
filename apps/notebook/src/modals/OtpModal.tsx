@@ -11,7 +11,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import { TextInput, StyleSheet } from 'react-native';
 
-export default function OtpModal({ onSuccess }: { onSuccess: (token: string) => void }) {
+export default function OtpModal({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const { lang } = useLangContext();
   const { setModal } = useModalsContext();
   const { otp } = useAuthContext();
@@ -20,11 +20,9 @@ export default function OtpModal({ onSuccess }: { onSuccess: (token: string) => 
   const [error, setError] = useState(false);
 
   const handleVerify = async () => {
-    if (otpCode.length !== 6) return;
-
-    const isValid = await otp?.verify(parseInt(otpCode, 10));
-    if (isValid) {
-      onSuccess(isValid);
+    if (!otp || otpCode.length !== 6) return;
+    if (await otp.verify(parseInt(otpCode, 10))) {
+      await onSuccess();
       setModal(OtpModal, null);
     } else {
       setError(true);

@@ -77,14 +77,14 @@ const ExtraAuthSection = React.memo(
     const [showPat, setShowPat] = useState(false);
     const [newToken, setNewToken] = useState<string | null>(null);
     useEffect(() => {
-      if (openOtp && !auth.useOtp) {
+      if (openOtp && !auth.hasOtp) {
         handleCreateOtp();
       }
     }, [openOtp]);
 
     useEffect(() => {
-      if (otpVerify === null && auth.useOtp !== null) {
-        setOtpVerify(auth.useOtp === true);
+      if (otpVerify === null && auth.hasOtp !== null) {
+        setOtpVerify(auth.hasOtp === true);
       }
     }, [auth, otpVerify]);
     return (
@@ -105,13 +105,13 @@ const ExtraAuthSection = React.memo(
           </TouchableOpacity>
           {showOtp && (
             <View style={{ paddingLeft: 10, marginBottom: 10 }}>
-              {!auth.useOtp && !otpData && (
+              {!auth.hasOtp && !otpData && (
                 <TouchableOpacity onPress={handleCreateOtp}>
                   <Text style={styles.generateText}>{lang('Generate New Token')}</Text>
                 </TouchableOpacity>
               )}
 
-              {!auth.useOtp && otpData?.secretKey && (
+              {!auth.hasOtp && otpData?.secretKey && (
                 <View
                   style={[
                     styles.newTokenBox,
@@ -181,7 +181,7 @@ const ExtraAuthSection = React.memo(
                 </View>
               )}
 
-              {auth.useOtp && (
+              {auth.hasOtp && (
                 <View style={{ marginTop: 8 }}>
                   {!isConfirmingDelete ? (
                     <View style={styles.otpActiveRow}>

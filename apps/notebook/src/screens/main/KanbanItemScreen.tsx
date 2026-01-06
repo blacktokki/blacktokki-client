@@ -349,7 +349,12 @@ export const KanbanItemScreen: React.FC = () => {
         <View style={[commonStyles.container, { paddingHorizontal: 0, paddingVertical: 0 }]}>
           {header}
           <View
-            style={{ width: '100%', height: 2, backgroundColor: commonStyles.card.borderColor }}
+            style={{
+              width: '100%',
+              height: 2,
+              backgroundColor: commonStyles.card.borderColor,
+              marginBottom: 8,
+            }}
           />
           {columns && columns.length > 0 ? (
             <Kanban

@@ -3,13 +3,14 @@ const path = require('path');
 
 const SRC_DIR = 'src';
 const OUTPUT_FILE = 'script.md';
-const EXTENSIONS = ['js', 'ts', 'jsx', 'tsx'];
+const EXTENSIONS = ['js', 'ts', 'jsx', 'tsx', 'json'];
 
 const extensionToLang = {
   js: 'javascript',
   ts: 'typescript',
   jsx: 'jsx',
   tsx: 'tsx',
+  json: 'json',
 };
 
 function getAllFiles(dir, exts, fileList = []) {

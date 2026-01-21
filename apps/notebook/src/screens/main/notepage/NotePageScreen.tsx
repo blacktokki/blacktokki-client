@@ -121,7 +121,7 @@ export const NotePageScreen: React.FC = () => {
           style={[commonStyles.container, pageStyles.container]}
           contentContainerStyle={pageStyles.contentContainer}
         >
-          <View style={[commonStyles.header, { zIndex: 1, alignItems: 'flex-start' }]}>
+          <View style={[commonStyles.header, pageStyles.header]}>
             <NotePageHeader
               title={title}
               paragraph={paragraph}
@@ -138,32 +138,32 @@ export const NotePageScreen: React.FC = () => {
                 fullParagraph={fullParagraph}
                 paragraphs={paragraphs}
               />
-              {!paragraphItem && !auth.isLocal && (
+              {!paragraphItem && !auth.isLocal && (_window === 'landscape' || toc || archive) && (
                 <HeaderIconButton
                   name="history"
                   onPress={() => navigation.navigate('Archive', { title })}
                 />
               )}
-              {!!paragraph && (
+              {!!paragraph && (_window === 'landscape' || !toc) && (
                 <HeaderIconButton
                   name={fullParagraph ? 'compress' : 'expand'}
                   onPress={() => toggleFullParagraph(!fullParagraph)}
                 />
               )}
-              {!!(paragraph || description) && !archive && _window === 'portrait' && (
-                <>
-                  <HeaderIconButton
-                    name="sitemap"
-                    onPress={() => navigation.navigate('RecentPages', { title })}
-                  />
-                  <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
-                </>
+              {!paragraph && !archive && (_window === 'landscape' || !toc) && (
+                <HeaderIconButton
+                  name="folder"
+                  onPress={() => navigation.navigate('RecentPages', { title })}
+                />
               )}
-              {!!(paragraph || description) && !archive && (
-                <>
-                  <HeaderIconButton name="exchange" onPress={handleMovePage} />
-                  <HeaderIconButton name="pencil" onPress={handleEdit} />
-                </>
+              {!!(paragraph || description) && !archive && (_window === 'landscape' || toc) && (
+                <HeaderIconButton name="exchange" onPress={handleMovePage} />
+              )}
+              {!!(paragraph || description) && !archive && (_window === 'landscape' || !toc) && (
+                <HeaderIconButton name="pencil" onPress={handleEdit} />
+              )}
+              {!!(paragraph || description) && !archive && _window === 'portrait' && (
+                <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
               )}
             </View>
           </View>

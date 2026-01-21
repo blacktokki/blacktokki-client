@@ -361,7 +361,7 @@ export const KanbanItemScreen: React.FC = () => {
               horizontal={_window === 'portrait' && horizontal}
               columns={columns}
               columnStyle={{
-                borderColor: commonStyles.card.borderColor,
+                borderColor: commonStyles.text.color,
               }}
               renderHeader={({ item }) => (
                 <TouchableOpacity

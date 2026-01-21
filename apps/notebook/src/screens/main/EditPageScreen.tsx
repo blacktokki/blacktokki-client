@@ -228,7 +228,7 @@ export const EditPageScreen: React.FC = () => {
             </TouchableOpacity>
           )}
           <Text style={[commonStyles.title, { flex: 1 }]}>
-            {title} {paragraph ? `> ${paragraph}` : ''} - {lang('Edit')}
+            {titleFormat({ title, paragraph })} - {lang('Edit')}
           </Text>
         </View>
         <Editor

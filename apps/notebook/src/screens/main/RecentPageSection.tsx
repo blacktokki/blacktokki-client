@@ -1,4 +1,10 @@
-import { useColorScheme, useResizeContext, Text } from '@blacktokki/core';
+import {
+  useColorScheme,
+  useResizeContext,
+  Text,
+  TextButton,
+  useLangContext,
+} from '@blacktokki/core';
 import { cleanHtml } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -6,7 +12,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { TouchableOpacity, ScrollView, StyleSheet, View } from 'react-native';
 import { Card } from 'react-native-paper';
 
-import { NotePageHeader } from './NoteItemSections';
+import { NotePageHeader, pageStyles } from './NoteItemSections';
 import { toRecentContents, updatedFormat } from './home/ContentGroupSection';
 import { Paragraph } from '../../components/HeaderSelectBar';
 import LoadingView from '../../components/LoadingView';
@@ -21,6 +27,7 @@ type BaseItem = {
   title: string;
   description?: string;
   updated?: string;
+  subNoteCount?: number;
   paragraph?: Paragraph & { origin: string };
 };
 
@@ -56,12 +63,14 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
       <View
         style={{
           flexBasis: window === 'landscape' ? '33%' : '50%',
+          minWidth: cardMaxWidth,
           maxWidth: cardMaxWidth,
           backgroundColor: 'transparent',
         }}
       />
     );
   }
+  const subNoteCount = item.subNoteCount || 0;
   return (
     <TouchableOpacity
       style={{
@@ -73,46 +82,74 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
       }}
       onPress={item.onPress}
     >
-      <Card
-        onPress={item.onPress}
-        style={[
-          commonStyles.card,
-          styles.card,
-          {
-            padding: 8 + cardPadding * 0.4,
-            paddingTop: 0,
-            aspectRatio: item.updated || window === 'landscape' ? 1 / Math.sqrt(2) : Math.sqrt(2),
-          },
-        ]}
-      >
-        <Card.Content
-          style={{
-            width: (zoomOut * 100 + '%') as `${number}%`,
-            transformOrigin: 'left top',
-            transform: [{ scale: 1 / zoomOut }],
-            padding: 0,
-          }}
+      <View style={styles.cardContainer}>
+        {Array.from(Array(3).keys()).map(
+          (v) =>
+            subNoteCount > v && (
+              <View
+                key={v}
+                style={[
+                  commonStyles.card,
+                  styles.stackLayer,
+                  { top: -4 * (v + 1), left: 3 * (v + 1), zIndex: -(v + 1) },
+                ]}
+              />
+            )
+        )}
+
+        <Card
+          onPress={item.onPress}
+          style={[
+            commonStyles.card,
+            styles.card,
+            {
+              padding: 8 + cardPadding * 0.4,
+              aspectRatio: item.updated || window === 'landscape' ? 1 / Math.sqrt(2) : Math.sqrt(2),
+            },
+          ]}
         >
-          {mounted && item.descriptionComponent}
-        </Card.Content>
-      </Card>
+          <Card.Content
+            style={{
+              width: (zoomOut * 100 + '%') as `${number}%`,
+              transformOrigin: 'left top',
+              transform: [{ scale: 1 / zoomOut }],
+              padding: 0,
+            }}
+          >
+            {mounted && item.descriptionComponent}
+          </Card.Content>
+        </Card>
+      </View>
       <View style={styles.cardLabel}>
-        <Text style={{ fontSize: 14 + fSize, overflow: 'hidden' }}>{item.title}</Text>
-        {item.updated && (
-          <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
-            {updatedFormat(item.updated)}
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Text style={{ fontSize: 14 + fSize, overflow: 'hidden' }} numberOfLines={1}>
+            {item.title}
           </Text>
+        </View>
+        {subNoteCount > 0 ? (
+          <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
+            ( {1 + subNoteCount} )
+          </Text>
+        ) : (
+          item.updated && (
+            <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
+              {updatedFormat(item.updated)}
+            </Text>
+          )
         )}
       </View>
     </TouchableOpacity>
   );
 });
-
 export const renderCardPage = ({ item, index }: { item: Item; index: number }) => (
   <CardPage key={index} index={index} item={item} />
 );
 
-export const useToCardPage = (onPress: (item: BaseItem) => void, scale: Scale) => {
+export const useToCardPage = (
+  onPress: (item: BaseItem) => void,
+  scale: Scale,
+  renderTitle?: (item: BaseItem) => string
+) => {
   const window = useResizeContext();
   const zoomOut = _zoomOut(window === 'landscape');
   const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
@@ -121,6 +158,7 @@ export const useToCardPage = (onPress: (item: BaseItem) => void, scale: Scale) =
   return useCallback(
     (v: BaseItem) => ({
       ...v,
+      title: renderTitle ? renderTitle(v) : v.title,
       descriptionComponent: (
         <RenderHtml
           source={{
@@ -160,38 +198,69 @@ type RecentPagesScreenRouteProp = RouteProp<NavigationParamList, 'RecentPages'>;
 export const RecentPagesSection = React.memo(() => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const { lang } = useLangContext();
   const window = useResizeContext();
   const { data: recentPages = [], isLoading } = useNotePages();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<RecentPagesScreenRouteProp>();
   const title = route.params?.title;
+  const dummyCards = window === 'landscape' ? 4 : 2;
 
   const toCardPage = useToCardPage(
-    (v) => navigation.push('NotePage', { title: v.title }),
-    defaultScale
+    (v) =>
+      navigation.push((v.subNoteCount || 0) > 0 ? 'RecentPages' : 'NotePage', { title: v.title }),
+    defaultScale,
+    (v) => (title === undefined ? v.title : v.title.replace(title + '/', './'))
   );
-  const contents = useMemo(
-    () => [
-      ...toRecentContents(recentPages)
-        .filter((v) => title === undefined || v.title.startsWith(title + '/'))
-        .map(toCardPage),
-      { scale: defaultScale },
-      { scale: defaultScale },
-    ],
-    [recentPages, title]
-  );
-  const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
+  const contents = useMemo(() => {
+    const processed = toRecentContents(recentPages)
+      .filter((v) =>
+        title === undefined
+          ? v.title.split('/').length === 1
+          : v.title.split('/').length <= 1 + title.split('/').length &&
+            (v.title === title || v.title.startsWith(title + '/'))
+      )
+      .map((v) => {
+        const children = toRecentContents(recentPages).filter(
+          (child) => v.title !== title && child.title.startsWith(v.title + '/')
+        );
+        const latestTime = [v.updated, ...children.map((c) => c.updated)].reduce((a, b) =>
+          new Date(a) > new Date(b) ? a : b
+        );
 
+        return {
+          ...v,
+          subNoteCount: children.length,
+          updated: latestTime,
+        };
+      })
+      .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
+
+    return [
+      ...processed.map(toCardPage),
+      ...Array.from(Array(dummyCards).keys()).map((v) => ({ scale: defaultScale })),
+    ];
+  }, [recentPages, title, window]);
+  const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
   const renderHeader = () => {
     return (
       title && (
-        <View style={{ height: 31, backgroundColor: 'transparent' }}>
+        <View style={[commonStyles.header, pageStyles.header]}>
           <NotePageHeader
             title={title}
             onPress={(title, hasChild) =>
-              (hasChild ? navigation.push : navigation.navigate)('NotePage', { title })
+              hasChild
+                ? navigation.push('RecentPages', { title })
+                : navigation.navigate('NotePage', { title })
             }
           />
+          <View style={pageStyles.actionButtons}>
+            <TextButton
+              title={lang('All Notes') + '  ▶'}
+              onPress={() => navigation.navigate('RecentPages', {})}
+              style={{ paddingRight: 0 }}
+            />
+          </View>
         </View>
       )
     );
@@ -201,7 +270,7 @@ export const RecentPagesSection = React.memo(() => {
     <View style={commonStyles.container}>
       <LoadingView />
     </View>
-  ) : contents.length > 2 ? (
+  ) : contents.length > dummyCards ? (
     <ScrollView
       key={window}
       contentContainerStyle={[
@@ -253,11 +322,15 @@ export const RecentPagesSection = React.memo(() => {
 });
 
 const styles = StyleSheet.create({
-  card: {
+  cardContainer: {
     borderRadius: 6,
     marginVertical: 10,
     marginHorizontal: 8,
+  },
+  card: {
     overflow: 'hidden',
+    paddingTop: 0,
+    marginBottom: 0,
   },
   cardLabel: {
     flexDirection: 'row',
@@ -276,5 +349,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
+  },
+  stackLayer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    padding: 0,
+    margin: 0,
+    opacity: 0.4,
   },
 });

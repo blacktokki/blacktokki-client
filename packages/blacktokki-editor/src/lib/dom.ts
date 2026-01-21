@@ -35,6 +35,9 @@ export function cleanHtml(
     if (cleanAnchorTitle) {
       a.textContent = '';
     } else {
+      while (a.attributes.length > 0) {
+        a.removeAttribute(a.attributes[0].name);
+      }
       a.href = '';
     }
   });

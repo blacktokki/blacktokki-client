@@ -22,14 +22,10 @@ const _createCommonStyles = (theme: 'light' | 'dark') => {
     secondaryButton: isDark ? '#4A4A4A' : '#95A5A6',
     navButton: isDark ? '#333333' : '#EBEBEB',
 
-    // Inputs
+    // Inputs & Tabs & Icons
     input: isDark ? '#222222' : '#FAFAFA',
     inputBorder: isDark ? '#444444' : '#CCCCCC',
-    inputText: isDark ? '#E4E4E4' : '#333333',
-
-    // Tabs & Icons
     activeTab: isDark ? 'rgba(255, 255, 255, 0.54)' : 'rgba(0, 0, 0, 0.54)',
-    activeTabBackground: isDark ? '#333333' : '#e0e0e0',
     inactiveTab: isDark ? '#888888' : '#666666',
     icon: isDark ? '#E4E4E4' : '#333333',
   };
@@ -107,7 +103,7 @@ const _createCommonStyles = (theme: 'light' | 'dark') => {
       borderColor: commonColors.inputBorder,
       borderRadius: 4,
       padding: 10,
-      color: commonColors.inputText,
+      color: commonColors.text,
       marginBottom: 16,
     },
     searchInput: {
@@ -116,7 +112,7 @@ const _createCommonStyles = (theme: 'light' | 'dark') => {
       borderColor: commonColors.inputBorder,
       borderRadius: 4,
       padding: 10,
-      color: commonColors.inputText,
+      color: commonColors.text,
       flex: 1,
       height: 36,
       marginBottom: 0,
@@ -173,7 +169,7 @@ const _createCommonStyles = (theme: 'light' | 'dark') => {
     },
     activeTab: {
       color: commonColors.activeTab,
-      backgroundColor: commonColors.activeTabBackground,
+      backgroundColor: commonColors.navButton,
     },
     inactiveTab: {
       color: commonColors.inactiveTab,

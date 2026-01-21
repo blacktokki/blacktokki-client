@@ -251,6 +251,7 @@ const styles = StyleSheet.create({
 });
 
 export const pageStyles = StyleSheet.create({
+  header: { zIndex: 1, alignItems: 'flex-start' },
   title: {
     flex: 1,
     fontSize: 20,

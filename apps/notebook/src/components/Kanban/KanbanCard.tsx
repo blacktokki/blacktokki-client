@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, PanResponder, Platform } from 'react-native';
 
 type KanbanCardProps<T> = {
@@ -87,6 +87,11 @@ export default <T,>({ item, renderItem, onStart, onActive, onEnd }: KanbanCardPr
       },
     })
   ).current;
+  useEffect(() => {
+    translateX.setValue(0);
+    translateY.setValue(0);
+    zIndexAnim.setValue(0);
+  }, [item]);
 
   return (
     <Animated.View style={[styles.container, { zIndex: zIndexAnim }]}>

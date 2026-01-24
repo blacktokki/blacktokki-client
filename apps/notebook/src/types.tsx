@@ -1,5 +1,6 @@
 export type BoardOption = {
   BOARD_NOTE_IDS: number[];
+  BOARD_TYPE?: 'KANBAN' | 'SCRUM';
   BOARD_HEADER_LEVEL: number;
   PAT_DESCRIPTION?: undefined;
 };

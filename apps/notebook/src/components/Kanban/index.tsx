@@ -1,20 +1,30 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleProp, ViewStyle, View, Animated } from 'react-native';
+import { FlatList, StyleProp, ViewStyle, View, Animated, Text } from 'react-native';
 
 import KanbanCard from './KanbanCard';
 
-type Column<T> = {
+type Row<T> = {
   name: string;
-  data: T[];
+  columns: {
+    name: string;
+    items: T[];
+  }[];
 };
 
 type KanbanProps<T> = {
-  columns: Column<T>[];
+  rows: Row<T>[];
   renderItem: (e: { item: T; index: number }) => JSX.Element;
   onStart: () => void;
-  onEnd: (data: T, columnKey: number, nextColumnKey: number) => boolean;
-  renderHeader: (e: { item: Column<T>; index: number }) => JSX.Element;
+  onEnd: (
+    rowKey: number,
+    nextRowkey: number,
+    columnKey: number,
+    nextColumnKey: number,
+    key: number
+  ) => boolean;
+  renderHeader: (e: { item: { name: string }; index: number }) => JSX.Element;
   columnStyle: StyleProp<ViewStyle>;
+  useScrum?: boolean;
   horizontal?: boolean;
 };
 
@@ -31,7 +41,7 @@ const indexResult = (columnIndex: number, move: number, positions: number[]) => 
 const cellRendererComponent = ({ children }: any) => children;
 
 export default <T,>({
-  columns,
+  rows,
   columnStyle,
   horizontal = false,
   renderItem,
@@ -39,31 +49,53 @@ export default <T,>({
   onEnd,
   renderHeader,
 }: KanbanProps<T>) => {
-  const positionRef = useRef<number[]>([]);
+  const positionRef = useRef<{ row: number[]; column: number[] }>({ row: [], column: [] });
   const [maxSize, setMaxSize] = useState({ width: 0, height: 0 });
   const translate = useRef(new Animated.Value(0)).current;
   const animated = useRef<Animated.CompositeAnimation>();
-  const [currentColumn, setCurrentColumn] = useState(0);
+  const [currentRow, setCurrentRow] = useState<number | undefined>(undefined);
+  const [currentColumn, setCurrentColumn] = useState<number | undefined>(undefined);
+  const [nextRow, setNextRow] = useState<number | undefined>(undefined);
   const [nextColumn, setNextColumn] = useState<number | undefined>(undefined);
-  const _onStart = (columnIndex: number, index: number) => {
+
+  const _onStart = (rowIndex: number, columnIndex: number) => {
     onStart();
     setCurrentColumn(columnIndex);
+    setCurrentRow(rowIndex);
   };
-  const onActive = (columnIndex: number, index: number, position: { x: number; y: number }) => {
-    const i = indexResult(columnIndex, horizontal ? position.y : position.x, positionRef.current);
+  const onActive = (rowIndex: number, columnIndex: number, position: { x: number; y: number }) => {
+    const j = indexResult(rowIndex, horizontal ? position.x : position.y, positionRef.current.row);
+    const i = indexResult(
+      columnIndex,
+      horizontal ? position.y : position.x,
+      positionRef.current.column
+    );
+    j >= 0 && j !== nextRow && setNextRow(j);
     i >= 0 && i !== nextColumn && setNextColumn(i);
   };
 
   const _onEnd = useCallback(
-    (columnIndex: number, index: number, position: { x: number; y: number }) => {
-      const i = indexResult(columnIndex, horizontal ? position.y : position.x, positionRef.current);
+    (rowIndex: number, columnIndex: number, index: number, position: { x: number; y: number }) => {
+      const i = indexResult(
+        columnIndex,
+        horizontal ? position.y : position.x,
+        positionRef.current.column
+      );
+      const j = indexResult(
+        rowIndex,
+        horizontal ? position.x : position.y,
+        positionRef.current.row
+      );
       setNextColumn(undefined);
-      if (i >= 0 && columnIndex !== i) {
-        return onEnd(columns[columnIndex].data[index], columnIndex, i);
+      setNextRow(undefined);
+      setCurrentColumn(undefined);
+      setCurrentRow(undefined);
+      if ((i >= 0 && columnIndex !== i) || (j >= 0 && rowIndex !== j)) {
+        return onEnd(rowIndex, j, columnIndex, i, index);
       }
       return false;
     },
-    [columns, horizontal, onEnd]
+    [rows, horizontal, onEnd]
   );
   const nextAnimated = () => {
     if (animated.current) {
@@ -76,24 +108,26 @@ export default <T,>({
       });
     }
   };
-  const columnList = useMemo(() => {
-    return columns.map((_item, itemIndex) =>
-      _item.data.map((item, index) => {
-        return (
-          <KanbanCard
-            item={item}
-            renderItem={(item) => renderItem({ index, item })}
-            onStart={() => _onStart(itemIndex, index)}
-            onActive={(p) => onActive(itemIndex, index, p)}
-            onEnd={(p) => _onEnd(itemIndex, index, p)}
-          />
-        );
-      })
+  const rowList = useMemo(() => {
+    return rows.map((row, rowIndex) =>
+      row.columns.map((column, columnIndex) =>
+        column.items.map((item, index) => {
+          return (
+            <KanbanCard
+              item={item}
+              renderItem={(item) => renderItem({ index, item })}
+              onStart={() => _onStart(rowIndex, columnIndex)}
+              onActive={(p) => onActive(rowIndex, columnIndex, p)}
+              onEnd={(p) => _onEnd(rowIndex, columnIndex, index, p)}
+            />
+          );
+        })
+      )
     );
-  }, [columns, horizontal, _onEnd]);
+  }, [rows, horizontal, _onEnd]);
   useEffect(() => {
     setMaxSize({ width: 0, height: 0 });
-  }, [columns, _onEnd]);
+  }, [horizontal]);
   const commonPadding = 5;
   return (
     <View
@@ -101,7 +135,7 @@ export default <T,>({
       style={{
         width: '100%',
         height: '100%',
-        flexDirection: horizontal ? 'column' : 'row',
+        flexDirection: horizontal ? 'row' : 'column',
         flex: 1,
         overflow: 'auto',
         padding: 20 - commonPadding,
@@ -122,68 +156,112 @@ export default <T,>({
         }
       }}
     >
-      {columns.map((item, itemIndex) => (
+      {rows.map((row, rowIndex) => (
         <View
-          key={itemIndex}
+          key={rowIndex}
           style={{
-            zIndex: itemIndex === currentColumn ? 5000 : undefined,
+            zIndex: rowIndex === currentRow ? 5000 : rowIndex === 0 ? 1 : undefined,
             flexDirection: horizontal ? 'row' : 'column',
-            alignSelf: 'flex-start',
-            minWidth: maxSize.width,
-            minHeight: maxSize.height,
           }}
           onLayout={(e) => {
-            const { width, height, x, y } = e.nativeEvent.layout;
-            positionRef.current[itemIndex] = horizontal ? y : x;
-            if (width > maxSize.width || height > maxSize.height) {
-              setMaxSize((prev) => ({
-                width: Math.max(prev.width, width),
-                height: Math.max(prev.height, height),
-              }));
-            }
+            const { x, y } = e.nativeEvent.layout;
+            positionRef.current.row[rowIndex] = horizontal ? x : y;
           }}
         >
           <View
             style={[
-              { flex: 1, borderWidth: 1, borderColor: (columnStyle as ViewStyle)?.borderColor },
-              nextColumn !== undefined && itemIndex !== currentColumn
-                ? { borderStyle: 'dashed' }
-                : { borderColor: 'transparent' },
+              {
+                zIndex: rowIndex === 0 ? 1 : undefined,
+                flexDirection: horizontal ? 'column' : 'row',
+                alignSelf: 'flex-start',
+              },
+              //
             ]}
           >
-            <View
-              style={[
-                {
-                  flexGrow: 1,
-                  borderWidth: 2,
-                  paddingHorizontal: commonPadding,
-                  paddingBottom: commonPadding,
-                  paddingTop: 0,
-                },
-                columnStyle,
-                itemIndex === nextColumn && itemIndex !== currentColumn
-                  ? { borderStyle: 'dashed' }
-                  : { borderColor: 'transparent' },
-              ]}
-            >
-              <View style={horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900 }}>
-                <Animated.View
-                  style={{
-                    transform: [horizontal ? { translateX: translate } : { translateY: translate }],
-                  }}
+            {row.columns.map((column, columnIndex) => (
+              <View
+                key={columnIndex}
+                style={[
+                  {
+                    zIndex: columnIndex === currentColumn ? 5000 : undefined,
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: (columnStyle as ViewStyle)?.borderColor,
+                  },
+                  horizontal ? { minHeight: maxSize.height } : { minWidth: maxSize.width },
+                  nextColumn !== undefined &&
+                  nextRow !== undefined &&
+                  (columnIndex !== currentColumn || rowIndex !== currentRow)
+                    ? { borderStyle: 'dashed' }
+                    : { borderColor: 'transparent' },
+                ]}
+                onLayout={(e) => {
+                  const { width, height, x, y } = e.nativeEvent.layout;
+                  positionRef.current.column[columnIndex] = horizontal ? y : x;
+                  if (width > maxSize.width || height > maxSize.height) {
+                    setMaxSize((prev) => ({
+                      width: Math.max(prev.width, width),
+                      height: Math.max(prev.height, height),
+                    }));
+                  }
+                }}
+              >
+                <View
+                  style={[
+                    {
+                      flexGrow: 1,
+                      borderWidth: 2,
+                      paddingHorizontal: commonPadding,
+                      paddingBottom: commonPadding,
+                      paddingTop: 0,
+                    },
+                    columnStyle,
+                    columnIndex === nextColumn &&
+                    rowIndex === nextRow &&
+                    !(columnIndex === currentColumn && rowIndex === currentRow)
+                      ? { borderStyle: 'dashed' }
+                      : { borderColor: 'transparent' },
+                  ]}
                 >
-                  {renderHeader({ item, index: itemIndex })}
-                </Animated.View>
+                  <View
+                    style={horizontal ? { flexDirection: 'row' } : { width: '100%', zIndex: 4900 }}
+                  >
+                    {rowIndex === 0 && (
+                      <Animated.View
+                        style={{
+                          transform: [
+                            horizontal ? { translateX: translate } : { translateY: translate },
+                          ],
+                        }}
+                      >
+                        {renderHeader({ item: column, index: columnIndex })}
+                      </Animated.View>
+                    )}
+                    <Text style={{ color: 'gray', marginTop: horizontal && rowIndex > 0 ? 8 : 0 }}>
+                      {row.name !== '' ? (columnIndex === 0 ? row.name : ' ') : ''}
+                    </Text>
+                  </View>
+                  <FlatList
+                    horizontal={horizontal}
+                    data={column.items}
+                    renderItem={({ item, index }) => rowList[rowIndex][columnIndex][index]}
+                    CellRendererComponent={cellRendererComponent}
+                    style={{
+                      zIndex: columnIndex === currentColumn ? 5000 : undefined,
+                      overflow: 'visible',
+                      backgroundColor: 'transparent',
+                    }}
+                  />
+                </View>
               </View>
-              <FlatList
-                horizontal={horizontal}
-                data={item.data}
-                renderItem={({ item, index }) => columnList[itemIndex][index]}
-                CellRendererComponent={cellRendererComponent}
-                style={{ overflow: 'visible', backgroundColor: 'transparent' }}
-              />
-            </View>
+            ))}
           </View>
+          <View
+            style={[
+              { backgroundColor: 'gray' },
+              horizontal ? { height: '100%', width: 2 } : { width: '100%', height: 2 },
+            ]}
+          />
         </View>
       ))}
     </View>

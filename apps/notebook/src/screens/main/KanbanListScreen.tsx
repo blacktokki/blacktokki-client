@@ -53,7 +53,7 @@ export const KanbanListScreen: React.FC = () => {
             style={commonStyles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder={lang('Add & Rename & Delete')}
+            placeholder={lang('Add & Delete')}
             placeholderTextColor={commonStyles.placeholder.color}
           />
           {/* 보드 추가 */}

@@ -91,12 +91,13 @@
 * Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
   * `+1 day`, `+1 month`, `Extend`, or `Delete`.
 
-### 🗂 Kanban
+### 🗂 Board
 
-* Visualize and manage note sections as a Kanban board.
+* Visualize and manage note sections as a Kanban/Scrum board.
 * You can create, modify, and delete boards.
 * Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
 * Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
+* In **Scrum Boards**, **Rows** are automatically generated based on the level immediately above the card's header (Header Level - 1). This enables a more multi-dimensional organization of cards, such as by project stage or assignee.
 * Cards can be **dragged and dropped** to another column.
 * When a card is moved, its corresponding section is **physically moved** to the target note.
 

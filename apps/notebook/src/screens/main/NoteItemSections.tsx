@@ -19,14 +19,14 @@ export const NotePageHeader = ({
   onPress,
   paragraph,
   archive,
-  kanban,
+  board,
 }: {
   title: string;
   onPress: (title: string, hasChild: boolean) => void;
   pressable?: boolean;
   paragraph?: string;
   archive?: { updated: string; previous?: number; next?: number };
-  kanban?: string;
+  board?: string;
 }) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -34,9 +34,9 @@ export const NotePageHeader = ({
   const splitTitle = getSplitTitle(title);
   return (
     <View style={styles.header}>
-      {kanban && (
+      {board && (
         <TouchableOpacity
-          onPress={() => push('KanbanPage', { title: kanban })}
+          onPress={() => push('BoardPage', { title: board })}
           style={[commonStyles.title, { marginRight: 5 }]}
         >
           <Icon2

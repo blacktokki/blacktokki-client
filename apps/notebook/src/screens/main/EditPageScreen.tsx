@@ -74,7 +74,7 @@ const useUnsaveEffect = (
 export const EditPageScreen: React.FC = () => {
   const route = useRoute<EditPageScreenRouteProp>();
   const isFocused = useIsFocused();
-  const { title, paragraph, section, kanban } = route.params;
+  const { title, paragraph, section, board } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -142,7 +142,7 @@ export const EditPageScreen: React.FC = () => {
       {
         onSuccess: () => {
           checkedRef.current = undefined;
-          navigation.navigate('NotePage', { ...toNoteParams(title, paragraph, section), kanban });
+          navigation.navigate('NotePage', { ...toNoteParams(title, paragraph, section), board });
         },
         onError: (error: any) => {
           Alert.alert('오류', error.message || '문서를 저장하는 중 오류가 발생했습니다.');
@@ -219,9 +219,9 @@ export const EditPageScreen: React.FC = () => {
     isFocused && (
       <View style={commonStyles.container}>
         <View style={commonStyles.header}>
-          {kanban && (
+          {board && (
             <TouchableOpacity
-              onPress={isPrevent() ? handleUnsaved : () => push('KanbanPage', { title: kanban })}
+              onPress={isPrevent() ? handleUnsaved : () => push('BoardPage', { title: board })}
               style={[commonStyles.title, { marginRight: 5 }]}
             >
               <Icon2 name="view-dashboard" size={20} color={commonStyles.pressibleText.color} />

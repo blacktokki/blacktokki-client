@@ -12,7 +12,7 @@ import { useBoardPages, useCreateOrUpdateBoard, useDeleteBoard } from '../../hoo
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
-export const KanbanListScreen: React.FC = () => {
+export const BoardListScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -28,7 +28,7 @@ export const KanbanListScreen: React.FC = () => {
   return (
     <>
       <ResponsiveSearchBar />
-      <UsageButton paragraph={'🗂 ' + lang('Kanban')} />
+      <UsageButton paragraph={'🗂 ' + lang('Board')} />
       <View style={commonStyles.container}>
         {boards.length > 0 ? (
           <FlatList
@@ -36,7 +36,7 @@ export const KanbanListScreen: React.FC = () => {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={commonStyles.card}
-                onPress={() => navigation.push('KanbanPage', { title: item.title })}
+                onPress={() => navigation.push('BoardPage', { title: item.title })}
               >
                 <Text style={commonStyles.title}>{item.title}</Text>
               </TouchableOpacity>

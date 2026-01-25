@@ -35,7 +35,7 @@ const diffToSnapshot = (original: string, delta: string) => {
 export const NotePageScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const route = useRoute<NotePageScreenRouteProp>();
-  const { title, paragraph, section, archiveId, kanban } = route.params;
+  const { title, paragraph, section, archiveId, board } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const _window = useResizeContext();
@@ -64,7 +64,7 @@ export const NotePageScreen: React.FC = () => {
       ? _archives?.find((v) => archive.option.SNAPSHOT_ID === v.id)
       : undefined;
   const handleEdit = () => {
-    navigation.navigate('EditPage', { ...toNoteParams(title, paragraph, section), kanban });
+    navigation.navigate('EditPage', { ...toNoteParams(title, paragraph, section), board });
   };
 
   const handleMovePage = () => {
@@ -94,7 +94,7 @@ export const NotePageScreen: React.FC = () => {
   }, [route]);
   useEffect(() => {
     if (page !== undefined && paragraph !== undefined && paragraphItem === undefined) {
-      navigation.navigate('NotePage', { title, paragraph: undefined, kanban });
+      navigation.navigate('NotePage', { title, paragraph: undefined, board });
     }
   }, [page, paragraph, paragraphItem]);
 
@@ -126,9 +126,9 @@ export const NotePageScreen: React.FC = () => {
               title={title}
               paragraph={paragraph}
               archive={archive}
-              kanban={kanban}
+              board={board}
               onPress={(title, hasChild) =>
-                (hasChild ? navigation.push : navigation.navigate)('NotePage', { title, kanban })
+                (hasChild ? navigation.push : navigation.navigate)('NotePage', { title, board })
               }
             />
             <View style={pageStyles.actionButtons}>
@@ -201,7 +201,7 @@ export const NotePageScreen: React.FC = () => {
                       moveParagraph.level === 0 ? undefined : moveParagraph.title,
                       moveParagraph.autoSection
                     ),
-                    kanban,
+                    board,
                   })
                 }
               />

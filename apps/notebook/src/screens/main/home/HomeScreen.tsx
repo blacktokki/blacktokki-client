@@ -33,8 +33,8 @@ const NotesTabView = () => {
       <ProblemButton />
       <List.Item
         left={RenderIcon('view-dashboard-variant')}
-        title={lang('Kanban')}
-        onPress={() => push('KanbanList')}
+        title={lang('Board')}
+        onPress={() => push('BoardList')}
       />
     </ScrollView>
   );

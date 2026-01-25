@@ -9,8 +9,8 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { HeaderIconButton, pageStyles } from './NoteItemSections';
 import { renderCardPage, useToCardPage } from './RecentPageSection';
 import { OptionButton } from './home/ConfigSection';
+import Board from '../../components/Board';
 import { Paragraph, parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
-import Kanban from '../../components/Kanban';
 import {
   ResponsiveSearchBar,
   SearchBar,
@@ -83,12 +83,12 @@ const move = (page: Content, newPage: Content, path: string, newParent?: Paragra
   return { sourceDescription, targetDescription };
 };
 
-type KanbanItemRouteProp = RouteProp<NavigationParamList, 'KanbanPage'>;
+type BoardItemRouteProp = RouteProp<NavigationParamList, 'BoardPage'>;
 
-export const KanbanItemScreen: React.FC = () => {
+export const BoardItemScreen: React.FC = () => {
   const _window = useResizeContext();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const route = useRoute<KanbanItemRouteProp>();
+  const route = useRoute<BoardItemRouteProp>();
   const { title } = route.params;
 
   const theme = useColorScheme();
@@ -122,7 +122,7 @@ export const KanbanItemScreen: React.FC = () => {
         if (v.paragraph) {
           navigation.push('EditPage', {
             ...toNoteParams(v.paragraph.origin, v.paragraph.title, v.paragraph.autoSection),
-            kanban: board?.title,
+            board: board?.title,
           });
         }
       } else {
@@ -276,7 +276,7 @@ export const KanbanItemScreen: React.FC = () => {
         <ResponsiveSearchBar />
         <View style={commonStyles.container}>
           <StatusCard
-            message="This kanban is hidden by Private Mode."
+            message="This board is hidden by Private Mode."
             buttonTitle="Enable Private Mode"
             onButtonPress={() => setPrivate.mutate({ enabled: true })}
           />
@@ -296,7 +296,7 @@ export const KanbanItemScreen: React.FC = () => {
   return (
     <>
       <ResponsiveSearchBar />
-      <UsageButton paragraph={'🗂 ' + lang('Kanban')} />
+      <UsageButton paragraph={'🗂 ' + lang('Board')} />
       {/* 설정 화면 (보드 옵션 수정) */}
       {showConfig ? (
         <ScrollView
@@ -351,7 +351,7 @@ export const KanbanItemScreen: React.FC = () => {
                 {option?.BOARD_NOTE_IDS && (
                   <View style={{ flexDirection: 'row' }}>
                     <OptionButton
-                      title={lang('Kanban')}
+                      title={lang('Board')}
                       onPress={() => saveBoardOption({ BOARD_TYPE: 'KANBAN' })}
                       active={option.BOARD_TYPE !== 'SCRUM'}
                     />
@@ -420,7 +420,7 @@ export const KanbanItemScreen: React.FC = () => {
           </View>
         </ScrollView>
       ) : (
-        // 칸반 보드 화면
+        // 보드 화면
         <View style={[commonStyles.container, { paddingHorizontal: 0, paddingVertical: 0 }]}>
           {header}
           <View
@@ -432,7 +432,7 @@ export const KanbanItemScreen: React.FC = () => {
             }}
           />
           {rows && rows.length > 0 ? (
-            <Kanban
+            <Board
               horizontal={_window === 'portrait' && horizontal}
               rows={rows}
               columnStyle={{
@@ -441,7 +441,7 @@ export const KanbanItemScreen: React.FC = () => {
               renderHeader={({ item }) => (
                 <TouchableOpacity
                   onPress={() =>
-                    navigation.push('NotePage', { title: item.name, kanban: board.title })
+                    navigation.push('NotePage', { title: item.name, board: board.title })
                   }
                   style={{ backgroundColor: commonStyles.container.backgroundColor }}
                 >

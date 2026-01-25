@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleProp, ViewStyle, View, Animated, Text } from 'react-native';
 
-import KanbanCard from './KanbanCard';
+import BoardCard from './BoardCard';
 
 type Row<T> = {
   name: string;
@@ -11,7 +11,7 @@ type Row<T> = {
   }[];
 };
 
-type KanbanProps<T> = {
+type BoardProps<T> = {
   rows: Row<T>[];
   renderItem: (e: { item: T; index: number }) => JSX.Element;
   onStart: () => void;
@@ -48,7 +48,7 @@ export default <T,>({
   onStart,
   onEnd,
   renderHeader,
-}: KanbanProps<T>) => {
+}: BoardProps<T>) => {
   const positionRef = useRef<{ row: number[]; column: number[] }>({ row: [], column: [] });
   const [maxSize, setMaxSize] = useState({ width: 0, height: 0 });
   const translate = useRef(new Animated.Value(0)).current;
@@ -113,7 +113,7 @@ export default <T,>({
       row.columns.map((column, columnIndex) =>
         column.items.map((item, index) => {
           return (
-            <KanbanCard
+            <BoardCard
               item={item}
               renderItem={(item) => renderItem({ index, item })}
               onStart={() => _onStart(rowIndex, columnIndex)}

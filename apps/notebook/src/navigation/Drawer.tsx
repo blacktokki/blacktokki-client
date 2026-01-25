@@ -112,7 +112,7 @@ export default () => {
           ]}
         >
           {renderTab('RECENT', lang('All Notes'), 'notebook', currentView === 'RECENT')}
-          {renderTab('KANBAN', lang('Kanban'), 'view-dashboard', currentView === 'KANBAN')}
+          {renderTab('BOARD', lang('Board'), 'view-dashboard', currentView === 'BOARD')}
           {renderTab(
             'CURRENT_NOTE',
             currentNote ? currentNote.title : lang('Current Note'),

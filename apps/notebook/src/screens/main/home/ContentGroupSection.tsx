@@ -204,10 +204,10 @@ const DraggableTabItem = ({
 };
 
 // --- Main Component Types ---
-export type ContentGroupType = 'KANBAN' | 'RECENT' | 'CURRENT_NOTE';
+export type ContentGroupType = 'BOARD' | 'RECENT' | 'CURRENT_NOTE';
 export type ContentGroupSubType = 'TOC' | 'SUBNOTE' | 'HISTORY';
 type Props =
-  | { type: 'KANBAN' | ContentGroupSubType | 'PAGE' | 'LAST' }
+  | { type: 'BOARD' | ContentGroupSubType | 'PAGE' | 'LAST' }
   | { type: 'RECENT'; noteCount: number };
 
 const ContentGroupSection = (props: Props) => {
@@ -269,7 +269,7 @@ const ContentGroupSection = (props: Props) => {
         toggleRecent(content.id);
       } else tabRef.current = setTimeout(() => (tabRef.current = undefined), 500);
     }
-    navigate(content.type === 'BOARD' ? 'KanbanPage' : 'NotePage', { title: content.title });
+    navigate(content.type === 'BOARD' ? 'BoardPage' : 'NotePage', { title: content.title });
   };
 
   const onNoteLongPress = (content: Content) => {
@@ -290,7 +290,7 @@ const ContentGroupSection = (props: Props) => {
 
   // --- Render Sections ---
 
-  if (props.type === 'KANBAN') {
+  if (props.type === 'BOARD') {
     return (
       <List.Section>
         {boards.slice(0, 10).map((b) => (
@@ -306,7 +306,7 @@ const ContentGroupSection = (props: Props) => {
         <List.Item
           title={lang('more...')}
           left={RenderIcon('view-dashboard-variant')}
-          onPress={() => push('KanbanList')}
+          onPress={() => push('BoardList')}
         />
       </List.Section>
     );

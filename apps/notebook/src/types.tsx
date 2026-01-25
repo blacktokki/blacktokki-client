@@ -55,11 +55,11 @@ export type ParagraphKey =
 export type NavigationParamList = {
   Home: undefined;
   RecentPages: { title?: string };
-  NotePage: { title: string; archiveId?: number; kanban?: string } & ParagraphKey;
+  NotePage: { title: string; archiveId?: number; board?: string } & ParagraphKey;
   NoteViewer: { key: string } & ParagraphKey;
-  EditPage: { title: string; kanban?: string } & ParagraphKey;
+  EditPage: { title: string; board?: string } & ParagraphKey;
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
-  KanbanPage: { title: string };
+  BoardPage: { title: string };
   SearchPage: { query: string };
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, PanResponder, Platform } from 'react-native';
 
-type KanbanCardProps<T> = {
+type BoardCardProps<T> = {
   item: T;
   renderItem: (item: T) => JSX.Element;
   onStart: () => void;
@@ -9,7 +9,7 @@ type KanbanCardProps<T> = {
   onEnd: (position: { x: number; y: number }) => boolean;
 };
 
-export default <T,>({ item, renderItem, onStart, onActive, onEnd }: KanbanCardProps<T>) => {
+export default <T,>({ item, renderItem, onStart, onActive, onEnd }: BoardCardProps<T>) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const zIndexAnim = useRef(new Animated.Value(0)).current;

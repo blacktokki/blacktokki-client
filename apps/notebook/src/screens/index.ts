@@ -4,8 +4,8 @@ import { Auth } from '@blacktokki/account';
 
 import { ArchiveScreen } from './main/ArchiveScreen';
 import { EditPageScreen } from './main/EditPageScreen';
-import { KanbanItemScreen } from './main/KanbanItemScreen';
-import { KanbanListScreen } from './main/KanbanListScreen';
+import { BoardItemScreen } from './main/BoardItemScreen';
+import { BoardListScreen } from './main/BoardListScreen';
 import { MovePageScreen } from './main/MovePageScreen';
 import { NoteViewerScreen } from './main/NoteViewerScreen';
 import { ProblemsScreen } from './main/ProblemScreen';
@@ -58,15 +58,15 @@ export const main = {
     component: TimeLineScreen,
     path: 'timeline',
   },
-  KanbanList: {
+  BoardList: {
     title,
-    component: KanbanListScreen,
-    path: 'kanbanlist',
+    component: BoardListScreen,
+    path: 'boardlist',
   },
-  KanbanPage: {
+  BoardPage: {
     title,
-    component: KanbanItemScreen,
-    path: 'kanban',
+    component: BoardItemScreen,
+    path: 'board',
   },
   SearchPage: {
     title,

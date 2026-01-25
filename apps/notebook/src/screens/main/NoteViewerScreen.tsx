@@ -28,8 +28,7 @@ export const NoteViewerScreen: React.FC = () => {
   const theme = useColorScheme();
   const _window = useResizeContext();
   const commonStyles = createCommonStyles(theme);
-  const [_toc, toggleToc] = useState(false);
-  const toc = _window === 'portrait' ? _toc : false;
+  const [toc, toggleToc] = useState(false);
   const [fullParagraph, toggleFullParagraph] = useState(false);
   const { data: viewers } = useNoteViewers();
 

@@ -94,7 +94,7 @@ export const NotePageScreen: React.FC = () => {
   }, [route]);
   useEffect(() => {
     if (page !== undefined && paragraph !== undefined && paragraphItem === undefined) {
-      navigation.navigate('NotePage', { title, paragraph: undefined });
+      navigation.navigate('NotePage', { title, paragraph: undefined, kanban });
     }
   }, [page, paragraph, paragraphItem]);
 

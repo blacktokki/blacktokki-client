@@ -29,12 +29,15 @@ export const NoteListSection = ({
   const { lang } = useLangContext();
   const height = useRef(0);
   return (
-    <View style={commonStyles.container}>
+    <View style={{ flex: 1 }}>
       {isLoading ? (
-        <LoadingView />
+        <View style={commonStyles.container}>
+          <LoadingView />
+        </View>
       ) : contents.length > 0 ? (
         <FlatList
           data={contents}
+          contentContainerStyle={commonStyles.container}
           keyExtractor={(item, i) => `${i}`}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -62,10 +65,12 @@ export const NoteListSection = ({
           }}
         />
       ) : (
-        <View style={[commonStyles.card, commonStyles.centerContent]}>
-          <Text selectable={false} style={commonStyles.text}>
-            {lang(emptyMessage)}
-          </Text>
+        <View style={commonStyles.container}>
+          <View style={[commonStyles.card, commonStyles.centerContent]}>
+            <Text selectable={false} style={commonStyles.text}>
+              {lang(emptyMessage)}
+            </Text>
+          </View>
         </View>
       )}
     </View>

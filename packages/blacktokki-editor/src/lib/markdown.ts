@@ -109,3 +109,65 @@ export const toRaw = (text: string) => {
   //   .replaceAll(/<br\s*[/]?>/gi, '\r\n')
   //   .replaceAll(/<\/?[^>]*>/gi, '');
 };
+
+export const exportMarkdowns = async (contents: { title: string; description?: string }[]) => {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  for (const content of contents.filter((v) => (v.description?.length || 0) > 0)) {
+    zip.file(content.title + '.md', parser(content.description as string));
+  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'notebook.zip';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+  }, 500);
+  a.remove();
+};
+
+export const importMarkdowns = async () => {
+  const files = await new Promise<File[]>((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/zip,.md,.markdown';
+    input.style.display = 'none';
+    input.multiple = true;
+
+    input.onchange = () => {
+      if (input.files && input.files.length > 0) {
+        resolve(Array.from(input.files));
+      } else {
+        reject(new Error('파일이 선택되지 않았습니다.'));
+      }
+    };
+
+    input.click(); // 파일 선택창 열기
+  });
+  const contents: { title: string; description: string }[] = [];
+  const JSZip = (await import('jszip')).default;
+  for (const file of files) {
+    if (file.type === 'application/zip' || file.name.endsWith('.zip')) {
+      const zip = new JSZip();
+      const files = (await zip.loadAsync(file)).files;
+      for (const relativePath in files) {
+        const file = zip.files[relativePath];
+        if (!file.dir) {
+          contents.push({
+            title: relativePath.replace(/\.[^/.]+$/, ''),
+            description: renderer((await file.async('text')).toString()),
+          });
+        }
+      }
+    } else if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) {
+      contents.push({
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        description: renderer(await file.text()),
+      });
+    }
+  }
+  return contents;
+};

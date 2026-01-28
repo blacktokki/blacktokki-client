@@ -9,6 +9,8 @@ let markdown: {
   parser: (htmlCode: string) => string;
   renderer: (markdownCode: string) => string;
   toRaw: (text: string) => string;
+  exportMarkdowns: (contents: { title: string; description?: string }[]) => Promise<void>;
+  importMarkdowns: () => Promise<{ title: string; description: string }[]>;
 };
 import('./markdown').then((value) => {
   markdown = value;
@@ -25,6 +27,11 @@ export const renderer = (markdownCode: string) => {
 export const toRaw = (text: string) => {
   return markdown.toRaw(text);
 };
+
+export const markdownFs = () => ({
+  export: markdown.exportMarkdowns,
+  import: markdown.importMarkdowns,
+});
 
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,

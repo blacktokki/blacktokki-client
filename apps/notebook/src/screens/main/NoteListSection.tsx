@@ -1,11 +1,19 @@
 import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 import LoadingView from '../../components/LoadingView';
 import { titleFormat } from '../../components/SearchBar';
 import { createCommonStyles } from '../../styles';
 import { ParagraphKey } from '../../types';
+
+type Item = {
+  title: string;
+  subtitles?: string[];
+  id?: number;
+  link?: string;
+} & ParagraphKey;
 
 export const NoteListSection = ({
   contents,
@@ -14,13 +22,9 @@ export const NoteListSection = ({
   emptyMessage,
   onScrollEnd,
 }: {
-  contents: ({
-    title: string;
-    subtitles?: string[];
-    id?: number;
-  } & ParagraphKey)[];
+  contents: Item[];
   isLoading: boolean;
-  onPress: (title: string, paragraph?: string, section?: string, id?: number) => void;
+  onPress: (title: string, paragraph?: string, section?: string, item?: Item) => void;
   emptyMessage: string;
   onScrollEnd?: () => void;
 }) => {
@@ -42,9 +46,17 @@ export const NoteListSection = ({
           renderItem={({ item }) => (
             <TouchableOpacity
               style={commonStyles.card}
-              onPress={() => onPress(item.title, item.paragraph, item.section, item.id)}
+              onPress={() => onPress(item.title, item.paragraph, item.section, item)}
             >
-              <Text style={commonStyles.title}>{titleFormat(item)}</Text>
+              <View style={{ flexDirection: 'row' }}>
+                <Icon
+                  style={{ top: 6, paddingRight: 6 }}
+                  name={item.link ? 'external-link' : 'file-text'}
+                  size={12}
+                  color={commonStyles.text.color}
+                />
+                <Text style={commonStyles.title}>{titleFormat(item)}</Text>
+              </View>
               {(item.subtitles || []).map((subtitle, index) => (
                 <Text key={index} style={[commonStyles.smallText]}>
                   {subtitle}

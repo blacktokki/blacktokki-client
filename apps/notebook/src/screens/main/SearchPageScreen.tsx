@@ -7,7 +7,7 @@ import React, { useEffect, useMemo } from 'react';
 import { View, Text } from 'react-native';
 
 import { NoteListSection } from './NoteListSection';
-import { ResponsiveSearchBar } from '../../components/SearchBar';
+import { onLink, ResponsiveSearchBar, titleFormat } from '../../components/SearchBar';
 import { useAgentSearch } from '../../hooks/useAgentSearch';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
@@ -22,15 +22,29 @@ export const SearchPageScreen: React.FC = () => {
   const commonStyles = createCommonStyles(theme);
   const { lang } = useLangContext();
   const { auth } = useAuthContext();
-  const { data, isLoading, fetchNextPage, isFetchingNextPage } = useAgentSearch(query);
+  const { data, isLoading, fetchNextPage, isFetchingNextPage } = useAgentSearch(query, false, true);
   const formattedContents = useMemo(() => {
     return (
-      data?.pages.flat().map((res) => ({
-        title: res.title,
-        paragraph: res.paragraph ? toRaw(toHtml(res.paragraph)).replace(/\n/g, '') : undefined,
-        subtitles: [toRaw(toHtml(res.description))], // `Score: ${(1 - res.distance).toFixed(2)}`
-        id: res.id,
-      })) || []
+      data?.pages.flat().map((res) => {
+        const description = toRaw(toHtml(res.description));
+        return {
+          title: res.link ? res.link.text : res.title,
+          paragraph: res.paragraph ? toRaw(toHtml(res.paragraph)).replace(/\n/g, '') : undefined,
+          subtitles: [
+            ...(res.link
+              ? [titleFormat({ title: res.link.origin, paragraph: res.link.url }), ' ']
+              : []),
+            res.link
+              ? description
+                  .split('\n')
+                  .slice(0, 5)
+                  .map((v) => v.substring(0, 500))
+                  .join('\n')
+              : description,
+          ], // `Score: ${(1 - res.distance).toFixed(2)}`
+          link: res.link?.url,
+        };
+      }) || []
     );
   }, [data]);
 
@@ -55,7 +69,13 @@ export const SearchPageScreen: React.FC = () => {
       <NoteListSection
         contents={formattedContents}
         isLoading={isLoading}
-        onPress={(title, paragraph) => navigation.push('NotePage', { title, paragraph })}
+        onPress={(title, paragraph, _, item) => {
+          if (item?.link) {
+            onLink(item.link, navigation);
+          } else {
+            navigation.push('NotePage', { title, paragraph });
+          }
+        }}
         emptyMessage="No results found for your search."
         onScrollEnd={() => {
           if (!isFetchingNextPage) {

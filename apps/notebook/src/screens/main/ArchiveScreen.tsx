@@ -32,10 +32,10 @@ export const ArchiveScreen: React.FC = () => {
             id: v.id || i,
           }))}
         isLoading={isLoading}
-        onPress={(title, _, __, id) =>
+        onPress={(title, _, __, item) =>
           (title === undefined ? navigation.push : navigation.navigate)('NotePage', {
             title,
-            archiveId: id,
+            archiveId: item?.id,
           })
         }
         emptyMessage="There are no recently modified notes."

@@ -7,7 +7,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import {
+  paragraphByKey,
+  paragraphDescription,
+  parseHtmlToParagraphs,
+} from '../../components/HeaderSelectBar';
 import {
   getFilteredPages,
   titleFormat,
@@ -15,7 +19,6 @@ import {
   urlToNoteLink,
 } from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
-import { paragraphByKey, paragraphDescription } from '../../hooks/useProblem';
 import AlertModal from '../../modals/AlertModal';
 import { previewUrl } from '../../services/notebook';
 import { createCommonStyles } from '../../styles';

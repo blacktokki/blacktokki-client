@@ -6,23 +6,26 @@ import DiffMatchPatch from 'diff-match-patch';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
-import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
-import LoadingView from '../../../components/LoadingView';
-import { ResponsiveSearchBar, toNoteParams } from '../../../components/SearchBar';
-import StatusCard from '../../../components/StatusCard';
-import { useNotePage, useSnapshotAll } from '../../../hooks/useNoteStorage';
-import { paragraphByKey, paragraphDescription } from '../../../hooks/useProblem';
-import { createCommonStyles } from '../../../styles';
-import { NavigationParamList } from '../../../types';
 import {
   HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
   NotePageSection,
   pageStyles,
-} from '../NoteItemSections';
-import TimerTagSection from './TimerTagSection';
-import { isHiddenTitle, usePrivate, useSetPrivate } from '../../../hooks/usePrivate';
+} from './NoteItemSections';
+import {
+  paragraphByKey,
+  paragraphDescription,
+  parseHtmlToParagraphs,
+} from '../../components/HeaderSelectBar';
+import LoadingView from '../../components/LoadingView';
+import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
+import StatusCard from '../../components/StatusCard';
+import TimerTagSection from '../../features/timeline/TimerTagSection';
+import { useNotePage, useSnapshotAll } from '../../hooks/useNoteStorage';
+import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
+import { createCommonStyles } from '../../styles';
+import { NavigationParamList } from '../../types';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
 

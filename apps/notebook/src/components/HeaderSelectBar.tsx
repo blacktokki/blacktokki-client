@@ -3,6 +3,7 @@ import { TouchableOpacity, View, FlatList, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { createCommonStyles } from '../styles';
+import { ParagraphKey } from '../types';
 
 export interface Paragraph {
   path: string;
@@ -13,7 +14,7 @@ export interface Paragraph {
   description: string;
 }
 
-export const base64Encode = (str: string): string => {
+const base64Encode = (str: string): string => {
   const bytes = new TextEncoder().encode(str);
   const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
   return btoa(binString);
@@ -117,6 +118,23 @@ export function parseHtmlToParagraphs(html: string): Paragraph[] {
   });
   return result;
 }
+
+// paragraph utilities
+export const paragraphDescription = (paragraphs: Paragraph[], path: string, rootTitle: boolean) => {
+  return path
+    ? paragraphs
+        .filter((v) => v.path === path || v.path.startsWith(path + ','))
+        .map((v) => (rootTitle || v.path !== path ? v.header : '') + v.description)
+        .join('')
+    : '';
+};
+
+export const paragraphByKey = (paragraph: Paragraph, key: ParagraphKey) => {
+  return (
+    paragraph.title === key.paragraph &&
+    (key.section === undefined || paragraph.path.includes(base64Encode(key.section) + ','))
+  );
+};
 
 export default function HeaderSelectBar(props: {
   root: string;

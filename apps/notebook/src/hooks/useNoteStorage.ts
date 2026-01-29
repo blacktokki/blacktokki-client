@@ -40,6 +40,14 @@ async function getDB(): Promise<IDBDatabase> {
   return dbInstance!;
 }
 
+export const getSplitTitle = (title: string) => {
+  const splitTitle = title.split('/');
+  if (splitTitle.length < 2) {
+    return [title];
+  }
+  return [splitTitle.slice(0, splitTitle.length - 1).join('/'), splitTitle[splitTitle.length - 1]];
+};
+
 export const focusListener: ((queryClient: QueryClient, id: number) => Promise<void>)[] = [];
 
 export const getContents = async (

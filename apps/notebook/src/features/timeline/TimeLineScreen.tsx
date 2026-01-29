@@ -4,14 +4,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 
-import { ResponsiveSearchBar, toNoteParams } from '../../../components/SearchBar';
-import { today } from '../../../components/TimerTag';
-import useTimeLine from '../../../hooks/useTimeLine';
-import { createCommonStyles } from '../../../styles';
-import { NavigationParamList } from '../../../types';
-import { NoteListSection } from '../NoteListSection';
 import DateHeaderSection from './DateHeaderSection';
-import UsageButton from '../../../components/UsageButton';
+import { today } from './TimerTag';
+import useTimeLine from './useTimeLine';
+import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
+import UsageButton from '../../components/UsageButton';
+import { NoteListSection } from '../../screens/main/NoteListSection';
+import { createCommonStyles } from '../../styles';
+import { NavigationParamList } from '../../types';
 
 export const TimeLineScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();

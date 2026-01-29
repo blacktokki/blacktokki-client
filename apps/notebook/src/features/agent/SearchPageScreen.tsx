@@ -6,9 +6,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useMemo } from 'react';
 import { View, Text } from 'react-native';
 
-import { NoteListSection } from './NoteListSection';
+import { useAgentSearch } from './useAgentSearch';
 import { onLink, ResponsiveSearchBar, titleFormat } from '../../components/SearchBar';
-import { useAgentSearch } from '../../hooks/useAgentSearch';
+import { NoteListSection } from '../../screens/main/NoteListSection';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 

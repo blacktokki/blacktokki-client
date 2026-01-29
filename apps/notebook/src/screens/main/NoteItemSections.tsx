@@ -10,7 +10,7 @@ import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import HeaderSelectBar, { Paragraph } from '../../components/HeaderSelectBar';
 import { onLink, titleFormat } from '../../components/SearchBar';
-import { getSplitTitle } from '../../hooks/useProblem';
+import { getSplitTitle } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 

@@ -11,10 +11,13 @@ import {
   NotePageSection,
   pageStyles,
 } from './NoteItemSections';
-import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import {
+  paragraphByKey,
+  paragraphDescription,
+  parseHtmlToParagraphs,
+} from '../../components/HeaderSelectBar';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import { useNoteViewers } from '../../hooks/useNoteStorage';
-import { paragraphByKey, paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList, ParagraphKey } from '../../types';
 

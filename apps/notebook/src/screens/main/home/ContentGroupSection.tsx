@@ -6,10 +6,11 @@ import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
+import useProblem from '../../../features/problem/useProblem';
+import useTimeLine from '../../../features/timeline/useTimeLine';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
-import { useNotePages, useSnapshotPages } from '../../../hooks/useNoteStorage';
+import { getSplitTitle, useNotePages, useSnapshotPages } from '../../../hooks/useNoteStorage';
 import { usePrivate } from '../../../hooks/usePrivate';
-import useProblem, { getSplitTitle } from '../../../hooks/useProblem';
 import {
   useAddRecentTab,
   useDeleteRecentTab,
@@ -17,7 +18,6 @@ import {
   useRecentTabs,
   useReorderRecentTabs,
 } from '../../../hooks/useTabStorage';
-import useTimeLine from '../../../hooks/useTimeLine';
 import { createCommonStyles } from '../../../styles';
 import { Content } from '../../../types';
 

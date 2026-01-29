@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from 'react-query';
 
-import { usePrivate } from './usePrivate';
-import { search } from '../services/agent';
+import { search } from './agent';
+import { usePrivate } from '../../hooks/usePrivate';
 
 export const useAgentSearch = (query: string, exact: boolean, withExternal: boolean) => {
   const { data: privateConfig } = usePrivate();

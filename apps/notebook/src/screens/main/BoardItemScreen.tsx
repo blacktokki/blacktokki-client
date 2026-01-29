@@ -10,7 +10,11 @@ import { HeaderIconButton, pageStyles } from './NoteItemSections';
 import { renderCardPage, useToCardPage } from './RecentPageSection';
 import { OptionButton } from './home/ConfigSection';
 import Board from '../../components/Board';
-import { Paragraph, parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import {
+  Paragraph,
+  paragraphDescription,
+  parseHtmlToParagraphs,
+} from '../../components/HeaderSelectBar';
 import {
   ResponsiveSearchBar,
   SearchBar,
@@ -22,7 +26,6 @@ import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
 import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
-import { paragraphDescription } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
 

@@ -4,9 +4,9 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import { today } from '../../../components/TimerTag';
-import DatePickerModal, { MarkedDateRange } from '../../../modals/DatePikcerModal';
-import { createCommonStyles } from '../../../styles';
+import { today } from './TimerTag';
+import DatePickerModal, { MarkedDateRange } from '../../modals/DatePikcerModal';
+import { createCommonStyles } from '../../styles';
 
 type DateHeaderSectionProps = {
   date: string;

@@ -2,14 +2,9 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { Paragraph } from '../../../components/HeaderSelectBar';
-import TimerTag, {
-  matchDateRange,
-  paragraphsToDatePatterns,
-  TimerData,
-  today,
-} from '../../../components/TimerTag';
-import { useCreateOrUpdatePage } from '../../../hooks/useNoteStorage';
+import TimerTag, { matchDateRange, paragraphsToDatePatterns, TimerData, today } from './TimerTag';
+import { Paragraph } from '../../components/HeaderSelectBar';
+import { useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 
 const replaceDay = (data: TimerData, newDate: string) => {
   return (

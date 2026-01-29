@@ -1,9 +1,9 @@
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 
-import { useNotePages } from './useNoteStorage';
-import { parseHtmlToParagraphs } from '../components/HeaderSelectBar';
-import { matchDateRange, paragraphsToDatePatterns, today } from '../components/TimerTag';
+import { matchDateRange, paragraphsToDatePatterns, today } from './TimerTag';
+import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import { useNotePages } from '../../hooks/useNoteStorage';
 
 export default (date?: string) => {
   const targetDate = dayjs(date || today()).startOf('day');

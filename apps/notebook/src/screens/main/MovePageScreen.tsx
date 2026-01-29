@@ -7,7 +7,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import { paragraphByKey, parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
 import {
   useCreateOrUpdatePage,
@@ -15,7 +15,6 @@ import {
   useNotePage,
   useNotePages,
 } from '../../hooks/useNoteStorage';
-import { paragraphByKey } from '../../hooks/useProblem';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 

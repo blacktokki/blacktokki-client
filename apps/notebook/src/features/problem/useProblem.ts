@@ -2,16 +2,16 @@ import { useAuthContext } from '@blacktokki/account';
 import { cleanHtml, findLists, toRaw } from '@blacktokki/editor';
 import { useEffect, useRef, useState } from 'react';
 
-import { KeywordContent } from './useKeywordStorage';
-import { useNotePages } from './useNoteStorage';
 import {
   base64Decode,
-  base64Encode,
-  Paragraph,
+  paragraphByKey,
+  paragraphDescription,
   parseHtmlToParagraphs,
-} from '../components/HeaderSelectBar';
-import { getLinks, titleFormat } from '../components/SearchBar';
-import { Content, ParagraphKey } from '../types';
+} from '../../components/HeaderSelectBar';
+import { getLinks, titleFormat } from '../../components/SearchBar';
+import { KeywordContent } from '../../hooks/useKeywordStorage';
+import { getSplitTitle, useNotePages } from '../../hooks/useNoteStorage';
+import { Content } from '../../types';
 
 const getReadabilityLevel = (() => {
   function getKoreanRatio(text: string): number {
@@ -68,30 +68,6 @@ const getReadabilityLevel = (() => {
   }
   return _getReadabilityLevel;
 })();
-
-export const getSplitTitle = (title: string) => {
-  const splitTitle = title.split('/');
-  if (splitTitle.length < 2) {
-    return [title];
-  }
-  return [splitTitle.slice(0, splitTitle.length - 1).join('/'), splitTitle[splitTitle.length - 1]];
-};
-
-export const paragraphDescription = (paragraphs: Paragraph[], path: string, rootTitle: boolean) => {
-  return path
-    ? paragraphs
-        .filter((v) => v.path === path || v.path.startsWith(path + ','))
-        .map((v) => (rootTitle || v.path !== path ? v.header : '') + v.description)
-        .join('')
-    : '';
-};
-
-export const paragraphByKey = (paragraph: Paragraph, key: ParagraphKey) => {
-  return (
-    paragraph.title === key.paragraph &&
-    (key.section === undefined || paragraph.path.includes(base64Encode(key.section) + ','))
-  );
-};
 
 const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
 

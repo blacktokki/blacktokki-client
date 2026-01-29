@@ -3,10 +3,10 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 
-import { NoteListSection } from './NoteListSection';
+import useProblem from './useProblem';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import UsageButton from '../../components/UsageButton';
-import useProblem from '../../hooks/useProblem';
+import { NoteListSection } from '../../screens/main/NoteListSection';
 import { NavigationParamList } from '../../types';
 
 export const ProblemsScreen: React.FC = () => {

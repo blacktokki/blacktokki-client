@@ -21,7 +21,7 @@ import {
 import LoadingView from '../../components/LoadingView';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import StatusCard from '../../components/StatusCard';
-import TimerTagSection from '../../features/timeline/TimerTagSection';
+import { useExtension } from '../../hooks/useExtension';
 import { useNotePage, useSnapshotAll } from '../../hooks/useNoteStorage';
 import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
 import { createCommonStyles } from '../../styles';
@@ -52,6 +52,7 @@ export const NotePageScreen: React.FC = () => {
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
   const { data: privateConfig } = usePrivate();
+  const { data: extension } = useExtension();
   const setPrivate = useSetPrivate();
   const archiveIndex = _archives?.findIndex((v) => v.id === archiveId);
   const archive =
@@ -135,12 +136,15 @@ export const NotePageScreen: React.FC = () => {
               }
             />
             <View style={pageStyles.actionButtons}>
-              <TimerTagSection
-                title={page?.title || ''}
-                path={paragraphItem?.path}
-                fullParagraph={fullParagraph}
-                paragraphs={paragraphs}
-              />
+              {extension.feature.NoteSections.map((NoteSection, i) => (
+                <NoteSection
+                  key={i}
+                  title={page?.title || ''}
+                  path={paragraphItem?.path}
+                  fullParagraph={fullParagraph}
+                  paragraphs={paragraphs}
+                />
+              ))}
               {!paragraphItem && !auth.isLocal && (_window === 'landscape' || toc || archive) && (
                 <HeaderIconButton
                   name="history"

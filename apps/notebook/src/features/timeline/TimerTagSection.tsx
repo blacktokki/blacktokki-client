@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import TimerTag, { matchDateRange, paragraphsToDatePatterns, TimerData, today } from './TimerTag';
-import { Paragraph } from '../../components/HeaderSelectBar';
+import { NoteSectionProps } from '../../hooks/useExtension';
 import { useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 
 const replaceDay = (data: TimerData, newDate: string) => {
@@ -62,12 +62,7 @@ const buttons = (data: TimerData) => {
   ];
 };
 
-export default (props: {
-  title: string;
-  path?: string;
-  fullParagraph: boolean;
-  paragraphs: Paragraph[];
-}) => {
+export default (props: NoteSectionProps) => {
   const dateNum = new Date(today()).getTime();
   const createOrUpdatePage = useCreateOrUpdatePage();
   const data = paragraphsToDatePatterns(props.title, props.paragraphs)

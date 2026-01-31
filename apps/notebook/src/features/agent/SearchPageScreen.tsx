@@ -12,7 +12,7 @@ import { NoteListSection } from '../../screens/main/NoteListSection';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
-type SearchPageRouteProp = RouteProp<NavigationParamList, 'SearchPage'>;
+type SearchPageRouteProp = RouteProp<{ SearchPage: { query: string } }, 'SearchPage'>;
 
 export const SearchPageScreen: React.FC = () => {
   const route = useRoute<SearchPageRouteProp>();

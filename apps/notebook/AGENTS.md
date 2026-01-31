@@ -29,7 +29,7 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
     * HTML 내의 `H1`~`H6` 태그를 기준으로 문단을 분리하고, `path` (부모 헤더의 b64 인코딩된 문자열)를 생성하여 계층 구조를 만듭니다.
 * **계층 구조 (폴더):** 데이터베이스에 별도 "폴더" 엔티티는 없습니다. **타이틀 네이밍 컨벤션** (`/` 사용)으로 구현됩니다.
     * 예: "프로젝트/기획" 노트는 "프로젝트" 노트의 하위 노트로 간주됩니다.
-    * 관련 로직: `src/hooks/useProblem.ts`의 `getSplitTitle`, `src/screens/main/EditPageScreen.tsx`의 `getChildrenPages`.
+    * 관련 로직: `src/hooks/useNoteStorage.ts`의 `getSplitTitle`, `src/screens/main/EditPageScreen.tsx`의 `getChildrenPages`.
 
 ### 2.2. 데이터 흐름 및 상태 관리 (`useNoteStorage.ts`)
 
@@ -68,6 +68,7 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
     * 네비게이션 파라미터(`paragraph`, `section`)를 받아 `paragraphItem`을 찾습니다.
     * `paragraphDescription` (`useProblem.ts`)을 사용해 현재 문단(`fullParagraph` 토글에 따라 하위 포함)에 해당하는 HTML만 추출합니다.
     * `EditorViewer` (`@blacktokki/editor`)로 HTML을 렌더링합니다.
+    * **문단 펼치기/접기 (Full Paragraph)**: 단일 문단 조회 시 `fullParagraph` 토글 상태에 따라 해당 문단만 보여줄지, 모든 하위 문단을 포함하여 하나의 문서처럼 렌더링할지 결정합니다 (`paragraphDescription` 활용).
 * **노트 편집 (`src/screens/main/EditPageScreen.tsx`):**
     * `<Editor>` 컴포넌트를 사용합니다.
     * **자동완성:** `autoComplete` prop을 통해 `[` (내부 링크) 및 `http` (외부 링크 미리보기) 트리거를 구현합니다.
@@ -83,17 +84,7 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 * `urlToNoteLink`: 내부 앱 링크(e.g., `?title=...&paragraph=...`)를 다시 네비게이션 파라미터 객체로 변환합니다.
 * **검색 기록:** `useKeywords` (`useKeywordStorage.ts`)를 통해 AsyncStorage에 저장된 기록을 불러옵니다.
 
-### 3.3. 타임라인 (`src/hooks/useTimeLine.ts`)
-
-* `useTimeLine` 훅이 `useNotePages`의 모든 노트를 가져옵니다.
-* `paragraphsToDatePatterns` (`TimerTag.tsx`)를 호출하여 각 노트의 `header`와 `description` 텍스트를 파싱합니다.
-* `extractDates` (`TimerTag.tsx`) 함수가 **정규식(Regex) 목록**을 사용해 `YYYY-MM-DD`, `MM/DD ~ MM/DD` 등 다양한 날짜 형식을 텍스트에서 추출합니다.
-* `TimeLineScreen.tsx`은 `useTimeLine` 훅에서 반환된 날짜가 포함된 노트 목록을 표시합니다.
-* **타이머 태그 (`TimerTagSection.tsx`):** 노트 페이지 상단에 표시되는 캘린더 태그입니다.
-    * `TimerTag.tsx` 컴포넌트는 날짜 수정(+1일, +1달 등) 버튼을 제공합니다.
-    * 날짜 수정 시 `replaceDay`, `addDay` 헬퍼 함수가 원본 문자열(`v.original`)을 변경한 뒤, `useCreateOrUpdatePage`를 호출해 노트 전체를 다시 저장합니다.
-
-### 3.4. 보드 (`src/screens/main/BoardItemScreen.tsx`)
+### 3.3. 보드 (`src/screens/main/BoardItemScreen.tsx`)
 
 * **데이터 모델:** `Content`의 `type`이 'BOARD'입니다.
 * `useBoardPages`로 보드 목록을, `useRecentBoard`로 현재 활성 보드를 가져옵니다.
@@ -114,24 +105,7 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
     5.  두 `Paragraph[]` 배열을 다시 **HTML 문자열로 재조합**합니다 (`sourceDescription`, `targetDescription`).
     6.  `useCreateOrUpdatePage` 훅을 **두 번** 호출하여 원본 노트와 대상 노트를 각각 업데이트합니다.
 
-### 3.5. 편집 제안 (Problems) (`src/hooks/useProblem.ts`)
-
-이 훅은 애플리케이션에서 가장 복잡한 비즈니스 로직 중 하나입니다. `useNotePages`로 모든 노트를 가져와 다양한 문제를 검사합니다.
-
-* `getData(pages)`: 모든 페이지에 대해 `getDataLinear`와 `getDataMatrix`를 실행합니다.
-* **`getDataLinear` (단일 노트 검사):**
-    * **`Empty paragraph`**: `parseHtmlToParagraphs`로 파싱 후, `paragraphDescription`으로 문단 내용을 가져와 `trim(...).length === 0`인지 확인합니다.
-    * **`Duplicate paragraphs`**: 동일한 `title`과 `autoSection`을 가진 문단을 찾습니다.
-    * **`Too high readability score`**: `getReadabilityLevel`이 문장 길이, 음절 등을 분석해 가독성 점수를 매깁니다.
-* **`getDataMatrix` (노트 간 교차 검사):**
-    * **`Unknown note link`**: `getLinks`로 노트 내 `<a>` 태그를 추출한 뒤, `titleSet` (모든 노트 제목)에 `link.title`이 존재하는지 확인합니다.
-    * **`Unlinked note keyword`**: **가장 복잡한 로직.**
-        1.  노트 A의 `title` (e.g., "React Query")을 가져옵니다.
-        2.  다른 모든 노트 B, C, D... 의 `description`을 가져옵니다.
-        3.  `<a>` 태그를 제외한 순수 텍스트 (`_target.raw`)에서 "React Query"라는 **문자열**이 발견되는지 `RegExp`로 검색합니다 (`_target.raw.match(...)`).
-        4.  발견되면 "Unlinked note keyword" 문제를 리포트합니다.
-
-### 3.6. 아카이브 (스냅샷) (`src/hooks/useNoteStorage.ts`)
+### 3.4. 아카이브 (스냅샷) (`src/hooks/useNoteStorage.ts`)
 
 * **저장:** (Online 모드에서만 활성화) `saveContents` 함수는 `NOTE`를 저장할 때, `SNAPSHOT` 타입의 `Content`를 `parentId` (원본 노트 ID)와 함께 추가로 `postContent`합니다.
 * **조회:**
@@ -139,18 +113,14 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
     * `src/screens/main/notepage/NotePageScreen.tsx`: `archiveId` 파라미터가 있으면 스냅샷을 봅니다.
     * **Diff 뷰:** `diffToSnapshot` 함수 (`NotePageScreen.tsx`)가 `diff-match-patch` 라이브러리를 사용해 'DELTA' 타입의 diff 텍스트를 원본 스냅샷과 병합하여 특정 시점의 HTML을 복원합니다.
 
-### 3.7. 개인 액세스 토큰 (PAT) 관리 (`usePat.ts`)
+### 3.5. 개인 액세스 토큰 (PAT) 관리 (`usePat.ts`)
 * **외부 연동용 토큰**: 사용자가 직접 토큰을 생성/삭제할 수 있는 기능을 제공합니다.
 * **보안 노출**: 발급 직후 `newToken` 상태를 통해 단 한 번만 값을 노출하고 이후에는 식별 정보만 유지하는 흐름을 따릅니다 (`AccountEditModal.tsx`).
 
-### 3.8. 탭 관리 및 드래그 앤 드롭 (`ContentGroupSection.tsx`)
+### 3.6. 탭 관리 및 드래그 앤 드롭 (`ContentGroupSection.tsx`)
 * **실시간 순서 변경 (Draggable)**: `PanResponder`와 `Animated`를 사용하여 탭 목록의 순서를 사용자가 직접 변경할 수 있습니다. 
 * **인덱스 보정 로직**: 드래그 중인 아이템의 시각적 위치와 실제 데이터 리스트의 인덱스 간 괴리를 `dragContext`와 `layoutShift` 계산을 통해 보정하여 자연스러운 리스트 재배치를 구현합니다.
 * **독립된 탭 목록**: 프라이빗 모드 활성 여부에 따라 `RECENT_TABS_KEY`와 `RECENT_TABS_PRIVACY_KEY`를 분리하여 저장소(AsyncStorage)를 관리합니다.
-
-### 3.9. 노트 페이지 상호작용 강화 (`NotePageScreen.tsx`)
-* **문단 펼치기/접기 (Full Paragraph)**: 단일 문단 조회 시 `fullParagraph` 토글 상태에 따라 해당 문단만 보여줄지, 모든 하위 문단을 포함하여 하나의 문서처럼 렌더링할지 결정합니다 (`paragraphDescription` 활용).
-* **타이머 태그 상호작용**: `TimerTagSection.tsx`에서 날짜를 클릭하면 메뉴가 확장되며, `addDay`, `replaceDay` 함수를 통해 원본 HTML 내의 날짜 문자열만 정교하게 찾아내어 수정/저장합니다.
 
 ---
 
@@ -162,7 +132,7 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 * **화면 목록:** `src/screens/index.ts`
     * 네비게이션 스택에 사용되는 스크린 이름과 컴포넌트를 매핑합니다.
 * **드로어 (사이드바):** `src/navigation/Drawer.tsx`
-    * 홈, 타임라인, 편집 제안, 보드 및 최근 노트/탭 목록을 표시합니다.
+    * 홈, 보드 및 최근 노트/탭 목록을 표시합니다.
 * **홈 화면:** `src/screens/main/home/HomeScreen.tsx`
     * `HomeSection`을 사용해 탭 뷰(Discovery, All Notes, Config)를 구성합니다.
 
@@ -194,18 +164,7 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 7.  사용자가 내용을 작성하고 'save' 버튼을 누르면 `handleSave`가 `mutation.mutate` (`useCreateOrUpdatePage` 훅)를 호출합니다.
 8.  `useCreateOrUpdatePage` 훅은 `auth.isLocal`을 확인한 뒤, `saveContents`를 호출하여 새 노트의 `description` (HTML)을 IndexedDB 또는 API에 저장합니다.
 
-### 6.2. 시나리오 2: 일정 노트 작성 및 타임라인 확인
-
-1.  사용자가 `EditPageScreen`에서 노트 본문에 "중요한 회의 2025-10-24"라고 텍스트를 입력하고 저장합니다.
-2.  `useCreateOrUpdatePage`가 노트를 저장합니다.
-3.  사용자가 드로어 메뉴에서 'Timeline'을 선택하여 `TimeLineScreen`으로 이동합니다.
-4.  `TimeLineScreen` 내부의 `useTimeLine` 훅이 실행됩니다.
-5.  `useTimeLine` 훅은 `useNotePages`를 통해 모든 노트의 `description`을 가져옵니다.
-6.  `paragraphsToDatePatterns` -> `extractDates` 함수가 정규식(`/\b(\d{4}-\d{2}-\d{2})\b/g`)을 사용해 "2025-10-24" 문자열을 감지합니다.
-7.  `useTimeLine` 훅은 현재 날짜(`date`)와 일치하는 노트 목록을 `TimeLineScreen`에 반환합니다.
-8.  `TimeLineScreen`은 10월 24일 날짜에 "중요한 회의 2025-10-24"가 포함된 노트를 `NoteListSection`에 렌더링합니다.
-
-### 6.3. 시나리오 3: 칸반 보드에서 문단(카드) 이동
+### 6.2. 시나리오 3: 칸반 보드에서 문단(카드) 이동
 
 1.  사용자가 `BoardItemScreen`을 엽니다.
 2.  보드의 `option.BOARD_NOTE_IDS` (예: `[1, 5]`)와 `option.BOARD_HEADER_LEVEL` (예: `3`)을 읽습니다.
@@ -217,13 +176,13 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 8.  `move` 함수는 이동된 카드의 `path`를 기준으로 "To Do" `Paragraph[]`에서 해당 문단(및 하위 문단)을 제거하고, "Done" `Paragraph[]`에 추가합니다. 그 후 두 `Paragraph[]` 배열을 다시 HTML 문자열(`sourceDescription`, `targetDescription`)로 재조합합니다.
 9.  `useCreateOrUpdatePage` 훅이 **두 번** 호출됩니다. 첫 번째는 `sourceDescription`으로 "To Do" 노트를 업데이트하고, 두 번째는 `targetDescription`으로 "Done" 노트를 업데이트합니다.
 
-### 6.4. 시나리오 4: 프라이빗 노트 관리 및 OTP 인증
+### 6.3. 시나리오 4: 프라이빗 노트 관리 및 OTP 인증
 1.  사용자가 `.개인정보`라는 제목의 노트를 생성합니다.
 2.  프라이빗 모드가 꺼져 있으면 검색 결과나 드로어 목록에 노출되지 않습니다.
 3.  프라이빗 모드 활성화 시, 설정에 따라 `OtpModal`이 뜨고 인증이 성공해야 모드가 전환됩니다.
 4.  사용자가 10분간 활동을 멈추면 `usePrivate`의 `useEffect` 내 타이머가 작동하여 모드를 자동으로 끄고 캐시를 무효화(invalidateQueries)합니다.
 
-### 6.5. 시나리오 5: 탭 고정 및 순서 변경
+### 6.4. 시나리오 5: 탭 고정 및 순서 변경
 1.  사용자가 최근 열람한 노트를 드로어에서 **길게 누르면(Long Press)** `useAddRecentTab`이 실행되어 탭 목록(Tab List)에 고정됩니다.
 2.  탭 목록에 있는 아이템을 드래그하여 위아래로 움직이면 `handleReorder`가 호출됩니다.
 3.  `useReorderRecentTabs`가 변경된 ID 배열을 AsyncStorage에 저장하여 사용자의 커스텀 순서를 유지합니다.
@@ -235,11 +194,8 @@ Blacktokki Notebook은 React Native (Expo)로 구축된 마크다운 기반의 �
 | 파일 | 역할 |
 | --- | --- |
 | `src/hooks/useNoteStorage.ts` | **(가장 중요)** 노트/스냅샷의 **데이터 접근 및 저장(CRUD) 로직** 전체. (React Query 훅) |
-| `src/hooks/useProblem.ts` | "편집 제안" 기능의 모든 복잡한 분석 로직. |
-| `src/hooks/useTimeLine.ts` | "타임라인" 기능의 날짜 추출 및 데이터 구성 로직. |
 | `src/hooks/useBoardStorage.ts` | "보드"의 CRUD 로직. |
 | `src/components/HeaderSelectBar.tsx` | `parseHtmlToParagraphs` (HTML -> `Paragraph[]`) 포함. |
-| `src/components/TimerTag.tsx` | `extractDates` (텍스트 -> 날짜 Regex) 포함. |
 | `src/components/SearchBar.tsx` | `getFilteredPages`, `getLinks` (검색 로직) 포함. |
 | `src/screens/main/notepage/NotePageScreen.tsx` | 노트/문단/스냅샷 뷰어 스크린. |
 | `src/screens/main/EditPageScreen.tsx` | 노트 편집기 스크린. |

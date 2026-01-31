@@ -6,10 +6,9 @@ import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-
 import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import { useExtension } from '../hooks/useExtension';
 import { useLastTab } from '../hooks/useTabStorage';
 import ContentGroupSection, {
-  ProblemButton,
-  TimeLineButton,
   ContentGroupType,
   TabsSection,
   RenderIcon,
@@ -24,6 +23,7 @@ export default () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { data: lastTab } = useLastTab();
+  const { data: extension } = useExtension();
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');
   const currentNote = lastTab?.type === 'NOTE' ? lastTab : undefined;
@@ -100,8 +100,7 @@ export default () => {
   return (
     <View style={{ flex: 1 }}>
       <List.Item left={RenderIcon('home')} title={lang('Home')} onPress={() => push('Home')} />
-      <TimeLineButton />
-      <ProblemButton />
+      {extension.feature.buttons}
       <CurrentTabSection />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <TabsSection />

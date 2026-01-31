@@ -19,8 +19,8 @@
 
 ### 🔍 Searching and Creating Notes
 
-* Full-text Search: Enter a keyword in the search bar and click the 🔍 button or press Enter to navigate to the full-text search results page, which searches through both note titles and their entire content.
-* Direct Navigation and Creation: Click the ➔ button to the right of the search bar to immediately jump to a note with that exact title.
+* Use the top search bar to find existing notes or create new ones.
+* Enter a new title and press `Enter` to automatically create and open the note.
 
 ### ✏️ Editing Notes
 
@@ -56,40 +56,6 @@
 
 * Lists recently viewed notes in chronological order.
 * Click to revisit a note, or remove it from the list if no longer needed.
-
-### 🧾 Edit Suggestions
-
-* Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content.
-* Problem types include:
-
-| Problem Type                              | Description                                                      |
-| --------------------------------------- | ---------------------------------------------------------------- |
-| Empty paragraph                         | A section heading exists but its content is empty                |
-| Empty list                              | A list is present in a section, but it has no items              |
-| Duplicate paragraphs (...)              | The same section title appears more than once                    |
-| Duplicate contents (...)                | Identical contents are repeated in a section                     |
-| Too high readability score: X > 3.0     | The reading difficulty score exceeds the recommended threshold   |
-| Unknown note link (...)                 | A link points to a non-existent note                             |
-| Empty parent note (...)                 | The parent note exists but contains no content                   |
-| Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |
-| Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note |
-
-* Click a problem to jump directly to the problematic section for quick editing.
-
-### 📆 Timeline
-
-* View your schedule at a glance based on dates written in your notes.
-* You can use the specified date formats via the 🕒 button while editing a note.
-* Supported date formats:
-  * `YYYY-MM`
-  * `YYYY-MM-DD`
-  * `YYYY-MM-DD/YYYY-MM-DD`
-  * `MM/DD`
-  * `MM/DD ~ MM/DD`
-* Use the date selector or calendar to browse notes by day.
-* View and edit dated sections directly from this screen.
-* Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
-  * `+1 day`, `+1 month`, `Extend`, or `Delete`.
 
 ### 🗂 Board
 
@@ -134,16 +100,6 @@
 * Links within notes are automatically detected and categorized.
 * Internal note links are also suggested during search and autocomplete.
 
-### ⏱ Automatic Schedule Detection by Note
-
-* The system automatically detects and displays schedules from each note using supported timeline date formats.
-* Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.
-
-### 🧠 Readability Analysis
-
-* Analyzes sentence length and structure to evaluate reading difficulty.
-* Helps improve overly complex or lengthy notes.
-
 ### 🔍 Search History and Autocomplete
 
 * Previously searched keywords are stored for faster reuse.
@@ -153,11 +109,6 @@
 
 * Move or copy specific sections to other notes to reorganize content.
 * Preview changes before confirming to ensure safe editing.
-
-### 📦 Backup and Restore
-
-* Export all notes in Markdown or ZIP format for backup.
-* Restore notes from saved files when needed.
 
 ### 💾 Storage Options and Account Sync
 
@@ -198,6 +149,54 @@
 * You can directly generate and manage Personal Access Tokens (PATs) required for integrating with external services and applications.
 * New tokens can be issued in a dedicated section within the Account Edit modal; for security reasons, the token value is displayed only once immediately after issuance, so it must be copied and stored in a safe place right away.
 * You can view the list of currently active tokens and their expiration dates, and maintain security by deleting tokens that are no longer in use at any time.
+
+---
+
+## Extension Features
+
+### 🔍 Full-text Search
+
+* Enter a keyword in the search bar and click the 🔍 button or press Enter to navigate to the full-text search results page, which searches through both note titles and their entire content.
+
+### 🧾 Edit Suggestions
+
+* Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content.
+* Problem types include:
+
+| Problem Type                              | Description                                                      |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| Empty paragraph                         | A section heading exists but its content is empty                |
+| Empty list                              | A list is present in a section, but it has no items              |
+| Duplicate paragraphs (...)              | The same section title appears more than once                    |
+| Duplicate contents (...)                | Identical contents are repeated in a section                     |
+| Too high readability score: X > 3.0     | The reading difficulty score exceeds the recommended threshold   |
+| Unknown note link (...)                 | A link points to a non-existent note                             |
+| Empty parent note (...)                 | The parent note exists but contains no content                   |
+| Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |
+| Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note |
+
+* Click a problem to jump directly to the problematic section for quick editing.
+
+### 📆 Timeline
+
+* View your schedule at a glance based on dates written in your notes.
+* You can use the specified date formats via the 🕒 button while editing a note.
+* Supported date formats:
+  * `YYYY-MM`
+  * `YYYY-MM-DD`
+  * `YYYY-MM-DD/YYYY-MM-DD`
+  * `MM/DD`
+  * `MM/DD ~ MM/DD`
+* Use the date selector or calendar to browse notes by day.
+* View and edit dated sections directly from this screen.
+* Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.
+* Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
+  * `+1 day`, `+1 month`, `Extend`, or `Delete`.
+
+### 📦 Archive (Backup and Restore)
+
+* Export all notes in Markdown or ZIP format for backup.
+* Restore notes from saved files when needed.
 
 ---
 

@@ -8,20 +8,16 @@ import { List } from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import ConfigSection from './ConfigSection';
-import {
-  CurrentTabSection,
-  ProblemButton,
-  RenderIcon,
-  TabsSection,
-  TimeLineButton,
-} from './ContentGroupSection';
+import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
 import { SearchBar } from '../../../components/SearchBar';
+import { useExtension } from '../../../hooks/useExtension';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
   const { lang } = useLangContext();
+  const { data: extension } = useExtension();
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors[theme].background }}>
       <CurrentTabSection />
@@ -29,8 +25,7 @@ const NotesTabView = () => {
       <List.Subheader style={{}} selectable={false}>
         {lang('Menu')}
       </List.Subheader>
-      <TimeLineButton />
-      <ProblemButton />
+      {extension.feature.buttons}
       <List.Item
         left={RenderIcon('view-dashboard-variant')}
         title={lang('Board')}

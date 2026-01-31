@@ -5,8 +5,9 @@ import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-p
 
 import { SearchBar } from '../components/SearchBar';
 import modals from '../modals';
-import { main } from '../screens';
+import { main, screenTitle } from '../screens';
 import Drawer from './Drawer';
+import features from '../features';
 
 const HeaderRight = () => {
   const windowType = useResizeContext();
@@ -16,7 +17,7 @@ const HeaderRight = () => {
 const getConfig = async () => {
   const Linking = await import('expo-linking');
   return {
-    main,
+    main: { ...main, ...features(screenTitle) },
     login,
     prefixes: [Linking.createURL('/')],
     rootPath: 'blacktokki-notebook',

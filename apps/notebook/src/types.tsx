@@ -61,5 +61,5 @@ export type NavigationParamList = {
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
   BoardPage: { title: string };
-  SearchPage: { query: string };
+  Extension: undefined;
 };

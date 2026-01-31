@@ -7,7 +7,6 @@ import {
   Text,
   useModalsContext,
 } from '@blacktokki/core';
-import { markdownFs } from '@blacktokki/editor';
 import { ConfigSection, LanguageConfigSection, SkinConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -15,8 +14,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 
 import { SearchList } from '../../../components/SearchBar';
+import { useExtension } from '../../../hooks/useExtension';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
-import { useCreateOrUpdatePage, useNotePages } from '../../../hooks/useNoteStorage';
 import {
   usePrivate,
   usePrivateOtp,
@@ -50,8 +49,6 @@ export default () => {
   const theme = useColorScheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const commonStyles = createCommonStyles(theme);
-  const { data: contents } = useNotePages();
-  const mutation = useCreateOrUpdatePage();
   const [noteConfig, setNoteConfig] = useState<'search' | 'private'>();
   const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();
@@ -60,7 +57,7 @@ export default () => {
   const { data: privateOtp } = usePrivateOtp();
   const setPrivate = useSetPrivate();
   const setPrivateOtp = useSetPrivateOtp();
-  const mdfs = markdownFs();
+  const { data: extension } = useExtension();
 
   return (
     <View>
@@ -89,6 +86,13 @@ export default () => {
               onPress={() => setNoteConfig(noteConfig === 'private' ? undefined : 'private')}
               active={noteConfig === 'private'}
             />
+            {!auth.isLocal && (
+              <OptionButton
+                title={lang('Changelog')}
+                onPress={() => navigation.push('Archive', {})}
+                active={false}
+              />
+            )}
           </View>
           {noteConfig === 'search' && (
             <>
@@ -177,34 +181,12 @@ export default () => {
           )}
         </ConfigSection>
       </View>
+      {extension.feature.configs}
       <View style={commonStyles.card}>
-        <ConfigSection title={lang('* Archive')}>
-          <View style={{ flexDirection: 'row' }}>
-            <OptionButton
-              title={lang('Export')}
-              onPress={() => contents && mdfs.export(contents)}
-              active={false}
-            />
-            <OptionButton
-              title={lang('Import')}
-              onPress={() =>
-                mdfs
-                  .import()
-                  .then((v) =>
-                    v.forEach((v2, i) => mutation.mutate({ ...v2, isLast: i + 1 === v.length }))
-                  )
-              }
-              active={false}
-            />
-            {!auth.isLocal && (
-              <OptionButton
-                title={lang('Changelog')}
-                onPress={() => navigation.push('Archive', {})}
-                active={false}
-              />
-            )}
-          </View>
-        </ConfigSection>
+        <ConfigSection
+          title={lang('* Extension Settings')}
+          onPress={() => navigation.push('Extension')}
+        />
       </View>
       <View style={commonStyles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

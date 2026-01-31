@@ -1,22 +1,19 @@
-// import HomeScreen from "./main/home/HomeScreen";
-
 import { Auth } from '@blacktokki/account';
 
 import { ArchiveScreen } from './main/ArchiveScreen';
-import { EditPageScreen } from './main/EditPageScreen';
 import { BoardItemScreen } from './main/BoardItemScreen';
 import { BoardListScreen } from './main/BoardListScreen';
+import { EditPageScreen } from './main/EditPageScreen';
+import { ExtensionScreen } from './main/ExtensionScreen';
 import { MovePageScreen } from './main/MovePageScreen';
+import { NotePageScreen } from './main/NotePageScreen';
 import { NoteViewerScreen } from './main/NoteViewerScreen';
-import { ProblemsScreen } from './main/ProblemScreen';
 import { RecentPagesScreen } from './main/RecentPageScreen';
-import { SearchPageScreen } from './main/SearchPageScreen';
 import HomeScreen from './main/home/HomeScreen';
-import { NotePageScreen } from './main/notepage/NotePageScreen';
-import { TimeLineScreen } from './main/timeline/TimeLineScreen';
 
 const title = (auth: Auth) =>
   !auth.isLocal ? 'Blacktokki Notebook' : 'Blacktokki Notebook - Local';
+export const screenTitle = title;
 export const main = {
   Home: {
     title,
@@ -43,20 +40,10 @@ export const main = {
     component: RecentPagesScreen,
     path: 'recent',
   },
-  Problem: {
-    title,
-    component: ProblemsScreen,
-    path: 'problem',
-  },
   Archive: {
     title,
     component: ArchiveScreen,
     path: 'archive',
-  },
-  TimeLine: {
-    title,
-    component: TimeLineScreen,
-    path: 'timeline',
   },
   BoardList: {
     title,
@@ -68,14 +55,14 @@ export const main = {
     component: BoardItemScreen,
     path: 'board',
   },
-  SearchPage: {
-    title,
-    component: SearchPageScreen,
-    path: 'search',
-  },
   NoteViewer: {
     title,
     component: NoteViewerScreen,
     path: 'viewer',
+  },
+  Extension: {
+    title,
+    component: ExtensionScreen,
+    path: 'extension',
   },
 };

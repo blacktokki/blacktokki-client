@@ -14,11 +14,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TextInput, TouchableOpacity, FlatList, StyleSheet, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
+import { parseHtmlToParagraphs } from './HeaderSelectBar';
+import { SearchFeature, useExtension } from '../hooks/useExtension';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
 import { createCommonStyles } from '../styles';
 import { Content, NavigationParamList, ParagraphKey } from '../types';
-import { parseHtmlToParagraphs } from './HeaderSelectBar';
 
 let _searchText = '';
 
@@ -130,7 +131,11 @@ const useOnPressKeyword = ({
   onPress,
   addKeyword,
   afterPress,
-}: PressKeywordOption & { afterPress?: () => void }) => {
+  searchFeature,
+}: PressKeywordOption & {
+  searchFeature?: SearchFeature;
+  afterPress?: () => void;
+}) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { mutate: addKeywordMutate } = useAddKeyowrd();
   return useCallback(
@@ -144,15 +149,18 @@ const useOnPressKeyword = ({
         navigation.push('NotePage', { title: item.title, paragraph: item.paragraph });
         addKeyword && addKeywordMutate(item);
       } else if (item.type === '_QUERY') {
-        navigation.push('SearchPage', { query: item.query });
-        addKeyword && addKeywordMutate(item);
+        const search = searchFeature?.(item);
+        if (search) {
+          navigation.push(search.screen as keyof NavigationParamList, search.params);
+          addKeyword && addKeywordMutate(item);
+        }
       } else {
         navigation.push('NotePage', { title: item.title });
         addKeyword && addKeywordMutate({ type: '_KEYWORD', title: item.title });
       }
       afterPress?.();
     },
-    [onPress]
+    [onPress, searchFeature]
   );
 };
 
@@ -267,16 +275,20 @@ export const SearchBar: React.FC<
   const inputRef = useRef<TextInput | null>();
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();
-  const useTextSearchExact = !auth.isLocal && useTextSearch;
+  const { data: extension } = useExtension();
+  const useTextSearchExact = !auth.isLocal && useTextSearch && !!extension.feature.search;
+
   const filteredPages: SearchContent[] = (
-    searchText.length > 0 ? getFilteredPages(pages, searchText) : keywords
+    searchText.length > 0
+      ? getFilteredPages(pages, searchText)
+      : keywords.filter((v) => v.type !== '_QUERY' || useTextSearchExact)
   )
     .filter((v) => onPress === undefined || v.type === 'NOTE')
     .slice(0, 10);
-
   const handleKeywordPress = useOnPressKeyword({
     onPress,
     addKeyword,
+    searchFeature: extension.feature.search,
     afterPress: () => setSearchText(''),
   });
 
@@ -368,7 +380,7 @@ export const SearchBar: React.FC<
             onPress={handleTextSearch}
             disabled={!searchText.trim()}
           >
-            <Icon name="search" size={18} color="#FFFFFF" />
+            <Icon name={icon} size={18} color="#FFFFFF" />
           </TouchableOpacity>
         )}
 

@@ -6,8 +6,6 @@ import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
-import useProblem from '../../../features/problem/useProblem';
-import useTimeLine from '../../../features/timeline/useTimeLine';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
 import { getSplitTitle, useNotePages, useSnapshotPages } from '../../../hooks/useNoteStorage';
 import { usePrivate } from '../../../hooks/usePrivate';
@@ -25,7 +23,7 @@ import { Content } from '../../../types';
 export const RenderIcon = (icon: string, color?: string) => (p: any) =>
   <List.Icon {...p} icon={icon} color={color || p.color} style={[p.style, { margin: 0 }]} />;
 
-const CountBadge = ({ count }: { count: number }) => (
+export const CountBadge = ({ count }: { count: number }) => (
   <View style={{ alignSelf: 'center', backgroundColor: 'transparent' }}>
     {count > 0 && <Badge>{count}</Badge>}
   </View>
@@ -45,33 +43,6 @@ export const updatedFormat = (_updated: string) => {
   const date = updated.slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
   return date === today ? updated.slice(11) : date;
-};
-
-// --- Exported Buttons ---
-export const TimeLineButton = () => {
-  const { lang } = useLangContext();
-  const { data } = useTimeLine();
-  return (
-    <List.Item
-      title={lang('Timeline')}
-      onPress={() => navigate('TimeLine')}
-      left={RenderIcon('calendar')}
-      right={() => <CountBadge count={data.length} />}
-    />
-  );
-};
-
-export const ProblemButton = () => {
-  const { lang } = useLangContext();
-  const { data } = useProblem();
-  return (
-    <List.Item
-      title={lang('Edit Suggestions')}
-      onPress={() => navigate('Problem')}
-      left={RenderIcon('note-alert')}
-      right={() => <CountBadge count={data.length} />}
-    />
-  );
 };
 // --- Sortable Item Component (Updated) ---
 const DraggableTabItem = ({

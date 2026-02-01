@@ -2,7 +2,7 @@ import { useColorScheme, useModalsContext, Text, useLangContext } from '@blackto
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { today } from './TimerTag';
 import DatePickerModal, { MarkedDateRange } from '../../modals/DatePikcerModal';

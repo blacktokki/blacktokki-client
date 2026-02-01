@@ -13,7 +13,7 @@ import ArchiveConfigSection from './archive/ArchiveConfigSection';
 
 features['agent'] = {
   title: 'Search',
-  description: '',
+  description: 'Provides advanced search, including note titles, body content, and external links.',
   isDefault: false,
   screens: {
     SearchPage: {
@@ -33,7 +33,8 @@ features['agent'] = {
 
 features['timeline'] = {
   title: 'Timeline',
-  description: '',
+  description:
+    'Automatically detects dates in notes to visualize schedules and manage them in a timeline format.',
   isDefault: false,
   screens: {
     TimeLine: {
@@ -49,7 +50,8 @@ features['timeline'] = {
 
 features['problem'] = {
   title: 'Edit Suggestions',
-  description: '',
+  description:
+    'Suggests edits by analyzing structural flaws or readability, such as duplicate content, empty paragraphs, or broken links.',
   isDefault: false,
   screens: {
     Problem: {
@@ -65,7 +67,7 @@ features['problem'] = {
 
 features['archive'] = {
   title: 'Archive',
-  description: '',
+  description: 'Manages saved note contents to export or import data in Markdown format.',
   isDefault: false,
   screens: {},
   NoteSections: [],

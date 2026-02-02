@@ -91,7 +91,7 @@ export default <T,>({
       setCurrentColumn(undefined);
       setCurrentRow(undefined);
       if ((i >= 0 && columnIndex !== i) || (j >= 0 && rowIndex !== j)) {
-        return onEnd(rowIndex, j, columnIndex, i, index);
+        return onEnd(rowIndex, Math.max(j, 0), columnIndex, Math.max(i, 0), index);
       }
       return false;
     },
@@ -128,6 +128,11 @@ export default <T,>({
   useEffect(() => {
     setMaxSize({ width: 0, height: 0 });
   }, [horizontal]);
+  useEffect(() => {
+    return () => {
+      positionRef.current = { row: [], column: [] };
+    };
+  }, [rows]);
   const commonPadding = 5;
   return (
     <View

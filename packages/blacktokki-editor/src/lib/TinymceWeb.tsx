@@ -70,6 +70,9 @@ export default (
     bodyStyle.push('background-color: #1E1E1E');
   }
   const path = process.env.PUBLIC_URL + '/tinymce/tinymce.min.js';
+  const dotDateFormat = new Date()
+    .toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
+    .replace(/\s/g, ' ');
   return (
     <Editor
       tinymceScriptSrc={path}
@@ -118,6 +121,8 @@ export default (
           new Date().toISOString().split('T')[0] + '/%Y-%m-%d',
           '%m/%d',
           new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) + ' ~ %m/%d',
+          dotDateFormat,
+          dotDateFormat + '~' + dotDateFormat,
         ],
         content_style:
           (bodyStyle.length > 0 ? `body { ${bodyStyle.join(';')} }` : '') +

@@ -90,6 +90,28 @@ const patterns: {
       };
     },
   },
+  {
+    regex: /\b(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*~\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\b/g,
+    parse: (match) => ({
+      // YYYY. M. D.~YYYY. M. D.
+      pattern: 'YYYY. M. D.',
+      format: (s, e) => `${s}~${e}`,
+      text: match[0],
+      dateStart: `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`,
+      dateEnd: `${match[4]}-${match[5].padStart(2, '0')}-${match[6].padStart(2, '0')}`,
+      index: match.index,
+    }),
+  },
+  {
+    regex: /\b(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\b/g,
+    parse: (match) => ({
+      pattern: 'YYYY. M. D.',
+      text: match[0],
+      dateStart: `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`,
+      dateEnd: `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`,
+      index: match.index,
+    }),
+  },
 ];
 
 function extractDates(input: string) {

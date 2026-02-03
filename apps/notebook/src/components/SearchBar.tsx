@@ -14,7 +14,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TextInput, TouchableOpacity, FlatList, StyleSheet, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { parseHtmlToParagraphs } from './HeaderSelectBar';
 import { SearchFeature, useExtension } from '../hooks/useExtension';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
@@ -91,32 +90,6 @@ export const getFilteredPages = (pages: Content[], searchText: string) => {
     ...links.filter((v) => v.type === '_NOTELINK' && normalize(v.name).startsWith(lowerCaseSearch)),
     ...links.filter((v) => v.type === '_LINK' && normalize(v.name).includes(lowerCaseSearch)),
   ];
-};
-
-const RandomButton = () => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const { data: pages = [] } = useNotePages();
-  const randomPages = pages.filter((v) => v.description);
-  return (
-    randomPages && (
-      <TouchableOpacity
-        style={commonStyles.searchButton}
-        onPress={() => {
-          const page = randomPages[Math.floor(Math.random() * randomPages.length)];
-          const paragraphs = parseHtmlToParagraphs(page.description || '');
-          const paragraph = paragraphs[Math.floor(Math.random() * paragraphs.length)].title;
-          navigation.push(
-            'NotePage',
-            toNoteParams(page.title, paragraph.length >= 0 ? paragraph : undefined)
-          );
-        }}
-      >
-        <Icon name={'random'} size={18} color="#FFFFFF" />
-      </TouchableOpacity>
-    )
-  );
 };
 
 export const titleFormat = (item: { title: string; paragraph?: string }) =>
@@ -252,7 +225,7 @@ export const SearchList = ({
 
 export const SearchBar: React.FC<
   {
-    useRandom?: boolean;
+    useExtraSearch?: boolean;
     useTextSearch?: boolean;
     newContent?: boolean;
     icon?: string;
@@ -260,7 +233,7 @@ export const SearchBar: React.FC<
 > = ({
   onPress,
   addKeyword = true,
-  useRandom = true,
+  useExtraSearch = true,
   useTextSearch = true,
   newContent = true,
   icon = 'search',
@@ -391,7 +364,7 @@ export const SearchBar: React.FC<
         >
           <Icon name="arrow-right" size={18} color="#FFFFFF" />
         </TouchableOpacity>
-        {useRandom && <RandomButton />}
+        {useExtraSearch && extension.feature.extraSearchButtons}
       </View>
 
       {showResults && (

@@ -28,6 +28,7 @@ type FeatureInfo = {
 
 type Feature = {
   search?: SearchFeature;
+  extraSearchButtons: React.JSX.Element[];
   buttons: React.JSX.Element[];
   NoteSections: ((props: NoteSectionProps) => React.JSX.Element)[];
   configs: React.JSX.Element[];
@@ -53,11 +54,12 @@ const getExtension = (config: string[]) => {
         const _search = prev.search;
         prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
         prev.buttons = [...prev.buttons, ...feat.buttons];
+        prev.extraSearchButtons = [...prev.extraSearchButtons, ...feat.extraSearchButtons];
         prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
         prev.configs = [...prev.configs, ...feat.configs];
         return prev;
       },
-      { buttons: [], NoteSections: [], configs: [] } as Feature
+      { buttons: [], extraSearchButtons: [], NoteSections: [], configs: [] } as Feature
     ),
   };
 };

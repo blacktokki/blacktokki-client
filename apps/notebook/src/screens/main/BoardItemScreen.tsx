@@ -396,7 +396,7 @@ export const BoardItemScreen: React.FC = () => {
                       }
                     }}
                     addKeyword={false}
-                    useRandom={false}
+                    useExtraSearch={false}
                     useTextSearch={false}
                     newContent={false}
                     icon="plus"

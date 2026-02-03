@@ -465,7 +465,7 @@ export const MovePageScreen: React.FC = () => {
           <SearchBar
             onPress={setNewTitle}
             addKeyword={false}
-            useRandom={false}
+            useExtraSearch={false}
             useTextSearch={false}
           />
           <Spacer height={12} />

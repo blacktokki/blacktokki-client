@@ -73,6 +73,8 @@ export default (
   const dotDateFormat = new Date()
     .toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
     .replace(/\s/g, ' ');
+  const composingRef = React.useRef(false);
+  const completeRef = React.useRef<{ complete: () => void; timeout: NodeJS.Timeout }>();
   return (
     <Editor
       tinymceScriptSrc={path}
@@ -93,7 +95,13 @@ export default (
           }
         }
       }}
-      onEditorChange={props.setValue}
+      onEditorChange={(v) => {
+        props.setValue(v);
+        if (completeRef.current) {
+          clearTimeout(completeRef.current.timeout);
+          completeRef.current.timeout = setTimeout(() => completeRef.current?.complete?.(), 1000);
+        }
+      }}
       init={{
         readonly: props.readonly,
         disabled: props.readonly,
@@ -181,11 +189,46 @@ export default (
               initMarkdown = !initMarkdown;
             }
           });
+          editor.on('compositionstart', () => {
+            composingRef.current = true;
+          });
+          editor.on('compositionend', () => {
+            composingRef.current = false;
+            if (completeRef.current) {
+              clearTimeout(completeRef.current.timeout);
+              completeRef.current = undefined;
+            }
+          });
           if (props.autoComplete) {
             props.autoComplete.forEach((ac, index) => {
               const getMatchedChars = ac.getMatchedChars;
               editor.ui.registry.addAutocompleter('autoComplete-' + index, {
                 trigger: ac.trigger,
+                matches: (range, text, pattern) => {
+                  // IME 입력 중이면 false를 반환해 UI 활성화를 원천 차단
+                  if (composingRef.current && pattern.length === 2) {
+                    const complete = () => {
+                      const tempInput = document.createElement('input');
+                      tempInput.style.position = 'fixed';
+                      tempInput.style.opacity = '0';
+                      document.body.appendChild(tempInput);
+
+                      tempInput.focus(); // 포커스를 외부로 완전히 빼냄 (IME 종료)
+
+                      setTimeout(() => {
+                        editor.focus(); // 다시 에디터로 포커스 복귀
+                        document.body.removeChild(tempInput);
+                        completeRef.current = undefined;
+                      }, 0);
+                    };
+                    completeRef.current = {
+                      complete,
+                      timeout: setTimeout(() => complete?.(), 1000),
+                    };
+                    return false;
+                  }
+                  return true;
+                },
                 fetch: (pattern) => {
                   return new Promise((resolve) => {
                     getMatchedChars(pattern).then((items) => {

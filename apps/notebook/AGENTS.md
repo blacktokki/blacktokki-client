@@ -40,12 +40,7 @@
 ## 세부 프로젝트 구조
 ### types (`/src/types.tsx`)
 1. 공통 타입 정의는 `/types`에 포함한다.
-2. type이 `NOTE`인 `Content.title`은 `/` 포함시 경로 및 하위 노트로 처리된다.
-3. type이 `NOTE`인 `Content.title`은 `.`으로 시작하거나 경로에 `/.`가 포함된 경우 프라이빗 모드가 비활성 상태일 때 목록에서 제외하고 접근을 차단한다.
-4. type이 `NOTE`,`SNAPSHOT`인 `Content.description`은 HTML 문자열로 저장된 노트의 본문을 포함한다.
-5. type이 `NOTE`인 `Content.description`이 빈 문자열일 경우 삭제된 문서로 간주되고, 재생성 하려면 수정 API로 내용을 채워야 한다.
-6. type이 `DIFF`인 `Content.description`은 Content.option.SNAPSHOT_ID를 id로 하는 type이 `SNAPSHOT`인 `Content.description`에서 변경된 부분을 `diff-match-patch`을 사용하여 저장한다.
-7. type이 `DIFF`인 `Content.description`은 `diffToSnapshot(SNAPSHOT description, DIFF description)`을 사용하여 원래 내용을 확인해야 한다.
+2. 각 타입에 대한 지침은 정의된 `TSDoc` 명세를 참고한다.
 ### styles (`/src/styles.ts`)
 1. 색상, 간격, 폰트 크기 등은 `styles.ts`에 포함한다.
 2. 프로젝트 전반에서 쓰이는 공통 스타일은 `src/styles.ts`에 추가해 다른 컴포넌트에서 재사용 가능하게 유지하고,추가시 대비(contrast)와 가독성을 고려한다.
@@ -68,9 +63,11 @@
 
 ## 그외 개발 가이드라인
 1. TypeScript의 타입 체크를 만족해야 한다.
-2. `parseHtmlToParagraphs(...)` 함수는 HTML 내의 `H1`~`H6` 태그를 기준으로 문단을 분리하고, `path` (부모 헤더의 b64 인코딩된 문자열)를 생성하여 계층 구조를 만든다.
-3. 추가 및 변경된 기능은 사용자 가이드(사용 방법.md)에 마크다운 포맷으로 반영하여야 한다.
-4. 기존 코드를 수정할 시 불필요한 변경 사항을 최소화 한다.(공백, 줄바꿈, 주석, console.log 등)
+2. 소스코드 내 주석이 필요한 경우 가능한 `JSDoc` 또는 `TSDoc` 명세를 만족해야 한다.
+3. `parseHtmlToParagraphs(...)` 함수는 HTML 내의 `H1`~`H6` 태그를 기준으로 문단을 분리하고, `path` (부모 헤더의 b64 인코딩된 문자열)를 생성하여 계층 구조를 만든다.
+4. `paragraphDescription(...)`을 사용해 문단(하위 문단 포함 또는 제외)에 해당하는 HTML만 추출한다.
+5. 추가 및 변경된 기능은 사용자 가이드(사용 방법.md)에 마크다운 포맷으로 반영하여야 한다.
+6. 기존 코드를 수정할 시 불필요한 변경 사항을 최소화 한다.(공백, 줄바꿈, 주석, console.log 등)
 
 ## AGENTS.md 수정 원칙
 1. 기존 내용을 수정할 시 불필요한 변경 사항을 최소화 한다.

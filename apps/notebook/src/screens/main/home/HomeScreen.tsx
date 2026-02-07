@@ -43,7 +43,10 @@ const ConfigTabView = () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={[commonStyles.container]}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: commonStyles.container.backgroundColor }}
+      contentContainerStyle={commonStyles.container}
+    >
       <ConfigSection />
     </ScrollView>
   );

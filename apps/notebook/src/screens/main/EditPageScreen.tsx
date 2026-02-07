@@ -148,7 +148,7 @@ export const EditPageScreen: React.FC = () => {
           navigation.navigate('NotePage', { ...toNoteParams(title, paragraph, section), board });
         },
         onError: (error: any) => {
-          Alert.alert('오류', error.message || '문서를 저장하는 중 오류가 발생했습니다.');
+          Alert.alert('오류', error.message || '노트를 저장하는 중 오류가 발생했습니다.');
         },
       }
     );

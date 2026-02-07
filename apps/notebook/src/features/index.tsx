@@ -81,8 +81,8 @@ features['archive'] = {
 };
 
 features['random'] = {
-  title: 'Random',
-  description: '',
+  title: 'Random Note Access',
+  description: 'Open a randomly selected note to discover content from a new perspective.',
   isDefault: false,
   screens: {},
   NoteSections: [],

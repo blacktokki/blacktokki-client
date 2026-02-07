@@ -20,7 +20,7 @@ export type PostContent = {
   /**
    * type이 `NOTE`,`SNAPSHOT`인 경우 HTML 문자열로 저장된 노트의 본문을 포함한다.
 
-   * type이 `NOTE`인 경우 빈 문자열일 경우 삭제된 문서로 간주되고, 재생성 하려면 수정 API로 내용을 채워야 한다.
+   * type이 `NOTE`인 경우 빈 문자열일 경우 삭제된 노트로 간주되고, 재생성 하려면 수정 API로 내용을 채워야 한다.
 
    * type이 `DIFF`인 경우
    * * Content.option.SNAPSHOT_ID를 id로 하는 type이 `SNAPSHOT`인 `Content.description`에서 변경된 부분을 `diff-match-patch`을 사용하여 저장한다.

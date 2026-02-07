@@ -93,7 +93,7 @@
   * When focusing on a specific section, you can toggle between:
     * Viewing only that section’s content, or
     * Viewing its content **plus all nested sub-sections.**
-  * This helps when you want to read or edit an entire section hierarchy as a single document.
+  * This helps when you want to read or edit an entire section hierarchy as a single note.
 
 ### 🔗 Link Recognition and Navigation
 
@@ -120,10 +120,6 @@
 * Notes are automatically backed up when saved.
 * Compare current content with past versions through the Archive screen.
 
-### 🎯 Random Note Access
-
-* Open a randomly selected note to discover content from a new perspective.
-
 ### 📌 Pin Tabs
 
 * Double-click or long-press the current tab or recently changed note to pin it to the tab list.
@@ -149,6 +145,27 @@
 * You can directly generate and manage Personal Access Tokens (PATs) required for integrating with external services and applications.
 * New tokens can be issued in a dedicated section within the Account Edit modal; for security reasons, the token value is displayed only once immediately after issuance, so it must be copied and stored in a safe place right away.
 * You can view the list of currently active tokens and their expiration dates, and maintain security by deleting tokens that are no longer in use at any time.
+
+### ✨ MCP server integration
+
+* The issued personal access token can be linked to Blacktokki Notebook’s MCP server.
+* The MCP setting method based on Claude Desktop is as follows:
+```json
+{
+  "mcpServers": {
+    "blacktokkiNotebook": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://blacktokki.kro.kr/agent/sse",
+        "--header",
+        "Authorization: Bearer ***"
+     ]
+    }
+  }
+}
+```
 
 ---
 
@@ -197,6 +214,10 @@
 
 * Export all notes in Markdown or ZIP format for backup.
 * Restore notes from saved files when needed.
+
+### 🎯 Random Note Access
+
+* Open a randomly selected note to discover content from a new perspective.
 
 ---
 

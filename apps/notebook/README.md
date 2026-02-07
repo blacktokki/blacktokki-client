@@ -69,12 +69,12 @@ yarn workspace @blacktokki/notebook yarn github # → 정적 파일 빌드 → S
 
 | 파일명                       | 설명                       |
 | ------------------------- | ------------------------ |
-| `NotePageScreen.tsx`      | 문서 보기 및 문단 탐색            |
+| `NotePageScreen.tsx`      | 노트 보기 및 문단 탐색            |
 | `EditPageScreen.tsx`      | 마크다운 편집기                 |
 | `MovePageScreen.tsx`      | 문단 이동 기능                 |
 | `TimeLineScreen.tsx`      | 날짜 기반 노트 필터링             |
 | `RecentPageScreen.tsx`    | 최근 수정 노트                 |
-| `ProblemScreen.tsx`       | 작성이 필요한 문서 목록            |
+| `ProblemScreen.tsx`       | 작성이 필요한 노트 목록            |
 | `HomeScreen.tsx`          | 탭 뷰 홈: 탐색 / 최근 변경 / 설정   |
 | `ExtraConfigSections.tsx` | 계정 설정, 내보내기/가져오기 등 환경 설정 |
 | `ContentGroupSection.tsx` | 최근 열람/문제 노트 목록 구성        |

@@ -256,7 +256,7 @@ export const RecentPagesSection = React.memo(() => {
           />
           <View style={pageStyles.actionButtons}>
             <TextButton
-              title={lang('All Notes') + '  ▶'}
+              title={lang('View all notes') + '  ▶'}
               onPress={() => navigation.navigate('RecentPages', {})}
               style={{ paddingRight: 0 }}
             />

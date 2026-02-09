@@ -47,7 +47,7 @@ export const NotePageScreen: React.FC = () => {
   const commonStyles = createCommonStyles(theme);
   const [_toc, toggleToc] = useState(false);
   const toc = _window === 'portrait' ? _toc : false;
-  const [fullParagraph, toggleFullParagraph] = useState(false);
+  const [fullParagraph, toggleFullParagraph] = useState(!!(paragraph && board));
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);

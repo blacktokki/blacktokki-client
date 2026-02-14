@@ -100,7 +100,7 @@ export default () => {
   return (
     <View style={{ flex: 1 }}>
       <List.Item left={RenderIcon('home')} title={lang('Home')} onPress={() => push('Home')} />
-      {extension.feature.buttons}
+      {extension.feature.elements('button')}
       <CurrentTabSection />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <TabsSection />

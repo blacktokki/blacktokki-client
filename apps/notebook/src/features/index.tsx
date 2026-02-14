@@ -28,10 +28,8 @@ features['agent'] = {
     params: { query: item.query },
   }),
   NoteSections: [],
-  buttons: [],
-  extraSearchButtons: [],
+  elements: [],
   extraArchiveButtons: [],
-  configs: [],
 };
 
 features['timeline'] = {
@@ -47,10 +45,13 @@ features['timeline'] = {
     },
   },
   NoteSections: [TimerTagSection],
-  buttons: [<TimeLineButton key={'timeline'} />],
-  extraSearchButtons: [],
   extraArchiveButtons: [],
-  configs: [],
+  elements: [
+    {
+      type: 'button',
+      Component: <TimeLineButton key={'timeline'} />,
+    },
+  ],
 };
 
 features['problem'] = {
@@ -66,10 +67,13 @@ features['problem'] = {
     },
   },
   NoteSections: [],
-  buttons: [<ProblemButton key={'problem'} />],
-  extraSearchButtons: [],
   extraArchiveButtons: [],
-  configs: [],
+  elements: [
+    {
+      type: 'button',
+      Component: <ProblemButton key={'problem'} />,
+    },
+  ],
 };
 
 features['archive'] = {
@@ -78,10 +82,13 @@ features['archive'] = {
   isDefault: false,
   screens: {},
   NoteSections: [],
-  extraSearchButtons: [],
   extraArchiveButtons: [ExportButton],
-  buttons: [],
-  configs: [<ArchiveConfigSection key={'archive'} />],
+  elements: [
+    {
+      type: 'config',
+      Component: <ArchiveConfigSection key={'archive'} />,
+    },
+  ],
 };
 
 features['random'] = {
@@ -90,10 +97,13 @@ features['random'] = {
   isDefault: false,
   screens: {},
   NoteSections: [],
-  extraSearchButtons: [<RandomButton />],
   extraArchiveButtons: [],
-  buttons: [],
-  configs: [],
+  elements: [
+    {
+      type: 'extraSearchButton',
+      Component: <RandomButton key={'random'} />,
+    },
+  ],
 };
 
 export default (title: string | ((auth: Auth) => string)) => {

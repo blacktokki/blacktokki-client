@@ -26,13 +26,13 @@ type FeatureInfo = {
   screens: NavigationConfig['main'];
 };
 
+type ElementType = 'button' | 'extraSearchButton' | 'config';
+
 type Feature = {
   search?: SearchFeature;
-  extraSearchButtons: React.JSX.Element[];
+  elements: { type: ElementType; Component: React.JSX.Element }[];
   extraArchiveButtons: ((props: { id: number; title: string }) => React.JSX.Element)[];
-  buttons: React.JSX.Element[];
   NoteSections: ((props: NoteSectionProps) => React.JSX.Element)[];
-  configs: React.JSX.Element[];
 };
 
 export const features: Record<string, FeatureInfo & Feature> = {};
@@ -42,6 +42,22 @@ const getDefaultConfig = () => {
 };
 
 const getExtension = (config: string[]) => {
+  const feature = config.reduce(
+    (prev, curr) => {
+      const feat = features[curr as keyof typeof features];
+      const _search = prev.search;
+      prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
+      prev.elements = [...prev.elements, ...feat.elements];
+      prev.extraArchiveButtons = [...prev.extraArchiveButtons, ...feat.extraArchiveButtons];
+      prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
+      return prev;
+    },
+    {
+      elements: [],
+      extraArchiveButtons: [],
+      NoteSections: [],
+    } as Feature
+  );
   return {
     info: Object.entries(features).map(([k, v]) => ({
       key: k,
@@ -49,26 +65,11 @@ const getExtension = (config: string[]) => {
       description: v.description,
       active: !!config.find((k2) => k === k2),
     })),
-    feature: config.reduce(
-      (prev, curr) => {
-        const feat = features[curr as keyof typeof features];
-        const _search = prev.search;
-        prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
-        prev.buttons = [...prev.buttons, ...feat.buttons];
-        prev.extraSearchButtons = [...prev.extraSearchButtons, ...feat.extraSearchButtons];
-        prev.extraArchiveButtons = [...prev.extraArchiveButtons, ...feat.extraArchiveButtons];
-        prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
-        prev.configs = [...prev.configs, ...feat.configs];
-        return prev;
-      },
-      {
-        buttons: [],
-        extraSearchButtons: [],
-        extraArchiveButtons: [],
-        NoteSections: [],
-        configs: [],
-      } as Feature
-    ),
+    feature: {
+      ...feature,
+      elements: (type: ElementType) =>
+        feature.elements.filter((v) => v.type === type).map((v) => v.Component),
+    },
   };
 };
 

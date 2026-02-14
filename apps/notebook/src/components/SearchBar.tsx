@@ -383,7 +383,7 @@ export const SearchBar: React.FC<
         >
           <Icon name="arrow-right" size={18} color="#FFFFFF" />
         </TouchableOpacity>
-        {useExtraSearch && extension.feature.extraSearchButtons}
+        {useExtraSearch && extension.feature.elements('extraSearchButton')}
       </View>
 
       {showResults && (

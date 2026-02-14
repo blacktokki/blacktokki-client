@@ -181,7 +181,7 @@ export default () => {
           )}
         </ConfigSection>
       </View>
-      {extension.feature.configs}
+      {extension.feature.elements('config')}
       <View style={commonStyles.card}>
         <ConfigSection
           title={lang('* Extension Settings')}

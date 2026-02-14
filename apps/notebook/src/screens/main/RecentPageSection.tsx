@@ -195,6 +195,33 @@ const defaultScale: Scale = {
 
 type RecentPagesScreenRouteProp = RouteProp<NavigationParamList, 'RecentPages'>;
 
+export const TitleHeader = ({
+  title,
+  children,
+}: {
+  title?: string;
+  children?: React.ReactNode;
+}) => {
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  return (
+    title && (
+      <View style={[commonStyles.header, pageStyles.header]}>
+        <NotePageHeader
+          title={title}
+          onPress={(title, hasChild) =>
+            hasChild
+              ? navigation.push('RecentPages', { title })
+              : navigation.navigate('NotePage', { title })
+          }
+        />
+        <View style={pageStyles.actionButtons}>{children}</View>
+      </View>
+    )
+  );
+};
+
 export const RecentPagesSection = React.memo(() => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
@@ -244,25 +271,13 @@ export const RecentPagesSection = React.memo(() => {
   const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
   const renderHeader = () => {
     return (
-      title && (
-        <View style={[commonStyles.header, pageStyles.header]}>
-          <NotePageHeader
-            title={title}
-            onPress={(title, hasChild) =>
-              hasChild
-                ? navigation.push('RecentPages', { title })
-                : navigation.navigate('NotePage', { title })
-            }
-          />
-          <View style={pageStyles.actionButtons}>
-            <TextButton
-              title={lang('View all notes') + '  ▶'}
-              onPress={() => navigation.navigate('RecentPages', {})}
-              style={{ paddingRight: 0 }}
-            />
-          </View>
-        </View>
-      )
+      <TitleHeader title={title}>
+        <TextButton
+          title={lang('View all notes') + '  ▶'}
+          onPress={() => navigation.navigate('RecentPages', {})}
+          style={{ paddingRight: 0 }}
+        />
+      </TitleHeader>
     );
   };
 

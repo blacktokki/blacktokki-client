@@ -9,7 +9,10 @@ let markdown: {
   parser: (htmlCode: string) => string;
   renderer: (markdownCode: string) => string;
   toRaw: (text: string) => string;
-  exportMarkdowns: (contents: { title: string; description?: string }[]) => Promise<void>;
+  exportMarkdowns: (
+    contents: { title: string; description?: string }[],
+    filename: string
+  ) => Promise<void>;
   importMarkdowns: () => Promise<{ title: string; description: string }[]>;
 };
 import('./markdown').then((value) => {

@@ -9,7 +9,7 @@ import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
 import { features } from '../hooks/useExtension';
-import ArchiveConfigSection from './archive/ArchiveConfigSection';
+import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import RandomButton from './random/RandomButton';
 
 features['agent'] = {
@@ -30,6 +30,7 @@ features['agent'] = {
   NoteSections: [],
   buttons: [],
   extraSearchButtons: [],
+  extraArchiveButtons: [],
   configs: [],
 };
 
@@ -48,6 +49,7 @@ features['timeline'] = {
   NoteSections: [TimerTagSection],
   buttons: [<TimeLineButton key={'timeline'} />],
   extraSearchButtons: [],
+  extraArchiveButtons: [],
   configs: [],
 };
 
@@ -66,6 +68,7 @@ features['problem'] = {
   NoteSections: [],
   buttons: [<ProblemButton key={'problem'} />],
   extraSearchButtons: [],
+  extraArchiveButtons: [],
   configs: [],
 };
 
@@ -76,6 +79,7 @@ features['archive'] = {
   screens: {},
   NoteSections: [],
   extraSearchButtons: [],
+  extraArchiveButtons: [ExportButton],
   buttons: [],
   configs: [<ArchiveConfigSection key={'archive'} />],
 };
@@ -87,6 +91,7 @@ features['random'] = {
   screens: {},
   NoteSections: [],
   extraSearchButtons: [<RandomButton />],
+  extraArchiveButtons: [],
   buttons: [],
   configs: [],
 };

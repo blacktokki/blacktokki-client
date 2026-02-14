@@ -3,6 +3,7 @@ import { EditorViewer } from '@blacktokki/editor';
 import { push } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
+import DiffMatchPatch from 'diff-match-patch';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -13,6 +14,12 @@ import { onLink, titleFormat } from '../../components/SearchBar';
 import { getSplitTitle } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
+
+export const diffToSnapshot = (original: string, delta: string) => {
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_fromDelta(original, delta);
+  return dmp.diff_text2(diffs);
+};
 
 export const NotePageHeader = ({
   title,

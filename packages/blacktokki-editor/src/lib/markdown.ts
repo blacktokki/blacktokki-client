@@ -110,7 +110,10 @@ export const toRaw = (text: string) => {
   //   .replaceAll(/<\/?[^>]*>/gi, '');
 };
 
-export const exportMarkdowns = async (contents: { title: string; description?: string }[]) => {
+export const exportMarkdowns = async (
+  contents: { title: string; description?: string }[],
+  filename: string
+) => {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   for (const content of contents.filter((v) => (v.description?.length || 0) > 0)) {
@@ -120,7 +123,7 @@ export const exportMarkdowns = async (contents: { title: string; description?: s
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'notebook.zip';
+  a.download = `${filename}.zip`;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {

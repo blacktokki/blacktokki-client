@@ -2,11 +2,11 @@ import { useAuthContext } from '@blacktokki/account';
 import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import DiffMatchPatch from 'diff-match-patch';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
 import {
+  diffToSnapshot,
   HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
@@ -28,12 +28,6 @@ import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
-
-const diffToSnapshot = (original: string, delta: string) => {
-  const dmp = new DiffMatchPatch();
-  const diffs = dmp.diff_fromDelta(original, delta);
-  return dmp.diff_text2(diffs);
-};
 
 export const NotePageScreen: React.FC = () => {
   const isFocused = useIsFocused();

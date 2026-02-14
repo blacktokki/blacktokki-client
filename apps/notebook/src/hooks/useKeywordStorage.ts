@@ -21,7 +21,7 @@ export type KeywordContent =
       origin: string;
     } & ParagraphKey)
   | {
-      type: '_KEYWORD';
+      type: '_KEYWORD' | '_BOARD';
       title: string;
     }
   | {
@@ -63,7 +63,7 @@ export const useKeywords = () => {
         ? keywords
         : keywords.filter(
             (v) =>
-              (v.type === '_KEYWORD' && !isHiddenTitle(v.title)) ||
+              ((v.type === '_KEYWORD' || v.type === '_BOARD') && !isHiddenTitle(v.title)) ||
               (v.type === '_NOTELINK' && !isHiddenTitle(v.origin) && !isHiddenTitle(v.title)) ||
               (v.type === '_LINK' && !isHiddenTitle(v.origin)) ||
               v.type === '_QUERY'

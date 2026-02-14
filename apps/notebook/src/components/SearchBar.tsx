@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TextInput, TouchableOpacity, FlatList, StyleSheet, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
+import { useBoardPages } from '../hooks/useBoardStorage';
 import { SearchFeature, useExtension } from '../hooks/useExtension';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
@@ -113,7 +114,13 @@ const useOnPressKeyword = ({
   const { mutate: addKeywordMutate } = useAddKeyowrd();
   return useCallback(
     (item: SearchContent) => {
-      if (onPress && (item.type === 'NOTE' || item.type === '_KEYWORD')) {
+      if (
+        onPress &&
+        (item.type === 'NOTE' ||
+          item.type === '_KEYWORD' ||
+          item.type === 'BOARD' ||
+          item.type === '_BOARD')
+      ) {
         onPress(item.title);
       } else if (item.type === '_LINK') {
         window.open(item.url, '_blank');
@@ -127,6 +134,9 @@ const useOnPressKeyword = ({
           navigation.push(search.screen as keyof NavigationParamList, search.params);
           addKeyword && addKeywordMutate(item);
         }
+      } else if (item.type === 'BOARD' || item.type === '_BOARD') {
+        navigation.push('BoardPage', { title: item.title });
+        addKeyword && addKeywordMutate({ type: '_BOARD', title: item.title });
       } else {
         navigation.push('NotePage', { title: item.title });
         addKeyword && addKeywordMutate({ type: '_KEYWORD', title: item.title });
@@ -190,6 +200,14 @@ export const SearchList = ({
                 color={commonStyles.text.color}
               />
             )}
+            {(item.type === 'BOARD' || item.type === '_BOARD') && (
+              <Icon
+                style={{ top: 6, paddingRight: 6 }}
+                name={'columns'}
+                size={12}
+                color={commonStyles.text.color}
+              />
+            )}
             <Text style={[commonStyles.text, styles.resultText, { flexShrink: 0 }]}>
               {item.type === '_NOTELINK' || item.type === '_LINK'
                 ? item.name
@@ -248,12 +266,13 @@ export const SearchBar: React.FC<
   const inputRef = useRef<TextInput | null>();
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();
+  const { data: boards = [] } = useBoardPages();
   const { data: extension } = useExtension();
   const useTextSearchExact = !auth.isLocal && useTextSearch && !!extension.feature.search;
 
   const filteredPages: SearchContent[] = (
     searchText.length > 0
-      ? getFilteredPages(pages, searchText)
+      ? getFilteredPages([...boards, ...pages], searchText)
       : keywords.filter((v) => v.type !== '_QUERY' || useTextSearchExact)
   )
     .filter((v) => onPress === undefined || v.type === 'NOTE')

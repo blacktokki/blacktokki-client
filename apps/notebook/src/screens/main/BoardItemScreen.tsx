@@ -3,7 +3,15 @@ import { ConfigSection } from '@blacktokki/navigation';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, View, Alert, TextInput } from 'react-native';
+import {
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  View,
+  Alert,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { HeaderIconButton, pageStyles } from './NoteItemSections';
@@ -107,6 +115,7 @@ export const BoardItemScreen: React.FC = () => {
   const accessableRef = useRef(true);
   const [showConfig, setShowConfig] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
+  const [isMoving, setIsMoving] = useState(false);
   const { data: privateConfig } = usePrivate();
   const setPrivate = useSetPrivate();
   const horizontal = true;
@@ -224,6 +233,7 @@ export const BoardItemScreen: React.FC = () => {
           newColumn.parentParagraph
         );
         (async () => {
+          setIsMoving(true);
           try {
             await mutation.mutateAsync({
               title: newPage.title,
@@ -242,6 +252,8 @@ export const BoardItemScreen: React.FC = () => {
               lang('error'),
               error ? `${error}` : lang('An error occurred while moving note.')
             );
+          } finally {
+            setIsMoving(false);
           }
         })();
         return true;
@@ -464,6 +476,11 @@ export const BoardItemScreen: React.FC = () => {
           ) : (
             <StatusCard message="There are no columns." />
           )}
+          {isMoving && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#3498DB" />
+            </View>
+          )}
         </View>
       )}
     </>
@@ -481,4 +498,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { fontSize: 16, fontWeight: '600', paddingVertical: 16 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(127,127,127,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999, // 최상단에 위치
+  },
 });

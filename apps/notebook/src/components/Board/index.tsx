@@ -49,6 +49,11 @@ export default <T,>({
   onEnd,
   renderHeader,
 }: BoardProps<T>) => {
+  const sizeRef = useRef<{ row: number[]; column: number[]; changed: boolean }>({
+    row: [],
+    column: [],
+    changed: false,
+  });
   const positionRef = useRef<{ row: number[]; column: number[] }>({ row: [], column: [] });
   const [maxSize, setMaxSize] = useState({ width: 0, height: 0 });
   const translate = useRef(new Animated.Value(0)).current;
@@ -128,11 +133,19 @@ export default <T,>({
   useEffect(() => {
     setMaxSize({ width: 0, height: 0 });
   }, [horizontal]);
-  useEffect(() => {
-    return () => {
-      positionRef.current = { row: [], column: [] };
-    };
-  }, [rows]);
+  if (sizeRef.current.changed) {
+    const maxColumns = Math.max(0, ...rows.map((v) => v.columns.length));
+    positionRef.current = { row: [], column: [] };
+    for (let i = 0, j = 0; i < rows.length; i++) {
+      positionRef.current.row[i] = j;
+      j += sizeRef.current.row[i];
+    }
+    for (let i = 0, j = 0; i < maxColumns; i++) {
+      positionRef.current.column[i] = j;
+      j += sizeRef.current.column[i];
+    }
+    sizeRef.current.changed = false;
+  }
   const commonPadding = 5;
   return (
     <View
@@ -163,14 +176,15 @@ export default <T,>({
     >
       {rows.map((row, rowIndex) => (
         <View
-          key={rowIndex}
+          key={rowIndex + '_' + row.columns.length}
           style={{
             zIndex: rowIndex === currentRow ? 5000 : rowIndex === 0 ? 1 : undefined,
             flexDirection: horizontal ? 'row' : 'column',
           }}
           onLayout={(e) => {
-            const { x, y } = e.nativeEvent.layout;
-            positionRef.current.row[rowIndex] = horizontal ? x : y;
+            const { width, height } = e.nativeEvent.layout;
+            sizeRef.current.changed = true;
+            sizeRef.current.row[rowIndex] = horizontal ? width : height;
           }}
         >
           <View
@@ -185,7 +199,7 @@ export default <T,>({
           >
             {row.columns.map((column, columnIndex) => (
               <View
-                key={columnIndex}
+                key={columnIndex + '_' + column.items.length}
                 style={[
                   {
                     zIndex: columnIndex === currentColumn ? 5000 : undefined,
@@ -201,8 +215,9 @@ export default <T,>({
                     : { borderColor: 'transparent' },
                 ]}
                 onLayout={(e) => {
-                  const { width, height, x, y } = e.nativeEvent.layout;
-                  positionRef.current.column[columnIndex] = horizontal ? y : x;
+                  const { width, height } = e.nativeEvent.layout;
+                  sizeRef.current.changed = true;
+                  sizeRef.current.column[columnIndex] = horizontal ? height : width;
                   if (width > maxSize.width || height > maxSize.height) {
                     setMaxSize((prev) => ({
                       width: Math.max(prev.width, width),

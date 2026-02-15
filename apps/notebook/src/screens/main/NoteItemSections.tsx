@@ -269,7 +269,7 @@ export const pageStyles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    flexBasis: 156,
+    flexBasis: 117,
   },
   actionButton: {
     padding: 8,

@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
+import BoardTagSection from './BoardTagSection';
 import {
   diffToSnapshot,
   HeaderIconButton,
@@ -110,6 +111,20 @@ export const NotePageScreen: React.FC = () => {
       </>
     );
   }
+  const renderHeaderSections = () => (
+    <>
+      <BoardTagSection noteId={page?.id} />
+      {extension.feature.NoteSections.map((NoteSection, i) => (
+        <NoteSection
+          key={i}
+          title={page?.title || ''}
+          path={paragraphItem?.path}
+          fullParagraph={fullParagraph}
+          paragraphs={paragraphs}
+        />
+      ))}
+    </>
+  );
   return (
     isFocused && (
       <>
@@ -119,7 +134,7 @@ export const NotePageScreen: React.FC = () => {
           style={[commonStyles.container, pageStyles.container]}
           contentContainerStyle={pageStyles.contentContainer}
         >
-          <View style={[commonStyles.header, pageStyles.header]}>
+          <View style={[commonStyles.header, pageStyles.header, { marginBottom: 0 }]}>
             <NotePageHeader
               title={title}
               paragraph={paragraph}
@@ -130,15 +145,7 @@ export const NotePageScreen: React.FC = () => {
               }
             />
             <View style={pageStyles.actionButtons}>
-              {extension.feature.NoteSections.map((NoteSection, i) => (
-                <NoteSection
-                  key={i}
-                  title={page?.title || ''}
-                  path={paragraphItem?.path}
-                  fullParagraph={fullParagraph}
-                  paragraphs={paragraphs}
-                />
-              ))}
+              {_window === 'landscape' && renderHeaderSections()}
               {!paragraphItem && !auth.isLocal && (_window === 'landscape' || toc || archive) && (
                 <HeaderIconButton
                   name="history"
@@ -167,6 +174,9 @@ export const NotePageScreen: React.FC = () => {
                 <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
               )}
             </View>
+          </View>
+          <View style={[commonStyles.header, pageStyles.header, { justifyContent: 'flex-end' }]}>
+            {_window === 'portrait' && !toc && renderHeaderSections()}
           </View>
           <View style={commonStyles.flex}>
             <NotePageSection active={!toc} description={description}>

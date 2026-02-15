@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import TimerTag, { matchDateRange, paragraphsToDatePatterns, TimerData, today } from './TimerTag';
+import TimerTag, { matchDateRange, paragraphsToDatePatterns, TimerData } from './TimerTag';
 import { NoteSectionProps } from '../../hooks/useExtension';
 import { useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 
@@ -63,7 +63,7 @@ const buttons = (data: TimerData) => {
 };
 
 export default (props: NoteSectionProps) => {
-  const dateNum = new Date(today()).getTime();
+  const dateNum = dayjs().startOf('day').valueOf();
   const createOrUpdatePage = useCreateOrUpdatePage();
   const data = paragraphsToDatePatterns(props.title, props.paragraphs)
     .flatMap((v) => matchDateRange(v.dateMatches, dateNum))

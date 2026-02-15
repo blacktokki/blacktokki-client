@@ -25,7 +25,7 @@ const NotesTabView = () => {
       <List.Subheader style={{}} selectable={false}>
         {lang('Menu')}
       </List.Subheader>
-      {extension.feature.buttons}
+      {extension.feature.elements('button')}
       <List.Item
         left={RenderIcon('view-dashboard-variant')}
         title={lang('Board')}

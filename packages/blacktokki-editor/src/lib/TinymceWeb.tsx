@@ -39,7 +39,7 @@ export const markdownFs = () => ({
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
   toolbar:
-    'supercode | blocks | bold italic underline strikethrough | undo redo | searchreplace | bullist numlist | hr link blockquote codesample insertdatetime', // alignleft aligncenter alignright charmap removeformat
+    'blocks | bold italic underline strikethrough | undo redo | searchreplace | bullist numlist | hr link blockquote codesample insertdatetime supercode', // alignleft aligncenter alignright charmap removeformat
 };
 
 let initMarkdown = false;
@@ -97,6 +97,14 @@ export default (
             toolbar.style.borderBottomWidth = '0px';
           }
         }
+        editor.ui.registry.addIcon(
+          'markdown',
+          `
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M2,17V7h2.5L8,11.5L11.5,7H14v10h-2.2V9.5L8,14L4.2,9.5V17H2z M19,7v7h-2.5l3.5,4l3.5-4H21V7H19z" />
+          </svg>
+          `
+        );
       }}
       onEditorChange={(v) => {
         props.setValue(v);
@@ -180,8 +188,13 @@ export default (
             editor.getWin().addEventListener('click', onClick, { capture: true });
           }
           document.querySelectorAll('.tox-tbtn').forEach((btn) => {
-            if (btn.getAttribute('aria-label') === 'Source Code Editor (Ctrl + space)') {
+            const ariaLabel = 'Markdown Editor (Ctrl + space)';
+            if (
+              btn.getAttribute('aria-label') === 'Source Code Editor (Ctrl + space)' ||
+              btn.getAttribute('aria-label') === ariaLabel
+            ) {
               btn.setAttribute('data-mce-name', 'supercode');
+              btn.setAttribute('aria-label', ariaLabel);
               if (initMarkdown) {
                 (btn as HTMLElement).click();
               }
@@ -267,7 +280,7 @@ export default (
           { text: 'C++', value: 'cpp' },
         ],
         supercode: {
-          iconName: 'edit-block',
+          iconName: 'markdown',
           theme: props.theme === 'light' ? 'chrome' : 'ambiance',
           dark: props.theme === 'dark',
           renderer, // Function : Markdown => HTML

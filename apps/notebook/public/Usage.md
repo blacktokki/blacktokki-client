@@ -79,7 +79,7 @@
 
 ### 📝 Dual Editor Support
 
-* The note editing screen can be freely converted to both WYSIWYG and Markdown methods with the ✏️ button.
+* The note editing screen can be freely converted to both WYSIWYG and Markdown methods with the `M↓` button.
 * Changes in one mode are reflected in real-time in the other.
 * Ideal for users who prefer visual editing or are familiar with markdown syntax.
 

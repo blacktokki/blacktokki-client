@@ -18,13 +18,18 @@ export const search = async (
   exact?: boolean,
   withExternal?: boolean
 ) => {
-  const exactParam = exact ? `&exact=true` : '';
-  const withExternalParam = withExternal ? `&withExternal=true` : '';
   return (
     (
-      await axios.get(
-        `/search?query=${query}&page=${page}&size=20&withHidden=${withHidden}${exactParam}${withExternalParam}`
-      )
+      await axios.get('/search', {
+        params: {
+          query,
+          page,
+          size: 20,
+          withHidden,
+          exact: exact || undefined,
+          withExternal: withExternal || undefined,
+        },
+      })
     ).data as any[]
   ).map((v) => {
     let paragraph: string | undefined = undefined;

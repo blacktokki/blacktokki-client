@@ -97,14 +97,6 @@ export default (
             toolbar.style.borderBottomWidth = '0px';
           }
         }
-        editor.ui.registry.addIcon(
-          'markdown',
-          `
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fill="currentColor" d="M2,17V7h2.5L8,11.5L11.5,7H14v10h-2.2V9.5L8,14L4.2,9.5V17H2z M19,7v7h-2.5l3.5,4l3.5-4H21V7H19z" />
-          </svg>
-          `
-        );
       }}
       onEditorChange={(v) => {
         props.setValue(v);
@@ -117,7 +109,16 @@ export default (
         readonly: props.readonly,
         disabled: props.readonly,
         disable_nodechange: props.readonly,
-        setup: () => {},
+        setup: (editor) => {
+          editor.ui.registry.addIcon(
+            'markdown',
+            `
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M2,17V7h2.5L8,11.5L11.5,7H14v10h-2.2V9.5L8,14L4.2,9.5V17H2z M19,7v7h-2.5l3.5,4l3.5-4H21V7H19z" />
+          </svg>
+          `
+          );
+        },
         plugins:
           (props.readonly ? 'link codesample' : INIT.plugins) +
           (props?.autoResize ? ' autoresize' : ''),

@@ -196,6 +196,7 @@
 | Empty parent note (...)                 | The parent note exists but contains no content                   |
 | Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |
 | Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note |
+| Isolated note | The note has content but lacks incoming paths (no parent note, no backlinks, and not assigned to any board) |
 
 * Click a problem to jump directly to the problematic section for quick editing.
 

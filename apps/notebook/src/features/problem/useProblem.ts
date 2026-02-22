@@ -9,6 +9,7 @@ import {
   parseHtmlToParagraphs,
 } from '../../components/HeaderSelectBar';
 import { getLinks, titleFormat } from '../../components/SearchBar';
+import { useBoardPages } from '../../hooks/useBoardStorage';
 import { KeywordContent } from '../../hooks/useKeywordStorage';
 import { getSplitTitle, useNotePages } from '../../hooks/useNoteStorage';
 import { Content } from '../../types';
@@ -78,11 +79,17 @@ const matchUnlinkedKeyword = (text: string, keyword: string) => {
 
 type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
 type ProblemSource = {
+  id: number;
   title: string;
   updated: string;
   raw: string;
   links: (KeywordContent & { type: '_NOTELINK' })[];
   parentTitle: string | undefined;
+};
+type ProblemMatrixSource = {
+  updated: string;
+  isReverseLink: boolean;
+  isSubNote: boolean;
 };
 
 let problemCacheUserId: number | undefined;
@@ -91,7 +98,7 @@ let problemCache: Record<
   {
     record: ProblemItem[];
     source: ProblemSource;
-    matrix: Record<string, { updated: string; record: ProblemItem[] }>;
+    matrix: Record<string, { record: ProblemItem[]; matrixSource: ProblemMatrixSource }>;
   }
 > = {};
 
@@ -172,7 +179,7 @@ const getDataLinear = (page: Content) => {
   const raw = toRaw(cleanHtml(page.description || '', true, true, false));
   problemCache[page.title] = {
     record,
-    source: { title: page.title, updated: page.updated, links, parentTitle, raw },
+    source: { id: page.id, title: page.title, updated: page.updated, links, parentTitle, raw },
     matrix: {},
   };
   return problemCache[page.title];
@@ -187,11 +194,16 @@ const getDataMatrix = (
   }
   const existData = problemCache[source.title];
   const existTarget = existData.matrix[target.title];
-  if (existData?.source.updated === source.updated && existTarget?.updated === target.updated) {
+  if (
+    existData?.source.updated === source.updated &&
+    existTarget?.matrixSource.updated === target.updated
+  ) {
     return existTarget.record;
   }
   const record: ProblemItem[] = [];
   const links = source.links.filter((link) => link.title === target.title);
+  let isSubNote = false;
+  let isReverseLink = false;
 
   if (target.description) {
     const description = target.description;
@@ -243,6 +255,8 @@ const getDataMatrix = (
           ]);
         }
       });
+    isSubNote = target.title.startsWith(source.title + '/');
+    isReverseLink = _target?.links.some((l) => l.title === source.title) || false;
   } else {
     //unknown note
     links.forEach((link) => {
@@ -254,12 +268,45 @@ const getDataMatrix = (
       record.push([source.parentTitle, undefined, `Empty parent note(${source.title})`]);
     }
   }
-  existData.matrix[target.title] = { record, updated: target.updated };
 
+  existData.matrix[target.title] = {
+    record,
+    matrixSource: {
+      updated: target.updated,
+      isReverseLink,
+      isSubNote,
+    },
+  };
   return record;
 };
 
-const getData = (userId: number | undefined, pages: Content[]) => {
+const getDataAggregate = (source: ProblemSource, boardCount: number): ProblemItem[] => {
+  const aggregateRecords: ProblemItem[] = [];
+  const matrixEntries = Object.values(problemCache[source.title].matrix);
+  const parentNoteCount = source.parentTitle ? 1 : 0;
+
+  let reverseLinkCount = 0;
+  // let subNoteCount = 0;
+
+  matrixEntries.forEach(({ matrixSource }) => {
+    if (matrixSource.isReverseLink) reverseLinkCount++;
+    // if (matrixSource.isSubNote) subNoteCount++;
+  });
+
+  // (연관 보드 수 + 역 노트링크 수 + 상위 노트) == 0
+  if (source.raw.length > 0 && boardCount + reverseLinkCount + parentNoteCount === 0) {
+    aggregateRecords.push([
+      source.title,
+      undefined,
+      'Isolated note', // +
+      // `\n(boards: ${boardCount}, reverse links: ${reverseLinkCount}, parent note: ${parentNoteCount})`,
+    ]);
+  }
+
+  return aggregateRecords;
+};
+
+const getData = (userId: number | undefined, pages: Content[], boards: Content[]) => {
   const records: {
     title: string;
     path: string | undefined;
@@ -280,8 +327,10 @@ const getData = (userId: number | undefined, pages: Content[]) => {
       if (source.parentTitle && !titleSet.has(source.parentTitle)) {
         unknownPages.push({ title: source.parentTitle, updated: '' });
       }
+      const boardCount = boards.filter((b) => b.option.BOARD_NOTE_IDS?.includes(source.id)).length;
       return [
         ...[...pages, ...unknownPages].flatMap((target) => getDataMatrix(source, target)),
+        ...getDataAggregate(source, boardCount),
         ...record,
       ];
     })
@@ -303,14 +352,15 @@ const getData = (userId: number | undefined, pages: Content[]) => {
 export default (delay?: number) => {
   const { auth } = useAuthContext();
   const { data: pages = [], isLoading } = useNotePages();
+  const { data: boards = [], isLoading: isBoardLoading } = useBoardPages();
   const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
   const timeoutRef = useRef<NodeJS.Timeout>();
   useEffect(() => {
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setData(getData(auth.user?.id, pages));
+      setData(getData(auth.user?.id, pages, boards));
       timeoutRef.current = undefined;
     }, delay || 500);
   }, [pages, auth.user]);
-  return { data: data || [], isLoading: isLoading || data === undefined };
+  return { data: data || [], isLoading: isLoading || isBoardLoading || data === undefined };
 };

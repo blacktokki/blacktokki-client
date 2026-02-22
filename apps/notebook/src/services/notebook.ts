@@ -16,7 +16,7 @@ export const getContentList = async (
 ) => {
   const parentIdParam = parentId !== undefined ? `&parentId=${parentId}` : '';
   const typeParam = types !== undefined ? `&types=${types.join(',')}` : '';
-  const pageParam = page !== undefined ? `&size=20&page=${page}` : '&size=256';
+  const pageParam = page !== undefined ? `&size=20&page=${page}` : '&size=2000';
   const withHiddenParam = withHidden ? `&withHidden=true` : `&withHidden=false`;
   return (
     await axios.get(

@@ -49,7 +49,8 @@ export const NotePageScreen: React.FC = () => {
   const { data: privateConfig } = usePrivate();
   const { data: extension } = useExtension();
   const setPrivate = useSetPrivate();
-  const archiveIndex = _archives?.findIndex((v) => v.id === archiveId);
+  const archiveIdExact = typeof archiveId === 'string' ? parseInt(archiveId, 10) : archiveId;
+  const archiveIndex = _archives?.findIndex((v) => v.id === archiveIdExact);
   const archive =
     _archives && archiveIndex && archiveIndex > 0
       ? {
@@ -111,20 +112,21 @@ export const NotePageScreen: React.FC = () => {
       </>
     );
   }
-  const renderHeaderSections = () => (
-    <>
-      <BoardTagSection noteId={page?.id} />
-      {extension.feature.NoteSections.map((NoteSection, i) => (
-        <NoteSection
-          key={i}
-          title={page?.title || ''}
-          path={paragraphItem?.path}
-          fullParagraph={fullParagraph}
-          paragraphs={paragraphs}
-        />
-      ))}
-    </>
-  );
+  const renderHeaderSections = () =>
+    !archive && (
+      <>
+        <BoardTagSection noteId={page?.id} />
+        {extension.feature.NoteSections.map((NoteSection, i) => (
+          <NoteSection
+            key={i}
+            title={page?.title || ''}
+            path={paragraphItem?.path}
+            fullParagraph={fullParagraph}
+            paragraphs={paragraphs}
+          />
+        ))}
+      </>
+    );
   return (
     isFocused && (
       <>

@@ -8,6 +8,7 @@ import { getContents, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 import { usePrivate } from '../../hooks/usePrivate';
 import { diffToSnapshot } from '../../screens/main/NoteItemSections';
 import { OptionButton } from '../../screens/main/home/ConfigSection';
+import { updatedFullFormat } from '../../screens/main/home/ContentGroupSection';
 import { createCommonStyles } from '../../styles';
 
 export const ExportButton = ({ title, id }: { title: string; id: number }) => {
@@ -16,15 +17,12 @@ export const ExportButton = ({ title, id }: { title: string; id: number }) => {
   const { auth } = useAuthContext();
   const { data: privateConfig } = usePrivate();
   const handleExportHistory = async () => {
-    // 2. 해당 노트의 모든 Snapshot 및 Delta 내역 조회
     const history = await getContents({
       isOnline: !auth.isLocal,
       types: ['SNAPSHOT', 'DELTA'],
       withHidden: privateConfig.enabled,
       parentId: id,
     });
-
-    // 3. 내역을 순회하며 본문 복원 및 파일명(타이틀) 정의
     const exportData = history.map((h) => {
       let description = h.description || '';
 
@@ -38,14 +36,12 @@ export const ExportButton = ({ title, id }: { title: string; id: number }) => {
 
       return {
         ...h,
-        // 파일명이 중복되지 않도록 타임스탬프를 포함
-        title: `${h.title}_${h.updated.replace(/[:.]/g, '-')}`,
+        title: `${h.title}_${updatedFullFormat(h.updated).replace(/[:.]/g, '-')}`,
         description,
       };
     });
 
-    // 4. 마크다운 내보내기 실행
-    mdfs.export(exportData, `${title}_history`);
+    mdfs.export(exportData, title);
   };
 
   return (

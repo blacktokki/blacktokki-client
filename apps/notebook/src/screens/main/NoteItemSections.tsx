@@ -14,6 +14,7 @@ import { onLink, titleFormat } from '../../components/SearchBar';
 import { getSplitTitle } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
+import { updatedFullFormat } from './home/ContentGroupSection';
 
 export const diffToSnapshot = (original: string, delta: string) => {
   const dmp = new DiffMatchPatch();
@@ -102,7 +103,7 @@ export const NotePageHeader = ({
               />
             )}
             <Text style={[commonStyles.text, { marginLeft: 5, fontStyle: 'italic' }]}>
-              {archive.updated}
+              {updatedFullFormat(archive.updated)}
             </Text>
             {archive.next !== undefined && (
               <HeaderIconButton

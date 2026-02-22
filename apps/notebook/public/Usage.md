@@ -171,6 +171,11 @@
 
 ## Extension Features
 
+### ⚡ Quick Memo
+* A feature that allows you to immediately add sub-paragraphs by selecting a specific note and a parent paragraph.
+* Information about the most recently used note and paragraph is automatically saved, allowing for quick recording in the same location next time.
+* You can easily change the target (note and paragraph) by clicking the exchange icon at the top.
+
 ### 🔍 Full-text Search
 
 * Enter a keyword in the search bar and click the 🔍 button or press Enter to navigate to the full-text search results page, which searches through both note titles and their entire content.

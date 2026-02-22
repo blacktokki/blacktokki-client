@@ -1,17 +1,17 @@
 import { useAuthContext } from '@blacktokki/account';
-import {
-  useColorScheme,
-  useLangContext,
-  View,
-  Text,
-  Colors,
-  useResizeContext,
-} from '@blacktokki/core';
+import { useColorScheme, useLangContext, Text, Colors, useResizeContext } from '@blacktokki/core';
 import { extractHtmlLinks } from '@blacktokki/editor';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TextInput, TouchableOpacity, FlatList, StyleSheet, PanResponder } from 'react-native';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  PanResponder,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { useBoardPages } from '../hooks/useBoardStorage';
@@ -254,7 +254,7 @@ export const SearchBar: React.FC<
   useExtraSearch = true,
   useTextSearch = true,
   newContent = true,
-  icon = 'search',
+  icon = 'arrow-right',
 }) => {
   const [searchText, setSearchText] = useState(_searchText);
   const [showResults, setShowResults] = useState(false);
@@ -372,7 +372,7 @@ export const SearchBar: React.FC<
             onPress={handleTextSearch}
             disabled={!searchText.trim()}
           >
-            <Icon name={icon} size={18} color="#FFFFFF" />
+            <Icon name={'search'} size={18} color="#FFFFFF" />
           </TouchableOpacity>
         )}
 
@@ -381,7 +381,7 @@ export const SearchBar: React.FC<
           onPress={handleSearch}
           disabled={!searchText.trim()}
         >
-          <Icon name="arrow-right" size={18} color="#FFFFFF" />
+          <Icon name={icon} size={18} color="#FFFFFF" />
         </TouchableOpacity>
         {useExtraSearch && extension.feature.elements('extraSearchButton')}
       </View>

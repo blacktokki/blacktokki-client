@@ -5,12 +5,35 @@ import React from 'react';
 import { SearchPageScreen } from './agent/SearchPageScreen';
 import ProblemButton from './problem/ProblemButton';
 import { ProblemsScreen } from './problem/ProblemScreen';
+import QuickMemoButton from './quickMemo/QuickMemoButton';
+import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
 import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
 import { features } from '../hooks/useExtension';
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import RandomButton from './random/RandomButton';
+
+features['quickMemo'] = {
+  title: 'Quick Memo',
+  description: 'Add a sub-paragraph quickly to a specific note.',
+  isDefault: true,
+  screens: {
+    QuickMemo: {
+      title: '',
+      component: QuickMemoScreen,
+      path: 'quickmemo',
+    },
+  },
+  NoteSections: [],
+  extraArchiveButtons: [],
+  elements: [
+    {
+      type: 'button',
+      Component: <QuickMemoButton key={'quickMemo'} />,
+    },
+  ],
+};
 
 features['agent'] = {
   title: 'Search',

@@ -74,16 +74,22 @@ const useUnsaveEffect = (
   }, []);
 };
 
-export const EditPageScreen: React.FC = () => {
-  const route = useRoute<EditPageScreenRouteProp>();
-  const isFocused = useIsFocused();
-  const { title, paragraph, section, board } = route.params;
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+export const EditPageSection = ({
+  title,
+  content,
+  setContent,
+  onCancel,
+  onSave,
+}: {
+  title: string;
+  content: string;
+  setContent: (content: string) => void;
+  onCancel: () => void;
+  onSave?: () => void;
+}) => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { lang } = useLangContext();
-
-  const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();
   const getChildrenPages = (keyword: string) =>
     pages
@@ -94,6 +100,112 @@ export const EditPageScreen: React.FC = () => {
         title: v.title,
       }))
       .filter((v) => v.name.toLowerCase().startsWith(keyword.toLowerCase()));
+
+  return (
+    <>
+      <Editor
+        active
+        value={content}
+        setValue={setContent}
+        theme={theme}
+        pasteAutocomplete={(text) => {
+          try {
+            const noteLink = urlToNoteLink(text);
+            if (noteLink) {
+              return `<a href=${text}>${
+                noteLink.title + (noteLink.paragraph ? ` > ${noteLink.paragraph}` : '')
+              }</a>`;
+            }
+          } catch {}
+        }}
+        autoComplete={[
+          {
+            trigger: '[',
+            getMatchedChars: async (pattern) => {
+              const childrenPages = getChildrenPages(pattern);
+              return [
+                { type: '_NOTELINK', name: pattern, title, paragraph: pattern },
+                ...(childrenPages.length
+                  ? childrenPages
+                  : [{ type: '_CHILDNOTE', name: pattern, title: title + '/' + pattern }]),
+                ...getFilteredPages(pages, pattern).filter((v) => v.type !== '_LINK'),
+              ].map((v) => {
+                const name = v.type === '_NOTELINK' || v.type === '_CHILDNOTE' ? v.name : v.title;
+                const description =
+                  v.type === '_NOTELINK'
+                    ? `(${titleFormat(v)})`
+                    : v.type === '_CHILDNOTE'
+                    ? `(${v.title})`
+                    : '';
+                const params = new URLSearchParams();
+                params.append('title', v.title);
+                if (v.type === '_NOTELINK' && v.paragraph) {
+                  params.append('paragraph', v.paragraph);
+                }
+                const url = `?${params.toString()}`;
+                return {
+                  text: name + description,
+                  value: `<a href=${url}>${name}</a>`,
+                };
+              });
+            },
+          },
+          {
+            trigger: 'http',
+            getMatchedChars: async (pattern) => {
+              const query = 'http' + pattern;
+              const url = new URL(query);
+              if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                return [];
+              }
+              const preview = await previewUrl({ query });
+              if (!preview.title) {
+                return [];
+              }
+              return [
+                {
+                  text: preview.title,
+                  value: `<a href=${preview.url}>${preview.title}</a>`,
+                },
+                // {
+                //   text:preview.title + '...',
+                //   value:`<a href=${preview.url}>${preview.title}</a><p>${preview.description}...</p>`,
+                // }
+              ];
+            },
+          },
+        ]}
+      />
+
+      <View style={commonStyles.buttonContainer}>
+        <TouchableOpacity style={[commonStyles.secondaryButton, { flex: 1 }]} onPress={onCancel}>
+          <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          disabled={onSave === undefined}
+          style={[
+            onSave ? commonStyles.button : commonStyles.secondaryButton,
+            { flex: 1, marginLeft: 8 },
+          ]}
+          onPress={onSave}
+        >
+          <Text style={commonStyles.buttonText}>{lang('save')}</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+};
+
+export const EditPageScreen: React.FC = () => {
+  const route = useRoute<EditPageScreenRouteProp>();
+  const isFocused = useIsFocused();
+  const { title, paragraph, section, board } = route.params;
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const theme = useColorScheme();
+  const commonStyles = createCommonStyles(theme);
+  const { lang } = useLangContext();
+
+  const { data: page, isLoading } = useNotePage(title);
   const [content, setContent] = useState('');
 
   const mutation = useCreateOrUpdatePage();
@@ -234,94 +346,13 @@ export const EditPageScreen: React.FC = () => {
             {titleFormat({ title, paragraph })} - {lang('Edit')}
           </Text>
         </View>
-        <Editor
-          active
-          value={content}
-          setValue={setContent}
-          theme={theme}
-          pasteAutocomplete={(text) => {
-            try {
-              const noteLink = urlToNoteLink(text);
-              if (noteLink) {
-                return `<a href=${text}>${
-                  noteLink.title + (noteLink.paragraph ? ` > ${noteLink.paragraph}` : '')
-                }</a>`;
-              }
-            } catch {}
-          }}
-          autoComplete={[
-            {
-              trigger: '[',
-              getMatchedChars: async (pattern) => {
-                const childrenPages = getChildrenPages(pattern);
-                return [
-                  { type: '_NOTELINK', name: pattern, title, paragraph: pattern },
-                  ...(childrenPages.length
-                    ? childrenPages
-                    : [{ type: '_CHILDNOTE', name: pattern, title: title + '/' + pattern }]),
-                  ...getFilteredPages(pages, pattern).filter((v) => v.type !== '_LINK'),
-                ].map((v) => {
-                  const name = v.type === '_NOTELINK' || v.type === '_CHILDNOTE' ? v.name : v.title;
-                  const description =
-                    v.type === '_NOTELINK'
-                      ? `(${titleFormat(v)})`
-                      : v.type === '_CHILDNOTE'
-                      ? `(${v.title})`
-                      : '';
-                  const params = new URLSearchParams();
-                  params.append('title', v.title);
-                  if (v.type === '_NOTELINK' && v.paragraph) {
-                    params.append('paragraph', v.paragraph);
-                  }
-                  const url = `?${params.toString()}`;
-                  return {
-                    text: name + description,
-                    value: `<a href=${url}>${name}</a>`,
-                  };
-                });
-              },
-            },
-            {
-              trigger: 'http',
-              getMatchedChars: async (pattern) => {
-                const query = 'http' + pattern;
-                const url = new URL(query);
-                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                  return [];
-                }
-                const preview = await previewUrl({ query });
-                if (!preview.title) {
-                  return [];
-                }
-                return [
-                  {
-                    text: preview.title,
-                    value: `<a href=${preview.url}>${preview.title}</a>`,
-                  },
-                  // {
-                  //   text:preview.title + '...',
-                  //   value:`<a href=${preview.url}>${preview.title}</a><p>${preview.description}...</p>`,
-                  // }
-                ];
-              },
-            },
-          ]}
+        <EditPageSection
+          content={content}
+          setContent={setContent}
+          title={title}
+          onCancel={isPrevent() ? handleUnsaved : handleBack}
+          onSave={handleSave}
         />
-
-        <View style={commonStyles.buttonContainer}>
-          <TouchableOpacity
-            style={[commonStyles.secondaryButton, { flex: 1 }]}
-            onPress={isPrevent() ? handleUnsaved : handleBack}
-          >
-            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[commonStyles.button, { flex: 1, marginLeft: 8 }]}
-            onPress={handleSave}
-          >
-            <Text style={commonStyles.buttonText}>{lang('save')}</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     )
   );

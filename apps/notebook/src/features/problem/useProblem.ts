@@ -99,6 +99,7 @@ let problemCache: Record<
     record: ProblemItem[];
     source: ProblemSource;
     matrix: Record<string, { record: ProblemItem[]; matrixSource: ProblemMatrixSource }>;
+    aggregate?: { reverseLinkCount: number; subNoteCount: number };
   }
 > = {};
 
@@ -277,24 +278,28 @@ const getDataMatrix = (
       isSubNote,
     },
   };
+  existData.aggregate = undefined;
   return record;
 };
 
 const getDataAggregate = (source: ProblemSource, boardCount: number): ProblemItem[] => {
   const aggregateRecords: ProblemItem[] = [];
-  const matrixEntries = Object.values(problemCache[source.title].matrix);
+  const aggregate = problemCache[source.title].aggregate || {
+    reverseLinkCount: 0,
+    subNoteCount: 0,
+  };
   const parentNoteCount = source.parentTitle ? 1 : 0;
-
-  let reverseLinkCount = 0;
-  // let subNoteCount = 0;
-
-  matrixEntries.forEach(({ matrixSource }) => {
-    if (matrixSource.isReverseLink) reverseLinkCount++;
-    // if (matrixSource.isSubNote) subNoteCount++;
-  });
+  if (!problemCache[source.title].aggregate) {
+    const matrixEntries = Object.values(problemCache[source.title].matrix);
+    matrixEntries.forEach(({ matrixSource }) => {
+      if (matrixSource.isReverseLink) aggregate.reverseLinkCount++;
+      if (matrixSource.isSubNote) aggregate.subNoteCount++;
+    });
+    problemCache[source.title].aggregate = aggregate;
+  }
 
   // (연관 보드 수 + 역 노트링크 수 + 상위 노트) == 0
-  if (source.raw.length > 0 && boardCount + reverseLinkCount + parentNoteCount === 0) {
+  if (source.raw.length > 0 && boardCount + aggregate.reverseLinkCount + parentNoteCount === 0) {
     aggregateRecords.push([
       source.title,
       undefined,
@@ -360,7 +365,7 @@ export default (delay?: number) => {
     timeoutRef.current = setTimeout(() => {
       setData(getData(auth.user?.id, pages, boards));
       timeoutRef.current = undefined;
-    }, delay || 500);
-  }, [pages, auth.user]);
+    }, delay || 250);
+  }, [pages, boards, auth.user]);
   return { data: data || [], isLoading: isLoading || isBoardLoading || data === undefined };
 };

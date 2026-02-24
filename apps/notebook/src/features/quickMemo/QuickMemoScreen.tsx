@@ -1,15 +1,14 @@
-import { useColorScheme, useLangContext, Spacer } from '@blacktokki/core';
+import { useColorScheme, useLangContext, Spacer, CommonButton } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 
-import {
-  QuickMemoSelection,
-  useQuickMemoSelection,
-  useSetQuickMemoSelection,
-} from './useQuickMemoStorage';
-import HeaderSelectBar, { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
+import { useQuickMemoSelection, useSetQuickMemoSelection } from './useQuickMemoStorage';
+import HeaderSelectBar, {
+  base64Decode,
+  parseHtmlToParagraphs,
+} from '../../components/HeaderSelectBar';
 import { SearchBar, titleFormat } from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 import { EditPageSection } from '../../screens/main/EditPageScreen';
@@ -17,23 +16,33 @@ import { HeaderIconButton } from '../../screens/main/NoteItemSections';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
+const pathToTitle = (path?: string) => {
+  if (!path) return undefined;
+  try {
+    const parts = path.split(',');
+    return base64Decode(parts[parts.length - 1]);
+  } catch {
+    return undefined;
+  }
+};
+
 export const QuickMemoScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { lang } = useLangContext();
 
-  const { data: selection } = useQuickMemoSelection();
+  const { data: history = [] } = useQuickMemoSelection();
   const { mutate: setSelection } = useSetQuickMemoSelection();
   const mutation = useCreateOrUpdatePage();
   const quickMemo = lang('Quick Memo');
-  const [noteTitle, setNoteTitle] = useState(quickMemo);
+  const [title, setTitle] = useState(quickMemo);
   const [targetPath, setTargetPath] = useState<string | undefined>(undefined);
   const [memoTitle, setMemoTitle] = useState('');
   const [content, setContent] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(true);
 
-  const { data: page } = useNotePage(noteTitle);
+  const { data: page } = useNotePage(title);
   const paragraphs = useMemo(
     () => parseHtmlToParagraphs(page?.description || ''),
     [page?.description]
@@ -44,22 +53,21 @@ export const QuickMemoScreen: React.FC = () => {
     [paragraphs, targetPath]
   );
   const memoLevel = Math.min((targetItem?.level || 3) + 1, 6);
-  const memoExists = paragraphs.find(() =>
-    paragraphs.find((p) => p.title === memoTitle && p.level === memoLevel)
-  );
+  const memoExists = paragraphs.find((p) => p.title === memoTitle && p.level === memoLevel);
   const disabled = memoExists || !content.trim();
 
   useEffect(() => {
-    if (selection) {
-      setNoteTitle(selection.title);
-      setTargetPath(selection.path);
+    if (history.length > 0) {
+      setTitle(history[0].title);
+      setTargetPath(history[0].path);
+    } else if (title !== quickMemo) {
+      setTitle(quickMemo);
+      setTargetPath(undefined);
     }
-  }, [selection]);
+  }, [history, quickMemo]);
 
   const handleSave = async () => {
-    if (disabled) {
-      return;
-    }
+    if (disabled) return;
 
     const splitIndex = paragraphs.findLastIndex((p) => p.path === (targetPath || ''));
     const memoContent = memoTitle
@@ -73,23 +81,18 @@ export const QuickMemoScreen: React.FC = () => {
     ].join('');
 
     try {
-      await mutation.mutateAsync({ title: noteTitle, description: finalDescription });
-
-      const newSelection: QuickMemoSelection = { title: noteTitle, path: targetPath };
-      setSelection(newSelection);
+      await mutation.mutateAsync({ title, description: finalDescription });
+      setSelection({ title, path: targetPath });
       setMemoTitle('');
       setContent('');
       setIsCollapsed(true);
-      navigation.navigate('NotePage', { title: noteTitle, paragraph: memoTitle || undefined });
+      navigation.navigate('NotePage', { title, paragraph: memoTitle || undefined });
     } catch (e: any) {}
   };
 
   const handleCancel = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Home');
-    }
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('Home');
   };
 
   return (
@@ -103,10 +106,10 @@ export const QuickMemoScreen: React.FC = () => {
       >
         <Text style={[commonStyles.title, { marginTop: 0, marginBottom: 4, flex: 1 }]}>
           {titleFormat({
-            title: noteTitle,
+            title,
             paragraph: targetItem?.level === 0 ? undefined : targetItem?.title,
           })}
-          {noteTitle === quickMemo ? '' : ` - ${quickMemo}`}
+          {title === quickMemo ? '' : ` - ${quickMemo}`}
         </Text>
         <HeaderIconButton
           name={isCollapsed ? 'chevron-right' : 'chevron-down'}
@@ -115,9 +118,36 @@ export const QuickMemoScreen: React.FC = () => {
       </TouchableOpacity>
       {!isCollapsed && (
         <View style={[commonStyles.card, { marginTop: 0 }]}>
+          <Text style={[commonStyles.text, { marginBottom: 8 }]}>
+            {lang('Note title and paragraph:')}
+          </Text>
+          {history.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 }}>
+              {history.map((item, idx) => (
+                <CommonButton
+                  key={idx}
+                  onPress={() => {
+                    setTitle(item.title);
+                    setTargetPath(item.path);
+                    setIsCollapsed(true);
+                  }}
+                  style={[
+                    {
+                      paddingVertical: 4,
+                      paddingHorizontal: 12,
+                      marginBottom: 6,
+                      marginRight: 6,
+                    },
+                  ]}
+                  title={titleFormat({ title: item.title, paragraph: pathToTitle(item.path) })}
+                />
+              ))}
+            </View>
+          )}
+
           <SearchBar
             onPress={(t) => {
-              setNoteTitle(t);
+              setTitle(t);
               setTargetPath(undefined);
             }}
             addKeyword={false}
@@ -130,7 +160,7 @@ export const QuickMemoScreen: React.FC = () => {
             <HeaderSelectBar
               data={paragraphs}
               path={targetPath || ''}
-              root={noteTitle || '...'}
+              root={title || '...'}
               onPress={(p) => {
                 setTargetPath(p.path);
                 setIsCollapsed(true);
@@ -147,7 +177,7 @@ export const QuickMemoScreen: React.FC = () => {
         placeholderTextColor={commonStyles.placeholder.color}
       />
       <EditPageSection
-        title={noteTitle}
+        title={title}
         content={content}
         setContent={setContent}
         onSave={disabled ? undefined : handleSave}

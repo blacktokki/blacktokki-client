@@ -9,7 +9,7 @@ const QUICK_MEMO_PRIVACY_KEY = '@blacktokki:notebook:quick_memo_private:';
 
 export type QuickMemoSelection = {
   title: string;
-  path?: string; // Paragraph['path']
+  path?: string;
 };
 
 export const useQuickMemoSelection = () => {
@@ -19,12 +19,12 @@ export const useQuickMemoSelection = () => {
   const isPrivate = privateConfig.enabled;
 
   return useQuery({
-    // 프라이빗 모드 상태가 변경될 때마다 쿼리가 갱신되도록 queryKey에 포함
     queryKey: ['quickMemoSelection', subkey, isPrivate],
     queryFn: async () => {
       const key = isPrivate ? QUICK_MEMO_PRIVACY_KEY : QUICK_MEMO_KEY;
       const jsonValue = await AsyncStorage.getItem(key + subkey);
-      return jsonValue ? (JSON.parse(jsonValue) as QuickMemoSelection) : null;
+      if (!jsonValue) return [];
+      return JSON.parse(jsonValue) as QuickMemoSelection[];
     },
   });
 };
@@ -39,10 +39,22 @@ export const useSetQuickMemoSelection = () => {
   return useMutation({
     mutationFn: async (selection: QuickMemoSelection) => {
       const key = isPrivate ? QUICK_MEMO_PRIVACY_KEY : QUICK_MEMO_KEY;
-      await AsyncStorage.setItem(key + subkey, JSON.stringify(selection));
+      const jsonValue = await AsyncStorage.getItem(key + subkey);
+      let list: QuickMemoSelection[] = [];
+
+      if (jsonValue) {
+        const parsed = JSON.parse(jsonValue);
+        list = Array.isArray(parsed) ? parsed : [parsed];
+      }
+
+      const filtered = list.filter(
+        (item) => !(item.title === selection.title && item.path === selection.path)
+      );
+      const newList = [selection, ...filtered].slice(0, 10);
+
+      await AsyncStorage.setItem(key + subkey, JSON.stringify(newList));
     },
     onSuccess: () => {
-      // 성공 시 관련 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: ['quickMemoSelection', subkey] });
     },
   });

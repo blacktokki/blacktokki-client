@@ -6,46 +6,14 @@ import { View, FlatList, TouchableOpacity, TextInput, StyleSheet } from 'react-n
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import { ResponsiveSearchBar } from '../../components/SearchBar';
 import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPages, useCreateOrUpdateBoard, useDeleteBoard } from '../../hooks/useBoardStorage';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { createCommonStyles } from '../../styles';
-import { Content, NavigationParamList } from '../../types';
-import { updatedFormat } from './home/ContentGroupSection';
-
-const getBoardStats = (board: Content, allPages: Content[]) => {
-  const option = board.option;
-
-  if (!option || !option['BOARD_NOTE_IDS']) {
-    return { noteCount: 0, cardCount: 0, updated: board.updated };
-  }
-
-  const noteColumns = option.BOARD_NOTE_IDS.map((id) => allPages.find((p) => p.id === id)).filter(
-    (v): v is Content => v !== undefined
-  );
-
-  let totalCardCount = 0;
-  let updated = board.updated;
-
-  noteColumns.forEach((page) => {
-    const paragraphs = parseHtmlToParagraphs(page.description || '');
-    const cards = paragraphs.filter((p) => p.level === option.BOARD_HEADER_LEVEL);
-    totalCardCount += cards.length;
-
-    if (new Date(page.updated) > new Date(updated)) {
-      updated = page.updated;
-    }
-  });
-
-  return {
-    noteCount: noteColumns.length,
-    cardCount: totalCardCount,
-    updated,
-  };
-};
+import { NavigationParamList } from '../../types';
+import { getBoardStatsList, updatedFormat } from './home/ContentGroupSection';
 
 export const BoardListScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -68,11 +36,7 @@ export const BoardListScreen: React.FC = () => {
       <View style={commonStyles.container}>
         {boards.length > 0 ? (
           <FlatList
-            data={boards
-              .map((v) => ({ ...v, stats: getBoardStats(v, pages) }))
-              .sort(
-                (a, b) => new Date(b.stats.updated).getTime() - new Date(a.stats.updated).getTime()
-              )}
+            data={getBoardStatsList(boards, pages)}
             renderItem={({ item }) => {
               return (
                 <TouchableOpacity

@@ -1,5 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, PanResponder, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Animated,
+  PanResponder,
+  Platform,
+  LayoutChangeEvent,
+} from 'react-native';
 
 type BoardCardProps<T> = {
   item: T;
@@ -7,9 +14,17 @@ type BoardCardProps<T> = {
   onStart: () => void;
   onActive: (position: { x: number; y: number }) => void;
   onEnd: (position: { x: number; y: number }) => boolean;
+  onLayout: (event: LayoutChangeEvent) => void;
 };
 
-export default <T,>({ item, renderItem, onStart, onActive, onEnd }: BoardCardProps<T>) => {
+export default <T,>({
+  item,
+  renderItem,
+  onStart,
+  onActive,
+  onEnd,
+  onLayout,
+}: BoardCardProps<T>) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const zIndexAnim = useRef(new Animated.Value(0)).current;
@@ -94,7 +109,7 @@ export default <T,>({ item, renderItem, onStart, onActive, onEnd }: BoardCardPro
   }, [item]);
 
   return (
-    <Animated.View style={[styles.container, { zIndex: zIndexAnim }]}>
+    <Animated.View style={[styles.container, { zIndex: zIndexAnim }]} onLayout={onLayout}>
       <View style={styles.dropzone}>
         <Animated.View
           {...panResponder.panHandlers}

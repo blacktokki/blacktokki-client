@@ -48,6 +48,47 @@ export const updatedFormat = (_updated: string) => {
   const today = new Date().toISOString().slice(0, 10);
   return date === today ? updated.slice(11) : date;
 };
+
+export const getBoardStatsList = (boards: Content[], allPages: Content[]) => {
+  return boards
+    .map((board) => {
+      const option = board.option;
+
+      if (!option || !option['BOARD_NOTE_IDS']) {
+        return {
+          ...board,
+          stats: { noteCount: 0, cardCount: 0, updated: board.updated },
+        };
+      }
+
+      const noteColumns = option.BOARD_NOTE_IDS.map((id) =>
+        allPages.find((p) => p.id === id)
+      ).filter((v): v is Content => v !== undefined);
+
+      let totalCardCount = 0;
+      let updated = board.updated;
+
+      noteColumns.forEach((page) => {
+        const paragraphs = parseHtmlToParagraphs(page.description || '');
+        const cards = paragraphs.filter((p) => p.level === option.BOARD_HEADER_LEVEL);
+        totalCardCount += cards.length;
+
+        if (new Date(page.updated) > new Date(updated)) {
+          updated = page.updated;
+        }
+      });
+
+      return {
+        ...board,
+        stats: {
+          noteCount: noteColumns.length,
+          cardCount: totalCardCount,
+          updated,
+        },
+      };
+    })
+    .sort((a, b) => new Date(b.stats.updated).getTime() - new Date(a.stats.updated).getTime());
+};
 // --- Sortable Item Component (Updated) ---
 const DraggableTabItem = ({
   index,
@@ -268,16 +309,18 @@ const ContentGroupSection = (props: Props) => {
   if (props.type === 'BOARD') {
     return (
       <List.Section>
-        {boards.slice(0, 10).map((b) => (
-          <List.Item
-            key={b.id}
-            title={b.title}
-            style={{ padding: itemPadding }}
-            left={RenderIcon('view-dashboard')}
-            onPress={() => onNotePress(b)}
-            onLongPress={() => onNoteLongPress(b)}
-          />
-        ))}
+        {getBoardStatsList(boards, notes.data || [])
+          .slice(0, 10)
+          .map((b) => (
+            <List.Item
+              key={b.id}
+              title={b.title}
+              style={{ padding: itemPadding }}
+              left={RenderIcon('view-dashboard')}
+              onPress={() => onNotePress(b)}
+              onLongPress={() => onNoteLongPress(b)}
+            />
+          ))}
         <List.Item
           title={lang('more...')}
           left={RenderIcon('view-dashboard-variant')}

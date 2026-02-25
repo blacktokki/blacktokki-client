@@ -49,12 +49,17 @@ export default <T,>({
   onEnd,
   renderHeader,
 }: BoardProps<T>) => {
-  const sizeRef = useRef<{ row: number[]; column: number[]; changed: boolean }>({
+  const sizeRef = useRef<{ row: number[]; column: number[]; item: number[]; changed: boolean }>({
     row: [],
     column: [],
+    item: [],
     changed: false,
   });
-  const positionRef = useRef<{ row: number[]; column: number[] }>({ row: [], column: [] });
+  const positionRef = useRef<{ row: number[]; column: number[]; item: number[] }>({
+    row: [],
+    column: [],
+    item: [],
+  });
   const [maxSize, setMaxSize] = useState({ width: 0, height: 0 });
   const translate = useRef(new Animated.Value(0)).current;
   const animated = useRef<Animated.CompositeAnimation>();
@@ -68,8 +73,17 @@ export default <T,>({
     setCurrentColumn(columnIndex);
     setCurrentRow(rowIndex);
   };
-  const onActive = (rowIndex: number, columnIndex: number, position: { x: number; y: number }) => {
-    const j = indexResult(rowIndex, horizontal ? position.x : position.y, positionRef.current.row);
+  const onActive = (
+    rowIndex: number,
+    columnIndex: number,
+    index: number,
+    position: { x: number; y: number }
+  ) => {
+    const j = indexResult(
+      rowIndex,
+      (horizontal ? position.x : position.y) + positionRef.current.item[index],
+      positionRef.current.row
+    );
     const i = indexResult(
       columnIndex,
       horizontal ? position.y : position.x,
@@ -122,8 +136,13 @@ export default <T,>({
               item={item}
               renderItem={(item) => renderItem({ index, item })}
               onStart={() => _onStart(rowIndex, columnIndex)}
-              onActive={(p) => onActive(rowIndex, columnIndex, p)}
+              onActive={(p) => onActive(rowIndex, columnIndex, index, p)}
               onEnd={(p) => _onEnd(rowIndex, columnIndex, index, p)}
+              onLayout={(e) => {
+                const { width, height } = e.nativeEvent.layout;
+                sizeRef.current.changed = true;
+                sizeRef.current.item[index] = horizontal ? width : height;
+              }}
             />
           );
         })
@@ -135,7 +154,8 @@ export default <T,>({
   }, [horizontal]);
   if (sizeRef.current.changed) {
     const maxColumns = Math.max(0, ...rows.map((v) => v.columns.length));
-    positionRef.current = { row: [], column: [] };
+    const maxItems = Math.max(0, ...rows.flatMap((v) => v.columns.map((v2) => v2.items.length)));
+    positionRef.current = { row: [], column: [], item: [] };
     for (let i = 0, j = 0; i < rows.length; i++) {
       positionRef.current.row[i] = j;
       j += sizeRef.current.row[i];
@@ -143,6 +163,10 @@ export default <T,>({
     for (let i = 0, j = 0; i < maxColumns; i++) {
       positionRef.current.column[i] = j;
       j += sizeRef.current.column[i];
+    }
+    for (let i = 0, j = 0; i < maxItems; i++) {
+      positionRef.current.item[i] = j;
+      j += sizeRef.current.item[i];
     }
     sizeRef.current.changed = false;
   }
@@ -179,7 +203,7 @@ export default <T,>({
           key={rowIndex + '_' + row.columns.length}
           style={{
             zIndex: rowIndex === currentRow ? 5000 : rowIndex === 0 ? 1 : undefined,
-            flexDirection: horizontal ? 'row' : 'column',
+            alignItems: 'flex-start',
           }}
           onLayout={(e) => {
             const { width, height } = e.nativeEvent.layout;
@@ -190,11 +214,14 @@ export default <T,>({
           <View
             style={[
               {
-                zIndex: rowIndex === 0 ? 1 : undefined,
                 flexDirection: horizontal ? 'column' : 'row',
-                alignSelf: 'flex-start',
+                borderColor: 'gray',
               },
-              //
+              rowIndex + 1 < rows.length
+                ? horizontal
+                  ? { borderRightWidth: 2 }
+                  : { borderBottomWidth: 2 }
+                : {},
             ]}
           >
             {row.columns.map((column, columnIndex) => (
@@ -276,12 +303,7 @@ export default <T,>({
               </View>
             ))}
           </View>
-          <View
-            style={[
-              { backgroundColor: 'gray' },
-              horizontal ? { height: '100%', width: 2 } : { width: '100%', height: 2 },
-            ]}
-          />
+          {/* */}
         </View>
       ))}
     </View>

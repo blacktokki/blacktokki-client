@@ -204,6 +204,23 @@ export default (
           editor.on('ExecCommand', (e) => {
             if (!props.readonly && e.command === 'ToggleView' && e.value === 'supercode') {
               initMarkdown = !initMarkdown;
+              if (initMarkdown) {
+                setTimeout(() => {
+                  const container = editor.getContainer();
+                  const overflows = container.querySelectorAll('.tox-toolbar__overflow');
+
+                  overflows.forEach((overflowDiv) => {
+                    if (overflowDiv.classList.contains('tox-toolbar__overflow--closed')) {
+                      overflowDiv.classList.remove(
+                        'tox-toolbar__overflow--closed',
+                        'tox-toolbar__overflow--shrinking'
+                      );
+                      overflowDiv.classList.add('tox-toolbar__overflow--open');
+                      (overflowDiv as any).style.setProperty('height', 'auto', 'important');
+                    }
+                  });
+                }, 0);
+              }
             }
           });
           editor.on('compositionstart', () => {

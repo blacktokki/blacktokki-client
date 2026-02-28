@@ -6,13 +6,18 @@ import {
   NavigationState,
   SceneRendererProps,
   TabBar,
+  TabBarItem,
 } from 'react-native-tab-view';
 
 import Colors from '../constants/Colors';
 import useColorScheme from '../hooks/useColorScheme';
 import useLangContext from '../hooks/useLangContext';
 
-export type TabViewData = { title: string; component: React.ComponentType<any>; icon: JSX.Element };
+export type TabViewData = {
+  title: string;
+  component: React.ComponentType<any>;
+  icon: React.JSX.Element;
+};
 
 const empty = () => <></>;
 
@@ -66,7 +71,9 @@ export default (props: {
               labelStyle={{ whiteSpace: 'nowrap' }}
               activeColor={Colors[theme].text}
               inactiveColor={Colors[theme].text}
-              renderIcon={(scene) => icons[scene.route.key]}
+              renderTabBarItem={(itemProps) => (
+                <TabBarItem {...itemProps} icon={(scene) => icons[scene.route.key]} />
+              )}
               onTabPress={(scene) => onTab?.(entries.findIndex(([k, v]) => k === scene.route.key))}
             />
           );

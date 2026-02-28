@@ -8,8 +8,8 @@ import { TabViewOption } from '../../../types';
 function firstComponent(tabViews: TabViewOption[], headerTitle?: string) {
   const Component = tabViews[0].component;
   const FirstTabView = (props: any) => {
-    const tempref = useRef<NodeJS.Timeout>();
-    const indexRef = useRef<number>();
+    const tempref = useRef<NodeJS.Timeout>(undefined);
+    const indexRef = useRef<number>(undefined);
     const { width } = useWindowDimensions();
     const navigation = useNavigation();
     useEffect(() => {

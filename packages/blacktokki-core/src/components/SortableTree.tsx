@@ -99,7 +99,7 @@ const useHover = (
 ) => {
   const [rootHover, setRootHover] = useState(false);
   const [originHoverNode, setOriginHoverNode] = useState<FlatNode>();
-  const hoverRef = useRef<string>();
+  const hoverRef = useRef<string>(undefined);
   const hoverNode =
     (draggingRef.current?.items === undefined || originHoverNode?.type === 'folder'
       ? originHoverNode?.id
@@ -134,7 +134,7 @@ const TreeItem = React.memo(
     handleNodePress: (id: string, e: NativeTouchEvent) => void;
     draggingRef: React.MutableRefObject<DraggingRef | undefined>;
   }) => {
-    const draggingItemRef = useRef<DraggingItemRef>();
+    const draggingItemRef = useRef<DraggingItemRef>(undefined);
     const setDragging = (id?: string) => {
       props.draggingRef.current?.setItem(
         id !== undefined ? ({ ...draggingItemRef.current, id } as DraggingItem) : undefined
@@ -239,7 +239,7 @@ const DraggableTree = () => {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [lastSelectedNode, setLastSelectedNode] = useState<string | null>(null);
   const flatNodes = useMemo(() => flatNode(data), [data]);
-  const draggingRef = useRef<DraggingRef>();
+  const draggingRef = useRef<DraggingRef>(undefined);
   const { rootSelected, hoverRef, isHoverId, setRootHover, setOriginHoverNode } = useHover(
     flatNodes,
     draggingRef
@@ -353,7 +353,7 @@ const DraggableTree = () => {
       />
       <DragPointer flatNodes={flatNodes} selectedNodes={selectedNodes} draggingRef={draggingRef} />
     </>
-  ) as JSX.Element;
+  ) as React.JSX.Element;
 };
 
 const styles = StyleSheet.create({

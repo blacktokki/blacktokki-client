@@ -11,7 +11,7 @@ const openURL =
 export default ({
   buttons,
 }: {
-  buttons: { icon: JSX.Element; url: string; isWeb?: boolean }[];
+  buttons: { icon: React.JSX.Element; url: string; isWeb?: boolean }[];
 }) => {
   return (
     <View style={Styles.footer_buttons}>

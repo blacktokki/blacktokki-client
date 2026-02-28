@@ -13,7 +13,7 @@ type Row<T> = {
 
 type BoardProps<T> = {
   rows: Row<T>[];
-  renderItem: (e: { item: T; index: number }) => JSX.Element;
+  renderItem: (e: { item: T; index: number }) => React.JSX.Element;
   onStart: () => void;
   onEnd: (
     rowKey: number,
@@ -22,7 +22,7 @@ type BoardProps<T> = {
     nextColumnKey: number,
     key: number
   ) => boolean;
-  renderHeader: (e: { item: { name: string }; index: number }) => JSX.Element;
+  renderHeader: (e: { item: { name: string }; index: number }) => React.JSX.Element;
   columnStyle: StyleProp<ViewStyle>;
   useScrum?: boolean;
   horizontal?: boolean;
@@ -62,7 +62,7 @@ export default <T,>({
   });
   const [maxSize, setMaxSize] = useState({ width: 0, height: 0 });
   const translate = useRef(new Animated.Value(0)).current;
-  const animated = useRef<Animated.CompositeAnimation>();
+  const animated = useRef<Animated.CompositeAnimation>(undefined);
   const [currentRow, setCurrentRow] = useState<number | undefined>(undefined);
   const [currentColumn, setCurrentColumn] = useState<number | undefined>(undefined);
   const [nextRow, setNextRow] = useState<number | undefined>(undefined);

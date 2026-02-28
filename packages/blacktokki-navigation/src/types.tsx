@@ -26,8 +26,8 @@ export type NavigationConfig = {
     main: string;
     login: string;
   };
-  headerLeftIcon: JSX.Element;
-  headerRight: JSX.Element;
+  headerLeftIcon: React.JSX.Element;
+  headerRight: React.JSX.Element;
   modals: ModalComponent[];
   drawer: React.ReactNode;
 };

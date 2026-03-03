@@ -230,7 +230,7 @@ const ContentGroupSection = (props: Props) => {
   const { lang } = useLangContext();
   const styles = createCommonStyles(useColorScheme());
   const itemPadding = useResizeContext() === 'landscape' ? 5 : 8;
-  const tabRef = useRef<NodeJS.Timeout>();
+  const tabRef = useRef<NodeJS.Timeout>(undefined);
 
   // Data Hooks
   const notes = useNotePages();

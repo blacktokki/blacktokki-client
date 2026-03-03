@@ -216,7 +216,7 @@ export const EditPageScreen: React.FC = () => {
     section?: string;
     initialContent: string;
     unsaved: boolean;
-  }>();
+  }>(undefined);
 
   const handleBack = () => {
     if (navigation.canGoBack()) {

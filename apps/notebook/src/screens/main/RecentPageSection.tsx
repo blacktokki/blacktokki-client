@@ -35,7 +35,7 @@ type Scale = Record<'landscape' | 'portrait', { maxWidth: number; padding: numbe
 
 type Item = { scale: Scale } & (
   | (BaseItem & {
-      descriptionComponent: JSX.Element;
+      descriptionComponent: React.JSX.Element;
       onPress: () => void;
     })
   | { title?: undefined }

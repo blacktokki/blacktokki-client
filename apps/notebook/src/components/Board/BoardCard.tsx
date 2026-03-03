@@ -10,7 +10,7 @@ import {
 
 type BoardCardProps<T> = {
   item: T;
-  renderItem: (item: T) => JSX.Element;
+  renderItem: (item: T) => React.JSX.Element;
   onStart: () => void;
   onActive: (position: { x: number; y: number }) => void;
   onEnd: (position: { x: number; y: number }) => boolean;

@@ -359,7 +359,7 @@ export default (delay?: number) => {
   const { data: pages = [], isLoading } = useNotePages();
   const { data: boards = [], isLoading: isBoardLoading } = useBoardPages();
   const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout>(undefined);
   useEffect(() => {
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {

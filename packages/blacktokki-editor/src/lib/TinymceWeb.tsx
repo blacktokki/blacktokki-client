@@ -77,7 +77,7 @@ export default (
     .toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
     .replace(/\s/g, ' ');
   const composingRef = React.useRef(false);
-  const completeRef = React.useRef<{ complete: () => void; timeout: NodeJS.Timeout }>();
+  const completeRef = React.useRef<{ complete: () => void; timeout: NodeJS.Timeout }>(undefined);
   return (
     <Editor
       tinymceScriptSrc={path}
@@ -105,9 +105,9 @@ export default (
           completeRef.current.timeout = setTimeout(() => completeRef.current?.complete?.(), 1000);
         }
       }}
+      readonly={props.readonly}
+      disabled={props.readonly}
       init={{
-        readonly: props.readonly,
-        disabled: props.readonly,
         disable_nodechange: props.readonly,
         setup: (editor) => {
           editor.ui.registry.addIcon(

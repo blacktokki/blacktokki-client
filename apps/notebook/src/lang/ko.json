@@ -16,6 +16,7 @@
   "This note already exists.": "이미 존재하는 노트 입니다.",
   "Notes changed": "변경된 노트",
   "Move sub-notes": "하위 노트 포함 이동",
+  "Update backlinks": "역링크 수정",
   "move": "이동",
   "overwrite": "덮어쓰기",
   "more...": "더 보기...",

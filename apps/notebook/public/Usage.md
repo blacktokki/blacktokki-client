@@ -105,10 +105,12 @@
 * Previously searched keywords are stored for faster reuse.
 * Suggestions appear in the search bar to reduce repeat typing.
 
-### 🔄 Section Rearrangement and Copying
+### 🔄 Note and Section Relocation
 
-* Move or copy specific sections to other notes to reorganize content.
-* Preview changes before confirming to ensure safe editing.
+* Move entire notes or specific sections to a different title or location to reorganize your knowledge structure.
+* **Move sub-notes**: When moving a parent note, you can choose to seamlessly move all of its nested sub-notes together.
+* **Update backlinks**: Automatically find and update all internal links pointing to the moved note or section across all your other notes, preventing broken links.
+* **Preview changes**: Safely preview the structural changes and text diffs before confirming the move. If the target note already exists, you will be warned and can choose to overwrite.
 
 ### 💾 Storage Options and Account Sync
 

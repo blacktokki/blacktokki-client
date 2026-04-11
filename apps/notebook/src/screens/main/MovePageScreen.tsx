@@ -1,14 +1,13 @@
-import { Spacer, useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
-import { EditorViewer } from '@blacktokki/editor';
+import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import DiffMatchPatch from 'diff-match-patch';
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
+import ChangedBlock, { ChangedItem } from '../../components/ChangedBlock';
 import { paragraphByKey, parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
-import { onLink, SearchBar, titleFormat } from '../../components/SearchBar';
+import { SearchBar, titleFormat, urlToNoteLink } from '../../components/SearchBar';
 import {
   useCreateOrUpdatePage,
   useMovePage,
@@ -18,252 +17,109 @@ import {
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
-const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 'dark'): string => {
-  const dmp = new DiffMatchPatch();
+// --- 역링크(백링크) 내용 치환 로직 ---
+const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
+  html: string,
+  mappings: T[],
+  targetParagraph?: string,
+  onMatch?: (
+    a: HTMLAnchorElement,
+    mapping: T,
+    noteLink: NonNullable<ReturnType<typeof urlToNoteLink>>
+  ) => void
+) => {
+  if (!html) return { hasMatch: false, processedHtml: html };
 
-  // 1. Tokenizer: HTML 태그와 텍스트 분리
-  const tokenizer = /(<[^>]+>|[^<]+)/g;
+  // 1차 필터링: 원본 문자열에 대상 이름이 아예 포함되지 않았다면 조기 종료
+  const mightHaveLink = mappings.some(
+    (m) => html.includes(m.oldTitle) || html.includes(encodeURIComponent(m.oldTitle))
+  );
+  if (!mightHaveLink) return { hasMatch: false, processedHtml: html };
 
-  const lineArray: string[] = [];
-  const lineHash: { [key: string]: number } = {};
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const links = doc.querySelectorAll('a');
+  let hasMatch = false;
 
-  // 토큰 -> 유니코드 매핑
-  const tokensToChars = (text: string): string => {
-    const tokens = text.match(tokenizer) || [];
-    let chars = '';
-    for (const token of tokens) {
-      if (Object.prototype.hasOwnProperty.call(lineHash, token)) {
-        chars += String.fromCharCode(lineHash[token]);
-      } else {
-        const code = lineArray.length;
-        lineArray[code] = token;
-        lineHash[token] = code;
-        chars += String.fromCharCode(code);
-      }
-    }
-    return chars;
-  };
+  for (let i = 0; i < links.length; i++) {
+    try {
+      const a = links[i];
+      const absoluteUrl = a.href;
+      const noteLink = urlToNoteLink(absoluteUrl);
 
-  const chars1 = tokensToChars(text1);
-  const chars2 = tokensToChars(text2);
+      if (!noteLink) continue;
 
-  const diffs = dmp.diff_main(chars1, chars2);
-  dmp.diff_cleanupSemantic(diffs);
+      const urlTitle = noteLink.title;
+      const urlPara = noteLink.paragraph;
 
-  // 2. 블록 병합 (연속된 연산자 묶기)
-  interface DiffBlock {
-    op: number; // 0: Equal, -1: Del, 1: Ins
-    text: string;
-  }
-
-  const blocks: DiffBlock[] = [];
-
-  for (const [op, data] of diffs) {
-    let text = '';
-    for (let i = 0; i < data.length; i++) {
-      text += lineArray[data.charCodeAt(i)];
-    }
-
-    if (blocks.length > 0 && blocks[blocks.length - 1].op === op) {
-      blocks[blocks.length - 1].text += text;
-    } else {
-      blocks.push({ op, text });
-    }
-  }
-
-  // 3. 테마별 색상 정의
-  const colors =
-    theme === 'dark'
-      ? {
-          containerBg: '#1e1e1e',
-          text: '#d4d4d4',
-          border: '#333333',
-          delBg: '#451818',
-          insBg: '#183818',
-          emptyBg: '#252526',
+      let matchedMapping: T | undefined;
+      if (targetParagraph) {
+        if (urlTitle === mappings[0].oldTitle && urlPara === targetParagraph) {
+          matchedMapping = mappings[0];
         }
-      : {
-          // 수정: 눈이 편안한 배경색과 대비가 낮은 강조색 적용
-          containerBg: '#FAFAFA',
-          text: '#454545',
-          border: '#E0E0E0',
-          delBg: '#F2D7D7', // 채도를 낮춘 Red
-          insBg: '#D7F2D7', // 채도를 낮춘 Green
-          emptyBg: '#F5F5F5',
-        };
-  // 4. HTML 스타일 및 생성 로직
-  // inline style을 사용하여 별도의 CSS 파일 없이 동작하도록 함
-  const rowStyle = `display: flex; flex-direction: row; align-items: stretch; border-bottom: 1px solid ${colors.border}; background-color: ${colors.containerBg};`;
-  const cellStyle = `flex: 1; padding: 1rem; overflow: hidden; word-wrap: break-word; color: ${colors.text};`;
+      } else {
+        matchedMapping = mappings.find(
+          (m) => urlTitle === m.oldTitle || urlTitle.startsWith(m.oldTitle + '/')
+        );
+      }
 
-  const createRow = (
-    leftContent: string,
-    rightContent: string,
-    leftBg: string = '',
-    rightBg: string = ''
-  ) => {
-    // 배경색이 지정되지 않은 경우(Equal 등)는 투명하게 처리하거나 기본 배경색 사용
-    const lStyle = `${cellStyle} background-color: ${leftBg || 'transparent'};`;
-    const rStyle = `${cellStyle} background-color: ${rightBg || 'transparent'};`;
-
-    return `
-      <div class="diff-row" style="${rowStyle}">
-        <div class="diff-cell left" style="${lStyle}">${leftContent}</div>
-        <div class="diff-cell right" style="${rStyle}">${rightContent}</div>
-      </div>`;
-  };
-
-  let resultHtml = '';
-  let i = 0;
-
-  while (i < blocks.length) {
-    const current = blocks[i];
-    const next = i + 1 < blocks.length ? blocks[i + 1] : null;
-
-    // CASE 1: Equal (양쪽 동일)
-    if (current.op === 0) {
-      resultHtml += createRow(current.text, current.text);
-      i++;
-    }
-    // CASE 2: Modification (Delete 후 바로 Insert -> 같은 줄에 배치하여 동기화)
-    else if (current.op === -1 && next && next.op === 1) {
-      resultHtml += createRow(current.text, next.text, colors.delBg, colors.insBg);
-      i += 2; // Delete와 Insert 두 블록을 소모했으므로 2칸 전진
-    }
-    // CASE 3: Only Delete (우측은 비어있음 - Empty Style 적용)
-    else if (current.op === -1) {
-      resultHtml += createRow(current.text, '', colors.delBg, colors.emptyBg);
-      i++;
-    }
-    // CASE 4: Only Insert (좌측은 비어있음 - Empty Style 적용)
-    else if (current.op === 1) {
-      resultHtml += createRow('', current.text, colors.emptyBg, colors.insBg);
-      i++;
+      if (matchedMapping) {
+        hasMatch = true;
+        if (onMatch) {
+          onMatch(a, matchedMapping, noteLink);
+        } else {
+          // onMatch 콜백이 없으면 단순히 존재 여부만 판단 (backLinks 필터용)
+          return { hasMatch: true, processedHtml: html };
+        }
+      }
+    } catch (e) {
+      // URL 파싱 오류 무시
     }
   }
 
-  // 최종 컨테이너 반환
-  return `<div class="diff-container" style="width: 100%; background-color: ${colors.containerBg};">${resultHtml}</div>`;
+  return { hasMatch, processedHtml: hasMatch && onMatch ? doc.body.innerHTML : html };
 };
 
-const DiffPreview = React.memo(
-  ({ source, target, theme }: { source?: string; target: string; theme: 'light' | 'dark' }) => {
-    const RenderHtml = React.lazy(() => import('react-native-render-html'));
-    const _window = useResizeContext();
+// --- 역링크(백링크) 내용 치환 로직 ---
+const replaceBacklinks = (
+  html: string,
+  mappings: { oldTitle: string; newTitle: string }[],
+  targetParagraph?: string
+) => {
+  const { hasMatch, processedHtml } = checkAndProcessBacklinks(
+    html,
+    mappings,
+    targetParagraph,
+    (a, mapping, noteLink) => {
+      let newUrlTitle = noteLink.title;
+      let newInnerText = a.textContent || '';
 
-    const diffRows = useMemo(() => {
-      if (!source) return { html: '' };
-      return { html: getHtmlSplitDiff(source, target, theme) };
-    }, [source, target, theme]);
-    return (
-      <Suspense>
-        <RenderHtml source={diffRows} contentWidth={_window === 'landscape' ? 360 : 260} />
-      </Suspense>
-    );
-  }
-);
+      if (targetParagraph) {
+        newUrlTitle = mapping.newTitle;
+      } else {
+        newUrlTitle = mapping.newTitle + noteLink.title.substring(mapping.oldTitle.length);
+        if (newInnerText === mapping.oldTitle) {
+          newInnerText = mapping.newTitle;
+        } else if (newInnerText === noteLink.title) {
+          newInnerText = newUrlTitle;
+        }
+      }
 
-type ChangedItem = {
-  title: string;
-  newDescription: string;
-} & (
-  | {
-      renderType: 'diff';
-      fetchType: 'part';
-      paragraph: string;
-      description: string;
+      const parsedUrl = new URL(a.href);
+      parsedUrl.searchParams.set('title', newUrlTitle);
+
+      const origHref = a.getAttribute('href') || '';
+      if (origHref.startsWith('http')) {
+        a.setAttribute('href', parsedUrl.toString());
+      } else {
+        a.setAttribute('href', parsedUrl.search + parsedUrl.hash);
+      }
+
+      a.textContent = newInnerText;
     }
-  | {
-      renderType: 'plain';
-      fetchType: 'part';
-    }
-  | {
-      renderType: 'override';
-      fetchType: 'part';
-      description: string;
-    }
-  | {
-      renderType: 'plain';
-      fetchType: 'move' | 'override';
-      newTitle: string;
-    }
-  | {
-      renderType: 'override';
-      fetchType: 'override';
-      description: string;
-      newTitle: string;
-    }
-);
-
-export const ChangedBlock = ({ item }: { item: ChangedItem }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme); // 공통 스타일 가져오기
-  const { lang } = useLangContext();
-
-  // 에러 발생 시(노트 중복 등) 강조 색상
-  const errorColor = '#d9534f';
-
-  return (
-    <View
-      style={[
-        commonStyles.card, // 기본 카드 스타일 적용
-        { padding: 0, overflow: 'hidden' }, // 내부 여백 제거 및 테두리 정제
-        item.renderType === 'override' ? { borderColor: errorColor } : {},
-      ]}
-    >
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsExpanded(!isExpanded)}
-        style={[
-          commonStyles.row,
-          {
-            padding: 12,
-            backgroundColor: commonStyles.card.backgroundColor,
-            borderBottomWidth: isExpanded ? 1 : 0,
-            borderBottomColor: commonStyles.card.borderColor,
-          },
-        ]}
-      >
-        <Icon
-          name={isExpanded ? 'chevron-down' : 'chevron-right'}
-          size={12}
-          color={commonStyles.text.color}
-          style={{ width: 16 }}
-        />
-        <Icon
-          name="file-text-o"
-          size={14}
-          color={commonStyles.text.color}
-          style={{ marginLeft: 8 }}
-        />
-        <Text style={[commonStyles.smallText, { marginLeft: 8, flex: 1 }]} numberOfLines={1}>
-          {item.title}
-          {item.fetchType !== 'part' && ` ➜ ${item.newTitle}`}
-        </Text>
-
-        {item.renderType === 'override' && (
-          <Text style={[commonStyles.smallText, { color: errorColor, marginLeft: 8 }]}>
-            {lang('This note already exists.')}
-          </Text>
-        )}
-      </TouchableOpacity>
-
-      {isExpanded &&
-        ('description' in item ? (
-          <DiffPreview source={item.description} target={item.newDescription} theme={theme} />
-        ) : (
-          <EditorViewer
-            active
-            value={item.newDescription}
-            theme={theme}
-            onLink={(url) => onLink(url, navigation)}
-            autoResize
-          />
-        ))}
-    </View>
   );
+
+  return hasMatch ? processedHtml : html;
 };
 
 type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
@@ -278,6 +134,7 @@ export const MovePageScreen: React.FC = () => {
 
   const [newTitle, setNewTitle] = useState(title);
   const [includeSubNotes, setIncludeSubNotes] = useState(true);
+  const [updateBacklinks, setUpdateBacklinks] = useState(true);
 
   const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();
@@ -299,6 +156,28 @@ export const MovePageScreen: React.FC = () => {
       ),
     [pages, title]
   );
+
+  // 대상 노트를 참조하는 역링크 목록 추출
+  const backLinks = useMemo(() => {
+    const mappings = [{ oldTitle: title }];
+    if (includeSubNotes && !paragraph) {
+      subNotes.forEach((sn) => {
+        mappings.push({ oldTitle: sn.title });
+      });
+    }
+
+    return pages.filter((p) => {
+      if (!p.description) return false;
+      return checkAndProcessBacklinks(p.description, mappings, paragraph).hasMatch;
+    });
+  }, [pages, title, subNotes, includeSubNotes, paragraph]);
+
+  // 역링크가 하나도 없게 되었다면 체크박스 상태도 같이 false 로 동기화
+  useEffect(() => {
+    if (backLinks.length === 0) {
+      setUpdateBacklinks(false);
+    }
+  }, [backLinks.length]);
 
   const previewData = useMemo(() => {
     const checkExisting = (t: string) => pages.find((p) => p.title === t.trim());
@@ -359,7 +238,6 @@ export const MovePageScreen: React.FC = () => {
         });
       }
 
-      // 하위 노트 포함 로직
       if (includeSubNotes) {
         subNotes.forEach((sn) => {
           const snNewTitle = mainNewTitle + sn.title.substring(title.length);
@@ -386,8 +264,62 @@ export const MovePageScreen: React.FC = () => {
         });
       }
     }
+
+    // 역링크 업데이트 반영
+    if (updateBacklinks) {
+      const mappings = [{ oldTitle: title, newTitle: mainNewTitle }];
+      if (includeSubNotes && !paragraph) {
+        subNotes.forEach((sn) => {
+          mappings.push({
+            oldTitle: sn.title,
+            newTitle: mainNewTitle + sn.title.substring(title.length),
+          });
+        });
+      }
+
+      // 이미 이동될 목록 내의 내용들도 치환 처리
+      data.forEach((item) => {
+        if ('newDescription' in item && item.newDescription) {
+          item.newDescription = replaceBacklinks(item.newDescription, mappings, paragraph);
+        }
+      });
+
+      // 그 외에 역링크를 포함하고 있는 다른 노트 탐색
+      const handledTitles = new Set(data.map((d) => d.title));
+      if (!paragraph) {
+        handledTitles.add(title);
+      }
+
+      pages.forEach((p) => {
+        if (handledTitles.has(p.title)) return;
+        if (!p.description) return;
+
+        const newDesc = replaceBacklinks(p.description, mappings, paragraph);
+        if (newDesc !== p.description) {
+          data.push({
+            renderType: 'diff',
+            fetchType: 'part',
+            title: p.title,
+            description: p.description,
+            newDescription: newDesc,
+          });
+        }
+      });
+    }
+
     return data;
-  }, [pages, title, mainNewTitle, page, subNotes, includeSubNotes]);
+  }, [
+    pages,
+    title,
+    mainNewTitle,
+    page,
+    subNotes,
+    includeSubNotes,
+    updateBacklinks,
+    paragraph,
+    path,
+  ]);
+
   const anyExists = useMemo(
     () => previewData.some((item) => item.renderType === 'override'),
     [previewData]
@@ -448,6 +380,7 @@ export const MovePageScreen: React.FC = () => {
     page && setNewTitle(page.title + (paragraph ? `/${paragraph}` : ''));
   }, [page, paragraph, isLoading]);
   const moveDisabled = !mainNewTitle || mainNewTitle === title;
+
   return (
     <ScrollView style={commonStyles.container}>
       <View style={commonStyles.card}>
@@ -481,6 +414,22 @@ export const MovePageScreen: React.FC = () => {
               />
               <Text style={[commonStyles.text, { marginLeft: 8, fontSize: 14 }]}>
                 {lang('Move sub-notes')} ({subNotes.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {backLinks.length > 0 && (
+            <TouchableOpacity
+              style={styles.optionContainer}
+              onPress={() => setUpdateBacklinks(!updateBacklinks)}
+            >
+              <Icon
+                name={updateBacklinks ? 'check-square-o' : 'square-o'}
+                size={20}
+                color={commonStyles.text.color}
+              />
+              <Text style={[commonStyles.text, { marginLeft: 8, fontSize: 14 }]}>
+                {lang('Update backlinks')} ({backLinks.length})
               </Text>
             </TouchableOpacity>
           )}

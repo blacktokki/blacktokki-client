@@ -36,6 +36,14 @@ export const markdownFs = () => ({
   import: markdown.importMarkdowns,
 });
 
+export const cleanId = (text: string) =>
+  text
+    .trim()
+    .toLowerCase() // 1. 소문자로 전환
+    .replace(/[()]/g, '') // 2. 소괄호 제거
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '') // 3. 이모지 완벽 제거 (ES2018 정규식)
+    .replace(/\s+/g, '-'); // 4. 공백을 하이픈으로 치환
+
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
   toolbar:
@@ -199,6 +207,32 @@ export default (
               if (initMarkdown) {
                 (btn as HTMLElement).click();
               }
+            }
+          });
+          editor.on('NodeChange', () => {
+            try {
+              // 에디터 내의 모든 H1 ~ H6 요소를 가져옵니다.
+              const headings = editor.dom.select('h1, h2, h3, h4, h5, h6');
+
+              headings.forEach((heading) => {
+                // [버그 수정] innerText 대신 textContent를 사용합니다.
+                // 미완성된 HTML 상태에서도 DOM 트리의 텍스트를 안전하게 읽어옵니다.
+                const text = heading.textContent || '';
+
+                if (text.trim()) {
+                  // [추가된 요구사항] ID 변환 규칙 적용
+                  const id = cleanId(text);
+
+                  // 기존 ID와 다를 경우에만 속성을 업데이트
+                  if (heading.getAttribute('id') !== id) {
+                    editor.dom.setAttrib(heading, 'id', id);
+                  }
+                }
+                // [버그 수정] else 블록(텍스트가 없을 때 id를 null로 세팅하는 로직) 제거
+                // HTML 파싱 중이거나 일시적으로 텍스트가 비어있을 때 모든 ID가 날아가는 현상을 방지합니다.
+              });
+            } catch (e) {
+              console.warn('TinyMCE 헤더 ID 자동 생성 중 오류 발생:', e);
             }
           });
           editor.on('ExecCommand', (e) => {

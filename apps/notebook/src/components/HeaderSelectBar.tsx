@@ -1,4 +1,5 @@
 import { Text, useColorScheme } from '@blacktokki/core';
+import { cleanId } from '@blacktokki/editor';
 import { TouchableOpacity, View, FlatList, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
@@ -130,8 +131,12 @@ export const paragraphDescription = (paragraphs: Paragraph[], path: string, root
 };
 
 export const paragraphByKey = (paragraph: Paragraph, key: ParagraphKey) => {
+  const isTitleMatch =
+    paragraph.title === key.paragraph ||
+    (key.paragraph !== undefined && cleanId(paragraph.title) === cleanId(key.paragraph));
+
   return (
-    paragraph.title === key.paragraph &&
+    isTitleMatch &&
     (key.section === undefined || paragraph.path.includes(base64Encode(key.section) + ','))
   );
 };

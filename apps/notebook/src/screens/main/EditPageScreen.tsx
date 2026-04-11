@@ -139,10 +139,11 @@ export const EditPageSection = ({
                     : '';
                 const params = new URLSearchParams();
                 params.append('title', v.title);
+                let hash = '';
                 if (v.type === '_NOTELINK' && v.paragraph) {
-                  params.append('paragraph', v.paragraph);
+                  hash = `#${encodeURIComponent(v.paragraph)}`;
                 }
-                const url = `?${params.toString()}`;
+                const url = `?${params.toString()}${hash}`;
                 return {
                   text: name + description,
                   value: `<a href=${url}>${name}</a>`,

@@ -1,4 +1,5 @@
 import markdownIt from 'markdown-it';
+import markdownItAnchor from 'markdown-it-anchor';
 import TurndownService from 'turndown';
 //@ts-ignore
 import { tables } from 'turndown-plugin-gfm';
@@ -39,6 +40,10 @@ const renderStrong: typeof markdownToHtml.renderer.rules.strong_open = (
 
 markdownToHtml.renderer.rules.strong_open = renderStrong;
 markdownToHtml.renderer.rules.strong_close = renderStrong;
+markdownToHtml.use(markdownItAnchor, {
+  level: [1, 2, 3, 4, 5, 6], // id를 부여할 헤딩 레벨
+  permalink: false,
+});
 
 const HtmlToMarkdown = new TurndownService({
   preformattedCode: true,

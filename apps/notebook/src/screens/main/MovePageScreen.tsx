@@ -1,4 +1,5 @@
 import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
+import { cleanId } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -54,7 +55,11 @@ const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
 
       let matchedMapping: T | undefined;
       if (targetParagraph) {
-        if (urlTitle === mappings[0].oldTitle && urlPara === targetParagraph) {
+        if (
+          urlTitle === mappings[0].oldTitle &&
+          urlPara &&
+          cleanId(urlPara) === cleanId(targetParagraph)
+        ) {
           matchedMapping = mappings[0];
         }
       } else {
@@ -94,8 +99,12 @@ const replaceBacklinks = (
       let newUrlTitle = noteLink.title;
       let newInnerText = a.textContent || '';
 
+      const parsedUrl = new URL(a.href);
+
       if (targetParagraph) {
         newUrlTitle = mapping.newTitle;
+        parsedUrl.searchParams.delete('paragraph');
+        parsedUrl.hash = '';
       } else {
         newUrlTitle = mapping.newTitle + noteLink.title.substring(mapping.oldTitle.length);
         if (newInnerText === mapping.oldTitle) {
@@ -105,7 +114,6 @@ const replaceBacklinks = (
         }
       }
 
-      const parsedUrl = new URL(a.href);
       parsedUrl.searchParams.set('title', newUrlTitle);
 
       const origHref = a.getAttribute('href') || '';

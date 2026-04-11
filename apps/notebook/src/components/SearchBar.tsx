@@ -38,7 +38,10 @@ export function urlToNoteLink(url: string) {
   if (location.origin === newLocation.origin) {
     const params = new URLSearchParams(newLocation.search);
     const title = params.get('title');
-    const paragraph = params.get('paragraph') || undefined;
+    const paragraph =
+      (newLocation.hash ? decodeURIComponent(newLocation.hash.substring(1)) : undefined) ||
+      params.get('paragraph') ||
+      undefined;
     const section = params.get('section') || undefined;
     if (title) {
       return toNoteParams(title, paragraph, section);
@@ -263,7 +266,7 @@ export const SearchBar: React.FC<
   const { auth } = useAuthContext();
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
-  const inputRef = useRef<TextInput | null>();
+  const inputRef = useRef<TextInput>(null);
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();
   const { data: boards = [] } = useBoardPages();

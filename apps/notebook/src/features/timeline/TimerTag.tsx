@@ -59,6 +59,28 @@ const patterns: {
     },
   },
   {
+    regex: /\b(\d{4})\/(\d{2})\/(\d{2})\s*~\s*(\d{4})\/(\d{2})\/(\d{2})\b/g,
+    parse: (match) => ({
+      pattern: 'YYYY/MM/DD',
+      format: (s, e) => `${s} ~ ${e}`,
+      text: match[0],
+      dateStart: `${match[1]}-${match[2]}-${match[3]}`,
+      dateEnd: `${match[4]}-${match[5]}-${match[6]}`,
+      index: match.index,
+    }),
+  },
+  // YYYY/MM/DD 단일 날짜 포맷 추가
+  {
+    regex: /\b(\d{4})\/(\d{2})\/(\d{2})\b/g,
+    parse: (match) => ({
+      pattern: 'YYYY/MM/DD',
+      text: match[0],
+      dateStart: `${match[1]}-${match[2]}-${match[3]}`,
+      dateEnd: `${match[1]}-${match[2]}-${match[3]}`,
+      index: match.index,
+    }),
+  },
+  {
     regex: /\b(\d{2})\/(\d{2})\s*~\s*(\d{2})\/(\d{2})\b/g,
     parse: (match, currentYear) => {
       const mm = parseInt(match[1], 10);

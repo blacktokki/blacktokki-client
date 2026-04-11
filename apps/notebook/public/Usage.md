@@ -212,6 +212,10 @@
   * `YYYY-MM-DD/YYYY-MM-DD`
   * `MM/DD`
   * `MM/DD ~ MM/DD`
+  * `YYYY/MM/DD`
+  * `YYYY/MM/DD ~ YYYY/MM/DD`
+  * `YYYY. M. D.`
+  * `YYYY. M. D.~YYYY. M. D.`
 * Use the date selector or calendar to browse notes by day.
 * View and edit dated sections directly from this screen.
 * Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.

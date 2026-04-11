@@ -149,6 +149,8 @@ export default (
           new Date().toISOString().split('T')[0] + '/%Y-%m-%d',
           '%m/%d',
           new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) + ' ~ %m/%d',
+          '%Y/%m/%d',
+          new Date().toISOString().split('T')[0].replaceAll('-', '/') + ' ~ %Y/%m/%d',
           dotDateFormat,
           dotDateFormat + '~' + dotDateFormat,
         ],

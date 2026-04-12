@@ -6,7 +6,7 @@ import {
   useLangContext,
 } from '@blacktokki/core';
 import { cleanHtml } from '@blacktokki/editor';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/core';
+import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { TouchableOpacity, ScrollView, StyleSheet, View } from 'react-native';
@@ -193,13 +193,13 @@ const defaultScale: Scale = {
   },
 };
 
-type RecentPagesScreenRouteProp = RouteProp<NavigationParamList, 'RecentPages'>;
-
 export const TitleHeader = ({
   title,
+  setTitle,
   children,
 }: {
   title?: string;
+  setTitle: (title?: string) => void;
   children?: React.ReactNode;
 }) => {
   const theme = useColorScheme();
@@ -210,10 +210,8 @@ export const TitleHeader = ({
       <View style={[commonStyles.header, pageStyles.header]}>
         <NotePageHeader
           title={title}
-          onPress={(title, hasChild) =>
-            hasChild
-              ? navigation.push('RecentPages', { title })
-              : navigation.navigate('NotePage', { title })
+          onPress={(nextTitle, hasChild) =>
+            hasChild ? setTitle(nextTitle) : navigation.navigate('NotePage', { title })
           }
         />
         <View style={pageStyles.actionButtons}>{children}</View>
@@ -222,119 +220,121 @@ export const TitleHeader = ({
   );
 };
 
-export const RecentPagesSection = React.memo(() => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const { lang } = useLangContext();
-  const window = useResizeContext();
-  const { data: recentPages = [], isLoading } = useNotePages();
-  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const route = useRoute<RecentPagesScreenRouteProp>();
-  const title = route.params?.title;
-  const dummyCards = window === 'landscape' ? 4 : 2;
+export const RecentPagesSection = React.memo(
+  ({ title, setTitle }: { title?: string; setTitle: (title?: string) => void }) => {
+    const theme = useColorScheme();
+    const commonStyles = createCommonStyles(theme);
+    const { lang } = useLangContext();
+    const window = useResizeContext();
+    const { data: recentPages = [], isLoading } = useNotePages();
+    const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+    const dummyCards = window === 'landscape' ? 4 : 2;
 
-  const toCardPage = useToCardPage(
-    (v) =>
-      navigation.push((v.subNoteCount || 0) > 0 ? 'RecentPages' : 'NotePage', { title: v.title }),
-    defaultScale,
-    (v) => (title === undefined ? v.title : v.title.replace(title + '/', './'))
-  );
-  const contents = useMemo(() => {
-    const processed = toRecentContents(recentPages)
-      .filter((v) =>
-        title === undefined
-          ? v.title.split('/').length === 1
-          : v.title.split('/').length <= 1 + title.split('/').length &&
-            (v.title === title || v.title.startsWith(title + '/'))
-      )
-      .map((v) => {
-        const children = toRecentContents(recentPages).filter(
-          (child) => v.title !== title && child.title.startsWith(v.title + '/')
-        );
-        const latestTime = [v.updated, ...children.map((c) => c.updated)].reduce((a, b) =>
-          new Date(a) > new Date(b) ? a : b
-        );
-
-        return {
-          ...v,
-          subNoteCount: children.length,
-          updated: latestTime,
-        };
-      })
-      .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
-
-    return [
-      ...processed.map(toCardPage),
-      ...Array.from(Array(dummyCards).keys()).map((v) => ({ scale: defaultScale })),
-    ];
-  }, [recentPages, title, window]);
-  const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
-  const renderHeader = () => {
-    return (
-      <TitleHeader title={title}>
-        <TextButton
-          title={lang('View all notes') + '  ▶'}
-          onPress={() => navigation.navigate('RecentPages', {})}
-          style={{ paddingRight: 0 }}
-        />
-      </TitleHeader>
+    const toCardPage = useToCardPage(
+      (v) =>
+        (v.subNoteCount || 0) > 0
+          ? setTitle(v.title)
+          : navigation.push('NotePage', { title: v.title }),
+      defaultScale,
+      (v) => (title === undefined ? v.title : v.title.replace(title + '/', './'))
     );
-  };
+    const contents = useMemo(() => {
+      const processed = toRecentContents(recentPages)
+        .filter((v) =>
+          title === undefined
+            ? v.title.split('/').length === 1
+            : v.title.split('/').length <= 1 + title.split('/').length &&
+              (v.title === title || v.title.startsWith(title + '/'))
+        )
+        .map((v) => {
+          const children = toRecentContents(recentPages).filter(
+            (child) => v.title !== title && child.title.startsWith(v.title + '/')
+          );
+          const latestTime = [v.updated, ...children.map((c) => c.updated)].reduce((a, b) =>
+            new Date(a) > new Date(b) ? a : b
+          );
 
-  return isLoading ? (
-    <View style={commonStyles.container}>
-      <LoadingView />
-    </View>
-  ) : contents.length > dummyCards ? (
-    <ScrollView
-      key={window}
-      contentContainerStyle={[
-        styles.contentContainer,
-        {
-          backgroundColor: commonStyles.container.backgroundColor,
-          paddingRight: defaultScale[window].padding,
-          paddingBottom: defaultScale[window].padding,
-        },
-      ]}
-    >
-      <View
-        style={{
-          paddingTop: commonStyles.container.paddingVertical,
-          paddingHorizontal: commonStyles.container.paddingHorizontal,
-        }}
-      >
-        {renderHeader()}
+          return {
+            ...v,
+            subNoteCount: children.length,
+            updated: latestTime,
+          };
+        })
+        .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
+
+      return [
+        ...processed.map(toCardPage),
+        ...Array.from(Array(dummyCards).keys()).map((v) => ({ scale: defaultScale })),
+      ];
+    }, [recentPages, title, window]);
+    const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
+    const renderHeader = () => {
+      return (
+        <TitleHeader title={title} setTitle={setTitle}>
+          <TextButton
+            title={lang('View all notes') + '  ▶'}
+            onPress={() => setTitle()}
+            style={{ paddingRight: 0 }}
+          />
+        </TitleHeader>
+      );
+    };
+
+    return isLoading ? (
+      <View style={commonStyles.container}>
+        <LoadingView />
       </View>
-      <View
-        style={[
-          styles.suspenseContainer,
+    ) : contents.length > dummyCards ? (
+      <ScrollView
+        key={window}
+        contentContainerStyle={[
+          styles.contentContainer,
           {
-            justifyContent: window === 'landscape' ? 'flex-start' : 'center',
-            maxWidth,
+            backgroundColor: commonStyles.container.backgroundColor,
+            paddingRight: defaultScale[window].padding,
+            paddingBottom: defaultScale[window].padding,
           },
         ]}
       >
-        <Suspense fallback={null}>
-          {contents.map((item, index) => renderCardPage({ item, index }))}
-        </Suspense>
+        <View
+          style={{
+            paddingTop: commonStyles.container.paddingVertical,
+            paddingHorizontal: commonStyles.container.paddingHorizontal,
+          }}
+        >
+          {renderHeader()}
+        </View>
+        <View
+          style={[
+            styles.suspenseContainer,
+            {
+              justifyContent: window === 'landscape' ? 'flex-start' : 'center',
+              maxWidth,
+            },
+          ]}
+        >
+          <Suspense fallback={null}>
+            {contents.map((item, index) => renderCardPage({ item, index }))}
+          </Suspense>
+        </View>
+      </ScrollView>
+    ) : (
+      <View style={commonStyles.container}>
+        {renderHeader()}
+        <StatusCard
+          style={{ marginTop: 18 }}
+          message={
+            title ? 'There are no subnotes for this note.' : 'There are no recently modified notes.'
+          }
+          buttonTitle={title === undefined ? 'Usage' : undefined}
+          onButtonPress={
+            title === undefined ? () => navigation.push('NoteViewer', { key: 'Usage' }) : undefined
+          }
+        />
       </View>
-    </ScrollView>
-  ) : (
-    <View style={commonStyles.container}>
-      {renderHeader()}
-      <StatusCard
-        style={{ marginTop: 18 }}
-        message={
-          title ? 'There are no subnotes for this note.' : 'There are no recently modified notes.'
-        }
-        buttonTitle={title === undefined ? 'Usage' : undefined}
-        onButtonPress={
-          title === undefined ? () => navigation.push('NoteViewer', { key: 'Usage' }) : undefined
-        }
-      />
-    </View>
-  );
-});
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   cardContainer: {

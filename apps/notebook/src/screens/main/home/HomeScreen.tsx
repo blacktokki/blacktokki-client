@@ -2,7 +2,7 @@ import { useAuthContext } from '@blacktokki/account';
 import { Colors, ContractFooter, useColorScheme, useLangContext } from '@blacktokki/core';
 import { HomeSection, push, TabViewOption } from '@blacktokki/navigation';
 import { StackScreenProps } from '@react-navigation/stack';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { List } from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
@@ -36,7 +36,8 @@ const NotesTabView = () => {
 };
 
 const RecentChangesTabView = () => {
-  return <RecentPagesSection />;
+  const [title, setTitle] = useState<string>();
+  return <RecentPagesSection title={title} setTitle={setTitle} />;
 };
 
 const ConfigTabView = () => {

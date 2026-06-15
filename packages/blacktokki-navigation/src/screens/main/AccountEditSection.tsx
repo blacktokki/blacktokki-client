@@ -379,27 +379,29 @@ export default function AccountEditSection({
             />
           </View>
           {nameError && <Text style={styles.error}>{nameError}</Text>}
-          <View style={styles.row}>
-            <Text style={[accountEditStyles.styles.label, { color: colors.text }]}>
-              {lang('Password')}
-            </Text>
-            <TextInput
-              value={password}
-              onChangeText={(v) => {
-                setPassword(v);
-                setPasswordError(validatePassword(v) ? null : lang('Password requirements'));
-              }}
-              secureTextEntry
-              style={[
-                styles.inputInline,
-                {
-                  borderColor: Colors.borderColor,
-                  backgroundColor: Colors[theme].buttonBackgroundColor,
-                  color: colors.text,
-                },
-              ]}
-            />
-          </View>
+          {!user?.isOauth && (
+            <View style={styles.row}>
+              <Text style={[accountEditStyles.styles.label, { color: colors.text }]}>
+                {lang('Password')}
+              </Text>
+              <TextInput
+                value={password}
+                onChangeText={(v) => {
+                  setPassword(v);
+                  setPasswordError(validatePassword(v) ? null : lang('Password requirements'));
+                }}
+                secureTextEntry
+                style={[
+                  styles.inputInline,
+                  {
+                    borderColor: Colors.borderColor,
+                    backgroundColor: Colors[theme].buttonBackgroundColor,
+                    color: colors.text,
+                  },
+                ]}
+              />
+            </View>
+          )}
           {passwordError && <Text style={styles.error}>{passwordError}</Text>}
 
           <View style={styles.actions}>

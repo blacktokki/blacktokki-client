@@ -9,6 +9,7 @@ type BaseUser = {
 export type User = BaseUser & {
   id: number;
   otpDeletionRequested?: boolean;
+  isOauth: boolean;
 };
 
 export type CreateUser = BaseUser & {

@@ -34,6 +34,7 @@ import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
 import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
+import { useTapDetector } from '../../hooks/useTapDetector';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
 
@@ -118,6 +119,7 @@ export const BoardItemScreen: React.FC = () => {
   const [isMoving, setIsMoving] = useState(false);
   const { data: privateConfig } = usePrivate();
   const setPrivate = useSetPrivate();
+  const detectTap = useTapDetector();
   const horizontal = true;
   const _option = board?.option;
   const option = _option && 'BOARD_HEADER_LEVEL' in _option ? _option : undefined;
@@ -131,11 +133,26 @@ export const BoardItemScreen: React.FC = () => {
   const toCardPage = useToCardPage(
     (v) => {
       if (accessableRef.current) {
-        if (v.paragraph) {
-          navigation.push('EditPage', {
-            ...toNoteParams(v.paragraph.origin, v.paragraph.title, v.paragraph.autoSection),
-            board: board?.title,
-          });
+        const paragraph = v.paragraph;
+        if (paragraph) {
+          detectTap(
+            // Single Tap: 단순 클릭 시 NotePage(읽기 모드)로 이동
+            () => {
+              navigation.push('NotePage', {
+                ...toNoteParams(paragraph.origin, paragraph.title, paragraph.autoSection),
+                board: board?.title,
+              });
+            },
+            // Double Tap: 더블 탭 시 EditPage(편집 모드)로 이동
+            () => {
+              navigation.push('EditPage', {
+                ...toNoteParams(paragraph.origin, paragraph.title, paragraph.autoSection),
+                board: board?.title,
+              });
+            },
+            // 옵션: 싱글 탭 지연 실행을 통해 완벽한 더블 탭 감지
+            { delay: 200, preventSingleOnDouble: true }
+          );
         }
       } else {
         accessableRef.current = true;

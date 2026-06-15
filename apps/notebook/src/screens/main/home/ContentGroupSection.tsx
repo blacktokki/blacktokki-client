@@ -16,6 +16,7 @@ import {
   useRecentTabs,
   useReorderRecentTabs,
 } from '../../../hooks/useTabStorage';
+import { useTapDetector } from '../../../hooks/useTapDetector';
 import { createCommonStyles } from '../../../styles';
 import { Content } from '../../../types';
 
@@ -230,7 +231,7 @@ const ContentGroupSection = (props: Props) => {
   const { lang } = useLangContext();
   const styles = createCommonStyles(useColorScheme());
   const itemPadding = useResizeContext() === 'landscape' ? 5 : 8;
-  const tabRef = useRef<NodeJS.Timeout>(undefined);
+  const detectTap = useTapDetector();
 
   // Data Hooks
   const notes = useNotePages();
@@ -278,18 +279,26 @@ const ContentGroupSection = (props: Props) => {
   };
 
   const onNotePress = (content: Content) => {
-    if (content.id === lastTab?.id) {
-      if (tabRef.current) {
-        clearTimeout(tabRef.current);
-        tabRef.current = undefined;
-        toggleRecent(content.id);
-      } else tabRef.current = setTimeout(() => (tabRef.current = undefined), 500);
-    }
-    navigate(content.type === 'BOARD' ? 'BoardPage' : 'NotePage', { title: content.title });
+    const isCurrentTab = content.id === lastTab?.id;
+    const navigateTo = () =>
+      navigate(content.type === 'BOARD' ? 'BoardPage' : 'NotePage', { title: content.title });
+
+    detectTap(
+      // Single Tap 동작 (클릭 시 화면 이동)
+      navigateTo,
+      // Double Tap 동작 (현재 탭일 경우 탭 고정 토글 실행 후 이동)
+      isCurrentTab
+        ? () => {
+            toggleRecent(content.id);
+            navigateTo();
+          }
+        : undefined,
+      // 옵션: 지연 없이 클릭 즉시 이동 처리 (기존 로직 동일 구현)
+      { delay: 500, preventSingleOnDouble: false }
+    );
   };
 
   const onNoteLongPress = (content: Content) => {
-    if (tabRef.current) clearTimeout(tabRef.current);
     toggleRecent(content.id);
   };
 

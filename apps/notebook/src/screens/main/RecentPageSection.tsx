@@ -155,6 +155,24 @@ export const useToCardPage = (
   const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
+  const tagsStyles = {
+    blockquote: {
+      borderLeftWidth: 4,
+      borderLeftColor: commonStyles.card.borderColor || '#cccccc',
+      backgroundColor: commonStyles.container || '#f5f5f5',
+      paddingLeft: 12,
+      paddingVertical: 8,
+      marginVertical: 8,
+      marginLeft: 0, // 기본 들여쓰기 제거
+      marginRight: 0,
+      color: commonStyles.smallText || '#777777',
+      fontStyle: 'italic',
+    },
+    // 기존 스타일 유지
+    body: {
+      color: commonStyles.text.color,
+    },
+  };
   return useCallback(
     (v: BaseItem) => ({
       ...v,
@@ -171,7 +189,24 @@ export const useToCardPage = (
           renderersProps={{
             a: { onPress: () => onPress(v) },
           }}
-          tagsStyles={{ body: { color: commonStyles.text.color } }}
+          tagsStyles={{
+            blockquote: {
+              borderLeftWidth: 4,
+              borderLeftColor: commonStyles.card.borderColor || '#cccccc',
+              backgroundColor: commonStyles.container.backgroundColor || '#f5f5f5',
+              paddingLeft: 6,
+              paddingVertical: 0,
+              marginVertical: 0,
+              marginLeft: 0, // 기본 들여쓰기 제거
+              marginRight: 0,
+              color: commonStyles.smallText.color || '#777777',
+              fontStyle: 'italic',
+            },
+            // 기존 스타일 유지
+            body: {
+              color: commonStyles.text.color,
+            },
+          }}
           contentWidth={scale[window].maxWidth}
         />
       ),

@@ -22,7 +22,7 @@ export const useBoardPages = () => {
         isOnline: !auth.isLocal,
         types: ['BOARD'],
         withHidden: true,
-        parentId: currentNotebookId || undefined,
+        parentId: currentNotebookId || 0,
       });
 
       return contents.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());

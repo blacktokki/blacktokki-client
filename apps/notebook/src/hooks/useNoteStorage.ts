@@ -137,15 +137,17 @@ export const saveContents = async (
   }
 };
 
-export const useNotePages = () => {
+export const useNotePages = (targetNotebookId?: number | null) => {
   const { auth } = useAuthContext();
   const { data: usageMode } = useUsageMode();
   const { currentNotebookId } = useCurrentNotebook();
 
+  const activeNotebookId = targetNotebookId !== undefined ? targetNotebookId : currentNotebookId;
+
   return useQuery({
-    queryKey: ['pageContents', !auth.isLocal, usageMode, currentNotebookId],
+    queryKey: ['pageContents', !auth.isLocal, usageMode, activeNotebookId],
     queryFn: async () => {
-      const parentId = usageMode === 'NOTEBOOK' ? currentNotebookId || undefined : undefined;
+      const parentId = usageMode !== 'SIMPLE' ? activeNotebookId || 0 : 0;
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
@@ -230,12 +232,19 @@ export const useCreateOrUpdatePage = () => {
       title,
       description,
       isLast = true,
+      newParentId,
     }: {
       title: string;
       description: string;
       isLast?: boolean;
+      newParentId?: number;
     }) => {
-      const parentId = usageMode === 'NOTEBOOK' ? currentNotebookId || undefined : undefined;
+      const parentId =
+        newParentId !== undefined
+          ? newParentId
+          : usageMode !== 'SIMPLE'
+          ? currentNotebookId || 0
+          : 0;
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
@@ -249,13 +258,16 @@ export const useCreateOrUpdatePage = () => {
       const updated = auth.isLocal ? new Date().toISOString() : undefined;
       if (page) {
         updatedContent = { ...page, description, updated } as PostContent;
+        if (newParentId !== undefined) {
+          updatedContent.parentId = newParentId;
+        }
       } else {
         updatedContent = {
           title,
           description,
           input: title,
           userId: auth.user?.id || 0,
-          parentId: parentId || 0, // 동적 parentId 삽입
+          parentId: parentId || 0,
           type: 'NOTE',
           order: 0,
           updated,
@@ -290,11 +302,13 @@ export const useMovePage = () => {
       newTitle,
       description,
       isLast = true,
+      newParentId,
     }: {
       oldTitle: string;
       newTitle: string;
       description?: string;
       isLast?: boolean;
+      newParentId?: number;
     }) => {
       const page = contents.find((c) => c.title === oldTitle);
 
@@ -302,18 +316,22 @@ export const useMovePage = () => {
         throw new Error('Page not found');
       }
 
-      if (contents.some((c) => c.title === newTitle)) {
+      if (contents.some((c) => c.title === newTitle && c.title !== oldTitle)) {
         throw new Error('Page with new title already exists');
       }
 
       const updatedContent = {
         ...page,
         title: newTitle,
-        description: description || page.description,
-      };
+        description: description !== undefined ? description : page.description,
+        updated: auth.isLocal ? new Date().toISOString() : undefined,
+      } as PostContent;
+      if (newParentId !== undefined) {
+        updatedContent.parentId = newParentId;
+      }
 
       await saveContents(!auth.isLocal, 'NOTE', [updatedContent], page.id);
-      if (auth.isLocal) {
+      if (auth.isLocal && newTitle !== oldTitle) {
         await saveContents(false, 'NOTE', [], page.id);
       }
       return { oldTitle, newTitle, skip: !isLast };

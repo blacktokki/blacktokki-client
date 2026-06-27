@@ -104,7 +104,12 @@ export const useNotebooks = () => {
   const { auth } = useAuthContext();
   return useQuery({
     queryKey: ['notebookContents', !auth.isLocal],
-    queryFn: () => getNotebookContents(!auth.isLocal),
+    queryFn: async () => {
+      const contents = await getNotebookContents(!auth.isLocal);
+      return contents.sort(
+        (a, b) => new Date(b.updated || 0).getTime() - new Date(a.updated || 0).getTime()
+      );
+    },
   });
 };
 

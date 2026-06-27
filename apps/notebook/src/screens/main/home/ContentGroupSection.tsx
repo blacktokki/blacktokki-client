@@ -7,7 +7,8 @@ import Icon2 from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
-import { getSplitTitle, useNotePages, useSnapshotPages } from '../../../hooks/useNoteStorage';
+import { useNotePages, getSplitTitle, useSnapshotPages } from '../../../hooks/useNoteStorage';
+import { useCurrentNotebook } from '../../../hooks/useNotebookStorage';
 import { usePrivate } from '../../../hooks/usePrivate';
 import {
   useAddRecentTab,
@@ -536,11 +537,11 @@ export const CurrentTabSection = () => {
 
 export const TabsSection = () => {
   const { lang } = useLangContext();
-  const { data: privateConfig } = usePrivate();
+  const { notebook } = useCurrentNotebook();
   return (
     <>
       <List.Subheader selectable={false}>
-        {privateConfig.enabled ? lang('Tab List - Private Mode') : lang('Tab List')}
+        {notebook?.title ? `${lang('Tab List')} - ${notebook.title}` : lang('Tab List')}
       </List.Subheader>
       <ContentGroupSection type={'PAGE'} />
     </>

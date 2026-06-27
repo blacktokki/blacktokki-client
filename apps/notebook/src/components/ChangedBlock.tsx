@@ -14,6 +14,8 @@ import { NavigationParamList } from '../types';
 export type ChangedItem = {
   title: string;
   newDescription: string;
+  oldNotebookName?: string;
+  newNotebookName?: string;
 } & (
   | {
       renderType: 'diff';
@@ -216,7 +218,14 @@ export default ({ item }: { item: ChangedItem }) => {
         />
         <Text style={[commonStyles.smallText, { marginLeft: 8, flex: 1 }]} numberOfLines={1}>
           {item.title}
-          {item.fetchType !== 'part' && ` ➜ ${item.newTitle}`}
+          {item.oldNotebookName ? ` (${item.oldNotebookName})` : ''}
+          {item.fetchType !== 'part' || item.oldNotebookName !== item.newNotebookName ? ' ➜ ' : ''}
+          {item.fetchType !== 'part' || item.oldNotebookName !== item.newNotebookName ? (
+            <Text>
+              {'newTitle' in item ? item.newTitle : item.title}
+              {item.newNotebookName ? ` (${item.newNotebookName})` : ''}
+            </Text>
+          ) : null}
         </Text>
 
         {item.renderType === 'override' && (

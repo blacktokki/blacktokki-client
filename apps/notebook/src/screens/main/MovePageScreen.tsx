@@ -15,6 +15,8 @@ import {
   useNotePage,
   useNotePages,
 } from '../../hooks/useNoteStorage';
+import { useCurrentNotebook, useNotebooks } from '../../hooks/useNotebookStorage';
+import { useUsageMode } from '../../hooks/useUsageMode';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
@@ -144,8 +146,29 @@ export const MovePageScreen: React.FC = () => {
   const [includeSubNotes, setIncludeSubNotes] = useState(true);
   const [updateBacklinks, setUpdateBacklinks] = useState(true);
 
+  const { data: usageMode } = useUsageMode();
+  const { currentNotebookId } = useCurrentNotebook();
+  const { data: notebooks = [] } = useNotebooks();
+
+  const [selectedNotebookId, setSelectedNotebookId] = useState<number>(currentNotebookId || 0);
+
+  const oldNotebookName =
+    usageMode === 'SIMPLE'
+      ? undefined
+      : currentNotebookId
+      ? notebooks.find((nb) => nb.id === currentNotebookId)?.title || lang('Note Mode')
+      : lang('Note Mode');
+  const newNotebookName =
+    usageMode === 'SIMPLE'
+      ? undefined
+      : selectedNotebookId
+      ? notebooks.find((nb) => nb.id === selectedNotebookId)?.title || lang('None')
+      : lang('None');
+
   const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();
+  const { data: targetPages = [], isFetching: isFetchingTargetPages } =
+    useNotePages(selectedNotebookId);
   const mainNewTitle = newTitle.trim();
 
   const moveMutation = useMovePage();
@@ -188,7 +211,7 @@ export const MovePageScreen: React.FC = () => {
   }, [backLinks.length]);
 
   const previewData = useMemo(() => {
-    const checkExisting = (t: string) => pages.find((p) => p.title === t.trim());
+    const checkExisting = (t: string) => targetPages.find((p) => p.title === t.trim());
     const data: ChangedItem[] = [];
     const existingMain = checkExisting(mainNewTitle);
 
@@ -207,6 +230,8 @@ export const MovePageScreen: React.FC = () => {
         paragraph,
         description: page?.description || '',
         newDescription: sourceDescription,
+        oldNotebookName,
+        newNotebookName,
       });
 
       if (existingMain) {
@@ -216,6 +241,8 @@ export const MovePageScreen: React.FC = () => {
           title: mainNewTitle,
           description: existingMain.description || '',
           newDescription: moveDescription,
+          oldNotebookName,
+          newNotebookName,
         });
       } else {
         data.push({
@@ -223,6 +250,8 @@ export const MovePageScreen: React.FC = () => {
           fetchType: 'part',
           title: mainNewTitle,
           newDescription: moveDescription,
+          oldNotebookName,
+          newNotebookName,
         });
       }
     } else {
@@ -235,6 +264,8 @@ export const MovePageScreen: React.FC = () => {
           newTitle: mainNewTitle,
           description: existingMain.description || '',
           newDescription: page?.description || '',
+          oldNotebookName,
+          newNotebookName,
         });
       } else {
         data.push({
@@ -243,6 +274,8 @@ export const MovePageScreen: React.FC = () => {
           title,
           newTitle: mainNewTitle,
           newDescription: page?.description || '',
+          oldNotebookName,
+          newNotebookName,
         });
       }
 
@@ -259,6 +292,8 @@ export const MovePageScreen: React.FC = () => {
               newTitle: snNewTitle,
               description: existingSub.description || '',
               newDescription: sn.description || '',
+              oldNotebookName,
+              newNotebookName,
             });
           } else {
             data.push({
@@ -267,14 +302,17 @@ export const MovePageScreen: React.FC = () => {
               title: sn.title,
               newTitle: snNewTitle,
               newDescription: sn.description || '',
+              oldNotebookName,
+              newNotebookName,
             });
           }
         });
       }
     }
 
+    const isTitleChangedOrParagraph = title !== mainNewTitle || !!paragraph;
     // 역링크 업데이트 반영
-    if (updateBacklinks) {
+    if (updateBacklinks && isTitleChangedOrParagraph) {
       const mappings = [{ oldTitle: title, newTitle: mainNewTitle }];
       if (includeSubNotes && !paragraph) {
         subNotes.forEach((sn) => {
@@ -318,6 +356,7 @@ export const MovePageScreen: React.FC = () => {
     return data;
   }, [
     pages,
+    targetPages,
     title,
     mainNewTitle,
     page,
@@ -344,6 +383,7 @@ export const MovePageScreen: React.FC = () => {
               oldTitle: item.title,
               newTitle: item.newTitle,
               isLast,
+              newParentId: selectedNotebookId,
             });
             break;
           case 'override':
@@ -351,6 +391,7 @@ export const MovePageScreen: React.FC = () => {
               title: item.newTitle,
               description: item.newDescription,
               isLast: false,
+              newParentId: selectedNotebookId,
             });
             await mutation.mutateAsync({
               title: item.title,
@@ -364,6 +405,7 @@ export const MovePageScreen: React.FC = () => {
               title: item.title,
               description: item.newDescription,
               isLast,
+              newParentId: selectedNotebookId,
             });
             break;
         }
@@ -387,19 +429,88 @@ export const MovePageScreen: React.FC = () => {
     }
     page && setNewTitle(page.title + (paragraph ? `/${paragraph}` : ''));
   }, [page, paragraph, isLoading]);
-  const moveDisabled = !mainNewTitle || mainNewTitle === title;
+
+  const isNotebookChanged =
+    usageMode !== 'SIMPLE' && (selectedNotebookId || 0) !== (currentNotebookId || 0);
+  const isTitleChangedOrParagraph = title !== mainNewTitle || !!paragraph;
+  const moveDisabled =
+    !mainNewTitle || (mainNewTitle === title && !isNotebookChanged) || isFetchingTargetPages;
 
   return (
     <ScrollView style={commonStyles.container}>
       <View style={commonStyles.card}>
         <View style={{ zIndex: 1 }}>
           <Text style={commonStyles.text}>
-            {lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
+            {usageMode !== 'SIMPLE'
+              ? lang(paragraph ? 'Current Notebook, Note & Paragraph' : 'Current Notebook & Note')
+              : lang(paragraph ? 'Current note title and paragraph:' : 'Current note title:')}
           </Text>
           <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>
+            {oldNotebookName && (
+              <Text style={{ fontSize: 14, color: 'gray' }}>[{oldNotebookName}] </Text>
+            )}
             {titleFormat({ title, paragraph })}
           </Text>
-          <Text style={commonStyles.text}>{lang('New note title:')}</Text>
+
+          <Text style={commonStyles.text}>
+            {usageMode !== 'SIMPLE' ? lang('New Notebook & Note') : lang('New note title:')}
+          </Text>
+
+          {usageMode !== 'SIMPLE' && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: 8, marginBottom: 16 }}
+            >
+              <TouchableOpacity
+                onPress={() => setSelectedNotebookId(0)}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 16,
+                  backgroundColor: selectedNotebookId === 0 ? '#3498DB' : 'transparent',
+                  borderWidth: selectedNotebookId === 0 ? 0 : 1,
+                  borderColor: commonStyles.text.color as string,
+                  marginRight: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    color: selectedNotebookId === 0 ? 'white' : (commonStyles.text.color as string),
+                  }}
+                >
+                  {lang('Note Mode')}
+                </Text>
+              </TouchableOpacity>
+              {notebooks.map((nb) => (
+                <TouchableOpacity
+                  key={nb.id}
+                  onPress={() => setSelectedNotebookId(nb.id)}
+                  style={{
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 16,
+                    backgroundColor: selectedNotebookId === nb.id ? '#3498DB' : 'transparent',
+                    borderWidth: selectedNotebookId === nb.id ? 0 : 1,
+                    borderColor: commonStyles.text.color as string,
+                    marginRight: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color:
+                        selectedNotebookId === nb.id
+                          ? 'white'
+                          : (commonStyles.text.color as string),
+                    }}
+                  >
+                    {nb.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
           {newTitle && title !== mainNewTitle && (
             <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>{newTitle}</Text>
           )}
@@ -426,7 +537,7 @@ export const MovePageScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
-          {backLinks.length > 0 && (
+          {backLinks.length > 0 && isTitleChangedOrParagraph && (
             <TouchableOpacity
               style={styles.optionContainer}
               onPress={() => setUpdateBacklinks(!updateBacklinks)}

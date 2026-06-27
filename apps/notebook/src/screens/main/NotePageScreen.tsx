@@ -24,7 +24,7 @@ import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import StatusCard from '../../components/StatusCard';
 import { useExtension } from '../../hooks/useExtension';
 import { useNotePage, useSnapshotAll } from '../../hooks/useNoteStorage';
-import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
+import { useUsageMode } from '../../hooks/useUsageMode';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
@@ -46,9 +46,8 @@ export const NotePageScreen: React.FC = () => {
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
-  const { data: privateConfig } = usePrivate();
+  const { data: usageMode } = useUsageMode();
   const { data: extension } = useExtension();
-  const setPrivate = useSetPrivate();
   const archiveIdExact = typeof archiveId === 'string' ? parseInt(archiveId, 10) : archiveId;
   const archiveIndex = _archives?.findIndex((v) => v.id === archiveIdExact);
   const archive =
@@ -98,20 +97,6 @@ export const NotePageScreen: React.FC = () => {
     }
   }, [page, paragraph, paragraphItem]);
 
-  if (!privateConfig.enabled && isHiddenTitle(title)) {
-    return (
-      <>
-        <ResponsiveSearchBar />
-        <View style={commonStyles.container}>
-          <StatusCard
-            message="This note is hidden by Private Mode."
-            buttonTitle="Enable Private Mode"
-            onButtonPress={() => setPrivate.mutate({ enabled: true })}
-          />
-        </View>
-      </>
-    );
-  }
   const renderHeaderSections = () =>
     !archive && (
       <>
@@ -148,12 +133,15 @@ export const NotePageScreen: React.FC = () => {
             />
             <View style={pageStyles.actionButtons}>
               {_window === 'landscape' && renderHeaderSections()}
-              {!paragraphItem && !auth.isLocal && (_window === 'landscape' || toc || archive) && (
-                <HeaderIconButton
-                  name="history"
-                  onPress={() => navigation.navigate('Archive', { title })}
-                />
-              )}
+              {!paragraphItem &&
+                !auth.isLocal &&
+                usageMode !== 'SIMPLE' &&
+                (_window === 'landscape' || toc || archive) && (
+                  <HeaderIconButton
+                    name="history"
+                    onPress={() => navigation.navigate('Archive', { title })}
+                  />
+                )}
               {!!paragraph && (_window === 'landscape' || !toc) && (
                 <HeaderIconButton
                   name={fullParagraph ? 'compress' : 'expand'}

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
+import { useUsageMode } from './useUsageMode';
 import OtpModal from '../modals/OtpModal';
 import { getPrivateConfigs, patchContent, postContent } from '../services/notebook';
 import { PostContent } from '../types';
@@ -91,6 +92,7 @@ let interval: NodeJS.Timeout | null = null;
 export const usePrivate = () => {
   const { auth, otp } = useAuthContext();
   const queryClient = useQueryClient();
+  const { data: usageMode } = useUsageMode();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
 
   const query = useQuery({
@@ -99,6 +101,9 @@ export const usePrivate = () => {
   });
 
   const config = query.data || defaultConfig;
+  if (usageMode === 'SIMPLE') {
+    config.enabled = false;
+  }
 
   useEffect(() => {
     if (config.enabled && config.autoUnlock) {

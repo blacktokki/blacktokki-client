@@ -11,26 +11,34 @@ import ConfigSection from './ConfigSection';
 import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
 import { SearchBar } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
+import { useCurrentNotebook } from '../../../hooks/useNotebookStorage';
+import { useUsageMode } from '../../../hooks/useUsageMode';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
 
 const NotesTabView = () => {
   const theme = useColorScheme();
   const { lang } = useLangContext();
+  const { isBoardEnabled } = useCurrentNotebook();
   const { data: extension } = useExtension();
+  const buttons = extension.feature.elements('button');
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors[theme].background }}>
       <CurrentTabSection />
       <TabsSection />
-      <List.Subheader style={{}} selectable={false}>
-        {lang('Menu')}
-      </List.Subheader>
-      {extension.feature.elements('button')}
-      <List.Item
-        left={RenderIcon('view-dashboard-variant')}
-        title={lang('Board')}
-        onPress={() => push('BoardList')}
-      />
+      {(buttons.length > 0 || isBoardEnabled) && (
+        <List.Subheader style={{}} selectable={false}>
+          {lang('Menu')}
+        </List.Subheader>
+      )}
+      {buttons}
+      {isBoardEnabled && (
+        <List.Item
+          left={RenderIcon('view-dashboard-variant')}
+          title={lang('Board')}
+          onPress={() => push('BoardList')}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -57,6 +65,7 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { auth } = useAuthContext();
+  const { data: usageMode } = useUsageMode();
   const title = auth.isLocal ? 'Blacktokki Notebook - Local' : 'Blacktokki Notebook';
   const tabViews: TabViewOption[] = useMemo(
     () => [
@@ -89,20 +98,22 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
     >
       <View style={[commonStyles.container, { width: '100%', justifyContent: 'space-between' }]}>
         <ConfigSection />
-        <ContractFooter
-          buttons={[
-            {
-              icon: <AntDesign name="github" size={24} color={Colors[theme].iconColor} />,
-              url: 'https://github.com/blacktokki/blacktokki-notebook',
-              isWeb: true,
-            },
-            {
-              icon: <AntDesign name="mail" size={24} color={Colors[theme].iconColor} />,
-              url: 'mailto:ydh051541@naver.com',
-              isWeb: false,
-            },
-          ]}
-        />
+        {usageMode !== 'SIMPLE' && (
+          <ContractFooter
+            buttons={[
+              {
+                icon: <AntDesign name="github" size={24} color={Colors[theme].iconColor} />,
+                url: 'https://github.com/blacktokki/blacktokki-notebook',
+                isWeb: true,
+              },
+              {
+                icon: <AntDesign name="mail" size={24} color={Colors[theme].iconColor} />,
+                url: 'mailto:ydh051541@naver.com',
+                isWeb: false,
+              },
+            ]}
+          />
+        )}
       </View>
     </HomeSection>
   );

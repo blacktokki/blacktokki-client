@@ -5,40 +5,11 @@ import { useIsFocused } from '@react-navigation/core';
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } from 'react-query';
 
+import { useCurrentNotebook } from './useNotebookStorage';
+import { useUsageMode } from './useUsageMode';
+import { getDB } from '../services/db';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, PostContent } from '../types';
-import { isHiddenTitle, usePrivate } from './usePrivate';
-
-const DB_NAME = '@Blacktokki:notebook';
-const DB_VERSION = 2;
-
-let dbInstance: IDBDatabase | undefined;
-
-async function getDB(): Promise<IDBDatabase> {
-  if (dbInstance) return dbInstance;
-  dbInstance = await new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('NOTE')) {
-        db.createObjectStore('NOTE', { keyPath: 'title' });
-      }
-      if (!db.objectStoreNames.contains('BOARD')) {
-        db.createObjectStore('BOARD', { keyPath: 'id' });
-      }
-    };
-
-    request.onsuccess = () => {
-      resolve(request.result);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
-  return dbInstance!;
-}
 
 export const getSplitTitle = (title: string) => {
   const splitTitle = title.split('/');
@@ -77,9 +48,7 @@ export const getContents = async (
       const request = store.getAll();
 
       request.onsuccess = () => {
-        resolve(
-          (request.result as Content[]).filter((v) => data.withHidden || !isHiddenTitle(v.title))
-        );
+        resolve(request.result as Content[]);
       };
       request.onerror = () => {
         console.error('Error loading contents from IndexedDB:', request.error);
@@ -121,7 +90,6 @@ export const saveContents = async (
   try {
     const tx = db.transaction([type /*, 'SNAPSHOT' */], 'readwrite');
     const store = tx.objectStore(type);
-    // const archive = tx.objectStore('SNAPSHOT');
     let nextId = 1;
     const newItems = contents.filter((c) => (c as Content).id === undefined);
 
@@ -171,30 +139,33 @@ export const saveContents = async (
 
 export const useNotePages = () => {
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
+  const { data: usageMode } = useUsageMode();
+  const { currentNotebookId } = useCurrentNotebook();
 
   return useQuery({
-    queryKey: ['pageContents', !auth.isLocal, privateConfig.enabled],
+    queryKey: ['pageContents', !auth.isLocal, usageMode, currentNotebookId],
     queryFn: async () => {
-      return await getContents({
+      const parentId = usageMode === 'NOTEBOOK' ? currentNotebookId || undefined : undefined;
+      const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
-        withHidden: privateConfig.enabled,
+        withHidden: true,
+        parentId,
       });
+      return contents;
     },
   });
 };
 
 export const useSnapshotPages = (parentId?: number) => {
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
   return useInfiniteQuery<Content[], number>({
-    queryKey: ['snapshotContents', !auth.isLocal, privateConfig.enabled, parentId],
+    queryKey: ['snapshotContents', !auth.isLocal, parentId],
     queryFn: async ({ pageParam }) =>
       await getContents({
         isOnline: !auth.isLocal,
         types: ['SNAPSHOT', 'DELTA'],
-        withHidden: privateConfig.enabled,
+        withHidden: true,
         parentId,
         page: pageParam || 0,
       }),
@@ -207,11 +178,10 @@ export const useSnapshotPages = (parentId?: number) => {
 export const useNotePage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
-  const { data: privateConfig } = usePrivate();
   const { data: contents = [], isFetching } = useNotePages();
 
   const query = useQuery({
-    queryKey: ['pageContent', title, privateConfig.enabled],
+    queryKey: ['pageContent', title],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
       return page || { title, description: '', id: undefined };
@@ -235,7 +205,6 @@ export const useNotePage = (title: string) => {
 
 export const useSnapshotAll = (parentId?: number) => {
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
   return useQuery({
     queryKey: ['snapshotContentsAll', !auth.isLocal, parentId],
     queryFn: async () =>
@@ -243,7 +212,7 @@ export const useSnapshotAll = (parentId?: number) => {
         ? await getContents({
             isOnline: !auth.isLocal,
             types: ['SNAPSHOT', 'DELTA'],
-            withHidden: privateConfig.enabled,
+            withHidden: true,
             parentId,
           })
         : undefined,
@@ -253,7 +222,8 @@ export const useSnapshotAll = (parentId?: number) => {
 export const useCreateOrUpdatePage = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
+  const { data: usageMode } = useUsageMode();
+  const { currentNotebookId } = useCurrentNotebook();
 
   return useMutation({
     mutationFn: async ({
@@ -265,10 +235,11 @@ export const useCreateOrUpdatePage = () => {
       description: string;
       isLast?: boolean;
     }) => {
+      const parentId = usageMode === 'NOTEBOOK' ? currentNotebookId || undefined : undefined;
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
-        withHidden: privateConfig.enabled,
+        withHidden: true,
       });
       const page = contents.find((c) => c.title === title);
       if (page?.description === description) {
@@ -284,7 +255,7 @@ export const useCreateOrUpdatePage = () => {
           description,
           input: title,
           userId: auth.user?.id || 0,
-          parentId: 0,
+          parentId: parentId || 0, // 동적 parentId 삽입
           type: 'NOTE',
           order: 0,
           updated,

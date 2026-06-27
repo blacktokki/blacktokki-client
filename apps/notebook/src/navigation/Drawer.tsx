@@ -7,7 +7,9 @@ import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useExtension } from '../hooks/useExtension';
+import { useCurrentNotebook } from '../hooks/useNotebookStorage';
 import { useLastTab } from '../hooks/useTabStorage';
+import { useUsageMode } from '../hooks/useUsageMode';
 import ContentGroupSection, {
   ContentGroupType,
   TabsSection,
@@ -23,6 +25,8 @@ export default () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { data: lastTab } = useLastTab();
+  const { data: usageMode } = useUsageMode();
+  const { isBoardEnabled } = useCurrentNotebook();
   const { data: extension } = useExtension();
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');
@@ -104,30 +108,35 @@ export default () => {
       <CurrentTabSection />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
         <TabsSection />
-        <View
-          style={[
-            styles.tabContainer,
-            { borderBottomColor: commonStyles.separator.backgroundColor },
-          ]}
-        >
-          {renderTab('RECENT', lang('All Notes'), 'notebook', currentView === 'RECENT')}
-          {renderTab('BOARD', lang('Board'), 'view-dashboard', currentView === 'BOARD')}
-          {renderTab(
-            'CURRENT_NOTE',
-            currentNote ? currentNote.title : lang('Current Note'),
-            'file-document',
-            currentView === 'CURRENT_NOTE',
-            currentNote === undefined
-          )}
-        </View>
-        {currentView === 'CURRENT_NOTE' && currentNote && (
+        {usageMode !== 'SIMPLE' ? (
+          <View
+            style={[
+              styles.tabContainer,
+              { borderBottomColor: commonStyles.separator.backgroundColor },
+            ]}
+          >
+            {renderTab('RECENT', lang('All Notes'), 'notebook', currentView === 'RECENT')}
+            {isBoardEnabled &&
+              renderTab('BOARD', lang('Board'), 'view-dashboard', currentView === 'BOARD')}
+            {renderTab(
+              'CURRENT_NOTE',
+              currentNote ? currentNote.title : lang('Current Note'),
+              'file-document',
+              currentView === 'CURRENT_NOTE',
+              currentNote === undefined
+            )}
+          </View>
+        ) : (
+          <List.Subheader selectable={false}>{lang('All Notes')}</List.Subheader>
+        )}
+        {usageMode !== 'SIMPLE' && currentView === 'CURRENT_NOTE' && currentNote && (
           <View style={styles.badgeContainer}>
             {renderBadge('TOC', lang('Table of Contents'), 'format-list-bulleted')}
             {renderBadge('SUBNOTE', lang('Sub Notes'), 'file-tree')}
             {!auth.isLocal && renderBadge('HISTORY', lang('Changelog'), 'clock-outline')}
           </View>
         )}
-        {currentView === 'RECENT' ? (
+        {usageMode === 'SIMPLE' || currentView === 'RECENT' ? (
           <ContentGroupSection type={'RECENT'} noteCount={10} />
         ) : (
           <ContentGroupSection

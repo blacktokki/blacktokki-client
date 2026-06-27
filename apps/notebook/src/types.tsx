@@ -3,18 +3,24 @@ export type BoardOption = {
   BOARD_TYPE?: 'KANBAN' | 'SCRUM';
   BOARD_HEADER_LEVEL: number;
   PAT_DESCRIPTION?: undefined;
+  NOTEBOOK_TYPE?: undefined;
+};
+
+export type NotebookOption = {
+  NOTEBOOK_TYPE: 'PRIVATE_NOTE' | 'WORKSPACE' | 'PRIVATE_WORKSPACE';
+  BOARD_NOTE_IDS?: undefined;
+  PAT_DESCRIPTION?: undefined;
 };
 
 export type PostContent = {
   userId: number;
-  parentId: number;
-  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA' | 'BOARD' | 'CONFIG';
+  parentId?: number;
+  type: 'NOTE' | 'BOOKMARK' | 'SNAPSHOT' | 'DELTA' | 'BOARD' | 'CONFIG' | 'NOTEBOOK';
   order: number;
   input: string;
   /**
    * type이 `NOTE`인 경우
    * * '/' 포함시 경로 및 하위 노트로 처리된다.
-   * * `.`으로 시작하거나 경로에 `/.`가 포함된 경우 프라이빗 모드가 비활성 상태일 때 목록에서 제외하고 접근을 차단한다.
    */
   title: string;
   /**
@@ -31,8 +37,10 @@ export type PostContent = {
     SNAPSHOT_ID?: number;
   } & (
     | BoardOption
+    | NotebookOption
     | {
         BOARD_NOTE_IDS?: undefined;
+        NOTEBOOK_TYPE?: undefined;
         PAT_DESCRIPTION?: string;
       }
   );

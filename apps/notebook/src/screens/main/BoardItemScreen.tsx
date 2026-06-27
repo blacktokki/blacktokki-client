@@ -33,7 +33,6 @@ import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
-import { isHiddenTitle, usePrivate, useSetPrivate } from '../../hooks/usePrivate';
 import { useTapDetector } from '../../hooks/useTapDetector';
 import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
@@ -117,8 +116,6 @@ export const BoardItemScreen: React.FC = () => {
   const [showConfig, setShowConfig] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
   const [isMoving, setIsMoving] = useState(false);
-  const { data: privateConfig } = usePrivate();
-  const setPrivate = useSetPrivate();
   const detectTap = useTapDetector();
   const horizontal = true;
   const _option = board?.option;
@@ -301,21 +298,6 @@ export const BoardItemScreen: React.FC = () => {
       </View>
     </View>
   );
-
-  if (!privateConfig.enabled && isHiddenTitle(title)) {
-    return (
-      <>
-        <ResponsiveSearchBar />
-        <View style={commonStyles.container}>
-          <StatusCard
-            message="This board is hidden by Private Mode."
-            buttonTitle="Enable Private Mode"
-            onButtonPress={() => setPrivate.mutate({ enabled: true })}
-          />
-        </View>
-      </>
-    );
-  }
 
   if (!board) {
     return (

@@ -3,6 +3,7 @@ import { NavigationConfig } from '@blacktokki/navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
+import { useUsageMode } from './useUsageMode';
 import { Paragraph } from '../components/HeaderSelectBar';
 
 export type SearchFeature = (item: any) =>
@@ -98,12 +99,18 @@ const saveExtensionConfig = async (subkey: string, config: string[]): Promise<vo
 export const useExtension = () => {
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const { data: usageMode } = useUsageMode();
 
   const query = useQuery({
     queryKey: ['extension', subkey],
     queryFn: () => getExtensionConfig(subkey).then(getExtension),
   });
-  return { ...query, data: query.data || getExtension(getDefaultConfig()) };
+
+  return {
+    ...query,
+    data:
+      usageMode === 'SIMPLE' ? getExtension([]) : query.data || getExtension(getDefaultConfig()),
+  };
 };
 
 export const useSetExtensionConfig = () => {

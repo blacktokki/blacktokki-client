@@ -4,36 +4,41 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { focusListener, getContents, saveContents } from './useNoteStorage';
+import { useCurrentNotebook } from './useNotebookStorage';
+import { useUsageMode } from './useUsageMode';
 import { BoardOption, Content, PostContent } from '../types';
-import { usePrivate } from './usePrivate';
 
 export const useBoardPages = () => {
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
+  const { data: usageMode } = useUsageMode();
+  const { currentNotebookId, isBoardEnabled } = useCurrentNotebook();
 
   return useQuery({
-    queryKey: ['boardContents', !auth.isLocal, privateConfig.enabled],
-    queryFn: async () =>
-      (
-        await getContents({
-          isOnline: !auth.isLocal,
-          types: ['BOARD'],
-          withHidden: privateConfig.enabled,
-        })
-      ).sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()),
+    queryKey: ['boardContents', !auth.isLocal, usageMode, currentNotebookId],
+    queryFn: async () => {
+      if (usageMode !== 'NOTEBOOK' || !isBoardEnabled) return [];
+
+      const contents = await getContents({
+        isOnline: !auth.isLocal,
+        types: ['BOARD'],
+        withHidden: true,
+        parentId: currentNotebookId || undefined,
+      });
+
+      return contents.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
+    },
   });
 };
 
 export const useBoardPage = (title: string) => {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
-  const { data: privateConfig } = usePrivate();
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
   const { data: contents = [], isFetching } = useBoardPages();
 
   const query = useQuery({
-    queryKey: ['boardContent', title, privateConfig.enabled],
+    queryKey: ['boardContent', title],
     queryFn: async () => {
       const page = contents.find((c) => c.title === title);
       return page;
@@ -59,6 +64,8 @@ export const useCreateOrUpdateBoard = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
   const { data: contents = [] } = useBoardPages();
+  const { currentNotebookId } = useCurrentNotebook();
+
   return useMutation({
     mutationFn: async ({
       id,
@@ -74,6 +81,7 @@ export const useCreateOrUpdateBoard = () => {
       const page = contents.find((c) => c.id === id);
       let updatedContent: Content | PostContent;
       const updated = auth.isLocal ? new Date().toISOString() : undefined;
+
       if (page) {
         updatedContent = { ...page, title, description, updated, option } as PostContent;
       } else {
@@ -82,7 +90,7 @@ export const useCreateOrUpdateBoard = () => {
           description,
           input: title,
           userId: auth.user?.id || 0,
-          parentId: 0,
+          parentId: currentNotebookId || 0, // 동적 parentId 적용
           type: 'BOARD',
           order: 0,
           updated,
@@ -92,7 +100,7 @@ export const useCreateOrUpdateBoard = () => {
       await saveContents(!auth.isLocal, 'BOARD', [updatedContent], page?.id);
       return { id };
     },
-    onSuccess: async (data) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
       await queryClient.invalidateQueries({ queryKey: ['boardContent'] });
       await queryClient.invalidateQueries({ queryKey: ['boardContents'] });
@@ -108,7 +116,7 @@ export const useDeleteBoard = () => {
       await saveContents(!auth.isLocal, 'BOARD', [], id);
       return { id };
     },
-    onSuccess: async (data) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['lastTab'] });
       await queryClient.invalidateQueries({ queryKey: ['boardContent'] });
       await queryClient.invalidateQueries({ queryKey: ['boardContents'] });

@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { ParagraphKey } from '../types';
-import { isHiddenTitle, usePrivate } from './usePrivate';
+import { useCurrentNotebook } from './useNotebookStorage';
+import { useUsageMode } from './useUsageMode';
 
 const KEYWORDS_KEY = '@blacktokki:notebook:keywords:';
 
@@ -53,21 +54,26 @@ const saveKeywords = async (
 
 export const useKeywords = () => {
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
+  const { data: usageMode } = useUsageMode();
+  const { isBoardEnabled } = useCurrentNotebook();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+
   return useQuery({
-    queryKey: ['keywords', subkey, privateConfig.enabled],
+    queryKey: ['keywords', subkey, usageMode, isBoardEnabled],
     queryFn: async () => {
       const keywords = await getKeywords(subkey);
-      return privateConfig.enabled
-        ? keywords
-        : keywords.filter(
-            (v) =>
-              ((v.type === '_KEYWORD' || v.type === '_BOARD') && !isHiddenTitle(v.title)) ||
-              (v.type === '_NOTELINK' && !isHiddenTitle(v.origin) && !isHiddenTitle(v.title)) ||
-              (v.type === '_LINK' && !isHiddenTitle(v.origin)) ||
-              v.type === '_QUERY'
-          );
+      const filteredByMode = keywords.filter((v) => {
+        if (usageMode === 'NOTEBOOK' && isBoardEnabled) return true;
+        if (!isBoardEnabled && v.type === '_BOARD') return false;
+        if (
+          usageMode === 'SIMPLE' &&
+          (v.type === '_BOARD' || v.type === '_LINK' || v.type === '_NOTELINK')
+        )
+          return false;
+        return true;
+      });
+
+      return filteredByMode;
     },
   });
 };

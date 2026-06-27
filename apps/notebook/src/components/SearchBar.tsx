@@ -18,6 +18,7 @@ import { useBoardPages } from '../hooks/useBoardStorage';
 import { SearchFeature, useExtension } from '../hooks/useExtension';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
+import { useUsageMode } from '../hooks/useUsageMode';
 import { createCommonStyles } from '../styles';
 import { Content, NavigationParamList, ParagraphKey } from '../types';
 
@@ -270,6 +271,7 @@ export const SearchBar: React.FC<
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();
   const { data: boards = [] } = useBoardPages();
+  const { data: usageMode } = useUsageMode();
   const { data: extension } = useExtension();
   const useTextSearchExact = !auth.isLocal && useTextSearch && !!extension.feature.search;
 
@@ -278,7 +280,11 @@ export const SearchBar: React.FC<
       ? getFilteredPages([...boards, ...pages], searchText)
       : keywords.filter((v) => v.type !== '_QUERY' || useTextSearchExact)
   )
-    .filter((v) => onPress === undefined || v.type === 'NOTE')
+    .filter(
+      (v) =>
+        (onPress === undefined || v.type === 'NOTE') &&
+        (usageMode !== 'SIMPLE' || v.type !== '_LINK')
+    )
     .slice(0, 10);
   const handleKeywordPress = useOnPressKeyword({
     onPress,

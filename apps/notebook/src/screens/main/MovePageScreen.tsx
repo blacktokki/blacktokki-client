@@ -15,7 +15,7 @@ import {
   useNotePage,
   useNotePages,
 } from '../../hooks/useNoteStorage';
-import { useCurrentNotebook, useNotebooks } from '../../hooks/useNotebookStorage';
+import { useNotebooks } from '../../hooks/useNotebookStorage';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
@@ -146,8 +146,8 @@ export const MovePageScreen: React.FC = () => {
   const [includeSubNotes, setIncludeSubNotes] = useState(true);
   const [updateBacklinks, setUpdateBacklinks] = useState(true);
 
-  const { data: usageMode } = useUsageMode();
-  const { currentNotebookId } = useCurrentNotebook();
+  const { usageMode, notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
   const { data: notebooks = [] } = useNotebooks();
 
   const [selectedNotebookId, setSelectedNotebookId] = useState<number>(currentNotebookId || 0);

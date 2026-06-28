@@ -5,7 +5,6 @@ import { useIsFocused } from '@react-navigation/core';
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } from 'react-query';
 
-import { useCurrentNotebook } from './useNotebookStorage';
 import { useUsageMode } from './useUsageMode';
 import { getDB } from '../services/db';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
@@ -139,8 +138,8 @@ export const saveContents = async (
 
 export const useNotePages = (targetNotebookId?: number | null) => {
   const { auth } = useAuthContext();
-  const { data: usageMode } = useUsageMode();
-  const { currentNotebookId } = useCurrentNotebook();
+  const { usageMode, notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
 
   const activeNotebookId = targetNotebookId !== undefined ? targetNotebookId : currentNotebookId;
 
@@ -224,8 +223,8 @@ export const useSnapshotAll = (parentId?: number) => {
 export const useCreateOrUpdatePage = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const { data: usageMode } = useUsageMode();
-  const { currentNotebookId } = useCurrentNotebook();
+  const { usageMode, notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
 
   return useMutation({
     mutationFn: async ({

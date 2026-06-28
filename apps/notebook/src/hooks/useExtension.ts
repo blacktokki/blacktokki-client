@@ -99,7 +99,7 @@ const saveExtensionConfig = async (subkey: string, config: string[]): Promise<vo
 export const useExtension = () => {
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
-  const { data: usageMode } = useUsageMode();
+  const { usageMode } = useUsageMode();
 
   const query = useQuery({
     queryKey: ['extension', subkey],

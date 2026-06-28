@@ -7,7 +7,6 @@ import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useExtension } from '../hooks/useExtension';
-import { useCurrentNotebook } from '../hooks/useNotebookStorage';
 import { useLastTab } from '../hooks/useTabStorage';
 import { useUsageMode } from '../hooks/useUsageMode';
 import ContentGroupSection, {
@@ -25,8 +24,7 @@ export default () => {
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { data: lastTab } = useLastTab();
-  const { data: usageMode } = useUsageMode();
-  const { isBoardEnabled } = useCurrentNotebook();
+  const { usageMode, isBoardEnabled } = useUsageMode();
   const { data: extension } = useExtension();
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');

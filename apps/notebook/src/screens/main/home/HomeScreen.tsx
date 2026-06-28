@@ -11,7 +11,6 @@ import ConfigSection from './ConfigSection';
 import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
 import { SearchBar } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
-import { useCurrentNotebook } from '../../../hooks/useNotebookStorage';
 import { useUsageMode } from '../../../hooks/useUsageMode';
 import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
@@ -19,7 +18,7 @@ import { RecentPagesSection } from '../RecentPageSection';
 const NotesTabView = () => {
   const theme = useColorScheme();
   const { lang } = useLangContext();
-  const { isBoardEnabled } = useCurrentNotebook();
+  const { usageMode, isBoardEnabled } = useUsageMode();
   const { data: extension } = useExtension();
   const buttons = extension.feature.elements('button');
   return (
@@ -65,7 +64,7 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
   const theme = useColorScheme();
   const commonStyles = createCommonStyles(theme);
   const { auth } = useAuthContext();
-  const { data: usageMode } = useUsageMode();
+  const { usageMode } = useUsageMode();
   const title = auth.isLocal ? 'Blacktokki Notebook - Local' : 'Blacktokki Notebook';
   const tabViews: TabViewOption[] = useMemo(
     () => [

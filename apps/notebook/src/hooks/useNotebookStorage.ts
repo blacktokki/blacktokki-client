@@ -1,45 +1,9 @@
 import { useAuthContext } from '@blacktokki/account';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { useUsageMode } from './useUsageMode';
 import { getDB } from '../services/db';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import { Content, NotebookOption, PostContent } from '../types';
-
-const CURRENT_NOTEBOOK_KEY = '@blacktokki:notebook:current_id:';
-
-const getCurrentNotebookId = async (subkey: string): Promise<number | null> => {
-  try {
-    const value = await AsyncStorage.getItem(CURRENT_NOTEBOOK_KEY + subkey);
-    return value ? parseInt(value, 10) : null;
-  } catch (e) {
-    return null;
-  }
-};
-
-// useCurrentNotebook에 통합되었습니다. 내부적으로만 사용되는 queryKey 유지를 위해 코드는 남겨두되 export는 통합본에서 합니다.
-
-export const useSetCurrentNotebookId = () => {
-  const queryClient = useQueryClient();
-  const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
-  return useMutation({
-    mutationFn: async (id: number | null) => {
-      if (id === null) {
-        await AsyncStorage.removeItem(CURRENT_NOTEBOOK_KEY + subkey);
-      } else {
-        await AsyncStorage.setItem(CURRENT_NOTEBOOK_KEY + subkey, String(id));
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentNotebookId', subkey] });
-      queryClient.invalidateQueries({ queryKey: ['pageContents'] });
-      queryClient.invalidateQueries({ queryKey: ['boardContents'] });
-      queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
-    },
-  });
-};
 
 const getNotebookContents = async (isOnline: boolean): Promise<Content[]> => {
   if (isOnline) {
@@ -170,7 +134,6 @@ export const useCreateOrUpdateNotebook = () => {
 export const useDeleteNotebook = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const { mutate: setCurrentNotebookId } = useSetCurrentNotebookId();
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -179,57 +142,6 @@ export const useDeleteNotebook = () => {
     },
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
-      const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
-      getCurrentNotebookId(subkey).then((currentId) => {
-        if (currentId === id) {
-          setCurrentNotebookId(null);
-        }
-      });
     },
   });
-};
-
-export const useCurrentNotebook = () => {
-  const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
-
-  const { data: currentNotebookId } = useQuery({
-    queryKey: ['currentNotebookId', subkey],
-    queryFn: () => getCurrentNotebookId(subkey),
-  });
-
-  const { data: usageMode } = useUsageMode();
-  const { data: notebook } = useNotebook(currentNotebookId || 0);
-
-  // 글로벌 모드(간단, 노트)인 경우 보드 비활성화
-  if (usageMode !== 'NOTEBOOK') {
-    return {
-      currentNotebookId,
-      notebook: null,
-      isBoardEnabled: false,
-      isPrivateEnabled: false,
-      isNotebookMode: false,
-    };
-  }
-
-  // 노트북 모드이긴 하지만 전역 네임스페이스에 있는 경우 (선택 안됨)
-  if (!currentNotebookId || !notebook) {
-    return {
-      currentNotebookId,
-      notebook,
-      isBoardEnabled: false,
-      isPrivateEnabled: false,
-      isNotebookMode: true,
-    };
-  }
-
-  const notebookType = notebook.option?.NOTEBOOK_TYPE;
-
-  return {
-    currentNotebookId,
-    notebook,
-    isBoardEnabled: notebookType === 'WORKSPACE' || notebookType === 'PRIVATE_WORKSPACE',
-    isPrivateEnabled: notebookType === 'PRIVATE_NOTE' || notebookType === 'PRIVATE_WORKSPACE',
-    isNotebookMode: true,
-  };
 };

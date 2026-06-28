@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 
 import { useBoardPages } from './useBoardStorage';
 import { focusListener, useNotePages } from './useNoteStorage';
-import { useCurrentNotebook } from './useNotebookStorage';
+import { useUsageMode } from './useUsageMode';
 
 const RECENT_TABS_KEY = '@blacktokki:notebook:recent_tabs';
 
@@ -44,8 +44,8 @@ const saveRecentTabs = async (ids: number[], notebookId: number): Promise<void> 
 export const useRecentTabs = () => {
   const { data: contents = [], isFetching } = useNotePages();
   const { data: boards = [], isFetching: isFetchingBoard } = useBoardPages();
-  const { currentNotebookId } = useCurrentNotebook();
-  const notebookId = currentNotebookId || 0;
+  const { notebook } = useUsageMode();
+  const notebookId = notebook?.id || 0;
 
   return useQuery({
     queryKey: ['recentTabs', notebookId],
@@ -61,8 +61,8 @@ export const useRecentTabs = () => {
 
 export const useAddRecentTab = () => {
   const queryClient = useQueryClient();
-  const { currentNotebookId } = useCurrentNotebook();
-  const notebookId = currentNotebookId || 0;
+  const { notebook } = useUsageMode();
+  const notebookId = notebook?.id || 0;
 
   return useMutation({
     mutationFn: async ({ id, direct }: { id: number; direct?: boolean }) => {
@@ -82,8 +82,8 @@ export const useAddRecentTab = () => {
 
 export const useDeleteRecentTab = () => {
   const queryClient = useQueryClient();
-  const { currentNotebookId } = useCurrentNotebook();
-  const notebookId = currentNotebookId || 0;
+  const { notebook } = useUsageMode();
+  const notebookId = notebook?.id || 0;
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -102,8 +102,8 @@ export const useDeleteRecentTab = () => {
 
 export const useReorderRecentTabs = () => {
   const queryClient = useQueryClient();
-  const { currentNotebookId } = useCurrentNotebook();
-  const notebookId = currentNotebookId || 0;
+  const { notebook } = useUsageMode();
+  const notebookId = notebook?.id || 0;
 
   return useMutation({
     mutationFn: async (ids: number[]) => {

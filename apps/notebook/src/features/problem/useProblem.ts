@@ -12,6 +12,7 @@ import { getLinks, titleFormat } from '../../components/SearchBar';
 import { useBoardPages } from '../../hooks/useBoardStorage';
 import { KeywordContent } from '../../hooks/useKeywordStorage';
 import { getSplitTitle, useNotePages } from '../../hooks/useNoteStorage';
+import { useUsageMode } from '../../hooks/useUsageMode';
 import { Content } from '../../types';
 
 const getReadabilityLevel = (() => {
@@ -92,7 +93,7 @@ type ProblemMatrixSource = {
   isSubNote: boolean;
 };
 
-let problemCacheUserId: number | undefined;
+let problemCacheKey: string | undefined;
 let problemCache: Record<
   string,
   {
@@ -311,16 +312,17 @@ const getDataAggregate = (source: ProblemSource, boardCount: number): ProblemIte
   return aggregateRecords;
 };
 
-const getData = (userId: number | undefined, pages: Content[], boards: Content[]) => {
+const getData = (userId: number, notebookId: number, pages: Content[], boards: Content[]) => {
   const records: {
     title: string;
     path: string | undefined;
     paragraph: string | undefined;
     subtitles: string[];
   }[] = [];
-  if (userId !== problemCacheUserId) {
+  const cacheKey = `${userId}:${notebookId}`;
+  if (cacheKey !== problemCacheKey) {
     problemCache = {};
-    problemCacheUserId = userId;
+    problemCacheKey = cacheKey;
   }
   const titleSet = new Set(pages.map((v) => v.title));
   pages
@@ -358,14 +360,16 @@ export default (delay?: number) => {
   const { auth } = useAuthContext();
   const { data: pages = [], isLoading } = useNotePages();
   const { data: boards = [], isLoading: isBoardLoading } = useBoardPages();
+  const { notebook } = useUsageMode();
   const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
   useEffect(() => {
+    if (isLoading || isBoardLoading) return;
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setData(getData(auth.user?.id, pages, boards));
+      setData(getData(auth.user?.id || 0, notebook?.id || 0, pages, boards));
       timeoutRef.current = undefined;
     }, delay || 250);
-  }, [pages, boards, auth.user]);
+  }, [pages, boards, auth.user, notebook, isLoading, isBoardLoading]);
   return { data: data || [], isLoading: isLoading || isBoardLoading || data === undefined };
 };

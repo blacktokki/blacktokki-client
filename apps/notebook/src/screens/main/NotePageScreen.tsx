@@ -46,7 +46,7 @@ export const NotePageScreen: React.FC = () => {
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
-  const { data: usageMode } = useUsageMode();
+  const { usageMode } = useUsageMode();
   const { data: extension } = useExtension();
   const archiveIdExact = typeof archiveId === 'string' ? parseInt(archiveId, 10) : archiveId;
   const archiveIndex = _archives?.findIndex((v) => v.id === archiveIdExact);

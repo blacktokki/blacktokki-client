@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { ParagraphKey } from '../types';
-import { useCurrentNotebook } from './useNotebookStorage';
 import { useUsageMode } from './useUsageMode';
 
 const KEYWORDS_KEY = '@blacktokki:notebook:keywords:';
@@ -54,8 +53,7 @@ const saveKeywords = async (
 
 export const useKeywords = () => {
   const { auth } = useAuthContext();
-  const { data: usageMode } = useUsageMode();
-  const { isBoardEnabled } = useCurrentNotebook();
+  const { usageMode, isBoardEnabled } = useUsageMode();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
 
   return useQuery({

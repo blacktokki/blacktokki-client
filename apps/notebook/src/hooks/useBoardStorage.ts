@@ -4,17 +4,15 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { focusListener, getContents, saveContents } from './useNoteStorage';
-import { useCurrentNotebook } from './useNotebookStorage';
 import { useUsageMode } from './useUsageMode';
 import { BoardOption, Content, PostContent } from '../types';
 
 export const useBoardPages = () => {
   const { auth } = useAuthContext();
-  const { data: usageMode } = useUsageMode();
-  const { currentNotebookId, isBoardEnabled } = useCurrentNotebook();
+  const { usageMode, notebook, isBoardEnabled } = useUsageMode();
 
   return useQuery({
-    queryKey: ['boardContents', !auth.isLocal, usageMode, currentNotebookId],
+    queryKey: ['boardContents', !auth.isLocal, usageMode, notebook?.id],
     queryFn: async () => {
       if (usageMode !== 'NOTEBOOK' || !isBoardEnabled) return [];
 
@@ -22,7 +20,7 @@ export const useBoardPages = () => {
         isOnline: !auth.isLocal,
         types: ['BOARD'],
         withHidden: true,
-        parentId: currentNotebookId || 0,
+        parentId: notebook?.id || 0,
       });
 
       return contents.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
@@ -64,7 +62,7 @@ export const useCreateOrUpdateBoard = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
   const { data: contents = [] } = useBoardPages();
-  const { currentNotebookId } = useCurrentNotebook();
+  const { notebook } = useUsageMode();
 
   return useMutation({
     mutationFn: async ({
@@ -90,7 +88,7 @@ export const useCreateOrUpdateBoard = () => {
           description,
           input: title,
           userId: auth.user?.id || 0,
-          parentId: currentNotebookId || 0, // 동적 parentId 적용
+          parentId: notebook?.id || 0, // 동적 parentId 적용
           type: 'BOARD',
           order: 0,
           updated,

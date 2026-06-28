@@ -271,7 +271,7 @@ export const SearchBar: React.FC<
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();
   const { data: boards = [] } = useBoardPages();
-  const { data: usageMode } = useUsageMode();
+  const { usageMode } = useUsageMode();
   const { data: extension } = useExtension();
   const useTextSearchExact = !auth.isLocal && useTextSearch && !!extension.feature.search;
 

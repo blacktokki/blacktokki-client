@@ -19,8 +19,6 @@ import { useExtension } from '../../../hooks/useExtension';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
 import {
   useNotebooks,
-  useCurrentNotebook,
-  useSetCurrentNotebookId,
   useCreateOrUpdateNotebook,
   useDeleteNotebook,
 } from '../../../hooks/useNotebookStorage';
@@ -66,14 +64,14 @@ export default () => {
   const { data: privateOtp } = usePrivateOtp();
   const setPrivate = useSetPrivate();
   const setPrivateOtp = useSetPrivateOtp();
-  const { data: usageMode } = useUsageMode();
+  const { usageMode } = useUsageMode();
   const setUsageMode = useSetUsageMode();
   const { data: extension } = useExtension();
 
   // 노트북 상태 및 훅 추가
   const { data: notebooks = [] } = useNotebooks();
-  const { currentNotebookId } = useCurrentNotebook();
-  const setNotebookId = useSetCurrentNotebookId();
+  const { notebook: currentNotebook } = useUsageMode();
+  const currentNotebookId = currentNotebook?.id || 0;
   const createNotebook = useCreateOrUpdateNotebook();
   const deleteNotebook = useDeleteNotebook();
 
@@ -170,8 +168,7 @@ export default () => {
                     borderBottomColor: commonStyles.card.borderColor,
                   }}
                   onPress={() => {
-                    setUsageMode.mutate('SIMPLE');
-                    setNotebookId.mutate(null);
+                    setUsageMode.mutate({ mode: 'SIMPLE' });
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -215,8 +212,7 @@ export default () => {
                     borderBottomColor: commonStyles.card.borderColor,
                   }}
                   onPress={() => {
-                    setUsageMode.mutate('NOTE');
-                    setNotebookId.mutate(null);
+                    setUsageMode.mutate({ mode: 'NOTE' });
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -265,8 +261,7 @@ export default () => {
                         <TouchableOpacity
                           style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
                           onPress={() => {
-                            setUsageMode.mutate('NOTEBOOK');
-                            setNotebookId.mutate(nb.id);
+                            setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: nb.id });
                           }}
                         >
                           <MciIcon

@@ -8,7 +8,7 @@ import Icon2 from 'react-native-vector-icons/FontAwesome';
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
 import { useNotePages, getSplitTitle, useSnapshotPages } from '../../../hooks/useNoteStorage';
-import { useCurrentNotebook } from '../../../hooks/useNotebookStorage';
+import { useUsageMode } from '../../../hooks/useUsageMode';
 import { usePrivate } from '../../../hooks/usePrivate';
 import {
   useAddRecentTab,
@@ -537,7 +537,7 @@ export const CurrentTabSection = () => {
 
 export const TabsSection = () => {
   const { lang } = useLangContext();
-  const { notebook } = useCurrentNotebook();
+  const { notebook } = useUsageMode();
   return (
     <>
       <List.Subheader selectable={false}>

@@ -92,7 +92,7 @@ let interval: NodeJS.Timeout | null = null;
 export const usePrivate = () => {
   const { auth, otp } = useAuthContext();
   const queryClient = useQueryClient();
-  const { data: usageMode } = useUsageMode();
+  const { usageMode } = useUsageMode();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
 
   const query = useQuery({

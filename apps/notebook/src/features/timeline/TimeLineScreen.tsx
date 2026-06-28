@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext } from '@blacktokki/core';
+import { useLangContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
@@ -9,14 +9,13 @@ import { today } from './TimerTag';
 import useTimeLine from './useTimeLine';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import UsageButton from '../../components/UsageButton';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NoteListSection } from '../../screens/main/NoteListSection';
-import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 export const TimeLineScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const [date, setDate] = useState(today());
   const { data, preData, isLoading } = useTimeLine(date);
   const markedDateRange = preData.flatMap((v) => v.dateMatches.flatMap((v2) => v2.matches));

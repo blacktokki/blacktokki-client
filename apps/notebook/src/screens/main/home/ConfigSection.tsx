@@ -1,17 +1,16 @@
 import { useAuthContext } from '@blacktokki/account';
 import {
-  Colors,
   TextButton,
-  useColorScheme,
   useLangContext,
   Text,
   useModalsContext,
+  useUserColorScheme,
 } from '@blacktokki/core';
-import { ConfigSection, LanguageConfigSection, SkinConfigSection } from '@blacktokki/navigation';
+import { ConfigSection, LanguageConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { ColorSchemeName, View, TextInput, TouchableOpacity, Alert } from 'react-native';
 import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { SearchList } from '../../../components/SearchBar';
@@ -22,6 +21,7 @@ import {
   useCreateOrUpdateNotebook,
   useDeleteNotebook,
 } from '../../../hooks/useNotebookStorage';
+import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import {
   usePrivate,
   usePrivateOtp,
@@ -30,12 +30,45 @@ import {
 } from '../../../hooks/usePrivate';
 import { useSetUsageMode, useUsageMode } from '../../../hooks/useUsageMode';
 import AccountEditModal from '../../../modals/AccountEditModal';
-import { createCommonStyles } from '../../../styles';
+import { ThemeName } from '../../../styles';
 import { NavigationParamList, NotebookOption } from '../../../types';
 
+export const SkinConfigSection = () => {
+  const { lang } = useLangContext();
+  const [configTheme, setConfigTheme] = useUserColorScheme();
+  const { commonStyles } = useNotebookTheme();
+  const color = commonStyles.text.color;
+
+  return (
+    <ConfigSection title={lang('* 스킨 설정')}>
+      <View style={{ flexDirection: 'column', gap: 12 }}>
+        <View style={{ flexDirection: 'row' }}>
+          {[
+            [lang('Auto'), null],
+            [lang('Light'), 'light'],
+            [lang('Dark'), 'dark'],
+          ].map(([title, scheme]) => (
+            <TextButton
+              key={title as string}
+              title={title as string}
+              textStyle={{
+                fontSize: 16,
+                color,
+                textDecorationLine: configTheme === scheme ? 'underline' : 'none',
+              }}
+              style={{ borderRadius: 20 }}
+              onPress={() => setConfigTheme(scheme as ColorSchemeName)}
+            />
+          ))}
+        </View>
+      </View>
+    </ConfigSection>
+  );
+};
+
 export const OptionButton = (props: { title: string; onPress: () => void; active: boolean }) => {
-  const theme = useColorScheme();
-  const color = Colors[theme].text;
+  const { commonStyles } = useNotebookTheme();
+  const color = commonStyles.text.color;
   return (
     <TextButton
       title={props.title}
@@ -53,9 +86,8 @@ export const OptionButton = (props: { title: string; onPress: () => void; active
 export default () => {
   const { lang } = useLangContext();
   const { auth, dispatch } = useAuthContext();
-  const theme = useColorScheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const [noteConfig, setNoteConfig] = useState<'search' | 'usage'>();
   const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();

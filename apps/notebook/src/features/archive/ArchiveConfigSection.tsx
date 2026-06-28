@@ -1,15 +1,15 @@
 import { useAuthContext } from '@blacktokki/account';
-import { TextButton, useColorScheme, useLangContext } from '@blacktokki/core';
+import { TextButton, useLangContext } from '@blacktokki/core';
 import { markdownFs } from '@blacktokki/editor';
 import { ConfigSection } from '@blacktokki/navigation';
 import { View } from 'react-native';
 
 import { getContents, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { usePrivate } from '../../hooks/usePrivate';
 import { diffToSnapshot } from '../../screens/main/NoteItemSections';
 import { OptionButton } from '../../screens/main/home/ConfigSection';
 import { updatedFullFormat } from '../../screens/main/home/ContentGroupSection';
-import { createCommonStyles } from '../../styles';
 
 export const ExportButton = ({ title, id }: { title: string; id: number }) => {
   const { lang } = useLangContext();
@@ -55,8 +55,7 @@ export const ExportButton = ({ title, id }: { title: string; id: number }) => {
 
 export default () => {
   const { lang } = useLangContext();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { auth } = useAuthContext();
   const { data: privateConfig } = usePrivate();
   const mutation = useCreateOrUpdatePage();

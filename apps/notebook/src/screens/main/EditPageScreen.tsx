@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext, useModalsContext } from '@blacktokki/core';
+import { useLangContext, useModalsContext } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
 import { push } from '@blacktokki/navigation';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
@@ -19,9 +19,9 @@ import {
   urlToNoteLink,
 } from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import AlertModal from '../../modals/AlertModal';
 import { previewUrl } from '../../services/notebook';
-import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 type EditPageScreenRouteProp = RouteProp<NavigationParamList, 'EditPage'>;
@@ -87,8 +87,7 @@ export const EditPageSection = ({
   onCancel: () => void;
   onSave?: () => void;
 }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles, colorScheme } = useNotebookTheme();
   const { lang } = useLangContext();
   const { data: pages = [] } = useNotePages();
   const getChildrenPages = (keyword: string) =>
@@ -107,7 +106,7 @@ export const EditPageSection = ({
         active
         value={content}
         setValue={setContent}
-        theme={theme}
+        theme={colorScheme}
         pasteAutocomplete={(text) => {
           try {
             const noteLink = urlToNoteLink(text);
@@ -202,8 +201,7 @@ export const EditPageScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const { title, paragraph, section, board } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
 
   const { data: page, isLoading } = useNotePage(title);

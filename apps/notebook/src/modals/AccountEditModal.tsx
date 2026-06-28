@@ -1,11 +1,11 @@
-import { Colors, useColorScheme, useLangContext, Text, useModalsContext } from '@blacktokki/core';
+import { useLangContext, Text, useModalsContext, Colors } from '@blacktokki/core';
 import { AccountEditSection, accountEditStyles } from '@blacktokki/navigation';
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { usePat, usePatMutation } from '../hooks/usePat';
-import { createCommonStyles } from '../styles';
 
 const renderToggle = (active: boolean, color: string) => {
   return <Icon name={active ? 'chevron-up' : 'chevron-down'} size={14} color={color} />;
@@ -13,10 +13,9 @@ const renderToggle = (active: boolean, color: string) => {
 
 const ExtraAuthSection = React.memo(() => {
   const { lang } = useLangContext();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
-  const sectionStyles = accountEditStyles.colors[theme];
-  const colors = Colors[theme];
+  const { commonStyles, colorScheme } = useNotebookTheme();
+  const sectionStyles = accountEditStyles.colors[colorScheme];
+  const colors = Colors[colorScheme];
 
   //pat
   const { data: pats = [] } = usePat();

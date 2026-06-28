@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { onLink } from './SearchBar';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { createCommonStyles } from '../styles';
 import { NavigationParamList } from '../types';
 
@@ -177,8 +178,7 @@ const DiffPreview = React.memo(
 export default ({ item }: { item: ChangedItem }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles, colorScheme } = useNotebookTheme();
   const { lang } = useLangContext();
 
   const errorColor = '#d9534f';
@@ -187,7 +187,11 @@ export default ({ item }: { item: ChangedItem }) => {
     <View
       style={[
         commonStyles.card,
-        { padding: 0, overflow: 'hidden' },
+        {
+          padding: 0,
+          overflow: 'hidden',
+          backgroundColor: createCommonStyles(colorScheme).card.backgroundColor,
+        },
         item.renderType === 'override' ? { borderColor: errorColor } : {},
       ]}
     >
@@ -237,12 +241,12 @@ export default ({ item }: { item: ChangedItem }) => {
 
       {isExpanded &&
         ('description' in item ? (
-          <DiffPreview source={item.description} target={item.newDescription} theme={theme} />
+          <DiffPreview source={item.description} target={item.newDescription} theme={colorScheme} />
         ) : (
           <EditorViewer
             active
             value={item.newDescription}
-            theme={theme}
+            theme={colorScheme}
             onLink={(url) => onLink(url, navigation)}
             autoResize
           />

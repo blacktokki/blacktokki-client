@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext, Spacer, CommonButton } from '@blacktokki/core';
+import { useLangContext, Spacer, CommonButton } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -11,9 +11,9 @@ import HeaderSelectBar, {
 } from '../../components/HeaderSelectBar';
 import { SearchBar, titleFormat } from '../../components/SearchBar';
 import { useNotePage, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { EditPageSection } from '../../screens/main/EditPageScreen';
 import { HeaderIconButton } from '../../screens/main/NoteItemSections';
-import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 const pathToTitle = (path?: string) => {
@@ -28,8 +28,7 @@ const pathToTitle = (path?: string) => {
 
 export const QuickMemoScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
 
   const { data: history = [] } = useQuickMemoSelection();

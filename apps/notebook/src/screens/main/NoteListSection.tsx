@@ -1,11 +1,11 @@
-import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
+import { Spacer, useLangContext } from '@blacktokki/core';
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import LoadingView from '../../components/LoadingView';
 import { titleFormat } from '../../components/SearchBar';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { ParagraphKey } from '../../types';
 
 type Item = {
@@ -28,8 +28,7 @@ export const NoteListSection = ({
   emptyMessage: string;
   onScrollEnd?: () => void;
 }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
   const height = useRef(0);
   return (

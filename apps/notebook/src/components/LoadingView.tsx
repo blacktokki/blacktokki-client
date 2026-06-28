@@ -1,11 +1,9 @@
-import { useColorScheme } from '@blacktokki/core';
 import { View, ActivityIndicator } from 'react-native';
 
-import { createCommonStyles } from '../styles';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 
 export default () => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   return (
     <View style={[commonStyles.card, commonStyles.centerContent]}>
       <ActivityIndicator size="large" color="#3498DB" />

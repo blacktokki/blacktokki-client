@@ -1,5 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
-import { useColorScheme, useLangContext, Text, Colors, useResizeContext } from '@blacktokki/core';
+import { useLangContext, Text, useResizeContext } from '@blacktokki/core';
 import { extractHtmlLinks } from '@blacktokki/editor';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,8 +18,8 @@ import { useBoardPages } from '../hooks/useBoardStorage';
 import { SearchFeature, useExtension } from '../hooks/useExtension';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { useUsageMode } from '../hooks/useUsageMode';
-import { createCommonStyles } from '../styles';
 import { Content, NavigationParamList, ParagraphKey } from '../types';
 
 let _searchText = '';
@@ -160,8 +160,7 @@ export const SearchList = ({
   onPressKeyword?: (item: SearchContent) => void;
   focus?: number;
 }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const onPressDefault = useOnPressKeyword({});
 
   const pagePressHandlers = useCallback(
@@ -183,7 +182,10 @@ export const SearchList = ({
         <TouchableOpacity
           style={[
             styles.resultItem,
-            { borderWidth: 1, borderColor: focus === index ? Colors[theme].text : 'transparent' },
+            {
+              borderWidth: 1,
+              ...commonStyles[focus === index ? 'focusedBorder' : 'transparentBorder'],
+            },
           ]}
           {...pagePressHandlers(item)}
         >
@@ -265,8 +267,7 @@ export const SearchBar: React.FC<
   const [focusIndex, setFocusIndex] = useState(-1);
   const { lang } = useLangContext();
   const { auth } = useAuthContext();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const inputRef = useRef<TextInput>(null);
   const { data: keywords = [] } = useKeywords();
   const { data: pages = [] } = useNotePages();

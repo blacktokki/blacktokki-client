@@ -1,21 +1,15 @@
 import { useAuthContext } from '@blacktokki/account';
-import {
-  CommonButton,
-  Text,
-  useLangContext,
-  useModalsContext,
-  View,
-  Colors,
-  useColorScheme,
-} from '@blacktokki/core';
+import { CommonButton, Text, useLangContext, useModalsContext, View } from '@blacktokki/core';
 import React, { useEffect, useState } from 'react';
 import { TextInput, StyleSheet } from 'react-native';
+
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 
 export default function OtpModal({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const { lang } = useLangContext();
   const { setModal } = useModalsContext();
   const { otp } = useAuthContext();
-  const theme = useColorScheme();
+  const { commonStyles } = useNotebookTheme();
   const [otpCode, setOtpCode] = useState('');
   const [error, setError] = useState(false);
 
@@ -38,13 +32,10 @@ export default function OtpModal({ onSuccess }: { onSuccess: () => Promise<void>
 
   return (
     <View style={styles.overlay}>
-      <View style={[styles.container, { backgroundColor: Colors[theme].background }]}>
+      <View style={[styles.container, commonStyles.backgroundView]}>
         <Text style={styles.title}>{lang('Enter OTP')}</Text>
         <TextInput
-          style={[
-            styles.input,
-            { color: Colors[theme].text, borderColor: Colors[theme].buttonBorderColor },
-          ]}
+          style={[styles.input, commonStyles.otpInput]}
           placeholder="000000"
           placeholderTextColor="#888"
           keyboardType="number-pad"

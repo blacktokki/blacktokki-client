@@ -1,15 +1,14 @@
-import { useColorScheme, useLangContext, Spacer } from '@blacktokki/core';
+import { useLangContext, Spacer } from '@blacktokki/core';
 import React from 'react';
 import { View, FlatList, Text } from 'react-native';
 import { List, Switch } from 'react-native-paper';
 
 import { ResponsiveSearchBar } from '../../components/SearchBar';
 import { useExtension, useSetExtensionConfig } from '../../hooks/useExtension';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 
 export const ExtensionScreen: React.FC = () => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
 
   const { data: extension } = useExtension();
@@ -18,12 +17,22 @@ export const ExtensionScreen: React.FC = () => {
   return (
     <>
       <ResponsiveSearchBar />
-      <View style={commonStyles.container}>
-        <Text style={[commonStyles.title, { marginBottom: 16 }]}>{lang('Extension Settings')}</Text>
-
+      <View style={{ flex: 1 }}>
+        <View
+          style={{
+            paddingTop: commonStyles.container.paddingVertical,
+            paddingHorizontal: commonStyles.container.paddingHorizontal,
+            backgroundColor: commonStyles.container.backgroundColor,
+          }}
+        >
+          <Text style={[commonStyles.title, { marginBottom: 16 }]}>
+            {lang('Extension Settings')}
+          </Text>
+        </View>
         <FlatList
           data={extension.info}
           keyExtractor={(item) => item.key}
+          style={commonStyles.container}
           renderItem={({ item }) => {
             return (
               <List.Item

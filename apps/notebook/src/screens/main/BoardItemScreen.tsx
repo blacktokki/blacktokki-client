@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext, Text, useLangContext, Spacer } from '@blacktokki/core';
+import { useResizeContext, Text, useLangContext, Spacer } from '@blacktokki/core';
 import { ConfigSection } from '@blacktokki/navigation';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -33,8 +33,8 @@ import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useCreateOrUpdatePage, useNotePages } from '../../hooks/useNoteStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useTapDetector } from '../../hooks/useTapDetector';
-import { createCommonStyles } from '../../styles';
 import { Content, NavigationParamList } from '../../types';
 
 const _getSourceDescription = (paragraphs: Paragraph[], path: string, moveParent?: Paragraph) => {
@@ -102,8 +102,7 @@ export const BoardItemScreen: React.FC = () => {
   const route = useRoute<BoardItemRouteProp>();
   const { title } = route.params;
 
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
 
   const { data: pages = [] } = useNotePages();

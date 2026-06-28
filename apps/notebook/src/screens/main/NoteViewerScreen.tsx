@@ -1,4 +1,4 @@
-import { useColorScheme, useResizeContext } from '@blacktokki/core';
+import { useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
@@ -18,7 +18,7 @@ import {
 } from '../../components/HeaderSelectBar';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import { useNoteViewers } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NavigationParamList, ParagraphKey } from '../../types';
 
 type NoteViewerScreenRouteProp = RouteProp<NavigationParamList, 'NoteViewer'>;
@@ -28,9 +28,8 @@ export const NoteViewerScreen: React.FC = () => {
   const route = useRoute<NoteViewerScreenRouteProp>();
   const { key, paragraph, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
   const _window = useResizeContext();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const [toc, toggleToc] = useState(false);
   const [fullParagraph, toggleFullParagraph] = useState(false);
   const { data: viewers } = useNoteViewers();

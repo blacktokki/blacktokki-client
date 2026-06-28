@@ -1,4 +1,3 @@
-import { useColorScheme } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
@@ -10,7 +9,7 @@ import { updatedFormat } from './home/ContentGroupSection';
 import { ResponsiveSearchBar } from '../../components/SearchBar';
 import { useExtension } from '../../hooks/useExtension';
 import { useNotePage, useSnapshotPages } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../types';
 
 type ArchiveScreenRouteProp = RouteProp<NavigationParamList, 'Archive'>;
@@ -18,8 +17,7 @@ type ArchiveScreenRouteProp = RouteProp<NavigationParamList, 'Archive'>;
 export const ArchiveScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const route = useRoute<ArchiveScreenRouteProp>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { data: extension } = useExtension();
   const title = route.params?.title;
   const { data: note } = useNotePage(title || '');

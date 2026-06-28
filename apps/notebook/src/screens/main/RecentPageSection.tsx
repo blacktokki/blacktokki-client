@@ -1,10 +1,4 @@
-import {
-  useColorScheme,
-  useResizeContext,
-  Text,
-  TextButton,
-  useLangContext,
-} from '@blacktokki/core';
+import { useResizeContext, Text, TextButton, useLangContext } from '@blacktokki/core';
 import { cleanHtml } from '@blacktokki/editor';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,7 +12,7 @@ import { Paragraph } from '../../components/HeaderSelectBar';
 import LoadingView from '../../components/LoadingView';
 import StatusCard from '../../components/StatusCard';
 import { useNotePages } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../types';
 
 const _zoomOut = (isLandscape: boolean) => (isLandscape ? 1 : 1);
@@ -46,8 +40,7 @@ const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => 
   const cardMaxWidth = item.scale[window].maxWidth;
   const cardPadding = item.scale[window].padding;
   const zoomOut = _zoomOut(window === 'landscape');
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const fSize = window === 'landscape' ? 2 : 0;
   const [mounted, setMounted] = useState(index < 10);
 
@@ -153,8 +146,7 @@ export const useToCardPage = (
   const window = useResizeContext();
   const zoomOut = _zoomOut(window === 'landscape');
   const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   return useCallback(
     (v: BaseItem) => ({
       ...v,
@@ -215,11 +207,10 @@ export const TitleHeader = ({
   children,
 }: {
   title?: string;
-  setTitle: (title?: string) => void;
+  setTitle?: (title?: string) => void;
   children?: React.ReactNode;
 }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   return (
     title && (
@@ -227,7 +218,7 @@ export const TitleHeader = ({
         <NotePageHeader
           title={title}
           onPress={(nextTitle, hasChild) =>
-            hasChild ? setTitle(nextTitle) : navigation.navigate('NotePage', { title })
+            hasChild && setTitle ? setTitle(nextTitle) : navigation.navigate('NotePage', { title })
           }
         />
         <View style={pageStyles.actionButtons}>{children}</View>
@@ -238,8 +229,7 @@ export const TitleHeader = ({
 
 export const RecentPagesSection = React.memo(
   ({ title, setTitle }: { title?: string; setTitle: (title?: string) => void }) => {
-    const theme = useColorScheme();
-    const commonStyles = createCommonStyles(theme);
+    const { commonStyles } = useNotebookTheme();
     const { lang } = useLangContext();
     const window = useResizeContext();
     const { data: recentPages = [], isLoading } = useNotePages();

@@ -1,9 +1,9 @@
-import { Text, useColorScheme } from '@blacktokki/core';
+import { Text } from '@blacktokki/core';
 import { cleanId } from '@blacktokki/editor';
 import { TouchableOpacity, View, FlatList, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { createCommonStyles } from '../styles';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { ParagraphKey } from '../types';
 
 export interface Paragraph {
@@ -147,8 +147,7 @@ export default function HeaderSelectBar(props: {
   onPress: (item: Paragraph) => void;
   data: Paragraph[];
 }) {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const renderItem = (item: Paragraph) => (
     <TouchableOpacity style={styles.resultItem} onPress={() => props.onPress(item)}>
       {item.level === 0 && <Icon name="file-text-o" size={18} color={commonStyles.text.color} />}

@@ -1,5 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
-import { Colors, ContractFooter, useColorScheme, useLangContext } from '@blacktokki/core';
+import { ContractFooter, useLangContext } from '@blacktokki/core';
 import { HomeSection, push, TabViewOption } from '@blacktokki/navigation';
 import { StackScreenProps } from '@react-navigation/stack';
 import React, { useMemo, useState } from 'react';
@@ -11,18 +11,18 @@ import ConfigSection from './ConfigSection';
 import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
 import { SearchBar } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
+import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../../hooks/useUsageMode';
-import { createCommonStyles } from '../../../styles';
 import { RecentPagesSection } from '../RecentPageSection';
 
 const NotesTabView = () => {
-  const theme = useColorScheme();
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
-  const { usageMode, isBoardEnabled } = useUsageMode();
+  const { isBoardEnabled } = useUsageMode();
   const { data: extension } = useExtension();
   const buttons = extension.feature.elements('button');
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors[theme].background }}>
+    <ScrollView style={commonStyles.backgroundView}>
       <CurrentTabSection />
       <TabsSection />
       {(buttons.length > 0 || isBoardEnabled) && (
@@ -48,8 +48,7 @@ const RecentChangesTabView = () => {
 };
 
 const ConfigTabView = () => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: commonStyles.container.backgroundColor }}
@@ -61,8 +60,7 @@ const ConfigTabView = () => {
 };
 
 export default function HomeScreen({ navigation, route }: StackScreenProps<any, 'Home'>) {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { auth } = useAuthContext();
   const { usageMode } = useUsageMode();
   const title = auth.isLocal ? 'Blacktokki Notebook - Local' : 'Blacktokki Notebook';
@@ -101,12 +99,12 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
           <ContractFooter
             buttons={[
               {
-                icon: <AntDesign name="github" size={24} color={Colors[theme].iconColor} />,
+                icon: <AntDesign name="github" size={24} color={commonStyles.iconColor.color} />,
                 url: 'https://github.com/blacktokki/blacktokki-notebook',
                 isWeb: true,
               },
               {
-                icon: <AntDesign name="mail" size={24} color={Colors[theme].iconColor} />,
+                icon: <AntDesign name="mail" size={24} color={commonStyles.iconColor.color} />,
                 url: 'mailto:ydh051541@naver.com',
                 isWeb: false,
               },

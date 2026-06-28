@@ -1,4 +1,3 @@
-import { useColorScheme } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { push } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
@@ -9,12 +8,13 @@ import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import { updatedFullFormat } from './home/ContentGroupSection';
 import HeaderSelectBar, { Paragraph } from '../../components/HeaderSelectBar';
 import { onLink, titleFormat } from '../../components/SearchBar';
 import { getSplitTitle } from '../../hooks/useNoteStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
-import { updatedFullFormat } from './home/ContentGroupSection';
 
 export const diffToSnapshot = (original: string, delta: string) => {
   const dmp = new DiffMatchPatch();
@@ -36,8 +36,7 @@ export const NotePageHeader = ({
   archive?: { updated: string; previous?: number; next?: number };
   board?: string;
 }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const splitTitle = getSplitTitle(title);
   return (
@@ -124,8 +123,7 @@ export const HeaderIconButton: React.FC<{
   size?: number;
   color?: string;
 }> = ({ name, onPress, size = 16, color }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const iconColor = color || commonStyles.icon.color;
 
   return (
@@ -145,20 +143,24 @@ export const NotePageSection = ({
   children?: React.ReactNode;
 }) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles, colorScheme } = useNotebookTheme();
   return (
     <View
       style={
         active && description
-          ? [commonStyles.card, { padding: 0, marginBottom: 0 }]
+          ? [
+              commonStyles.card,
+              {
+                backgroundColor: createCommonStyles(colorScheme).card.backgroundColor,
+              },
+            ]
           : { flex: 1, position: 'absolute' }
       }
     >
       <EditorViewer
         active
         value={description || ''}
-        theme={theme}
+        theme={colorScheme}
         onLink={(url) => onLink(url, navigation)}
         autoResize
       />
@@ -183,8 +185,7 @@ export const NoteBottomSection = ({
   onPress: (paragraph: Paragraph) => void;
 }) => {
   const idx = paragraphs.findIndex((v) => v.path === path);
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const moveParagraphs = [
     {
       icon: 'arrow-left',

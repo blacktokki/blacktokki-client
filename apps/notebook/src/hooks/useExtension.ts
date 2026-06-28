@@ -1,6 +1,7 @@
 import { useAuthContext } from '@blacktokki/account';
 import { NavigationConfig } from '@blacktokki/navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { useUsageMode } from './useUsageMode';
@@ -32,8 +33,9 @@ type ElementType = 'button' | 'extraSearchButton' | 'config';
 type Feature = {
   search?: SearchFeature;
   elements: { type: ElementType; Component: React.JSX.Element }[];
-  extraArchiveButtons: ((props: { id: number; title: string }) => React.JSX.Element)[];
   NoteSections: ((props: NoteSectionProps) => React.JSX.Element)[];
+  extraArchiveButtons?: ((props: { id: number; title: string }) => React.JSX.Element)[];
+  createCommonStylesList?: ((colorScheme: 'light' | 'dark') => any)[];
 };
 
 export const features: Record<string, FeatureInfo & Feature> = {};
@@ -49,14 +51,23 @@ const getExtension = (config: string[]) => {
       const _search = prev.search;
       prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
       prev.elements = [...prev.elements, ...feat.elements];
-      prev.extraArchiveButtons = [...prev.extraArchiveButtons, ...feat.extraArchiveButtons];
       prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
+      if (prev.extraArchiveButtons && feat.extraArchiveButtons) {
+        prev.extraArchiveButtons = [...prev.extraArchiveButtons, ...feat.extraArchiveButtons];
+      }
+      if (prev.createCommonStylesList && feat.createCommonStylesList) {
+        prev.createCommonStylesList = [
+          ...prev.createCommonStylesList,
+          ...feat.createCommonStylesList,
+        ];
+      }
       return prev;
     },
     {
       elements: [],
-      extraArchiveButtons: [],
       NoteSections: [],
+      extraArchiveButtons: [],
+      createCommonStylesList: [],
     } as Feature
   );
   return {
@@ -104,12 +115,21 @@ export const useExtension = () => {
   const query = useQuery({
     queryKey: ['extension', subkey],
     queryFn: () => getExtensionConfig(subkey).then(getExtension),
+    staleTime: Infinity,
+    cacheTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
+
+  const data = useMemo(() => {
+    return usageMode === 'SIMPLE'
+      ? getExtension([])
+      : query.data || getExtension(getDefaultConfig());
+  }, [usageMode, query.data]);
 
   return {
     ...query,
-    data:
-      usageMode === 'SIMPLE' ? getExtension([]) : query.data || getExtension(getDefaultConfig()),
+    data,
   };
 };
 

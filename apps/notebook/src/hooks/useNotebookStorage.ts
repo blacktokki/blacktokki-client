@@ -74,6 +74,10 @@ export const useNotebooks = () => {
         (a, b) => new Date(b.updated || 0).getTime() - new Date(a.updated || 0).getTime()
       );
     },
+    staleTime: Infinity,
+    cacheTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -83,6 +87,10 @@ export const useNotebook = (id: number) => {
     queryKey: ['notebookContent', id],
     queryFn: () => notebooks.find((n) => n.id === id) || null,
     enabled: notebooks.length > 0,
+    staleTime: Infinity,
+    cacheTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 

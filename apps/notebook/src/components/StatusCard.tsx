@@ -1,8 +1,8 @@
-import { useColorScheme, useLangContext } from '@blacktokki/core';
+import { useLangContext } from '@blacktokki/core';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 
-import { createCommonStyles } from '../styles';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 
 type StatusCardProps = {
   message: string;
@@ -12,8 +12,7 @@ type StatusCardProps = {
 };
 
 const StatusCard: React.FC<StatusCardProps> = ({ message, buttonTitle, onButtonPress, style }) => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
 
   return (

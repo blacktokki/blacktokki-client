@@ -1,4 +1,4 @@
-import { useColorScheme, useLangContext, Text, Spacer } from '@blacktokki/core';
+import { useLangContext, Text, Spacer } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
@@ -11,14 +11,13 @@ import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
 import { useBoardPages, useCreateOrUpdateBoard, useDeleteBoard } from '../../hooks/useBoardStorage';
 import { useNotePages } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../types';
 import { getBoardStatsList, updatedFormat } from './home/ContentGroupSection';
 
 export const BoardListScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
 
   const { data: boards = [] } = useBoardPages();

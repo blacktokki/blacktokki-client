@@ -1,15 +1,14 @@
-import { useColorScheme, useLangContext, useResizeContext, View } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { navigate, push } from '@blacktokki/navigation';
 import React, { useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, StyleProp, ViewStyle } from 'react-native';
+import { Animated, PanResponder, StyleProp, ViewStyle, View } from 'react-native';
 import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
 import { useNotePages, getSplitTitle, useSnapshotPages } from '../../../hooks/useNoteStorage';
-import { useUsageMode } from '../../../hooks/useUsageMode';
-import { usePrivate } from '../../../hooks/usePrivate';
+import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import {
   useAddRecentTab,
   useDeleteRecentTab,
@@ -18,7 +17,7 @@ import {
   useReorderRecentTabs,
 } from '../../../hooks/useTabStorage';
 import { useTapDetector } from '../../../hooks/useTapDetector';
-import { createCommonStyles } from '../../../styles';
+import { useUsageMode } from '../../../hooks/useUsageMode';
 import { Content } from '../../../types';
 
 // --- Helpers ---
@@ -230,7 +229,7 @@ type Props =
 
 const ContentGroupSection = (props: Props) => {
   const { lang } = useLangContext();
-  const styles = createCommonStyles(useColorScheme());
+  const { commonStyles } = useNotebookTheme();
   const itemPadding = useResizeContext() === 'landscape' ? 5 : 8;
   const detectTap = useTapDetector();
 
@@ -352,7 +351,7 @@ const ContentGroupSection = (props: Props) => {
             <Icon2
               name="file-text-o"
               size={18}
-              color={styles.text.color}
+              color={commonStyles.text.color}
               style={{ paddingTop: 8, paddingLeft: 5 }}
             />
           )}
@@ -403,14 +402,23 @@ const ContentGroupSection = (props: Props) => {
 
   if (props.type === 'LAST') {
     if (!lastTab) return null;
+    const tabStyles = commonStyles.activeTab;
     return (
       <List.Section>
         {listData.length > 0 && lastTab && (
           <List.Item
             title={lastTab.title}
-            titleStyle={{ fontStyle: 'italic' }}
-            style={{ padding: itemPadding }}
-            left={RenderIcon(lastTab.type === 'BOARD' ? 'view-dashboard' : 'file-document')}
+            titleStyle={{
+              fontStyle: 'italic',
+              fontFamily: commonStyles.text.fontFamily,
+              color: tabStyles.color,
+              fontWeight: '500',
+            }}
+            style={{ padding: itemPadding, backgroundColor: tabStyles.backgroundColor }}
+            left={RenderIcon(
+              lastTab.type === 'BOARD' ? 'view-dashboard' : 'file-document',
+              tabStyles.color
+            )}
             onPress={() => onNotePress(lastTab)}
             onLongPress={() => onNoteLongPress(lastTab)}
           />
@@ -454,6 +462,12 @@ const ContentGroupSection = (props: Props) => {
         </>
       )}
       {(props.type === 'RECENT' ? listData.slice(0, props.noteCount) : listData).map((v, index) => {
+        const isActive = (props.type === 'PAGE' || props.type === 'LAST') && v.id === lastTab?.id;
+        const tabStyles =
+          props.type === 'PAGE' || props.type === 'LAST'
+            ? commonStyles[isActive ? 'activeTab' : 'inactiveTab']
+            : { color: commonStyles.text.color, backgroundColor: 'transparent' };
+
         // 공통 아이템 렌더링
         const itemContent = (
           <List.Item
@@ -461,7 +475,11 @@ const ContentGroupSection = (props: Props) => {
             // DraggableWrapper 내부가 아니면 key 필수.
             // Draggable 내부에서는 key를 Draggable에 부여.
             title={v.title}
-            style={{ padding: itemPadding }}
+            titleStyle={[
+              { fontFamily: commonStyles.text.fontFamily, color: tabStyles.color },
+              isActive && { fontWeight: '500' },
+            ]}
+            style={[{ padding: itemPadding }, { backgroundColor: tabStyles.backgroundColor }]}
             left={RenderIcon(
               props.type === 'PAGE'
                 ? v.type === 'BOARD'
@@ -469,7 +487,8 @@ const ContentGroupSection = (props: Props) => {
                   : 'file-document-edit'
                 : !isLinked(v.title)
                 ? 'notebook'
-                : 'notebook-edit'
+                : 'notebook-edit',
+              tabStyles.color
             )}
             right={
               props.type === 'PAGE'
@@ -501,7 +520,7 @@ const ContentGroupSection = (props: Props) => {
               index={index}
               totalCount={listData.length}
               onReorder={handleReorder}
-              draggingColor={styles.activeTab.backgroundColor}
+              draggingColor={commonStyles.activeTab.backgroundColor}
             >
               {itemContent}
             </DraggableTabItem>
@@ -527,9 +546,15 @@ const ContentGroupSection = (props: Props) => {
 
 export const CurrentTabSection = () => {
   const { lang } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
   return (
-    <View>
-      <List.Subheader selectable={false}>{lang('Current Tab')}</List.Subheader>
+    <View style={commonStyles.backgroundContainer}>
+      <List.Subheader
+        selectable={false}
+        style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+      >
+        {lang('Current Tab')}
+      </List.Subheader>
       <ContentGroupSection type={'LAST'} />
     </View>
   );
@@ -538,13 +563,17 @@ export const CurrentTabSection = () => {
 export const TabsSection = () => {
   const { lang } = useLangContext();
   const { notebook } = useUsageMode();
+  const { commonStyles } = useNotebookTheme();
   return (
-    <>
-      <List.Subheader selectable={false}>
+    <View style={commonStyles.backgroundContainer}>
+      <List.Subheader
+        selectable={false}
+        style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+      >
         {notebook?.title ? `${lang('Tab List')} - ${notebook.title}` : lang('Tab List')}
       </List.Subheader>
       <ContentGroupSection type={'PAGE'} />
-    </>
+    </View>
   );
 };
 

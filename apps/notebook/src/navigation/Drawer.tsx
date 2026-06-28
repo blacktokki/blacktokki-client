@@ -1,12 +1,13 @@
 import { useAuthContext } from '@blacktokki/account';
-import { useLangContext, View, useColorScheme } from '@blacktokki/core';
+import { useLangContext } from '@blacktokki/core';
 import { push } from '@blacktokki/navigation';
 import React, { useEffect, useState } from 'react';
-import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { Platform, ScrollView, TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useExtension } from '../hooks/useExtension';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { useLastTab } from '../hooks/useTabStorage';
 import { useUsageMode } from '../hooks/useUsageMode';
 import ContentGroupSection, {
@@ -16,13 +17,11 @@ import ContentGroupSection, {
   ContentGroupSubType,
   CurrentTabSection,
 } from '../screens/main/home/ContentGroupSection';
-import { createCommonStyles } from '../styles';
 
 export default () => {
   const { lang } = useLangContext();
   const { auth } = useAuthContext();
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { data: lastTab } = useLastTab();
   const { usageMode, isBoardEnabled } = useUsageMode();
   const { data: extension } = useExtension();
@@ -36,7 +35,14 @@ export default () => {
     const borderColor = commonStyles.inactiveTab.color;
     return (
       <TouchableOpacity
-        style={[styles.badge, { backgroundColor: tabStyles.backgroundColor, borderColor }]}
+        style={[
+          styles.badge,
+          {
+            backgroundColor: tabStyles.backgroundColor,
+            borderColor,
+            borderRadius: commonStyles.button.borderRadius,
+          },
+        ]}
         onPress={() => setCurrentSubView(type)}
       >
         <Icon name={icon} size={14} color={tabStyles.color} style={{ marginRight: 6 }} />
@@ -45,6 +51,7 @@ export default () => {
             fontSize: 12,
             color: tabStyles.color,
             fontWeight: isActive ? 'bold' : 'normal',
+            fontFamily: commonStyles.text.fontFamily,
           }}
         >
           {label}
@@ -61,15 +68,10 @@ export default () => {
     disabled?: boolean
   ) => {
     const tabStyles = commonStyles[isActive ? 'activeTab' : 'inactiveTab'];
-    const borderBottomColor = commonStyles.activeTab.color;
 
     return (
       <TouchableOpacity
-        style={[
-          styles.tabItem,
-          isActive && { borderBottomColor, borderBottomWidth: 2 },
-          disabled && { opacity: 0.33 },
-        ]}
+        style={[styles.tabItem, tabStyles, disabled && { opacity: 0.33 }]}
         disabled={disabled}
         onPress={() => setCurrentView(type)}
       >
@@ -80,6 +82,7 @@ export default () => {
             textAlign: 'center',
             fontWeight: isActive ? 'bold' : 'normal',
             color: tabStyles.color,
+            fontFamily: commonStyles.text.fontFamily,
           }}
         >
           {label}
@@ -100,8 +103,13 @@ export default () => {
   }, [auth.isLocal && currentSubView]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <List.Item left={RenderIcon('home')} title={lang('Home')} onPress={() => push('Home')} />
+    <View style={commonStyles.backgroundView}>
+      <List.Item
+        left={RenderIcon('home')}
+        title={lang('Home')}
+        titleStyle={{ fontFamily: commonStyles.text.fontFamily, color: commonStyles.text.color }}
+        onPress={() => push('Home')}
+      />
       {extension.feature.elements('button')}
       <CurrentTabSection />
       <ScrollView style={Platform.OS === 'web' ? ({ scrollbarWidth: 'thin' } as any) : {}}>
@@ -125,7 +133,12 @@ export default () => {
             )}
           </View>
         ) : (
-          <List.Subheader selectable={false}>{lang('All Notes')}</List.Subheader>
+          <List.Subheader
+            selectable={false}
+            style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+          >
+            {lang('All Notes')}
+          </List.Subheader>
         )}
         {usageMode !== 'SIMPLE' && currentView === 'CURRENT_NOTE' && currentNote && (
           <View style={styles.badgeContainer}>

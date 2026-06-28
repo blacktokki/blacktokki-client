@@ -1,5 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
-import { useColorScheme, useLangContext, useResizeContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
@@ -24,8 +24,8 @@ import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import StatusCard from '../../components/StatusCard';
 import { useExtension } from '../../hooks/useExtension';
 import { useNotePage, useSnapshotAll } from '../../hooks/useNoteStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../hooks/useUsageMode';
-import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 type NotePageScreenRouteProp = RouteProp<NavigationParamList, 'NotePage'>;
@@ -35,11 +35,10 @@ export const NotePageScreen: React.FC = () => {
   const route = useRoute<NotePageScreenRouteProp>();
   const { title, paragraph, section, archiveId, board } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
   const _window = useResizeContext();
   const { auth } = useAuthContext();
   const { lang } = useLangContext();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const [_toc, toggleToc] = useState(false);
   const toc = _window === 'portrait' ? _toc : false;
   const [fullParagraph, toggleFullParagraph] = useState(!!(paragraph && board));

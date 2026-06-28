@@ -161,5 +161,11 @@
   "End date +7d": "종료일 +1d",
   "End date +1M": "종료일 +1M",
   "Random Note Access": "랜덤 노트 열람",
-  "Open a randomly selected note to discover content from a new perspective.": "랜덤 버튼을 통해 무작위로 노트를 열람하며 새로운 관점을 얻을 수 있습니다."
+  "Open a randomly selected note to discover content from a new perspective.": "랜덤 버튼을 통해 무작위로 노트를 열람하며 새로운 관점을 얻을 수 있습니다.",
+  "VSCode Skin": "VSCode 스킨",
+  "Apply VSCode style theme.": "VSCode 스타일 테마를 적용합니다.",
+  "GitHub Skin": "GitHub 스킨",
+  "Apply GitHub style theme.": "GitHub 스타일 테마를 적용합니다.",
+  "Namuwiki Skin": "나무위키 스킨",
+  "Apply Namuwiki style theme.": "나무위키 스타일 테마를 적용합니다."
 }

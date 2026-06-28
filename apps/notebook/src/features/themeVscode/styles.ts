@@ -1,105 +1,91 @@
 import { StyleSheet } from 'react-native';
 
-export type AppColors = {
-  // From old styles.ts
-  container: string;
-  card: string;
-  cardBorder: string;
-  separator: string;
-  title: string;
-  text: string;
-  smallText: string;
-  textPlaceholder: string;
-  textPressable: string;
-  button: string;
-  secondaryButton: string;
-  navButton: string;
-  input: string;
-  inputBorder: string;
-  activeTab: string;
-  inactiveTab: string;
-  icon: string;
+import { AppColors } from '../../styles';
 
-  // From old Colors
-  background: string;
-  tint: string;
-  tabIconDefault: string;
-  tabIconSelected: string;
-  hoverColor: string;
-  buttonBackgroundColor: string;
-  header: string;
-  headerBottomColor: string;
-  buttonBorderColor: string;
-  iconColor: string;
-  borderColor: string;
-  focus: string;
-};
-
-const getThemeColors = (colorScheme: 'light' | 'dark'): AppColors => {
-  const isDark = colorScheme === 'dark';
-
-  // Base Colors for Default
-  const colors: AppColors = {
-    container: isDark ? '#121212' : '#F5F5F5',
-    card: isDark ? '#1E1E1E' : '#FFFFFF',
-    cardBorder: isDark ? '#333333' : '#E0E0E0',
-    separator: isDark ? '#333333' : '#EEEEEE',
-    title: isDark ? '#FFFFFF' : '#2C2C2C',
-    text: isDark ? '#E4E4E4' : '#454545',
-    smallText: isDark ? '#BBBBBB' : '#777777',
-    textPlaceholder: isDark ? '#777777' : '#999999',
-    textPressable: isDark ? '#FFFFFF88' : '#00000088',
-    button: isDark ? '#2C73B5' : '#3498DB',
-    secondaryButton: isDark ? '#4A4A4A' : '#95A5A6',
-    navButton: isDark ? '#333333' : '#EBEBEB',
-    input: isDark ? '#222222' : '#FAFAFA',
-    inputBorder: isDark ? '#444444' : '#CCCCCC',
-    activeTab: isDark ? '#FFFFFF' : '#000000',
-    inactiveTab: isDark ? '#888888' : '#666666',
-    icon: isDark ? '#E4E4E4' : '#333333',
-    background: isDark ? '#000000' : '#FFFFFF',
-    tint: isDark ? '#FFFFFF' : '#2f95dc',
-    tabIconDefault: '#cccccc',
-    tabIconSelected: isDark ? '#FFFFFF' : '#2f95dc',
-    hoverColor: isDark ? '#010409' : '#f2f2f2',
-    buttonBackgroundColor: isDark ? '#010409' : '#f6f8fa',
-    header: isDark ? '#010409' : '#f6f8fa',
-    headerBottomColor: isDark ? '#282828' : '#d8d8d8',
-    buttonBorderColor: isDark ? 'rgba(229,225,220,0.15)' : 'rgba(27,31,36,0.15)',
-    iconColor: isDark ? '#FFFFFF' : '#000000',
-    borderColor: '#d0d7de',
-    focus: '#0065A4',
-  };
-
-  return colors;
-};
-
-const getThemeLayout = (isDark: boolean) => {
-  const borderRadius = 8;
-  const paddingHorizontal = 24;
-  const paddingVertical = 16;
-  const cardPadding = 16;
-  const shadowOpacity = isDark ? 0.1 : 0.05;
-  const fontFamily: string | undefined = undefined;
-  const buttonBorderRadius = 8;
-
+const getColors = (isDark: boolean): AppColors => {
+  if (isDark) {
+    return {
+      background: '#1E1E1E',
+      container: '#252526',
+      card: '#1E1E1E',
+      cardBorder: '#3C3C3C',
+      header: '#252526',
+      headerBottomColor: '#3C3C3C',
+      buttonBackgroundColor: '#333333',
+      buttonBorderColor: '#3C3C3C',
+      hoverColor: '#2A2D2E',
+      text: '#CCCCCC',
+      title: '#FFFFFF',
+      iconColor: '#CCCCCC',
+      focus: '#007ACC',
+      button: '#0E639C',
+      activeTab: '#FFFFFF',
+      inactiveTab: '#969696',
+      navButton: '#2D2D2D',
+      separator: '#3C3C3C',
+      // Default fallbacks for remaining properties
+      smallText: '#BBBBBB',
+      textPlaceholder: '#777777',
+      textPressable: '#FFFFFF88',
+      secondaryButton: '#4A4A4A',
+      input: '#222222',
+      inputBorder: '#444444',
+      icon: '#E4E4E4',
+      tint: '#FFFFFF',
+      tabIconDefault: '#cccccc',
+      tabIconSelected: '#FFFFFF',
+      borderColor: '#d0d7de',
+    };
+  }
   return {
-    borderRadius,
-    paddingHorizontal,
-    paddingVertical,
-    cardPadding,
-    shadowOpacity,
-    fontFamily,
-    buttonBorderRadius,
+    background: '#FFFFFF',
+    container: '#F3F3F3',
+    card: '#FFFFFF',
+    cardBorder: '#E4E4E4',
+    header: '#F3F3F3',
+    headerBottomColor: '#E4E4E4',
+    buttonBackgroundColor: '#E8E8E8',
+    buttonBorderColor: '#CCCCCC',
+    hoverColor: '#F0F0F0',
+    text: '#3B3B3B',
+    title: '#000000',
+    iconColor: '#3B3B3B',
+    focus: '#007ACC',
+    button: '#007ACC',
+    activeTab: '#333333',
+    inactiveTab: '#737373',
+    navButton: '#ECECEC',
+    separator: '#E4E4E4',
+    // Default fallbacks for remaining properties
+    smallText: '#777777',
+    textPlaceholder: '#999999',
+    textPressable: '#00000088',
+    secondaryButton: '#95A5A6',
+    input: '#FAFAFA',
+    inputBorder: '#CCCCCC',
+    icon: '#333333',
+    tint: '#2f95dc',
+    tabIconDefault: '#cccccc',
+    tabIconSelected: '#2f95dc',
+    borderColor: '#d0d7de',
   };
 };
 
 export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
-  const commonColors = getThemeColors(colorScheme);
   const isDark = colorScheme === 'dark';
-  const layout = getThemeLayout(isDark);
+  const commonColors = getColors(isDark);
 
-  return StyleSheet.create({
+  const layout = {
+    borderRadius: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    cardPadding: 12,
+    shadowOpacity: 0,
+    fontFamily: undefined as string | undefined,
+    buttonBorderRadius: 2,
+  };
+
+  const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: commonColors.container,
@@ -245,14 +231,14 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
     activeTab: {
       color: commonColors.activeTab,
       backgroundColor: commonColors.navButton,
-      borderBottomWidth: 2,
-      borderBottomColor: commonColors.focus,
+      borderTopWidth: 1,
+      borderTopColor: commonColors.focus,
     },
     inactiveTab: {
       color: commonColors.inactiveTab,
       backgroundColor: 'transparent',
-      borderBottomWidth: 2,
-      borderBottomColor: 'transparent',
+      borderTopWidth: 1,
+      borderTopColor: 'transparent',
     },
     icon: {
       color: commonColors.icon,
@@ -287,4 +273,6 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       borderColor: 'transparent',
     },
   });
+
+  return { ...styles, colors: commonColors };
 };

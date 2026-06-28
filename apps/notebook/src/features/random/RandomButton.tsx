@@ -1,4 +1,3 @@
-import { useColorScheme } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
@@ -8,12 +7,11 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import { toNoteParams } from '../../components/SearchBar';
 import { useNotePages } from '../../hooks/useNoteStorage';
-import { createCommonStyles } from '../../styles';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../types';
 
 export default () => {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { data: pages = [] } = useNotePages();
   const randomPages = pages.filter((v) => v.description);

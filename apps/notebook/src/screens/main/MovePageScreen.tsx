@@ -1,4 +1,4 @@
-import { Spacer, useColorScheme, useLangContext } from '@blacktokki/core';
+import { Spacer, useLangContext } from '@blacktokki/core';
 import { cleanId } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,8 +16,8 @@ import {
   useNotePages,
 } from '../../hooks/useNoteStorage';
 import { useNotebooks } from '../../hooks/useNotebookStorage';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../hooks/useUsageMode';
-import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 // --- 역링크(백링크) 내용 치환 로직 ---
@@ -138,9 +138,8 @@ export const MovePageScreen: React.FC = () => {
   const route = useRoute<MovePageScreenRouteProp>();
   const { title, paragraph, section } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const theme = useColorScheme();
   const { lang } = useLangContext();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
 
   const [newTitle, setNewTitle] = useState(title);
   const [includeSubNotes, setIncludeSubNotes] = useState(true);

@@ -1,5 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
-import { useColorScheme, useLangContext } from '@blacktokki/core';
+import { useLangContext } from '@blacktokki/core';
 import { toHtml, toRaw } from '@blacktokki/editor';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -8,8 +8,8 @@ import { View, Text } from 'react-native';
 
 import { useAgentSearch } from './useAgentSearch';
 import { onLink, ResponsiveSearchBar, titleFormat } from '../../components/SearchBar';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NoteListSection } from '../../screens/main/NoteListSection';
-import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
 type SearchPageRouteProp = RouteProp<{ SearchPage: { query: string } }, 'SearchPage'>;
@@ -18,8 +18,7 @@ export const SearchPageScreen: React.FC = () => {
   const route = useRoute<SearchPageRouteProp>();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { query } = route.params;
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
   const { auth } = useAuthContext();
   const { data, isLoading, fetchNextPage, isFetchingNextPage } = useAgentSearch(query, false, true);

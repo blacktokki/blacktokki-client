@@ -7,12 +7,15 @@ import ProblemButton from './problem/ProblemButton';
 import { ProblemsScreen } from './problem/ProblemScreen';
 import QuickMemoButton from './quickMemo/QuickMemoButton';
 import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
+import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';
+import { createCommonStyles as createNamuwikiStyles } from './themeNamuwiki/styles';
 import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
 import { features } from '../hooks/useExtension';
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import RandomButton from './random/RandomButton';
+import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
 
 features['quickMemo'] = {
   title: 'Quick Memo',
@@ -26,7 +29,6 @@ features['quickMemo'] = {
     },
   },
   NoteSections: [],
-  extraArchiveButtons: [],
   elements: [
     {
       type: 'button',
@@ -52,7 +54,6 @@ features['agent'] = {
   }),
   NoteSections: [],
   elements: [],
-  extraArchiveButtons: [],
 };
 
 features['timeline'] = {
@@ -68,7 +69,6 @@ features['timeline'] = {
     },
   },
   NoteSections: [TimerTagSection],
-  extraArchiveButtons: [],
   elements: [
     {
       type: 'button',
@@ -90,7 +90,6 @@ features['problem'] = {
     },
   },
   NoteSections: [],
-  extraArchiveButtons: [],
   elements: [
     {
       type: 'button',
@@ -120,13 +119,42 @@ features['random'] = {
   isDefault: false,
   screens: {},
   NoteSections: [],
-  extraArchiveButtons: [],
   elements: [
     {
       type: 'extraSearchButton',
       Component: <RandomButton key={'random'} />,
     },
   ],
+};
+
+features['themeVscode'] = {
+  title: 'VSCode Skin',
+  description: 'Apply VSCode style theme.',
+  isDefault: false,
+  screens: {},
+  NoteSections: [],
+  elements: [],
+  createCommonStylesList: [createVSCodeStyles],
+};
+
+features['themeGithub'] = {
+  title: 'GitHub Skin',
+  description: 'Apply GitHub style theme.',
+  isDefault: false,
+  screens: {},
+  NoteSections: [],
+  elements: [],
+  createCommonStylesList: [createGitHubStyles],
+};
+
+features['themeNamuwiki'] = {
+  title: 'Namuwiki Skin',
+  description: 'Apply Namuwiki style theme.',
+  isDefault: false,
+  screens: {},
+  NoteSections: [],
+  elements: [],
+  createCommonStylesList: [createNamuwikiStyles],
 };
 
 export default (title: string | ((auth: Auth) => string)) => {

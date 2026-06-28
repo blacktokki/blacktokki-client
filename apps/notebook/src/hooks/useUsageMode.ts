@@ -34,11 +34,19 @@ export const useUsageMode = () => {
   const { data: usageMode = 'SIMPLE', isLoading: isModeLoading } = useQuery({
     queryKey: ['usageMode', subkey],
     queryFn: () => getUsageMode(subkey),
+    staleTime: Infinity,
+    cacheTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const { data: currentNotebookId, isLoading: isIdLoading } = useQuery({
     queryKey: ['currentNotebookId', subkey],
     queryFn: () => getCurrentNotebookId(subkey),
+    staleTime: Infinity,
+    cacheTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const { data: notebook, isLoading: isNotebookLoading } = useNotebook(currentNotebookId || 0);

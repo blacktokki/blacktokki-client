@@ -1,18 +1,17 @@
-import { useColorScheme, useLangContext, Text } from '@blacktokki/core';
+import { useLangContext, Text } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { createCommonStyles } from '../styles';
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { NavigationParamList } from '../types';
 
 export default ({ paragraph }: { paragraph: string }) => {
   const { lang } = useLangContext();
-  const theme = useColorScheme();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   return (
     <View
       style={{

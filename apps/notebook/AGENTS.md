@@ -47,7 +47,7 @@
 3. `createCommonStyles` 내에 있는 `commonColors`의 색상은 더 이상 추가하지 않는다.
 4. 새로운 컴포넌트용 스타일을 만들기 전에 반드시 `src/styles.ts`에서 적절한 스타일이 있는지 확인한다.
 5. 인라인 스타일로 정의를 지양하고, 하드코딩된 스타일 사용을 최소화 한다.
-6. 컴포넌트 내부에서는 `import { createCommonStyles } from '../styles'; const styles = createCommonStyles(colorScheme);` 형태로 사용한다.
+6. 컴포넌트 내부에서는 `const { commonStyles } = useNotebookTheme();` 형태로 사용한다.
 7. 기본 스타일에서 확장할 경우 `style={[styles.container, styles.card, localStyles.custom]}`처럼 조합한다.
 8. 색상의 경우 `createCommonStyles` 내에 있는 `commonColors`에 정의된 색상만 사용한다.
 ### services (`/src/services`)

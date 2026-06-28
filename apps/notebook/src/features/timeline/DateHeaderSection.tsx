@@ -1,12 +1,12 @@
-import { useColorScheme, useModalsContext, Text, useLangContext } from '@blacktokki/core';
+import { useModalsContext, Text, useLangContext } from '@blacktokki/core';
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { today } from './TimerTag';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import DatePickerModal, { MarkedDateRange } from '../../modals/DatePikcerModal';
-import { createCommonStyles } from '../../styles';
 
 type DateHeaderSectionProps = {
   date: string;
@@ -21,8 +21,7 @@ export default function DateHeaderSection({
   monthly,
   markedDateRange,
 }: DateHeaderSectionProps) {
-  const theme = useColorScheme();
-  const commonStyles = createCommonStyles(theme);
+  const { commonStyles } = useNotebookTheme();
   const { setModal } = useModalsContext();
   const { lang } = useLangContext();
   const moveDate = (value: number) =>
@@ -49,7 +48,7 @@ export default function DateHeaderSection({
     <View style={[headerStyles.container, themedStyles.container]}>
       <View style={commonStyles.flex} />
       {/* Date Display */}
-      <View style={headerStyles.dateContainer}>
+      <View style={[headerStyles.dateContainer, { height: commonStyles.navButton.height }]}>
         <TouchableOpacity
           onPress={() =>
             setModal(DatePickerModal, {
@@ -105,7 +104,6 @@ const headerStyles = StyleSheet.create({
   dateContainer: {
     flex: 1,
     minWidth: 130,
-    height: createCommonStyles('light').navButton.height,
     alignItems: 'center',
     justifyContent: 'center',
   },

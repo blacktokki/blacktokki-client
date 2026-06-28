@@ -6,7 +6,7 @@ import { View } from 'react-native';
 
 import { getContents, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
-import { usePrivate } from '../../hooks/usePrivate';
+import { useUsageMode } from '../../hooks/useUsageMode';
 import { diffToSnapshot } from '../../screens/main/NoteItemSections';
 import { OptionButton } from '../../screens/main/home/ConfigSection';
 import { updatedFullFormat } from '../../screens/main/home/ContentGroupSection';
@@ -15,12 +15,10 @@ export const ExportButton = ({ title, id }: { title: string; id: number }) => {
   const { lang } = useLangContext();
   const mdfs = markdownFs();
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
   const handleExportHistory = async () => {
     const history = await getContents({
       isOnline: !auth.isLocal,
       types: ['SNAPSHOT', 'DELTA'],
-      withHidden: privateConfig.enabled,
       parentId: id,
     });
     const exportData = history.map((h) => {
@@ -57,9 +55,9 @@ export default () => {
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
   const { auth } = useAuthContext();
-  const { data: privateConfig } = usePrivate();
   const mutation = useCreateOrUpdatePage();
   const mdfs = markdownFs();
+  const { usageMode, notebook } = useUsageMode();
   return (
     <View style={commonStyles.card}>
       <ConfigSection title={lang('* Archive')}>
@@ -70,19 +68,28 @@ export default () => {
               getContents({
                 isOnline: !auth.isLocal,
                 types: ['NOTE'],
-                withHidden: privateConfig.enabled,
-              }).then((contents) => mdfs.export(contents, 'notebook'))
+                parentId: notebook?.id || 0,
+              }).then((contents) =>
+                mdfs.export(
+                  contents,
+                  usageMode === 'NOTEBOOK' && notebook ? notebook.title : 'notebook'
+                )
+              )
             }
             active={false}
           />
           <OptionButton
             title={lang('Import')}
             onPress={() =>
-              mdfs
-                .import()
-                .then((v) =>
-                  v.forEach((v2, i) => mutation.mutate({ ...v2, isLast: i + 1 === v.length }))
+              mdfs.import().then((v) =>
+                v.forEach((v2, i) =>
+                  mutation.mutate({
+                    ...v2,
+                    isLast: i + 1 === v.length,
+                    newParentId: notebook?.id || 0,
+                  })
                 )
+              )
             }
             active={false}
           />

@@ -14,7 +14,6 @@ type SearchResult = {
 export const search = async (
   query: string,
   page: number,
-  withHidden: boolean,
   exact?: boolean,
   withExternal?: boolean
 ) => {
@@ -25,7 +24,6 @@ export const search = async (
           query,
           page,
           size: 20,
-          withHidden,
           exact: exact || undefined,
           withExternal: withExternal || undefined,
         },

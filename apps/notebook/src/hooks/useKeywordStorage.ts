@@ -53,8 +53,9 @@ const saveKeywords = async (
 
 export const useKeywords = () => {
   const { auth } = useAuthContext();
-  const { usageMode, isBoardEnabled } = useUsageMode();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const { usageMode, isBoardEnabled, notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
+  const subkey = `${auth.isLocal ? '' : auth.user?.id}:${currentNotebookId}`;
 
   return useQuery({
     queryKey: ['keywords', subkey, usageMode, isBoardEnabled],
@@ -79,7 +80,9 @@ export const useKeywords = () => {
 export const useAddKeyowrd = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const { notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
+  const subkey = `${auth.isLocal ? '' : auth.user?.id}:${currentNotebookId}`;
 
   return useMutation({
     mutationFn: async (keyword: KeywordContent) => {
@@ -98,7 +101,9 @@ export const useAddKeyowrd = () => {
 export const useResetKeyowrd = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const { notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
+  const subkey = `${auth.isLocal ? '' : auth.user?.id}:${currentNotebookId}`;
 
   return useMutation({
     mutationFn: async () => {

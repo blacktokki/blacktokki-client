@@ -11,18 +11,13 @@ export const getContentOne = async (id: number) => {
 export const getContentList = async (
   parentId?: number,
   types?: Content['type'][],
-  page?: number,
-  withHidden?: boolean
+  page?: number
 ) => {
   const parentIdParam = parentId !== undefined ? `&parentId=${parentId}` : '';
   const typeParam = types !== undefined ? `&types=${types.join(',')}` : '';
   const pageParam = page !== undefined ? `&size=20&page=${page}` : '&size=2000';
-  const withHiddenParam = withHidden ? `&withHidden=true` : `&withHidden=false`;
-  return (
-    await axios.get(
-      `/api/v1/content?sort=id,DESC${parentIdParam}${typeParam}${pageParam}${withHiddenParam}`
-    )
-  ).data.value as Content[];
+  return (await axios.get(`/api/v1/content?sort=id,DESC${parentIdParam}${typeParam}${pageParam}`))
+    .data.value as Content[];
 };
 
 export const getPrivateConfigs = async () => {

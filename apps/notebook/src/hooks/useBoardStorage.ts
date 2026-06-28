@@ -19,7 +19,6 @@ export const useBoardPages = () => {
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['BOARD'],
-        withHidden: true,
         parentId: notebook?.id || 0,
       });
 

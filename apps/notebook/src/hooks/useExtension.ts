@@ -109,8 +109,9 @@ const saveExtensionConfig = async (subkey: string, config: string[]): Promise<vo
 
 export const useExtension = () => {
   const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
-  const { usageMode } = useUsageMode();
+  const { usageMode, notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
+  const subkey = `${auth.isLocal ? '' : auth.user?.id}:${currentNotebookId}`;
 
   const query = useQuery({
     queryKey: ['extension', subkey],
@@ -136,7 +137,9 @@ export const useExtension = () => {
 export const useSetExtensionConfig = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const { notebook } = useUsageMode();
+  const currentNotebookId = notebook?.id || 0;
+  const subkey = `${auth.isLocal ? '' : auth.user?.id}:${currentNotebookId}`;
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: boolean }) => {

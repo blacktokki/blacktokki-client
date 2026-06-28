@@ -25,14 +25,13 @@ export const getContents = async (
     | {
         isOnline: true;
         types: Content['type'][];
-        withHidden: boolean;
         page?: number;
         parentId?: number;
       }
-    | { isOnline: false; types: Content['type'][]; withHidden: boolean }
+    | { isOnline: false; types: Content['type'][] }
 ): Promise<Content[]> => {
   if (data.isOnline) {
-    return await getContentList(data.parentId, data.types, data.page, data.withHidden);
+    return await getContentList(data.parentId, data.types, data.page);
   }
   if (data.types.length !== 1 || ['NOTE', 'BOARD'].find((v) => v === data.types[0]) === undefined) {
     return [];
@@ -150,7 +149,6 @@ export const useNotePages = (targetNotebookId?: number | null) => {
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
-        withHidden: true,
         parentId,
       });
       return contents;
@@ -166,7 +164,6 @@ export const useSnapshotPages = (parentId?: number) => {
       await getContents({
         isOnline: !auth.isLocal,
         types: ['SNAPSHOT', 'DELTA'],
-        withHidden: true,
         parentId,
         page: pageParam || 0,
       }),
@@ -213,7 +210,6 @@ export const useSnapshotAll = (parentId?: number) => {
         ? await getContents({
             isOnline: !auth.isLocal,
             types: ['SNAPSHOT', 'DELTA'],
-            withHidden: true,
             parentId,
           })
         : undefined,
@@ -247,7 +243,6 @@ export const useCreateOrUpdatePage = () => {
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
-        withHidden: true,
       });
       const page = contents.find((c) => c.title === title);
       if (page?.description === description) {

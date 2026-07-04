@@ -228,9 +228,11 @@ const getDataMatrix = (
       _target.parentTitle !== source.title &&
       _target.links.find((v) => v.name.toLowerCase() === sourceName.toLowerCase()) === undefined
     ) {
-      const match = matchUnlinkedKeyword(_target.raw, sourceName);
-      if (match) {
-        record.push([target.title, undefined, `Unlinked note keyword: ${match[0]}`]);
+      if (_target.raw.toLowerCase().includes(sourceName.toLowerCase())) {
+        const match = matchUnlinkedKeyword(_target.raw, sourceName);
+        if (match) {
+          record.push([target.title, undefined, `Unlinked note keyword: ${match[0]}`]);
+        }
       }
     }
     source.links
@@ -248,13 +250,15 @@ const getDataMatrix = (
           ) === undefined
       )
       .forEach((link) => {
-        const match = matchUnlinkedKeyword(_target.raw, link.name);
-        if (match) {
-          record.push([
-            target.title,
-            undefined,
-            `Unlinked note keyword: ${match[0]} => ${titleFormat(link)}(${link.origin})`,
-          ]);
+        if (_target.raw.toLowerCase().includes(link.name.toLowerCase())) {
+          const match = matchUnlinkedKeyword(_target.raw, link.name);
+          if (match) {
+            record.push([
+              target.title,
+              undefined,
+              `Unlinked note keyword: ${match[0]} => ${titleFormat(link)}(${link.origin})`,
+            ]);
+          }
         }
       });
     isSubNote = target.title.startsWith(source.title + '/');

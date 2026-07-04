@@ -20,16 +20,12 @@ export const getSplitTitle = (title: string) => {
 
 export const focusListener: ((queryClient: QueryClient, id: number) => Promise<void>)[] = [];
 
-export const getContents = async (
-  data:
-    | {
-        isOnline: true;
-        types: Content['type'][];
-        page?: number;
-        parentId?: number;
-      }
-    | { isOnline: false; types: Content['type'][] }
-): Promise<Content[]> => {
+export const getContents = async (data: {
+  isOnline: boolean;
+  types: Content['type'][];
+  page?: number;
+  parentId?: number;
+}): Promise<Content[]> => {
   if (data.isOnline) {
     return await getContentList(data.parentId, data.types, data.page);
   }
@@ -46,7 +42,19 @@ export const getContents = async (
       const request = store.getAll();
 
       request.onsuccess = () => {
-        resolve(request.result as Content[]);
+        const results = request.result as Content[];
+        if (data.parentId !== undefined) {
+          resolve(
+            results.filter((c) => {
+              if (data.parentId === 0) {
+                return c.parentId === 0 || c.parentId === undefined || c.parentId === null;
+              }
+              return c.parentId === data.parentId;
+            })
+          );
+        } else {
+          resolve(results);
+        }
       };
       request.onerror = () => {
         console.error('Error loading contents from IndexedDB:', request.error);
@@ -113,8 +121,12 @@ export const saveContents = async (
     if (contents.length === 0 && deleteId) {
       if (type === 'NOTE') {
         const titleToDelete = await new Promise<string | undefined>((resolve) => {
-          const getRequest = store.get(deleteId);
-          getRequest.onsuccess = () => resolve(getRequest.result?.title);
+          const getRequest = store.getAll();
+          getRequest.onsuccess = () => {
+            const results = getRequest.result as Content[];
+            const found = results.find((c) => c.id === deleteId);
+            resolve(found?.title);
+          };
           getRequest.onerror = () => resolve(undefined);
         });
 
@@ -243,6 +255,7 @@ export const useCreateOrUpdatePage = () => {
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
+        parentId,
       });
       const page = contents.find((c) => c.title === title);
       if (page?.description === description) {

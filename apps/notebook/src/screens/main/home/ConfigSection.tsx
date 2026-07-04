@@ -30,7 +30,6 @@ import {
 } from '../../../hooks/usePrivate';
 import { useSetUsageMode, useUsageMode } from '../../../hooks/useUsageMode';
 import AccountEditModal from '../../../modals/AccountEditModal';
-import { ThemeName } from '../../../styles';
 import { NavigationParamList, NotebookOption } from '../../../types';
 
 export const SkinConfigSection = () => {

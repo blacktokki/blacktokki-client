@@ -80,17 +80,21 @@ export default () => {
           />
           <OptionButton
             title={lang('Import')}
-            onPress={() =>
-              mdfs.import().then((v) =>
-                v.forEach((v2, i) =>
-                  mutation.mutate({
-                    ...v2,
-                    isLast: i + 1 === v.length,
+            onPress={async () => {
+              try {
+                const importedNotes = await mdfs.import();
+                for (let i = 0; i < importedNotes.length; i++) {
+                  const note = importedNotes[i];
+                  await mutation.mutateAsync({
+                    ...note,
+                    isLast: i + 1 === importedNotes.length,
                     newParentId: notebook?.id || 0,
-                  })
-                )
-              )
-            }
+                  });
+                }
+              } catch (err) {
+                console.error('Import failed:', err);
+              }
+            }}
             active={false}
           />
         </View>

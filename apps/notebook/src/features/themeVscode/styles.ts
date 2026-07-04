@@ -5,17 +5,18 @@ import { AppColors } from '../../styles';
 const getColors = (isDark: boolean): AppColors => {
   if (isDark) {
     return {
-      background: '#1E1E1E',
-      container: '#252526',
-      card: '#1E1E1E',
-      cardBorder: '#3C3C3C',
-      header: '#252526',
-      headerBottomColor: '#3C3C3C',
+      background: '#181818',
+      container: '#181818',
+      card: '#2B2D31',
+      cardBorder: '#2B2D31',
+      header: '#181818',
+      headerTitle: '#CCCCCC',
+      headerBottomColor: '#181818',
       buttonBackgroundColor: '#333333',
       buttonBorderColor: '#3C3C3C',
       hoverColor: '#2A2D2E',
       text: '#CCCCCC',
-      title: '#FFFFFF',
+      title: '#E0E0E0',
       iconColor: '#CCCCCC',
       focus: '#007ACC',
       button: '#0E639C',
@@ -43,6 +44,7 @@ const getColors = (isDark: boolean): AppColors => {
     card: '#FFFFFF',
     cardBorder: '#E4E4E4',
     header: '#F3F3F3',
+    headerTitle: '#333333',
     headerBottomColor: '#E4E4E4',
     buttonBackgroundColor: '#E8E8E8',
     buttonBorderColor: '#CCCCCC',
@@ -76,10 +78,10 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
   const commonColors = getColors(isDark);
 
   const layout = {
-    borderRadius: 0,
+    borderRadius: 4,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    cardPadding: 12,
+    cardPadding: 16,
     shadowOpacity: 0,
     fontFamily: undefined as string | undefined,
     buttonBorderRadius: 2,
@@ -99,11 +101,11 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       marginBottom: 16,
       borderWidth: 1,
       borderColor: commonColors.cardBorder,
-      shadowColor: 'gray',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: layout.shadowOpacity,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     title: {
       fontSize: 18,
@@ -197,6 +199,17 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    appHeader: {
+      backgroundColor: commonColors.header,
+    },
+    appHeaderTitle: {
+      color: commonColors.headerTitle,
+    },
+    appHeaderLeftContainer: {
+      backgroundColor: commonColors.header,
+      borderBottomWidth: 1,
+      borderColor: commonColors.headerBottomColor,
     },
     flex: {
       flex: 1,

@@ -10,6 +10,7 @@ const getColors = (isDark: boolean): AppColors => {
       card: '#161B22',
       cardBorder: '#30363D',
       header: '#161B22',
+      headerTitle: '#E6EDF3',
       headerBottomColor: '#30363D',
       buttonBackgroundColor: '#21262D',
       buttonBorderColor: '#30363D',
@@ -43,6 +44,7 @@ const getColors = (isDark: boolean): AppColors => {
     card: '#F6F8FA',
     cardBorder: '#D0D7DE',
     header: '#F6F8FA',
+    headerTitle: '#24292F',
     headerBottomColor: '#D0D7DE',
     buttonBackgroundColor: '#F6F8FA',
     buttonBorderColor: '#D0D7DE',
@@ -197,6 +199,17 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    appHeader: {
+      backgroundColor: commonColors.header,
+    },
+    appHeaderTitle: {
+      color: commonColors.headerTitle,
+    },
+    appHeaderLeftContainer: {
+      backgroundColor: commonColors.header,
+      borderBottomWidth: 1,
+      borderColor: commonColors.headerBottomColor,
     },
     flex: {
       flex: 1,

@@ -5,35 +5,43 @@ import { AutoCompleteProps, EditorProps } from '../types';
 
 // import { createRoot } from 'react-dom/client';
 
-let markdown: {
-  parser: (htmlCode: string) => string;
-  renderer: (markdownCode: string) => string;
-  toRaw: (text: string) => string;
-  exportMarkdowns: (
-    contents: { title: string; description?: string }[],
-    filename: string
-  ) => Promise<void>;
-  importMarkdowns: () => Promise<{ title: string; description: string }[]>;
-};
+let markdown:
+  | {
+      parser: (htmlCode: string) => string;
+      renderer: (markdownCode: string) => string;
+      toRaw: (text: string) => string;
+      exportMarkdowns: (
+        contents: { title: string; description?: string }[],
+        filename: string
+      ) => Promise<void>;
+      importMarkdowns: () => Promise<{ title: string; description: string }[]>;
+    }
+  | undefined;
 import('./markdown').then((value) => {
   markdown = value;
 });
 
 export const parser = (htmlCode: string) => {
-  return markdown.parser(htmlCode);
+  return markdown ? markdown.parser(htmlCode) : htmlCode;
 };
 
 export const renderer = (markdownCode: string) => {
-  return markdown.renderer(markdownCode);
+  return markdown ? markdown.renderer(markdownCode) : markdownCode;
 };
 
 export const toRaw = (text: string) => {
-  return markdown.toRaw(text);
+  return markdown ? markdown.toRaw(text) : text;
 };
 
 export const markdownFs = () => ({
-  export: markdown.exportMarkdowns,
-  import: markdown.importMarkdowns,
+  export: async (contents: { title: string; description?: string }[], filename: string) => {
+    const md = markdown || (await import('./markdown'));
+    return md.exportMarkdowns(contents, filename);
+  },
+  import: async () => {
+    const md = markdown || (await import('./markdown'));
+    return md.importMarkdowns();
+  },
 });
 
 export const cleanId = (text: string) =>

@@ -39,9 +39,25 @@ const getConfig = async () => {
   } as NavigationConfig;
 };
 
-const NavigationLazy = React.lazy(() =>
-  getConfig().then((config) => ({ default: () => <Navigation config={config} /> }))
-);
+const NavigationLazy = React.lazy(async () => {
+  const config = await getConfig();
+  return {
+    default: (props: {
+      headerStyle?: any;
+      headerTitleStyle?: any;
+      headerLeftContainerStyle?: any;
+    }) => (
+      <Navigation
+        config={{
+          ...config,
+          headerStyle: props.headerStyle,
+          headerTitleStyle: props.headerTitleStyle,
+          headerLeftContainerStyle: props.headerLeftContainerStyle,
+        }}
+      />
+    ),
+  };
+});
 
 export default () => {
   const scheme = useColorScheme();
@@ -77,7 +93,11 @@ export default () => {
   return (
     <PaperProvider theme={theme}>
       <Suspense fallback={<></>}>
-        <NavigationLazy />
+        <NavigationLazy
+          headerStyle={commonStyles.appHeader}
+          headerTitleStyle={commonStyles.appHeaderTitle}
+          headerLeftContainerStyle={commonStyles.appHeaderLeftContainer}
+        />
       </Suspense>
     </PaperProvider>
   );

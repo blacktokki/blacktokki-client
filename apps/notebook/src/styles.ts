@@ -28,6 +28,7 @@ export type AppColors = {
   hoverColor: string;
   buttonBackgroundColor: string;
   header: string;
+  headerTitle: string;
   headerBottomColor: string;
   buttonBorderColor: string;
   iconColor: string;
@@ -61,10 +62,11 @@ const getThemeColors = (colorScheme: 'light' | 'dark'): AppColors => {
     tint: isDark ? '#FFFFFF' : '#2f95dc',
     tabIconDefault: '#cccccc',
     tabIconSelected: isDark ? '#FFFFFF' : '#2f95dc',
-    hoverColor: isDark ? '#010409' : '#f2f2f2',
+    hoverColor: isDark ? '#010409' : 'rgb(242,242,242)',
     buttonBackgroundColor: isDark ? '#010409' : '#f6f8fa',
     header: isDark ? '#010409' : '#f6f8fa',
-    headerBottomColor: isDark ? '#282828' : '#d8d8d8',
+    headerTitle: isDark ? '#fff' : '#000',
+    headerBottomColor: isDark ? 'rgb(40, 40, 40)' : 'rgb(216, 216, 216)',
     buttonBorderColor: isDark ? 'rgba(229,225,220,0.15)' : 'rgba(27,31,36,0.15)',
     iconColor: isDark ? '#FFFFFF' : '#000000',
     borderColor: '#d0d7de',
@@ -211,6 +213,17 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    appHeader: {
+      backgroundColor: commonColors.header,
+    },
+    appHeaderTitle: {
+      color: commonColors.headerTitle,
+    },
+    appHeaderLeftContainer: {
+      backgroundColor: commonColors.header,
+      borderBottomWidth: 1,
+      borderColor: commonColors.headerBottomColor,
     },
     flex: {
       flex: 1,

@@ -28,6 +28,9 @@ export type NavigationConfig = {
   };
   headerLeftIcon: React.JSX.Element;
   headerRight: React.JSX.Element;
+  headerStyle?: any;
+  headerTitleStyle?: any;
+  headerLeftContainerStyle?: any;
   modals: ModalComponent[];
   drawer: React.ReactNode;
 };

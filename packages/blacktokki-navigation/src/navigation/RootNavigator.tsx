@@ -79,14 +79,14 @@ export default ({ config }: { config: NavigationConfig }) => {
               screenOptions={({ navigation, route }) => {
                 rootRef.current = navigation;
                 return {
-                  headerStyle: {
+                  headerStyle: config.headerStyle ? { ...config.headerStyle, height: isMobile ? 50 : undefined } : {
                     backgroundColor: Colors[theme].header,
                     height: isMobile ? 50 : undefined,
                   },
-                  headerTitleStyle: { color: Colors[theme].text },
+                  headerTitleStyle: config.headerTitleStyle || { color: Colors[theme].text },
                   headerLeft: () => <HeaderLeft {...{navigation, route, config}}/>,
                   headerRight: () => config.headerRight,
-                  headerLeftContainerStyle: {
+                  headerLeftContainerStyle: config.headerLeftContainerStyle || {
                     backgroundColor: Colors[theme].header,
                     borderBottomWidth: 1,
                     borderColor: Colors[theme].headerBottomColor,

@@ -82,12 +82,18 @@ export const OptionButton = (props: { title: string; onPress: () => void; active
   );
 };
 
+let _noteConfig: 'search' | 'usage' | undefined = undefined;
+
 export default () => {
   const { lang } = useLangContext();
   const { auth, dispatch } = useAuthContext();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
-  const [noteConfig, setNoteConfig] = useState<'search' | 'usage'>();
+  const [noteConfig, _setNoteConfig] = useState<'search' | 'usage' | undefined>(_noteConfig);
+  const setNoteConfig = (config: 'search' | 'usage' | undefined) => {
+    _noteConfig = config;
+    _setNoteConfig(config);
+  };
   const { setModal } = useModalsContext();
   const { data: keywords = [] } = useKeywords();
   const resetKeyword = useResetKeyowrd();

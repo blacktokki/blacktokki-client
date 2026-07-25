@@ -1,5 +1,6 @@
 import { useAuthContext } from '@blacktokki/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { useNotebook } from './useNotebookStorage';
@@ -31,7 +32,7 @@ export const useUsageMode = () => {
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
 
-  const { data: usageMode = 'SIMPLE', isLoading: isModeLoading } = useQuery({
+  const { data: usageMode, isLoading: isModeLoading } = useQuery({
     queryKey: ['usageMode', subkey],
     queryFn: () => getUsageMode(subkey),
     staleTime: Infinity,
@@ -50,37 +51,39 @@ export const useUsageMode = () => {
   });
 
   const { data: notebook, isLoading: isNotebookLoading } = useNotebook(currentNotebookId || 0);
+  const isLoading = isModeLoading || isIdLoading || isNotebookLoading;
+  return useMemo(() => {
+    if (usageMode === undefined || notebook === undefined) {
+      return {
+        usageMode: undefined,
+        notebook: undefined,
+        isBoardEnabled: undefined,
+      };
+    }
 
-  if (isModeLoading || isIdLoading || isNotebookLoading) {
-    return {
-      usageMode: undefined,
-      notebook: undefined,
-      isBoardEnabled: undefined,
-    };
-  }
+    if (usageMode !== 'NOTEBOOK') {
+      return {
+        usageMode,
+        notebook: null,
+        isBoardEnabled: false,
+      };
+    }
+    if (currentNotebookId === 0 || !notebook) {
+      return {
+        usageMode: 'NOTE',
+        notebook: null,
+        isBoardEnabled: false,
+      };
+    }
 
-  if (usageMode !== 'NOTEBOOK') {
+    const notebookType = notebook.option?.NOTEBOOK_TYPE;
+
     return {
       usageMode,
-      notebook: null,
-      isBoardEnabled: false,
+      notebook,
+      isBoardEnabled: notebookType === 'WORKSPACE' || notebookType === 'PRIVATE_WORKSPACE',
     };
-  }
-  if (currentNotebookId === 0 || !notebook) {
-    return {
-      usageMode: 'NOTE',
-      notebook: null,
-      isBoardEnabled: false,
-    };
-  }
-
-  const notebookType = notebook.option?.NOTEBOOK_TYPE;
-
-  return {
-    usageMode,
-    notebook,
-    isBoardEnabled: notebookType === 'WORKSPACE' || notebookType === 'PRIVATE_WORKSPACE',
-  };
+  }, [usageMode, notebook, currentNotebookId, isLoading]);
 };
 
 export const useSetUsageMode = () => {

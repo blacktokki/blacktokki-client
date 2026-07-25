@@ -8,6 +8,7 @@ import features from '../features';
 import Drawer from './Drawer';
 import { useExtension } from '../hooks/useExtension';
 import { createCommonStyles } from '../hooks/useNotebookTheme';
+import { useUsageMode } from '../hooks/useUsageMode';
 import modals from '../modals';
 import { main, screenTitle } from '../screens';
 
@@ -46,21 +47,24 @@ const NavigationLazy = React.lazy(async () => {
       headerStyle?: any;
       headerTitleStyle?: any;
       headerLeftContainerStyle?: any;
-    }) => (
-      <Navigation
-        config={{
-          ...config,
-          headerStyle: props.headerStyle,
-          headerTitleStyle: props.headerTitleStyle,
-          headerLeftContainerStyle: props.headerLeftContainerStyle,
-        }}
-      />
-    ),
+      active: boolean;
+    }) =>
+      props.active && (
+        <Navigation
+          config={{
+            ...config,
+            headerStyle: props.headerStyle,
+            headerTitleStyle: props.headerTitleStyle,
+            headerLeftContainerStyle: props.headerLeftContainerStyle,
+          }}
+        />
+      ),
   };
 });
 
 export default () => {
   const scheme = useColorScheme();
+  const { usageMode, notebook } = useUsageMode();
   const { data: extension } = useExtension();
 
   const commonStyles = useMemo(() => {
@@ -97,6 +101,7 @@ export default () => {
           headerStyle={commonStyles.appHeader}
           headerTitleStyle={commonStyles.appHeaderTitle}
           headerLeftContainerStyle={commonStyles.appHeaderLeftContainer}
+          active={usageMode !== undefined && notebook !== undefined}
         />
       </Suspense>
     </PaperProvider>

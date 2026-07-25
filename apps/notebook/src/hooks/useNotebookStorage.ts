@@ -7,7 +7,7 @@ import { Content, NotebookOption, PostContent } from '../types';
 
 const getNotebookContents = async (isOnline: boolean): Promise<Content[]> => {
   if (isOnline) {
-    return await getContentList(undefined, ['NOTEBOOK'], undefined, true);
+    return await getContentList(undefined, ['NOTEBOOK'], undefined);
   }
   const db = await getDB();
   return new Promise((resolve) => {
@@ -82,11 +82,11 @@ export const useNotebooks = () => {
 };
 
 export const useNotebook = (id: number) => {
-  const { data: notebooks = [] } = useNotebooks();
+  const { data: notebooks } = useNotebooks();
   return useQuery({
     queryKey: ['notebookContent', id],
-    queryFn: () => notebooks.find((n) => n.id === id) || null,
-    enabled: notebooks.length > 0,
+    queryFn: () => notebooks?.find((n) => n.id === id) || null,
+    enabled: notebooks !== undefined,
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,

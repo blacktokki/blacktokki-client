@@ -54,24 +54,21 @@ export const getBoardStatsList = (boards: Content[], allPages: Content[]) => {
   return boards
     .map((board) => {
       const option = board.option;
+      const headerLevel = option && 'BOARD_HEADER_LEVEL' in option ? option.BOARD_HEADER_LEVEL : 3;
 
-      if (!option || !option['BOARD_NOTE_IDS']) {
-        return {
-          ...board,
-          stats: { noteCount: 0, cardCount: 0, updated: board.updated },
-        };
-      }
-
-      const noteColumns = option.BOARD_NOTE_IDS.map((id) =>
-        allPages.find((p) => p.id === id)
-      ).filter((v): v is Content => v !== undefined);
+      const noteColumns = allPages.filter(
+        (p) =>
+          p.title !== board.title &&
+          p.title.startsWith(board.title + '/') &&
+          p.title.slice(board.title.length + 1).split('/').length === 1
+      );
 
       let totalCardCount = 0;
       let updated = board.updated;
 
       noteColumns.forEach((page) => {
         const paragraphs = parseHtmlToParagraphs(page.description || '');
-        const cards = paragraphs.filter((p) => p.level === option.BOARD_HEADER_LEVEL);
+        const cards = paragraphs.filter((p) => p.level === headerLevel);
         totalCardCount += cards.length;
 
         if (new Date(page.updated) > new Date(updated)) {
@@ -281,7 +278,7 @@ const ContentGroupSection = (props: Props) => {
   const onNotePress = (content: Content) => {
     const isCurrentTab = content.id === lastTab?.id;
     const navigateTo = () =>
-      navigate(content.type === 'BOARD' ? 'BoardPage' : 'NotePage', { title: content.title });
+      navigate(content.type === 'BOARD' ? 'RecentPages' : 'NotePage', { title: content.title });
 
     detectTap(
       // Single Tap 동작 (클릭 시 화면 이동)

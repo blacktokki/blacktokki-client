@@ -139,7 +139,7 @@ const useOnPressKeyword = ({
           addKeyword && addKeywordMutate(item);
         }
       } else if (item.type === 'BOARD' || item.type === '_BOARD') {
-        navigation.push('BoardPage', { title: item.title });
+        navigation.push('RecentPages', { title: item.title });
         addKeyword && addKeywordMutate({ type: '_BOARD', title: item.title });
       } else {
         navigation.push('NotePage', { title: item.title });

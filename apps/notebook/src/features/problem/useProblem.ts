@@ -91,6 +91,7 @@ type ProblemMatrixSource = {
   updated: string;
   isReverseLink: boolean;
   isSubNote: boolean;
+  hasBoard: boolean;
 };
 
 let problemCacheKey: string | undefined;
@@ -189,7 +190,8 @@ const getDataLinear = (page: Content) => {
 
 const getDataMatrix = (
   source: ProblemSource,
-  target: { title: string; updated: string; description?: string }
+  target: { title: string; updated: string; description?: string },
+  hasBoard = false
 ) => {
   if (source.title === target.title) {
     return [];
@@ -198,7 +200,8 @@ const getDataMatrix = (
   const existTarget = existData.matrix[target.title];
   if (
     existData?.source.updated === source.updated &&
-    existTarget?.matrixSource.updated === target.updated
+    existTarget?.matrixSource.updated === target.updated &&
+    existTarget?.matrixSource.hasBoard === hasBoard
   ) {
     return existTarget.record;
   }
@@ -270,7 +273,7 @@ const getDataMatrix = (
     });
 
     //empty parent note
-    if (source.parentTitle === target.title) {
+    if (source.parentTitle === target.title && !hasBoard) {
       record.push([source.parentTitle, undefined, `Empty parent note(${source.title})`]);
     }
   }
@@ -281,6 +284,7 @@ const getDataMatrix = (
       updated: target.updated,
       isReverseLink,
       isSubNote,
+      hasBoard,
     },
   };
   existData.aggregate = undefined;
@@ -328,7 +332,7 @@ const getData = (userId: number, notebookId: number, pages: Content[], boards: C
     problemCache = {};
     problemCacheKey = cacheKey;
   }
-  const titleSet = new Set(pages.map((v) => v.title));
+  const titleSet = new Set([...pages, ...boards].map((v) => v.title));
   pages
     .map(getDataLinear)
     .flatMap(({ record, source }) => {
@@ -338,9 +342,15 @@ const getData = (userId: number, notebookId: number, pages: Content[], boards: C
       if (source.parentTitle && !titleSet.has(source.parentTitle)) {
         unknownPages.push({ title: source.parentTitle, updated: '' });
       }
-      const boardCount = boards.filter((b) => b.option.BOARD_NOTE_IDS?.includes(source.id)).length;
+      const boardCount = boards.filter((b) => b.title === source.parentTitle).length;
       return [
-        ...[...pages, ...unknownPages].flatMap((target) => getDataMatrix(source, target)),
+        ...[...pages, ...unknownPages].flatMap((target) =>
+          getDataMatrix(
+            source,
+            target,
+            boards.some((b) => b.title === target.title || b.title === source.parentTitle)
+          )
+        ),
         ...getDataAggregate(source, boardCount),
         ...record,
       ];

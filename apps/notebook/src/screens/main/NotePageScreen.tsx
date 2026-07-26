@@ -5,7 +5,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
-import BoardTagSection from './BoardTagSection';
 import {
   diffToSnapshot,
   HeaderIconButton,
@@ -22,6 +21,7 @@ import {
 import LoadingView from '../../components/LoadingView';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import StatusCard from '../../components/StatusCard';
+import { useBoardPage, useCreateOrUpdateBoard } from '../../hooks/useBoardStorage';
 import { useExtension } from '../../hooks/useExtension';
 import { useNotePage, useSnapshotAll } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
@@ -44,6 +44,8 @@ export const NotePageScreen: React.FC = () => {
   const [fullParagraph, toggleFullParagraph] = useState(!!(paragraph && board));
 
   const { data: page, isFetching } = useNotePage(title);
+  const { data: boardPage } = useBoardPage(title);
+  const createBoard = useCreateOrUpdateBoard();
   const { data: _archives } = useSnapshotAll(archiveId ? page?.id : undefined);
   const { usageMode } = useUsageMode();
   const { data: extension } = useExtension();
@@ -99,7 +101,6 @@ export const NotePageScreen: React.FC = () => {
   const renderHeaderSections = () =>
     !archive && (
       <>
-        <BoardTagSection noteId={page?.id} />
         {extension.feature.NoteSections.map((NoteSection, i) => (
           <NoteSection
             key={i}
@@ -149,7 +150,7 @@ export const NotePageScreen: React.FC = () => {
               )}
               {!paragraph && !archive && (_window === 'landscape' || !toc) && (
                 <HeaderIconButton
-                  name="folder"
+                  name="th-large"
                   onPress={() => navigation.navigate('RecentPages', { title })}
                 />
               )}
@@ -210,8 +211,27 @@ export const NotePageScreen: React.FC = () => {
                 <StatusCard
                   style={{ marginTop: 0 }}
                   message="This note has no content yet. Press the ‘Edit’ button to add content."
-                  buttonTitle="Edit"
-                  onButtonPress={handleEdit}
+                  buttons={
+                    !boardPage && !board && usageMode === 'NOTEBOOK'
+                      ? [
+                          { title: 'Edit', onPress: handleEdit },
+                          {
+                            title: 'Create Board',
+                            onPress: () =>
+                              createBoard.mutate(
+                                {
+                                  title,
+                                  description: '',
+                                  option: { BOARD_TYPE: 'KANBAN', BOARD_HEADER_LEVEL: 3 },
+                                },
+                                {
+                                  onSuccess: () => navigation.replace('RecentPages', { title }),
+                                }
+                              ),
+                          },
+                        ]
+                      : [{ title: 'Edit', onPress: handleEdit }]
+                  }
                 />
               )
             )}

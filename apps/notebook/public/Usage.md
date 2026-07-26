@@ -54,7 +54,8 @@
 
 ### 🗂 Recent Notes
 
-* Lists recently viewed notes in chronological order.
+* Lists recently viewed or created notes as cards and grids.
+* Use the header icon buttons on the top right to intuitively switch between Sub-note List view, Kanban Board, and Scrum Board (fixed to Sub-note List view in Simple Mode).
 * Click to revisit a note, or remove it from the list if no longer needed.
 
 ---
@@ -64,6 +65,7 @@ You can adjust the app's complexity and features across 3 levels according to yo
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
+* **View Mode & Board Restrictions:** View mode switcher options and board features (Kanban/Scrum) are not provided in simple mode. When viewing notes, the view mode is always fixed to **sub-note mode (card/grid view)**. Furthermore, board creation and navigation buttons are hidden in empty note screens and note headers.
 
 ### 📝 Note Mode
 Provides pure document writing and knowledge management features without board or private functionalities. Suitable for users who need structured information and extension features.
@@ -87,14 +89,19 @@ An environment where you can organize the app's features into distinct 'Notebook
   * **Auto-unlock Timer:** If the 'Auto-unlock (10 mins)' option is enabled, Private Mode will automatically turn off after 10 minutes of inactivity to ensure your data remains secure.
   * If you attempt to access a hidden notebook directly (e.g., via URL) while the mode is **Off**, a warning message will appear, and the content will remain hidden.
 
-* **🗂 Board** (Workspace types only)
+#### 🗂 Board
+> Workspace types only feature
+
   * Visualize and manage note sections as a Kanban/Scrum board.
+  * **Icon-based View Switcher:** Use the intuitive header icon buttons on the upper right of the Recent Pages screen to switch between or automatically create Sub-note List View, Kanban Board, Scrum Board, and Board Settings. The icon on the left of note titles lets you easily jump back to the parent board.
+  * **Alphabetical Column Sorting:** In Kanban and Scrum boards, columns (direct sub-notes) are stably sorted **alphabetically by title (with numeric prefix support)** rather than by modification date, ensuring that column order never jumps around when cards are edited or moved.
   * Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
   * Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
   * In **Scrum Boards**, **Rows** are automatically generated based on the level immediately above the card's header (Header Level - 1). This enables a more multi-dimensional organization of cards.
   * Cards can be **dragged and dropped** to another column.
   * When a card is moved, its corresponding section is **physically moved** to the target note.
   * Single-clicking (tapping) a card navigates to the note view screen, while double-clicking (double-tapping) opens the editing screen.
+  * **Enhanced Empty State UI:** When notes or cards have no description, an icon with the note title is displayed instead of a blank card. Accessing an empty note provides quick buttons to edit content or create a board (disabled in Simple Mode).
 
 ### 📊 Usage Mode Feature Comparison
 

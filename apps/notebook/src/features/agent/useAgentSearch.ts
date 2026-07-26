@@ -7,8 +7,7 @@ export const useAgentSearch = (query: string, exact: boolean, withExternal: bool
   const { data: privateConfig } = usePrivate();
   return useInfiniteQuery({
     queryKey: ['agentSearch', query, privateConfig.enabled, exact, withExternal],
-    queryFn: ({ pageParam = 0 }) =>
-      search(query, pageParam, privateConfig.enabled, exact, withExternal),
+    queryFn: ({ pageParam = 0 }) => search(query, pageParam, exact, withExternal),
     getNextPageParam: (lastPage, allPages) => {
       return allPages.length;
     },

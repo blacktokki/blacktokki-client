@@ -43,7 +43,7 @@ export const NotePageHeader = ({
     <View style={styles.header}>
       {board && (
         <TouchableOpacity
-          onPress={() => push('BoardPage', { title: board })}
+          onPress={() => push('RecentPages', { title: board })}
           style={[commonStyles.title, { marginRight: 5 }]}
         >
           <Icon2

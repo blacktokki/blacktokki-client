@@ -1,7 +1,6 @@
 import { Auth } from '@blacktokki/account';
 
 import { ArchiveScreen } from './main/ArchiveScreen';
-import { BoardItemScreen } from './main/BoardItemScreen';
 import { BoardListScreen } from './main/BoardListScreen';
 import { EditPageScreen } from './main/EditPageScreen';
 import { ExtensionScreen } from './main/ExtensionScreen';
@@ -49,11 +48,6 @@ export const main = {
     title,
     component: BoardListScreen,
     path: 'boardlist',
-  },
-  BoardPage: {
-    title,
-    component: BoardItemScreen,
-    path: 'board',
   },
   NoteViewer: {
     title,

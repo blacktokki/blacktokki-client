@@ -1,194 +1,26 @@
-import { useResizeContext, Text, TextButton, useLangContext } from '@blacktokki/core';
-import { cleanHtml } from '@blacktokki/editor';
+import { useResizeContext, Text, useLangContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { TouchableOpacity, ScrollView, StyleSheet, View } from 'react-native';
-import { Card } from 'react-native-paper';
+import React, { Suspense, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { NotePageHeader, pageStyles } from './NoteItemSections';
-import { toRecentContents, updatedFormat } from './home/ContentGroupSection';
-import { Paragraph } from '../../components/HeaderSelectBar';
+import { renderCardPage, Scale, useToCardPage } from './CardPageSection';
+import { NotePageHeader, HeaderIconButton, pageStyles } from './NoteItemSections';
+import { RecentBoardSection } from './RecentBoardSection';
+import { OptionButton } from './home/ConfigSection';
 import LoadingView from '../../components/LoadingView';
 import StatusCard from '../../components/StatusCard';
+import {
+  useBoardPage,
+  useBoardPages,
+  useCreateOrUpdateBoard,
+  useDeleteBoard,
+} from '../../hooks/useBoardStorage';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
+import { useUsageMode } from '../../hooks/useUsageMode';
 import { NavigationParamList } from '../../types';
-
-const _zoomOut = (isLandscape: boolean) => (isLandscape ? 1 : 1);
-
-type BaseItem = {
-  title: string;
-  description?: string;
-  updated?: string;
-  subNoteCount?: number;
-  paragraph?: Paragraph & { origin: string };
-};
-
-type Scale = Record<'landscape' | 'portrait', { maxWidth: number; padding: number }>;
-
-type Item = { scale: Scale } & (
-  | (BaseItem & {
-      descriptionComponent: React.JSX.Element;
-      onPress: () => void;
-    })
-  | { title?: undefined }
-);
-
-const CardPage = React.memo(({ item, index }: { item: Item; index: number }) => {
-  const window = useResizeContext();
-  const cardMaxWidth = item.scale[window].maxWidth;
-  const cardPadding = item.scale[window].padding;
-  const zoomOut = _zoomOut(window === 'landscape');
-  const { commonStyles } = useNotebookTheme();
-  const fSize = window === 'landscape' ? 2 : 0;
-  const [mounted, setMounted] = useState(index < 10);
-
-  useEffect(() => {
-    if (!mounted) {
-      const timer = setTimeout(() => setMounted(true), 50 * index - 400);
-      return () => clearTimeout(timer);
-    }
-  }, [item, index, mounted]);
-
-  if (item.title === undefined) {
-    return (
-      <View
-        style={{
-          flexBasis: window === 'landscape' ? '33%' : '50%',
-          minWidth: cardMaxWidth,
-          maxWidth: cardMaxWidth,
-          backgroundColor: 'transparent',
-        }}
-      />
-    );
-  }
-  const subNoteCount = item.subNoteCount || 0;
-  return (
-    <TouchableOpacity
-      style={{
-        flexBasis: window === 'landscape' ? '33%' : '50%',
-        padding: cardPadding,
-        paddingRight: 0,
-        minWidth: cardMaxWidth,
-        maxWidth: cardMaxWidth,
-      }}
-      onPress={item.onPress}
-    >
-      <View style={styles.cardContainer}>
-        {Array.from(Array(3).keys()).map(
-          (v) =>
-            subNoteCount > v && (
-              <View
-                key={v}
-                style={[
-                  commonStyles.card,
-                  styles.stackLayer,
-                  { top: -4 * (v + 1), left: 3 * (v + 1), zIndex: -(v + 1) },
-                ]}
-              />
-            )
-        )}
-
-        <Card
-          onPress={item.onPress}
-          style={[
-            commonStyles.card,
-            styles.card,
-            {
-              padding: 8 + cardPadding * 0.4,
-              aspectRatio: item.updated || window === 'landscape' ? 1 / Math.sqrt(2) : Math.sqrt(2),
-            },
-          ]}
-        >
-          <Card.Content
-            style={{
-              width: (zoomOut * 100 + '%') as `${number}%`,
-              transformOrigin: 'left top',
-              transform: [{ scale: 1 / zoomOut }],
-              padding: 0,
-            }}
-          >
-            {mounted && item.descriptionComponent}
-          </Card.Content>
-        </Card>
-      </View>
-      <View style={styles.cardLabel}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          <Text style={{ fontSize: 14 + fSize, overflow: 'hidden' }} numberOfLines={1}>
-            {item.title}
-          </Text>
-        </View>
-        {subNoteCount > 0 ? (
-          <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
-            ( {1 + subNoteCount} )
-          </Text>
-        ) : (
-          item.updated && (
-            <Text style={{ fontSize: 12 + fSize, opacity: 0.4, textAlign: 'right' }}>
-              {updatedFormat(item.updated)}
-            </Text>
-          )
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-});
-export const renderCardPage = ({ item, index }: { item: Item; index: number }) => (
-  <CardPage key={index} index={index} item={item} />
-);
-
-export const useToCardPage = (
-  onPress: (item: BaseItem) => void,
-  scale: Scale,
-  renderTitle?: (item: BaseItem) => string
-) => {
-  const window = useResizeContext();
-  const zoomOut = _zoomOut(window === 'landscape');
-  const RenderHtml = useMemo(() => React.lazy(() => import('react-native-render-html')), []);
-  const { commonStyles } = useNotebookTheme();
-  return useCallback(
-    (v: BaseItem) => ({
-      ...v,
-      title: renderTitle ? renderTitle(v) : v.title,
-      descriptionComponent: (
-        <RenderHtml
-          source={{
-            html:
-              cleanHtml(v.description || '', false, false, false).slice(
-                0,
-                300 * zoomOut * zoomOut
-              ) || '',
-          }}
-          renderersProps={{
-            a: { onPress: () => onPress(v) },
-          }}
-          tagsStyles={{
-            blockquote: {
-              borderLeftWidth: 3,
-              borderLeftColor: commonStyles.card.borderColor || '#cccccc',
-              paddingLeft: 6,
-              paddingVertical: 0,
-              marginVertical: 0,
-              marginLeft: 0, // 기본 들여쓰기 제거
-              marginRight: 0,
-              color: commonStyles.smallText.color || '#777777',
-              fontStyle: 'italic',
-            },
-            // 기존 스타일 유지
-            body: {
-              color: commonStyles.text.color,
-            },
-          }}
-          contentWidth={scale[window].maxWidth}
-        />
-      ),
-      onPress: () => onPress(v),
-      scale,
-    }),
-    [zoomOut, onPress, commonStyles, scale]
-  );
-};
 
 const defaultScale: Scale = {
   landscape: {
@@ -215,12 +47,28 @@ export const TitleHeader = ({
   return (
     title && (
       <View style={[commonStyles.header, pageStyles.header]}>
-        <NotePageHeader
-          title={title}
-          onPress={(nextTitle, hasChild) =>
-            hasChild && setTitle ? setTitle(nextTitle) : navigation.navigate('NotePage', { title })
-          }
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          {setTitle && (
+            <TouchableOpacity
+              onPress={() => setTitle()}
+              style={[commonStyles.title, { marginRight: 5 }]}
+            >
+              <Icon2
+                name="notebook-multiple"
+                size={pageStyles.title.fontSize}
+                color={commonStyles.pressibleText.color}
+              />
+            </TouchableOpacity>
+          )}
+          <NotePageHeader
+            title={title}
+            onPress={(nextTitle, hasChild) =>
+              hasChild && setTitle
+                ? setTitle(nextTitle)
+                : navigation.navigate('NotePage', { title })
+            }
+          />
+        </View>
         <View style={pageStyles.actionButtons}>{children}</View>
       </View>
     )
@@ -236,16 +84,43 @@ export const RecentPagesSection = React.memo(
     const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
     const dummyCards = window === 'landscape' ? 4 : 2;
 
+    const { usageMode } = useUsageMode();
+    const isNotebookMode = usageMode === 'NOTEBOOK';
+
+    const { data: board } = useBoardPage(title || '');
+    const { data: boards = [] } = useBoardPages();
+    const createBoard = useCreateOrUpdateBoard();
+    const deleteBoard = useDeleteBoard();
+    const [showConfig, setShowConfig] = useState(false);
+
+    const boardOption =
+      board?.option && 'BOARD_HEADER_LEVEL' in board.option ? board.option : undefined;
+
+    const validPages = useMemo(() => {
+      const pageMap = new Map(recentPages.map((v) => [v.title, v]));
+      if (isNotebookMode) {
+        boards.forEach((b) => {
+          if (!pageMap.has(b.title)) {
+            pageMap.set(b.title, { ...b, description: '' });
+          }
+        });
+      }
+      return Array.from(pageMap.values()).filter(
+        (v) => v.description || (isNotebookMode && boards.some((b) => b.title === v.title))
+      );
+    }, [recentPages, boards, isNotebookMode]);
+
     const toCardPage = useToCardPage(
       (v) =>
-        (v.subNoteCount || 0) > 0
+        (isNotebookMode && boards.some((b) => b.title === v.title)) || (v.subNoteCount || 0) > 0
           ? setTitle(v.title)
           : navigation.push('NotePage', { title: v.title }),
       defaultScale,
       (v) => (title === undefined ? v.title : v.title.replace(title + '/', './'))
     );
     const contents = useMemo(() => {
-      const processed = toRecentContents(recentPages)
+      const processed = [...validPages]
+        .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
         .filter((v) =>
           title === undefined
             ? v.title.split('/').length === 1
@@ -253,7 +128,7 @@ export const RecentPagesSection = React.memo(
               (v.title === title || v.title.startsWith(title + '/'))
         )
         .map((v) => {
-          const children = toRecentContents(recentPages).filter(
+          const children = validPages.filter(
             (child) => v.title !== title && child.title.startsWith(v.title + '/')
           );
           const latestTime = [v.updated, ...children.map((c) => c.updated)].reduce((a, b) =>
@@ -272,23 +147,140 @@ export const RecentPagesSection = React.memo(
         ...processed.map(toCardPage),
         ...Array.from(Array(dummyCards).keys()).map((v) => ({ scale: defaultScale })),
       ];
-    }, [recentPages, title, window]);
+    }, [validPages, title, window, toCardPage]);
     const maxWidth = (defaultScale[window].maxWidth + 5) * (window === 'landscape' ? 5 : 3);
     const renderHeader = () => {
       return (
-        <TitleHeader title={title} setTitle={setTitle}>
-          <TextButton
-            title={lang('View all notes') + '  ▶'}
-            onPress={() => setTitle()}
-            style={{ paddingRight: 0 }}
-          />
-        </TitleHeader>
+        <>
+          <TitleHeader title={title} setTitle={setTitle}>
+            {title && isNotebookMode && (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <HeaderIconButton
+                  name="th-large"
+                  onPress={() => {
+                    if (board) deleteBoard.mutate(board.id);
+                  }}
+                  color={!board ? commonStyles.text.color : commonStyles.smallText.color}
+                />
+                <HeaderIconButton
+                  name="columns"
+                  onPress={() => {
+                    if (!board) {
+                      createBoard.mutate({
+                        title,
+                        description: '',
+                        option: { BOARD_TYPE: 'KANBAN', BOARD_HEADER_LEVEL: 3 },
+                      });
+                    } else if (boardOption?.BOARD_TYPE === 'SCRUM') {
+                      createBoard.mutate({
+                        ...board,
+                        description: '',
+                        option: {
+                          BOARD_TYPE: 'KANBAN',
+                          BOARD_HEADER_LEVEL: boardOption.BOARD_HEADER_LEVEL || 3,
+                        },
+                      });
+                    }
+                  }}
+                  color={
+                    boardOption?.BOARD_TYPE !== 'SCRUM' && !!board
+                      ? commonStyles.text.color
+                      : commonStyles.smallText.color
+                  }
+                />
+                <HeaderIconButton
+                  name="trello"
+                  onPress={() => {
+                    if (!board) {
+                      createBoard.mutate({
+                        title,
+                        description: '',
+                        option: { BOARD_TYPE: 'SCRUM', BOARD_HEADER_LEVEL: 3 },
+                      });
+                    } else if (boardOption?.BOARD_TYPE !== 'SCRUM') {
+                      createBoard.mutate({
+                        ...board,
+                        description: '',
+                        option: {
+                          BOARD_TYPE: 'SCRUM',
+                          BOARD_HEADER_LEVEL: boardOption?.BOARD_HEADER_LEVEL || 3,
+                        },
+                      });
+                    }
+                  }}
+                  color={
+                    boardOption?.BOARD_TYPE === 'SCRUM' && !!board
+                      ? commonStyles.text.color
+                      : commonStyles.smallText.color
+                  }
+                />
+                {board && (
+                  <HeaderIconButton
+                    name="cog"
+                    onPress={() => setShowConfig(!showConfig)}
+                    color={showConfig ? commonStyles.text.color : commonStyles.smallText.color}
+                  />
+                )}
+              </View>
+            )}
+          </TitleHeader>
+          {showConfig && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                paddingVertical: 8,
+                zIndex: 10,
+              }}
+            >
+              <Text style={[commonStyles.smallText, { marginRight: 8 }]}>
+                {lang('* Header level')}:
+              </Text>
+              {Array.from(Array(5).keys()).map((v) => {
+                const level = v + 2;
+                const currentLevel = boardOption?.BOARD_HEADER_LEVEL || 3;
+                return (
+                  <OptionButton
+                    key={v}
+                    title={`H${level}`}
+                    onPress={() => {
+                      if (currentLevel !== level && board) {
+                        createBoard.mutate({
+                          ...board,
+                          description: '',
+                          option: {
+                            BOARD_TYPE: boardOption?.BOARD_TYPE || 'KANBAN',
+                            BOARD_HEADER_LEVEL: level,
+                          },
+                        });
+                      }
+                    }}
+                    active={currentLevel === level}
+                  />
+                );
+              })}
+            </View>
+          )}
+        </>
       );
     };
 
     return isLoading ? (
       <View style={commonStyles.container}>
         <LoadingView />
+      </View>
+    ) : title && board ? (
+      <View style={[commonStyles.container, { paddingHorizontal: 0, paddingVertical: 0 }]}>
+        <View
+          style={{
+            paddingTop: commonStyles.container.paddingVertical,
+            paddingHorizontal: commonStyles.container.paddingHorizontal,
+          }}
+        >
+          {renderHeader()}
+        </View>
+        <RecentBoardSection board={board} title={title} />
       </View>
     ) : contents.length > dummyCards ? (
       <ScrollView
@@ -343,23 +335,6 @@ export const RecentPagesSection = React.memo(
 );
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    borderRadius: 6,
-    marginVertical: 10,
-    marginHorizontal: 8,
-  },
-  card: {
-    overflow: 'hidden',
-    paddingTop: 0,
-    marginBottom: 0,
-  },
-  cardLabel: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: 'transparent',
-  },
   contentContainer: {
     alignSelf: 'center',
     backgroundColor: 'transparent',
@@ -370,13 +345,5 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-  },
-  stackLayer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    padding: 0,
-    margin: 0,
-    opacity: 0.4,
   },
 });

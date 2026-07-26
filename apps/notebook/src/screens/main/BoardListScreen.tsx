@@ -1,15 +1,14 @@
 import { useLangContext, Text, Spacer } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import { View, FlatList, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import React from 'react';
+import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { ResponsiveSearchBar } from '../../components/SearchBar';
 import StatusCard from '../../components/StatusCard';
 import UsageButton from '../../components/UsageButton';
-import { useBoardPages, useCreateOrUpdateBoard, useDeleteBoard } from '../../hooks/useBoardStorage';
+import { useBoardPages } from '../../hooks/useBoardStorage';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../types';
@@ -22,11 +21,6 @@ export const BoardListScreen: React.FC = () => {
 
   const { data: boards = [] } = useBoardPages();
   const { data: pages = [] } = useNotePages();
-  const mutation = useCreateOrUpdateBoard();
-  const deleteMutation = useDeleteBoard();
-
-  const [searchText, setSearchText] = useState('');
-  const searchBoard = boards?.find((v) => v.title === searchText);
 
   return (
     <>
@@ -40,7 +34,7 @@ export const BoardListScreen: React.FC = () => {
               return (
                 <TouchableOpacity
                   style={commonStyles.card}
-                  onPress={() => navigation.push('BoardPage', { title: item.title })}
+                  onPress={() => navigation.push('RecentPages', { title: item.title })}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={commonStyles.title}>{item.title}</Text>
@@ -68,48 +62,6 @@ export const BoardListScreen: React.FC = () => {
         ) : (
           <StatusCard message="There are no boards." />
         )}
-
-        {/* 하단 보드 생성/검색/삭제 바 */}
-        <View style={[commonStyles.searchContainer, { paddingTop: 16 }]}>
-          <TextInput
-            style={commonStyles.searchInput}
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder={lang('Add & Delete')}
-            placeholderTextColor={commonStyles.placeholder.color}
-          />
-          {/* 보드 추가 */}
-          <TouchableOpacity
-            style={[
-              commonStyles.searchButton,
-              !searchBoard && searchText !== '' ? {} : { backgroundColor: 'gray' },
-            ]}
-            disabled={!(!searchBoard && searchText !== '')}
-            onPress={
-              !searchBoard && searchText !== ''
-                ? () =>
-                    mutation.mutateAsync({
-                      title: searchText,
-                      description: '',
-                      option: {
-                        BOARD_NOTE_IDS: [],
-                        BOARD_HEADER_LEVEL: 3,
-                      },
-                    })
-                : undefined
-            }
-          >
-            <Icon name={'plus'} size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-          {/* 보드 삭제 */}
-          <TouchableOpacity
-            style={[commonStyles.searchButton, searchBoard ? {} : { backgroundColor: 'gray' }]}
-            disabled={!searchBoard}
-            onPress={searchBoard ? () => deleteMutation.mutateAsync(searchBoard.id) : undefined}
-          >
-            <Icon name={'minus'} size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
       </View>
     </>
   );

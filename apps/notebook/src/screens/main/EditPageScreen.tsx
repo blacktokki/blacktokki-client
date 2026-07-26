@@ -335,7 +335,7 @@ export const EditPageScreen: React.FC = () => {
         <View style={commonStyles.header}>
           {board && (
             <TouchableOpacity
-              onPress={isPrevent() ? handleUnsaved : () => push('BoardPage', { title: board })}
+              onPress={isPrevent() ? handleUnsaved : () => push('RecentPages', { title: board })}
               style={[commonStyles.title, { marginRight: 5 }]}
             >
               <Icon2 name="view-dashboard" size={20} color={commonStyles.pressibleText.color} />

@@ -1,5 +1,4 @@
 export type BoardOption = {
-  BOARD_NOTE_IDS: number[];
   BOARD_TYPE?: 'KANBAN' | 'SCRUM';
   BOARD_HEADER_LEVEL: number;
   PAT_DESCRIPTION?: undefined;
@@ -8,7 +7,6 @@ export type BoardOption = {
 
 export type NotebookOption = {
   NOTEBOOK_TYPE: 'PRIVATE_NOTE' | 'WORKSPACE' | 'PRIVATE_WORKSPACE';
-  BOARD_NOTE_IDS?: undefined;
   PAT_DESCRIPTION?: undefined;
 };
 
@@ -39,7 +37,6 @@ export type PostContent = {
     | BoardOption
     | NotebookOption
     | {
-        BOARD_NOTE_IDS?: undefined;
         NOTEBOOK_TYPE?: undefined;
         PAT_DESCRIPTION?: string;
       }
@@ -82,6 +79,5 @@ export type NavigationParamList = {
   EditPage: { title: string; board?: string } & ParagraphKey;
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
-  BoardPage: { title: string };
   Extension: undefined;
 };

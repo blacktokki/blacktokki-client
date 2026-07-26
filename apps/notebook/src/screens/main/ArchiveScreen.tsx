@@ -34,7 +34,7 @@ export const ArchiveScreen: React.FC = () => {
         <TitleHeader title={title}>
           {title &&
             note?.id &&
-            extension.feature.extraArchiveButtons.map((Button, i) => (
+            extension.feature?.extraArchiveButtons?.map((Button, i) => (
               <Button key={i} title={title} id={note.id} />
             ))}
         </TitleHeader>

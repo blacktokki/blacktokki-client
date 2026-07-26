@@ -29,38 +29,43 @@ export const getContents = async (data: {
   if (data.isOnline) {
     return await getContentList(data.parentId, data.types, data.page);
   }
-  if (data.types.length !== 1 || ['NOTE', 'BOARD'].find((v) => v === data.types[0]) === undefined) {
+  const validTypes = data.types.filter((t): t is 'NOTE' | 'BOARD' => ['NOTE', 'BOARD'].includes(t));
+  if (validTypes.length === 0) {
     return [];
   }
-  const type = data.types[0];
   const db = await getDB();
   try {
-    return new Promise((resolve) => {
-      const transaction = db.transaction(type, 'readonly');
-      const store = transaction.objectStore(type);
+    const allResults: Content[] = [];
+    for (const type of validTypes) {
+      const results = await new Promise<Content[]>((resolve, reject) => {
+        const transaction = db.transaction(type, 'readonly');
+        const store = transaction.objectStore(type);
 
-      const request = store.getAll();
+        const request = store.getAll();
 
-      request.onsuccess = () => {
-        const results = request.result as Content[];
-        if (data.parentId !== undefined) {
-          resolve(
-            results.filter((c) => {
-              if (data.parentId === 0) {
-                return c.parentId === 0 || c.parentId === undefined || c.parentId === null;
-              }
-              return c.parentId === data.parentId;
-            })
-          );
-        } else {
-          resolve(results);
-        }
-      };
-      request.onerror = () => {
-        console.error('Error loading contents from IndexedDB:', request.error);
-        throw request.error;
-      };
-    });
+        request.onsuccess = () => {
+          const res = request.result as Content[];
+          if (data.parentId !== undefined) {
+            resolve(
+              res.filter((c) => {
+                if (data.parentId === 0) {
+                  return c.parentId === 0 || c.parentId === undefined || c.parentId === null;
+                }
+                return c.parentId === data.parentId;
+              })
+            );
+          } else {
+            resolve(res);
+          }
+        };
+        request.onerror = () => {
+          console.error('Error loading contents from IndexedDB:', request.error);
+          reject(request.error);
+        };
+      });
+      allResults.push(...results);
+    }
+    return allResults;
   } catch (e) {
     console.error('Error opening IndexedDB', e);
     return [];

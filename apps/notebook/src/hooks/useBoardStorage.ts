@@ -69,25 +69,31 @@ export const useCreateOrUpdateBoard = () => {
       title,
       description,
       option,
+      newParentId,
     }: {
       id?: number;
       title: string;
       description: string;
       option: BoardOption;
+      newParentId?: number;
     }) => {
-      const page = contents.find((c) => c.id === id);
+      const parentId = newParentId !== undefined ? newParentId : notebook?.id || 0;
+      const page = contents.find((c) => (id !== undefined ? c.id === id : c.title === title));
       let updatedContent: Content | PostContent;
       const updated = auth.isLocal ? new Date().toISOString() : undefined;
 
       if (page) {
         updatedContent = { ...page, title, description, updated, option } as PostContent;
+        if (newParentId !== undefined) {
+          updatedContent.parentId = newParentId;
+        }
       } else {
         updatedContent = {
           title,
           description,
           input: title,
           userId: auth.user?.id || 0,
-          parentId: notebook?.id || 0, // 동적 parentId 적용
+          parentId, // 동적 parentId 적용
           type: 'BOARD',
           order: 0,
           updated,

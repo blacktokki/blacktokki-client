@@ -117,12 +117,16 @@ export const toRaw = (text: string) => {
 
 export const exportMarkdowns = async (
   contents: { title: string; description?: string }[],
+  jsons: { title: string; data: any }[],
   filename: string
 ) => {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   for (const content of contents.filter((v) => (v.description?.length || 0) > 0)) {
     zip.file(content.title + '.md', parser(content.description as string));
+  }
+  for (const json of jsons) {
+    zip.file(json.title + '.json', JSON.stringify(json.data || {}, null, 2));
   }
   const blob = await zip.generateAsync({ type: 'blob' });
   const url = window.URL.createObjectURL(blob);
@@ -141,7 +145,7 @@ export const importMarkdowns = async () => {
   const files = await new Promise<File[]>((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'application/zip,.md,.markdown';
+    input.accept = 'application/zip,.md,.markdown,.json';
     input.style.display = 'none';
     input.multiple = true;
 
@@ -156,6 +160,7 @@ export const importMarkdowns = async () => {
     input.click(); // 파일 선택창 열기
   });
   const contents: { title: string; description: string }[] = [];
+  const jsons: { title: string; data: any }[] = [];
   const JSZip = (await import('jszip')).default;
   for (const file of files) {
     if (file.type === 'application/zip' || file.name.endsWith('.zip')) {
@@ -164,11 +169,35 @@ export const importMarkdowns = async () => {
       for (const relativePath in files) {
         const file = zip.files[relativePath];
         if (!file.dir) {
-          contents.push({
-            title: relativePath.replace(/\.[^/.]+$/, ''),
-            description: renderer((await file.async('text')).toString()),
-          });
+          if (relativePath.endsWith('.json')) {
+            try {
+              const text = (await file.async('text')).toString();
+              const data = JSON.parse(text);
+              jsons.push({
+                title: relativePath.replace(/\.[^/.]+$/, ''),
+                data,
+              });
+            } catch (e) {
+              console.error('Failed to parse json board file in zip:', relativePath, e);
+            }
+          } else if (relativePath.endsWith('.md') || relativePath.endsWith('.markdown')) {
+            contents.push({
+              title: relativePath.replace(/\.[^/.]+$/, ''),
+              description: renderer((await file.async('text')).toString()),
+            });
+          }
         }
+      }
+    } else if (file.name.endsWith('.json')) {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        jsons.push({
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          data,
+        });
+      } catch (e) {
+        console.error('Failed to parse json board file:', file.name, e);
       }
     } else if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) {
       contents.push({
@@ -177,5 +206,5 @@ export const importMarkdowns = async () => {
       });
     }
   }
-  return contents;
+  return { contents, jsons };
 };

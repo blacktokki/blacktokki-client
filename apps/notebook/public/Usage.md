@@ -11,7 +11,7 @@
 * 🔁 Move specific sections to other notes
 * 📆 Automatically detect dates and visualize them as timer bars
 * 🧠 Use autocomplete to quickly insert links and child notes
-* 🧳 Export and import notes in Markdown format
+* 🧳 Export and import notes and boards in Markdown/JSON ZIP archives
 
 ---
 
@@ -251,8 +251,10 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 ### 📦 Archive (Backup and Restore)
 
-* Export all notes in Markdown or ZIP format for backup.
-* Restore notes from saved files when needed.
+* Export all notes and boards in a ZIP archive for comprehensive backup.
+  * **Notes** are saved as Markdown (`.md`) files.
+  * **Boards** (Kanban/Scrum options and settings) are saved as structured JSON (`.json`) files (e.g., `{Board Title}.json`).
+* Restore notes and boards seamlessly by importing ZIP archives, Markdown (`.md`) files, or board JSON (`.json`) files.
 
 ### 🎯 Random Note Access
 

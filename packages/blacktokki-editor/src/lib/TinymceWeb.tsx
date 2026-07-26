@@ -12,9 +12,13 @@ let markdown:
       toRaw: (text: string) => string;
       exportMarkdowns: (
         contents: { title: string; description?: string }[],
+        jsons: { title: string; data: any }[],
         filename: string
       ) => Promise<void>;
-      importMarkdowns: () => Promise<{ title: string; description: string }[]>;
+      importMarkdowns: () => Promise<{
+        contents: { title: string; description: string }[];
+        jsons: { title: string; data: any }[];
+      }>;
     }
   | undefined;
 import('./markdown').then((value) => {
@@ -34,9 +38,13 @@ export const toRaw = (text: string) => {
 };
 
 export const markdownFs = () => ({
-  export: async (contents: { title: string; description?: string }[], filename: string) => {
+  export: async (
+    contents: { title: string; description?: string }[],
+    jsons: { title: string; data: any }[],
+    filename: string
+  ) => {
     const md = markdown || (await import('./markdown'));
-    return md.exportMarkdowns(contents, filename);
+    return md.exportMarkdowns(contents, jsons, filename);
   },
   import: async () => {
     const md = markdown || (await import('./markdown'));

@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { ColorSchemeName, View, TextInput, TouchableOpacity, Alert } from 'react-native';
 import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import { NotebookPathBadge, NotebookStorageFormSection } from './StoragePathSection';
 import { SearchList } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
@@ -30,6 +31,7 @@ import {
 } from '../../../hooks/usePrivate';
 import { useSetUsageMode, useUsageMode } from '../../../hooks/useUsageMode';
 import AccountEditModal from '../../../modals/AccountEditModal';
+import { getStorageConfig } from '../../../services/storage';
 import { NavigationParamList, NotebookOption } from '../../../types';
 
 export const SkinConfigSection = () => {
@@ -118,6 +120,10 @@ export default () => {
   const [newNotebookDescription, setNewNotebookDescription] = useState('');
   const [newNotebookType, setNewNotebookType] =
     useState<NotebookOption['NOTEBOOK_TYPE']>('WORKSPACE');
+  const [newNbPathName, setNewNbPathName] = useState('');
+  const [newNbHandle, setNewNbHandle] = useState<any>(null);
+  const [titleError, setTitleError] = useState(false);
+  const [storageError, setStorageError] = useState(false);
 
   // 모드별 설명
 
@@ -337,6 +343,12 @@ export default () => {
                             setNewNotebookDescription(nb.description || '');
                             setNewNotebookType(nb.option?.NOTEBOOK_TYPE || 'WORKSPACE');
                             setIsAddingNotebook(false);
+                            setTitleError(false);
+                            setStorageError(false);
+                            getStorageConfig(nb.id).then((conf) => {
+                              setNewNbPathName(conf.pathName || `notebook-${nb.id}`);
+                              setNewNbHandle(conf.handle || null);
+                            });
                           }}
                         >
                           <Text style={{ color: '#3498DB', paddingHorizontal: 8 }}>
@@ -357,6 +369,7 @@ export default () => {
                       >
                         {nb.description}
                       </Text>
+                      {auth.isLocal && <NotebookPathBadge nbId={nb.id} updated={nb.updated} />}
                     </View>
                   );
                 })}
@@ -376,23 +389,76 @@ export default () => {
                     <TextInput
                       style={[
                         commonStyles.input,
-                        { marginBottom: 12, backgroundColor: 'transparent' },
+                        {
+                          backgroundColor: 'transparent',
+                          borderColor: titleError
+                            ? commonStyles.button.backgroundColor
+                            : commonStyles.input.borderColor,
+                          borderWidth: titleError ? 1.5 : commonStyles.input.borderWidth || 1,
+                        },
                       ]}
                       placeholder={lang('Enter Notebook Title')}
-                      placeholderTextColor={commonStyles.placeholder.color}
+                      placeholderTextColor={
+                        titleError
+                          ? commonStyles.button.backgroundColor
+                          : commonStyles.placeholder.color
+                      }
                       value={newNotebookTitle}
-                      onChangeText={setNewNotebookTitle}
+                      onChangeText={(t) => {
+                        setNewNotebookTitle(t);
+                        if (t.trim()) setTitleError(false);
+                      }}
                     />
+                    {titleError && (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginTop: 4,
+                          marginLeft: 4,
+                        }}
+                      >
+                        <MciIcon
+                          name="alert-circle-outline"
+                          size={14}
+                          color={commonStyles.button.backgroundColor}
+                          style={{ marginRight: 4 }}
+                        />
+                        <Text
+                          style={{
+                            color: commonStyles.button.backgroundColor,
+                            fontSize: 12,
+                            fontWeight: '500',
+                          }}
+                        >
+                          {lang('Please enter a notebook title.')}
+                        </Text>
+                      </View>
+                    )}
+
                     <TextInput
-                      style={[
-                        commonStyles.input,
-                        { marginBottom: 12, backgroundColor: 'transparent' },
-                      ]}
+                      style={[commonStyles.input, { backgroundColor: 'transparent' }]}
                       placeholder={lang('Enter Notebook Description')}
                       placeholderTextColor={commonStyles.placeholder.color}
                       value={newNotebookDescription}
                       onChangeText={setNewNotebookDescription}
                     />
+
+                    {auth.isLocal && (
+                      <NotebookStorageFormSection
+                        pathName={newNbPathName}
+                        setPathName={(s) => {
+                          setNewNbPathName(s);
+                          if (s) setStorageError(false);
+                        }}
+                        setHandle={(h) => {
+                          setNewNbHandle(h);
+                          if (h) setStorageError(false);
+                        }}
+                        hasError={storageError}
+                      />
+                    )}
+
                     <Text style={[commonStyles.smallText, { marginBottom: 4 }]}>
                       {lang('Select Sub-mode:')}
                     </Text>
@@ -413,6 +479,7 @@ export default () => {
                           : 'An environment managed by dynamically added notebooks with isolated namespaces.'
                       )}
                     </Text>
+
                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
                       <TouchableOpacity
                         onPress={() => {
@@ -421,27 +488,59 @@ export default () => {
                           setNewNotebookTitle('');
                           setNewNotebookDescription('');
                           setNewNotebookType('WORKSPACE');
+                          setNewNbPathName('');
+                          setNewNbHandle(null);
+                          setTitleError(false);
+                          setStorageError(false);
                         }}
                         style={{ marginRight: 16, padding: 8 }}
                       >
                         <Text style={commonStyles.smallText}>{lang('cancel')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => {
-                          if (newNotebookTitle.trim()) {
-                            createNotebook.mutate({
+                        onPress={async () => {
+                          let hasErr = false;
+                          if (!newNotebookTitle.trim()) {
+                            setTitleError(true);
+                            hasErr = true;
+                          } else {
+                            setTitleError(false);
+                          }
+                          if (auth.isLocal && !newNbHandle) {
+                            setStorageError(true);
+                            hasErr = true;
+                          } else {
+                            setStorageError(false);
+                          }
+                          if (hasErr) return;
+
+                          try {
+                            await createNotebook.mutateAsync({
                               id: editingNotebookId,
                               title: newNotebookTitle,
                               description: newNotebookDescription,
                               notebookType: newNotebookType,
+                              storageConfig: auth.isLocal
+                                ? {
+                                    pathName: newNbPathName,
+                                    handle: newNbHandle,
+                                  }
+                                : undefined,
                             });
                             setNewNotebookTitle('');
                             setNewNotebookDescription('');
                             setNewNotebookType('WORKSPACE');
+                            setNewNbPathName('');
+                            setNewNbHandle(null);
                             setIsAddingNotebook(false);
                             setEditingNotebookId(undefined);
-                          } else {
-                            Alert.alert(lang('error'), lang('Please enter a notebook title.'));
+                            setTitleError(false);
+                            setStorageError(false);
+                          } catch (e: any) {
+                            Alert.alert(
+                              lang('error'),
+                              e.message || lang('Failed to save notebook.')
+                            );
                           }
                         }}
                         style={{ padding: 8 }}
@@ -455,7 +554,13 @@ export default () => {
                 ) : (
                   <TouchableOpacity
                     style={{ marginTop: 12, paddingVertical: 8 }}
-                    onPress={() => setIsAddingNotebook(true)}
+                    onPress={() => {
+                      setIsAddingNotebook(true);
+                      setNewNbPathName('');
+                      setNewNbHandle(null);
+                      setTitleError(false);
+                      setStorageError(false);
+                    }}
                   >
                     <Text style={{ color: '#3498DB', fontWeight: '500' }}>
                       + {lang('Add Notebook Mode')}

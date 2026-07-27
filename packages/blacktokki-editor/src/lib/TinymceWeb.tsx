@@ -15,10 +15,7 @@ let markdown:
         jsons: { title: string; data: any }[],
         filename: string
       ) => Promise<void>;
-      importMarkdowns: () => Promise<{
-        contents: { title: string; description: string }[];
-        jsons: { title: string; data: any }[];
-      }>;
+      importMarkdowns: () => Promise<FsData>;
     }
   | undefined;
 import('./markdown').then((value) => {
@@ -37,14 +34,18 @@ export const toRaw = (text: string) => {
   return markdown ? markdown.toRaw(text) : text;
 };
 
+export type FsData = {
+  contents: { title: string; description?: string }[],
+  jsons: { title: string; data: any }[],
+}
+
 export const markdownFs = () => ({
   export: async (
-    contents: { title: string; description?: string }[],
-    jsons: { title: string; data: any }[],
+    data : FsData,
     filename: string
   ) => {
     const md = markdown || (await import('./markdown'));
-    return md.exportMarkdowns(contents, jsons, filename);
+    return md.exportMarkdowns(data.contents, data.jsons, filename);
   },
   import: async () => {
     const md = markdown || (await import('./markdown'));

@@ -65,7 +65,6 @@ You can adjust the app's complexity and features across 3 levels according to yo
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
-* **View Mode & Board Restrictions:** View mode switcher options and board features (Kanban/Scrum) are not provided in simple mode. When viewing notes, the view mode is always fixed to **sub-note mode (card/grid view)**. Furthermore, board creation and navigation buttons are hidden in empty note screens and note headers.
 
 ### 📝 Note Mode
 Provides pure document writing and knowledge management features without board or private functionalities. Suitable for users who need structured information and extension features.
@@ -158,6 +157,8 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 * Choose between local or cloud-based accounts for saving notes.
 * Online sync keeps notes up-to-date automatically.
+* For local accounts, Note and Simple modes automatically save data to internal browser storage (OPFS) without extra setup.
+* For local accounts, Notebook mode links directly to a chosen folder on your computer, with permissions preserved in browser storage (IndexedDB).
 
 ### 📌 Pin Tabs
 

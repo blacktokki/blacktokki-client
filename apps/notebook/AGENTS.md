@@ -28,7 +28,7 @@
 4. 앱 내 모달은 전역 모달 컨텍스트(`useModalsContext`)에서 제공하는 `setModal` 함수를 사용해 열고 닫아야 한다.
 5. 모달을 닫을 때는 `setModal(Component, null)`을 사용한다.
 ### @blacktokki/account
-1. `auth.isLocal === true`인 경우 api 및 서버를 사용하지 않고, 데이터를 `IndexedDB`에 저장한다.
+1. `auth.isLocal === true`인 경우 api 및 서버를 사용하지 않고, File System API(`services/storage` - OPFS 또는 Local Directory Picker)를 통해 로컬 폴더에 마크다운 파일 형태로 데이터를 저장하며, 폴더 접근 권한 및 매핑 정보는 `IndexedDB`(`FS_CONFIG`)로 관리한다.
 2. `auth.isLocal`값과 무관하게 `AsyncStorage`에 데이터를 저장할 때 key값에 사용자를 식별할 수 있는 subkey를 포함해야 한다.
 ### @blacktokki/navigation
 1. `useNavigation()`을 사용할 수 없는 경우, `@blacktokki/navigation`의 `push()` 또는 `navigate()`를 사용할 수 있다.

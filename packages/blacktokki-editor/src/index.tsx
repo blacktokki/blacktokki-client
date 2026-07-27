@@ -7,4 +7,5 @@ export {
   markdownFs,
   cleanId,
 } from './lib/TinymceWeb';
+export type { FsData } from './lib/TinymceWeb';
 export * from './lib/dom';

@@ -168,5 +168,14 @@
   "GitHub Skin": "GitHub 스킨",
   "Apply GitHub style theme.": "GitHub 스타일 테마를 적용합니다.",
   "Namuwiki Skin": "나무위키 스킨",
-  "Apply Namuwiki style theme.": "나무위키 스타일 테마를 적용합니다."
+  "Apply Namuwiki style theme.": "나무위키 스타일 테마를 적용합니다.",
+  "Select Local Storage Folder (Required):": "내 컴퓨터 저장 폴더 선택 (필수):",
+  "Click to select a folder on your PC...": "클릭하여 내 컴퓨터의 저장 폴더를 선택하세요...",
+  "Select": "선택",
+  "Change": "변경",
+  "Please select a local folder on your computer to save.": "저장할 내 컴퓨터 로컬 폴더를 반드시 선택해주세요.",
+  "Failed to save notebook.": "노트북 저장에 실패했습니다.",
+  "PC folder direct integration is not supported in this browser.": "이 브라우저에서는 PC 폴더 직접 연동이 지원되지 않습니다.",
+  "Failed to select folder.": "폴더 선택에 실패했습니다.",
+  " items": "개 항목"
 }

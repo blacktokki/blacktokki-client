@@ -1,5 +1,5 @@
 export const DB_NAME = '@Blacktokki:notebook';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 let dbInstance: IDBDatabase | undefined;
 
@@ -18,6 +18,9 @@ export async function getDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('NOTEBOOK')) {
         db.createObjectStore('NOTEBOOK', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('FS_CONFIG')) {
+        db.createObjectStore('FS_CONFIG', { keyPath: 'parentId' });
       }
     };
 

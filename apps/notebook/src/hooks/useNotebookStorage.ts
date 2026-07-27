@@ -1,67 +1,63 @@
 import { useAuthContext } from '@blacktokki/account';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { getDB } from '../services/db';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
+import {
+  deleteStorageConfig,
+  getStoreItems,
+  saveStoreItems,
+  setStorageConfig,
+} from '../services/storage';
 import { Content, NotebookOption, PostContent } from '../types';
 
 const getNotebookContents = async (isOnline: boolean): Promise<Content[]> => {
   if (isOnline) {
     return await getContentList(undefined, ['NOTEBOOK'], undefined);
   }
-  const db = await getDB();
-  return new Promise((resolve) => {
-    const transaction = db.transaction('NOTEBOOK', 'readonly');
-    const store = transaction.objectStore('NOTEBOOK');
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result as Content[]);
-    request.onerror = () => resolve([]);
-  });
+  try {
+    return await getStoreItems('NOTEBOOK', 0);
+  } catch (e) {
+    console.error('Error loading notebooks from File System:', e);
+    return [];
+  }
 };
 
 const saveNotebookContent = async (
   isOnline: boolean,
   contents: (Content | PostContent)[],
   deleteId?: number
-): Promise<void> => {
+): Promise<number | undefined> => {
   const content = contents.length === 1 ? contents[0] : undefined;
   if (isOnline) {
     if (content) {
       const id = (content as Content).id;
       if (id) {
         await patchContent(id, content);
+        return id;
       } else {
-        await postContent(content);
+        const newId = await postContent(content);
+        return newId;
       }
     } else if (deleteId) {
       await deleteContent(deleteId);
+      return deleteId;
     }
-    return;
+    return undefined;
   }
 
-  const db = await getDB();
-  const tx = db.transaction('NOTEBOOK', 'readwrite');
-  const store = tx.objectStore('NOTEBOOK');
-
-  if (content) {
-    const contentItem = content as Content;
-    if (contentItem.id === undefined) {
-      const cursorRequest = store.openCursor(null, 'prev');
-      const lastItem = await new Promise<Content | null>((resolve) => {
-        cursorRequest.onsuccess = () => resolve(cursorRequest.result?.value || null);
-        cursorRequest.onerror = () => resolve(null);
-      });
-      contentItem.id = lastItem ? lastItem.id + 1 : 1;
+  try {
+    await saveStoreItems('NOTEBOOK', contents, deleteId, 0);
+    if (deleteId) {
+      await deleteStorageConfig(deleteId);
+      return deleteId;
     }
-    store.put(contentItem);
-  } else if (deleteId) {
-    store.delete(deleteId);
+    if (content) {
+      return (content as Content).id;
+    }
+  } catch (e) {
+    console.error('Error saving notebook to File System:', e);
   }
-
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve(undefined);
-    tx.onerror = () => reject(tx.error);
-  });
+  return undefined;
 };
 
 export const useNotebooks = () => {
@@ -104,11 +100,16 @@ export const useCreateOrUpdateNotebook = () => {
       title,
       description,
       notebookType,
+      storageConfig,
     }: {
       id?: number;
       title: string;
       description?: string;
       notebookType: NotebookOption['NOTEBOOK_TYPE'];
+      storageConfig?: {
+        pathName?: string;
+        handle?: any;
+      };
     }) => {
       const updated = auth.isLocal ? new Date().toISOString() : undefined;
 
@@ -130,8 +131,19 @@ export const useCreateOrUpdateNotebook = () => {
         (notebookData as Content).id = id;
       }
 
-      await saveNotebookContent(!auth.isLocal, [notebookData], id);
-      return { id };
+      const savedId = await saveNotebookContent(!auth.isLocal, [notebookData], id);
+      const targetId = savedId || id;
+
+      if (auth.isLocal && targetId && storageConfig) {
+        await setStorageConfig({
+          parentId: targetId,
+          type: 'local',
+          pathName: storageConfig.pathName?.trim() || `notebook-${targetId}`,
+          handle: storageConfig.handle,
+        });
+      }
+
+      return { id: targetId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });

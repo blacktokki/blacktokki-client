@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } from 'react-query';
 
 import { useUsageMode } from './useUsageMode';
-import { getDB } from '../services/db';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
+import { getStoreItems, saveStoreItems } from '../services/storage';
 import { Content, PostContent } from '../types';
 
 export const getSplitTitle = (title: string) => {
@@ -29,45 +29,17 @@ export const getContents = async (data: {
   if (data.isOnline) {
     return await getContentList(data.parentId, data.types, data.page);
   }
-  const validTypes = data.types.filter((t): t is 'NOTE' | 'BOARD' => ['NOTE', 'BOARD'].includes(t));
-  if (validTypes.length === 0) {
-    return [];
-  }
-  const db = await getDB();
   try {
     const allResults: Content[] = [];
-    for (const type of validTypes) {
-      const results = await new Promise<Content[]>((resolve, reject) => {
-        const transaction = db.transaction(type, 'readonly');
-        const store = transaction.objectStore(type);
-
-        const request = store.getAll();
-
-        request.onsuccess = () => {
-          const res = request.result as Content[];
-          if (data.parentId !== undefined) {
-            resolve(
-              res.filter((c) => {
-                if (data.parentId === 0) {
-                  return c.parentId === 0 || c.parentId === undefined || c.parentId === null;
-                }
-                return c.parentId === data.parentId;
-              })
-            );
-          } else {
-            resolve(res);
-          }
-        };
-        request.onerror = () => {
-          console.error('Error loading contents from IndexedDB:', request.error);
-          reject(request.error);
-        };
-      });
-      allResults.push(...results);
+    for (const type of data.types) {
+      if (['NOTE', 'BOARD', 'SNAPSHOT', 'DELTA'].includes(type)) {
+        const results = await getStoreItems(type as any, data.parentId || 0);
+        allResults.push(...results);
+      }
     }
     return allResults;
   } catch (e) {
-    console.error('Error opening IndexedDB', e);
+    console.error('Error loading contents from File System:', e);
     return [];
   }
 };
@@ -76,7 +48,8 @@ export const saveContents = async (
   isOnline: boolean,
   type: 'NOTE' | 'BOARD',
   contents: (Content | PostContent)[],
-  deleteId?: number
+  deleteId?: number | string,
+  parentId?: number
 ): Promise<void> => {
   const content = contents.length === 1 ? contents[0] : undefined;
   if (isOnline) {
@@ -92,63 +65,15 @@ export const saveContents = async (
         };
         await postContent(snapshot);
       }
-    } else if (deleteId) {
-      await deleteContent(deleteId);
+    } else if (deleteId !== undefined) {
+      await deleteContent(deleteId as number);
     }
     return;
   }
-  const db = await getDB();
   try {
-    const tx = db.transaction([type /*, 'SNAPSHOT' */], 'readwrite');
-    const store = tx.objectStore(type);
-    let nextId = 1;
-    const newItems = contents.filter((c) => (c as Content).id === undefined);
-
-    if (newItems.length > 0) {
-      const cursorRequest = store.openCursor(null, 'prev'); // 역순 정렬 커서
-      const lastItem = await new Promise((resolve) => {
-        cursorRequest.onsuccess = () => resolve(cursorRequest.result?.value);
-        cursorRequest.onerror = () => resolve(null);
-      });
-      if (lastItem) {
-        nextId = (lastItem as Content).id + 1;
-      }
-    }
-
-    for (const item of contents) {
-      const contentItem = item as Content;
-      if (contentItem.id === undefined) {
-        contentItem.id = nextId++;
-      }
-      store.put(contentItem);
-    }
-
-    if (contents.length === 0 && deleteId) {
-      if (type === 'NOTE') {
-        const titleToDelete = await new Promise<string | undefined>((resolve) => {
-          const getRequest = store.getAll();
-          getRequest.onsuccess = () => {
-            const results = getRequest.result as Content[];
-            const found = results.find((c) => c.id === deleteId);
-            resolve(found?.title);
-          };
-          getRequest.onerror = () => resolve(undefined);
-        });
-
-        if (titleToDelete) {
-          store.delete(titleToDelete);
-        }
-      } else {
-        store.delete(deleteId);
-      }
-    }
-
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve(undefined);
-      tx.onerror = () => reject(tx.error);
-    });
+    await saveStoreItems(type, contents, deleteId, parentId);
   } catch (e) {
-    console.error('Error saving contents to IndexedDB', e);
+    console.error('Error saving contents to File System:', e);
   }
 };
 
@@ -287,7 +212,13 @@ export const useCreateOrUpdatePage = () => {
         } as PostContent;
       }
 
-      await saveContents(!auth.isLocal, 'NOTE', [updatedContent], page?.id);
+      await saveContents(
+        !auth.isLocal,
+        'NOTE',
+        [updatedContent],
+        page?.id,
+        updatedContent.parentId
+      );
       return { title, description, skip: !isLast };
     },
     onSuccess: async (data) => {
@@ -342,9 +273,15 @@ export const useMovePage = () => {
         updatedContent.parentId = newParentId;
       }
 
-      await saveContents(!auth.isLocal, 'NOTE', [updatedContent], page.id);
+      await saveContents(
+        !auth.isLocal,
+        'NOTE',
+        [updatedContent],
+        page.id,
+        updatedContent.parentId || page.parentId
+      );
       if (auth.isLocal && newTitle !== oldTitle) {
-        await saveContents(false, 'NOTE', [], page.id);
+        await saveContents(false, 'NOTE', [], oldTitle, page.parentId);
       }
       return { oldTitle, newTitle, skip: !isLast };
     },

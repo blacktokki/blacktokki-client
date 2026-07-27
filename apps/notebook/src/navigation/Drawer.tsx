@@ -7,6 +7,7 @@ import { List } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useExtension } from '../hooks/useExtension';
+import { getSplitTitle } from '../hooks/useNoteStorage';
 import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { useLastTab } from '../hooks/useTabStorage';
 import { useUsageMode } from '../hooks/useUsageMode';
@@ -126,7 +127,12 @@ export default () => {
               renderTab('BOARD', lang('Board'), 'view-dashboard', currentView === 'BOARD')}
             {renderTab(
               'CURRENT_NOTE',
-              currentNote ? currentNote.title : lang('Current Note'),
+              currentNote
+                ? (() => {
+                    const splitTitle = getSplitTitle(currentNote.title);
+                    return splitTitle.length > 1 ? `../${splitTitle[1]}` : splitTitle[0];
+                  })()
+                : lang('Current Note'),
               'file-document',
               currentView === 'CURRENT_NOTE',
               currentNote === undefined

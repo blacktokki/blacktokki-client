@@ -60,3 +60,6 @@ xcuserdata
 **/public/editor*
 **/template/tinymce*
 **/script.md
+
+# Downloaded AI skills
+.agents/skills/harness-diagnostics

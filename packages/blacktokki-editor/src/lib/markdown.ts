@@ -92,27 +92,67 @@ HtmlToMarkdown.addRule('strikethrough', {
   },
 });
 
+HtmlToMarkdown.addRule('yamlFrontmatter', {
+  filter(node) {
+    return (
+      node.nodeName === 'DIV' &&
+      typeof (node as HTMLElement).getAttribute === 'function' &&
+      Boolean(
+        (node as HTMLElement).getAttribute('class')?.split(/\s+/).includes('yaml-frontmatter')
+      )
+    );
+  },
+  replacement(content, node) {
+    const dataYaml = (node as HTMLElement).getAttribute('data-yaml');
+    if (!dataYaml) {
+      return '';
+    }
+    try {
+      const decodedYaml = decodeURIComponent(dataYaml);
+      return `---\n${decodedYaml.trim()}\n---\n\n`;
+    } catch (e) {
+      return '';
+    }
+  },
+});
+
 HtmlToMarkdown.use(tables);
 
 // A function that renders markdown to HTML
 export const renderer = (markdownCode: string) => {
+  const match = markdownCode.match(/^\s*---\r?\n([\s\S]*?)\r?\n(?:---\r?\n?|---$)/);
+  if (match && match[0]) {
+    const yamlContent = match[1] || '';
+    const bodyMarkdown = markdownCode.slice(match[0].length);
+    const htmlBody = markdownToHtml.render(bodyMarkdown);
+    return `<div class="yaml-frontmatter" data-yaml="${encodeURIComponent(
+      yamlContent
+    )}" style="display: none;" contenteditable="false"><br></div>\n${htmlBody}`;
+  }
   return markdownToHtml.render(markdownCode);
 };
 
 // A function that converts HTML back to Markdown
 export const parser = (htmlCode: string) => {
-  return HtmlToMarkdown.turndown(htmlCode);
+  let md = HtmlToMarkdown.turndown(htmlCode);
+  md = md.replace(/^\s*---\r?\n([\s\S]*?)\r?\n---\s*/, '---\n$1\n---\n\n');
+  return md;
 };
 
 export const toRaw = (text: string) => {
-  const doc = new DOMParser().parseFromString(text, 'text/html');
-  return doc.body.textContent || '';
-  // return text
-  //   .replaceAll(/\n/g, '')
-  //   .replaceAll(/<hr\s*[/]?>\n/gi, '')
-  //   .replaceAll(/&nbsp;/gi, ' ')
-  //   .replaceAll(/<br\s*[/]?>/gi, '\r\n')
-  //   .replaceAll(/<\/?[^>]*>/gi, '');
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    const frontmatters = doc.querySelectorAll('.yaml-frontmatter');
+    frontmatters.forEach((el) => el.remove());
+    return doc.body.textContent || '';
+  }
+  return text
+    .replace(/<div class="yaml-frontmatter"[^>]*>.*?<\/div>/gi, '')
+    .replaceAll(/\n/g, '')
+    .replaceAll(/<hr\s*[/]?>\n/gi, '')
+    .replaceAll(/&nbsp;/gi, ' ')
+    .replaceAll(/<br\s*[/]?>/gi, '\r\n')
+    .replaceAll(/<\/?[^>]*>/gi, '');
 };
 
 export const exportMarkdowns = async (

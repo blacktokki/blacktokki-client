@@ -35,15 +35,12 @@ export const toRaw = (text: string) => {
 };
 
 export type FsData = {
-  contents: { title: string; description?: string }[],
-  jsons: { title: string; data: any }[],
-}
+  contents: { title: string; description?: string }[];
+  jsons: { title: string; data: any }[];
+};
 
 export const markdownFs = () => ({
-  export: async (
-    data : FsData,
-    filename: string
-  ) => {
+  export: async (data: FsData, filename: string) => {
     const md = markdown || (await import('./markdown'));
     return md.exportMarkdowns(data.contents, data.jsons, filename);
   },

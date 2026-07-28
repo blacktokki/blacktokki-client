@@ -1,7 +1,7 @@
-const parser = new DOMParser();
-
 export function extractHtmlLinks(text: string) {
+  if (typeof DOMParser === 'undefined') return [];
   // 링크 이름과 주소 추출
+  const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'text/html');
   const links = doc.querySelectorAll('a');
 
@@ -19,8 +19,15 @@ export function cleanHtml(
   cleanAnchorTitle: boolean,
   mergeTds: boolean
 ): string {
+  if (typeof DOMParser === 'undefined') {
+    return html.replace(/<div class="yaml-frontmatter"[^>]*>.*?<\/div>/gi, '').trim();
+  }
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
+
+  // 0. 숨김 처리된 메타데이터(.yaml-frontmatter)는 미리보기 및 RenderHtml에서 불필요한 공백을 만들지 않도록 제거
+  const frontmatters = doc.querySelectorAll('.yaml-frontmatter');
+  frontmatters.forEach((el) => el.remove());
 
   // 1. <code> 태그 내부 비우기
   if (cleanCode) {
@@ -61,10 +68,11 @@ export function cleanHtml(
       }
     });
   }
-  return doc.body.innerHTML;
+  return doc.body.innerHTML.trim();
 }
 
 export function findLists(html: string): { type: 'ul' | 'ol'; items: string[] }[] {
+  if (typeof DOMParser === 'undefined') return [];
   // 리스트 추출
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');

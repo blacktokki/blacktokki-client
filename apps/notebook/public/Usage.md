@@ -124,6 +124,12 @@ An environment where you can organize the app's features into distinct 'Notebook
 * Changes in one mode are reflected in real-time in the other.
 * Ideal for users who prefer visual editing or are familiar with markdown syntax.
 
+### 🏷️ YAML Frontmatter Preservation and Metadata Support
+
+* Automatically recognizes and protects **YAML Frontmatter (`--- ... ---`)** metadata blocks at the top of markdown documents.
+* During visual (WYSIWYG) editing, the frontmatter block is safely hidden to prevent accidental modification, and is preserved verbatim (100% untouched) upon markdown mode switching, note saving, and archive export.
+* Fully compatible with markdown files created in external tools like Obsidian or Jekyll that contain document metadata.
+
 ### 📑 Automatic Section Detection
 
 * Headings within notes are automatically structured into a navigable tree view.

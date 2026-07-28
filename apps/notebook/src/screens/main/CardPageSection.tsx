@@ -199,7 +199,7 @@ const CardDescriptionHtml = React.memo(
       [borderColor, smallTextColor, textColor]
     );
 
-    if (!description || !description.trim()) {
+    if (!source.html || !source.html.trim()) {
       const displayTitle = item.title ? item.title.split('/').pop() : '';
       return (
         <View

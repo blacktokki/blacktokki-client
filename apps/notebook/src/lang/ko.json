@@ -177,5 +177,11 @@
   "Failed to save notebook.": "노트북 저장에 실패했습니다.",
   "PC folder direct integration is not supported in this browser.": "이 브라우저에서는 PC 폴더 직접 연동이 지원되지 않습니다.",
   "Failed to select folder.": "폴더 선택에 실패했습니다.",
-  " items": "개 항목"
+  " items": "개 항목",
+  "PDF Export (Default Style)": "PDF 다운로드 (기본 스타일 - 인쇄 최적화)",
+  "Export the current note as a PDF document with default clean styling optimized for printing.": "현재 노트를 배경을 흰색으로, 글자색을 검은색으로 고정하여 인쇄에 최적화된 기본 스타일로 PDF 문서로 다운로드합니다.",
+  "PDF Export (Theme Style)": "PDF 다운로드 (현재 테마 스타일 - 테마 유지)",
+  "Export the current note as a PDF document retaining the active theme styling.": "현재 노트를 활성화된 테마(다크 모드, 스킨 등)의 색상 스타일을 유지하여 PDF 문서로 다운로드합니다.",
+  "PDF Export (Midnight Style)": "PDF 다운로드 (미드나이트 스타일 - 프리미엄 다크)",
+  "Export the current note as a PDF document styled with a premium midnight blue dark theme.": "현재 노트를 코딩 및 기술 문서에 최적화된 프리미엄 미드나이트 블루 다크 테마로 스타일링하여 PDF 문서로 다운로드합니다."
 }

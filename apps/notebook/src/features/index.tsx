@@ -3,18 +3,21 @@ import { NavigationConfig } from '@blacktokki/navigation';
 import React from 'react';
 
 import { SearchPageScreen } from './agent/SearchPageScreen';
+import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
+import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
+import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
+import PdfExportThemeSection from './pdf/PdfExportThemeSection';
 import ProblemButton from './problem/ProblemButton';
 import { ProblemsScreen } from './problem/ProblemScreen';
 import QuickMemoButton from './quickMemo/QuickMemoButton';
 import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
+import RandomButton from './random/RandomButton';
 import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';
 import { createCommonStyles as createNamuwikiStyles } from './themeNamuwiki/styles';
 import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
 import { features } from '../hooks/useExtension';
-import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
-import RandomButton from './random/RandomButton';
 import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
 
 features['quickMemo'] = {
@@ -125,6 +128,38 @@ features['random'] = {
       Component: <RandomButton key={'random'} />,
     },
   ],
+};
+
+features['pdfExportDefault'] = {
+  title: 'PDF Export (Default Style)',
+  description:
+    'Export the current note as a PDF document with default clean styling optimized for printing.',
+  isDefault: false,
+  screens: {},
+  NoteSections: [],
+  HeaderIconButtons: [PdfExportDefaultSection],
+  elements: [],
+};
+
+features['pdfExportTheme'] = {
+  title: 'PDF Export (Theme Style)',
+  description: 'Export the current note as a PDF document retaining the active theme styling.',
+  isDefault: false,
+  screens: {},
+  NoteSections: [],
+  HeaderIconButtons: [PdfExportThemeSection],
+  elements: [],
+};
+
+features['pdfExportMidnight'] = {
+  title: 'PDF Export (Midnight Style)',
+  description:
+    'Export the current note as a PDF document styled with a premium midnight blue dark theme.',
+  isDefault: false,
+  screens: {},
+  NoteSections: [],
+  HeaderIconButtons: [PdfExportMidnightSection],
+  elements: [],
 };
 
 features['themeVscode'] = {

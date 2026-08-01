@@ -148,6 +148,17 @@ export const NotePageScreen: React.FC = () => {
                   onPress={() => toggleFullParagraph(!fullParagraph)}
                 />
               )}
+              {!archive &&
+                (_window === 'landscape' || toc) &&
+                extension.feature.HeaderIconButtons?.map((HeaderIconButtonComponent, i) => (
+                  <HeaderIconButtonComponent
+                    key={i}
+                    title={page?.title || ''}
+                    path={paragraphItem?.path}
+                    fullParagraph={fullParagraph}
+                    paragraphs={paragraphs}
+                  />
+                ))}
               {!paragraph && !archive && (_window === 'landscape' || !toc) && (
                 <HeaderIconButton
                   name="th-large"

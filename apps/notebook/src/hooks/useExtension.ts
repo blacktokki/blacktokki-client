@@ -34,6 +34,7 @@ type Feature = {
   search?: SearchFeature;
   elements: { type: ElementType; Component: React.JSX.Element }[];
   NoteSections: ((props: NoteSectionProps) => React.JSX.Element)[];
+  HeaderIconButtons?: ((props: NoteSectionProps) => React.JSX.Element)[];
   extraArchiveButtons?: ((props: { id: number; title: string }) => React.JSX.Element)[];
   createCommonStylesList?: ((colorScheme: 'light' | 'dark') => any)[];
 };
@@ -47,11 +48,14 @@ const getDefaultConfig = () => {
 const getExtension = (config: string[]) => {
   const feature = config.reduce(
     (prev, curr) => {
-      const feat = features[curr as keyof typeof features];
+      const feat = features[curr as keyof typeof features];      
       const _search = prev.search;
       prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
       prev.elements = [...prev.elements, ...feat.elements];
       prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
+      if (feat.HeaderIconButtons) {
+        prev.HeaderIconButtons = [...(prev.HeaderIconButtons || []), ...feat.HeaderIconButtons];
+      }
       if (prev.extraArchiveButtons && feat.extraArchiveButtons) {
         prev.extraArchiveButtons = [...prev.extraArchiveButtons, ...feat.extraArchiveButtons];
       }
@@ -66,9 +70,12 @@ const getExtension = (config: string[]) => {
     {
       elements: [],
       NoteSections: [],
+      HeaderIconButtons: [],
       extraArchiveButtons: [],
       createCommonStylesList: [],
-    } as Feature
+    } as Feature & {
+      HeaderIconButtons: ((props: NoteSectionProps) => React.JSX.Element)[];
+    }
   );
   return {
     info: Object.entries(features).map(([k, v]) => ({

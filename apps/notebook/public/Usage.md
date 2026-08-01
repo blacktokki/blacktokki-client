@@ -267,6 +267,17 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 * Open a randomly selected note to discover content from a new perspective.
 
+### 📄 PDF Export (Default Style)
+
+* Export or print the current note (or selected sub-paragraph) as a PDF document with default clean styling optimized for printing.
+* Forces a clean white background and black text, optimized for printing and standard document sharing.
+* Click the print icon button at the top of the note viewing screen to export.
+
+### 📄 PDF Export (Theme Style)
+
+* Export the current note (or selected sub-paragraph) as a PDF document retaining your active theme colors (dark mode, skins, etc.).
+* Click the PDF icon button at the top of the note viewing screen to export.
+
 ---
 
 ## 📞 Contact

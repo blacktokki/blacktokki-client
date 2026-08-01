@@ -291,7 +291,7 @@ const ContentGroupSection = (props: Props) => {
           }
         : undefined,
       // 옵션: 지연 없이 클릭 즉시 이동 처리 (기존 로직 동일 구현)
-      { delay: 500, preventSingleOnDouble: false }
+      { delay: 500, preventSingleOnDouble: false, key: content.id}
     );
   };
 

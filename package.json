@@ -2,7 +2,7 @@
   "private": true,
   "name": "blacktokki-client",
   "scripts": {
-    "postinstall": "bash .agents/skills/install.sh",
+    "postinstall": "bash .agents/skills/setup.sh",
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "expo-blank": "yarn workspace @blacktokki/expo-blank",

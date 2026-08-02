@@ -63,3 +63,4 @@ xcuserdata
 
 # Downloaded AI skills
 .agents/skills/harness-diagnostics
+.agents/skills/adr-skill

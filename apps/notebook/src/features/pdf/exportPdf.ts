@@ -134,6 +134,7 @@ export const exportPdf = async (
         border-collapse: collapse;
         width: 100%;
         margin: 16px 0;
+        table-layout: fixed;
       }
       table, th, td {
         border: 1px solid ${borderColor};
@@ -141,9 +142,14 @@ export const exportPdf = async (
       th, td {
         padding: 8px 12px;
         text-align: left;
+        word-break: keep-all;
+        overflow-wrap: break-word;
       }
       th {
         background-color: ${codeBgColor};
+      }
+      @page {
+        margin: 0;
       }
       @media print {
         *, ::after, ::before, html, body {
@@ -154,7 +160,7 @@ export const exportPdf = async (
         html, body {
           background-color: ${bgColor} !important;
           color: ${textColor} !important;
-          padding: 0 !important;
+          padding: 5mm !important;
           margin: 0 !important;
         }
       }

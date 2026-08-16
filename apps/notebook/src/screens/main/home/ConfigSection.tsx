@@ -10,18 +10,12 @@ import { ConfigSection, LanguageConfigSection } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
-import { ColorSchemeName, View, TextInput, TouchableOpacity, Alert } from 'react-native';
-import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { ColorSchemeName, View } from 'react-native';
 
-import { NotebookPathBadge, NotebookStorageFormSection } from './StoragePathSection';
 import { SearchList } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
 import { useKeywords, useResetKeyowrd } from '../../../hooks/useKeywordStorage';
-import {
-  useNotebooks,
-  useCreateOrUpdateNotebook,
-  useDeleteNotebook,
-} from '../../../hooks/useNotebookStorage';
+import { useNotebooks } from '../../../hooks/useNotebookStorage';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import {
   usePrivate,
@@ -31,8 +25,7 @@ import {
 } from '../../../hooks/usePrivate';
 import { useSetUsageMode, useUsageMode } from '../../../hooks/useUsageMode';
 import AccountEditModal from '../../../modals/AccountEditModal';
-import { getStorageConfig } from '../../../services/storage';
-import { NavigationParamList, NotebookOption } from '../../../types';
+import { NavigationParamList } from '../../../types';
 
 export const SkinConfigSection = () => {
   const { lang } = useLangContext();
@@ -107,35 +100,20 @@ export default () => {
   const setUsageMode = useSetUsageMode();
   const { data: extension } = useExtension();
 
-  // 노트북 상태 및 훅 추가
   const { data: notebooks = [] } = useNotebooks();
-  const { notebook: currentNotebook } = useUsageMode();
-  const currentNotebookId = currentNotebook?.id || 0;
-  const createNotebook = useCreateOrUpdateNotebook();
-  const deleteNotebook = useDeleteNotebook();
 
-  const [isAddingNotebook, setIsAddingNotebook] = useState(false);
-  const [editingNotebookId, setEditingNotebookId] = useState<number | undefined>();
-  const [newNotebookTitle, setNewNotebookTitle] = useState('');
-  const [newNotebookDescription, setNewNotebookDescription] = useState('');
-  const [newNotebookType, setNewNotebookType] =
-    useState<NotebookOption['NOTEBOOK_TYPE']>('WORKSPACE');
-  const [newNbPathName, setNewNbPathName] = useState('');
-  const [newNbHandle, setNewNbHandle] = useState<any>(null);
-  const [titleError, setTitleError] = useState(false);
-  const [storageError, setStorageError] = useState(false);
-
-  // 모드별 설명
-
-  // 프라이빗 모드 여부에 따른 노트북 필터링 (비활성화 시 프라이빗 노트북 숨김)
-  const visibleNotebooks = privateConfig.enabled
-    ? notebooks
-    : notebooks.filter((nb) => !nb.option?.NOTEBOOK_TYPE?.includes('PRIVATE'));
-
-  // 프라이빗 모드 여부에 따른 생성 가능 하위 모드 필터링
-  const availableNotebookTypes: NotebookOption['NOTEBOOK_TYPE'][] = privateConfig.enabled
-    ? ['PRIVATE_NOTE', 'WORKSPACE', 'PRIVATE_WORKSPACE']
-    : ['WORKSPACE'];
+  const getUsageModeDescription = (mode: string) => {
+    switch (mode) {
+      case 'SIMPLE':
+        return lang('A lightweight environment providing only essential features.');
+      case 'NOTE':
+        return lang('Provides all knowledge management features except boards.');
+      case 'NOTEBOOK':
+        return lang('An integrated environment with all features including boards.');
+      default:
+        return '';
+    }
+  };
 
   return (
     <View>
@@ -187,386 +165,35 @@ export default () => {
             </>
           )}
 
-          {/* 통합된 사용 모드 및 노트북/프라이빗 관리 영역 */}
+          {/* 모드 설정 및 프라이빗 모드 설정 영역 */}
           {noteConfig === 'usage' && (
             <View style={{ marginTop: 12 }}>
-              <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 12 }]}>
+              {/* Usage Mode 설정 (현재 선택된 모드에 대해서만 설명 표시) */}
+              <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
                 {lang('Usage Mode')}
               </Text>
-              <View
-                style={{
-                  padding: 12,
-                  borderWidth: 1,
-                  borderColor: commonStyles.card.borderColor,
-                  borderRadius: 8,
-                  marginBottom: 16,
-                }}
-              >
-                {/* 간단 모드 */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'column',
-                    paddingVertical: 10,
-                    borderBottomWidth: 1,
-                    borderBottomColor: commonStyles.card.borderColor,
-                  }}
+              <Text style={[commonStyles.smallText, { marginBottom: 8, color: 'gray' }]}>
+                {usageMode && getUsageModeDescription(usageMode)}
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
+                <OptionButton
+                  title={lang('Simple Mode')}
+                  onPress={() => setUsageMode.mutate({ mode: 'SIMPLE' })}
+                  active={usageMode === 'SIMPLE'}
+                />
+                <OptionButton
+                  title={lang('Note Mode')}
+                  onPress={() => setUsageMode.mutate({ mode: 'NOTE' })}
+                  active={usageMode === 'NOTE'}
+                />
+                <OptionButton
+                  title={lang('Notebook Mode')}
                   onPress={() => {
-                    setUsageMode.mutate({ mode: 'SIMPLE' });
+                    const firstId = notebooks[0]?.id;
+                    setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: firstId });
                   }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MciIcon
-                      name="file-document-outline"
-                      size={18}
-                      color={
-                        usageMode === 'SIMPLE' ? '#3498DB' : (commonStyles.text.color as string)
-                      }
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text
-                      style={[
-                        commonStyles.text,
-                        usageMode === 'SIMPLE' && {
-                          color: '#3498DB',
-                          fontWeight: 'bold',
-                          textDecorationLine: 'underline',
-                        },
-                      ]}
-                    >
-                      {lang('Simple Mode')}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      commonStyles.smallText,
-                      { marginTop: 4, marginLeft: 26, color: 'gray' },
-                    ]}
-                  >
-                    {lang('A lightweight environment providing only essential features.')}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 노트 모드 */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'column',
-                    paddingVertical: 10,
-                    borderBottomWidth: 1,
-                    borderBottomColor: commonStyles.card.borderColor,
-                  }}
-                  onPress={() => {
-                    setUsageMode.mutate({ mode: 'NOTE' });
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MciIcon
-                      name="file-document-multiple-outline"
-                      size={18}
-                      color={usageMode === 'NOTE' ? '#3498DB' : (commonStyles.text.color as string)}
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text
-                      style={[
-                        commonStyles.text,
-                        usageMode === 'NOTE' && {
-                          color: '#3498DB',
-                          fontWeight: 'bold',
-                          textDecorationLine: 'underline',
-                        },
-                      ]}
-                    >
-                      {lang('Note Mode')}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      commonStyles.smallText,
-                      { marginTop: 4, marginLeft: 26, color: 'gray' },
-                    ]}
-                  >
-                    {lang('Provides all knowledge management features except boards.')}
-                  </Text>
-                </TouchableOpacity>
-
-                {visibleNotebooks.map((nb) => {
-                  const isActive = usageMode === 'NOTEBOOK' && currentNotebookId === nb.id;
-                  return (
-                    <View
-                      key={nb.id}
-                      style={{
-                        flexDirection: 'column',
-                        paddingVertical: 10,
-                        borderBottomWidth: 1,
-                        borderBottomColor: commonStyles.card.borderColor,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <TouchableOpacity
-                          style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
-                          onPress={() => {
-                            setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: nb.id });
-                          }}
-                        >
-                          <MciIcon
-                            name="notebook-outline"
-                            size={18}
-                            color={isActive ? '#3498DB' : (commonStyles.text.color as string)}
-                            style={{ marginRight: 8 }}
-                          />
-                          <Text
-                            style={[
-                              commonStyles.text,
-                              isActive && {
-                                color: '#3498DB',
-                                fontWeight: 'bold',
-                                textDecorationLine: 'underline',
-                              },
-                            ]}
-                          >
-                            {nb.title}{' '}
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                color: 'gray',
-                                textDecorationLine: 'none',
-                                fontWeight: 'normal',
-                              }}
-                            >
-                              ({lang('Notebook Mode')} - {lang(nb.option?.NOTEBOOK_TYPE || '')})
-                            </Text>
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setEditingNotebookId(nb.id);
-                            setNewNotebookTitle(nb.title);
-                            setNewNotebookDescription(nb.description || '');
-                            setNewNotebookType(nb.option?.NOTEBOOK_TYPE || 'WORKSPACE');
-                            setIsAddingNotebook(false);
-                            setTitleError(false);
-                            setStorageError(false);
-                            getStorageConfig(nb.id).then((conf) => {
-                              setNewNbPathName(conf.pathName || `notebook-${nb.id}`);
-                              setNewNbHandle(conf.handle || null);
-                            });
-                          }}
-                        >
-                          <Text style={{ color: '#3498DB', paddingHorizontal: 8 }}>
-                            {lang('Edit')}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => deleteNotebook.mutate(nb.id)}>
-                          <Text style={{ color: '#d9534f', paddingHorizontal: 8 }}>
-                            {lang('Delete')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                      <Text
-                        style={[
-                          commonStyles.smallText,
-                          { marginTop: 4, marginLeft: 26, color: 'gray' },
-                        ]}
-                      >
-                        {nb.description}
-                      </Text>
-                      {auth.isLocal && <NotebookPathBadge nbId={nb.id} updated={nb.updated} />}
-                    </View>
-                  );
-                })}
-
-                {/* 새 노트북 추가 폼 */}
-                {isAddingNotebook || editingNotebookId !== undefined ? (
-                  <View
-                    style={{
-                      marginTop: 12,
-                      padding: 12,
-                      backgroundColor: commonStyles.input.backgroundColor,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: commonStyles.card.borderColor,
-                    }}
-                  >
-                    <TextInput
-                      style={[
-                        commonStyles.input,
-                        {
-                          backgroundColor: 'transparent',
-                          borderColor: titleError
-                            ? commonStyles.button.backgroundColor
-                            : commonStyles.input.borderColor,
-                          borderWidth: titleError ? 1.5 : commonStyles.input.borderWidth || 1,
-                        },
-                      ]}
-                      placeholder={lang('Enter Notebook Title')}
-                      placeholderTextColor={
-                        titleError
-                          ? commonStyles.button.backgroundColor
-                          : commonStyles.placeholder.color
-                      }
-                      value={newNotebookTitle}
-                      onChangeText={(t) => {
-                        setNewNotebookTitle(t);
-                        if (t.trim()) setTitleError(false);
-                      }}
-                    />
-                    {titleError && (
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          marginTop: 4,
-                          marginLeft: 4,
-                        }}
-                      >
-                        <MciIcon
-                          name="alert-circle-outline"
-                          size={14}
-                          color={commonStyles.button.backgroundColor}
-                          style={{ marginRight: 4 }}
-                        />
-                        <Text
-                          style={{
-                            color: commonStyles.button.backgroundColor,
-                            fontSize: 12,
-                            fontWeight: '500',
-                          }}
-                        >
-                          {lang('Please enter a notebook title.')}
-                        </Text>
-                      </View>
-                    )}
-
-                    <TextInput
-                      style={[commonStyles.input, { backgroundColor: 'transparent' }]}
-                      placeholder={lang('Enter Notebook Description')}
-                      placeholderTextColor={commonStyles.placeholder.color}
-                      value={newNotebookDescription}
-                      onChangeText={setNewNotebookDescription}
-                    />
-
-                    {auth.isLocal && (
-                      <NotebookStorageFormSection
-                        pathName={newNbPathName}
-                        setPathName={(s) => {
-                          setNewNbPathName(s);
-                          if (s) setStorageError(false);
-                        }}
-                        setHandle={(h) => {
-                          setNewNbHandle(h);
-                          if (h) setStorageError(false);
-                        }}
-                        hasError={storageError}
-                      />
-                    )}
-
-                    <Text style={[commonStyles.smallText, { marginBottom: 4 }]}>
-                      {lang('Select Sub-mode:')}
-                    </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 }}>
-                      {availableNotebookTypes.map((type) => (
-                        <OptionButton
-                          key={type}
-                          title={lang(type)}
-                          active={newNotebookType === type}
-                          onPress={() => setNewNotebookType(type)}
-                        />
-                      ))}
-                    </View>
-                    <Text style={[commonStyles.smallText, { marginBottom: 12, color: 'gray' }]}>
-                      {lang(
-                        newNotebookType === 'WORKSPACE' || newNotebookType === 'PRIVATE_WORKSPACE'
-                          ? 'An integrated environment with all features including boards.'
-                          : 'An environment managed by dynamically added notebooks with isolated namespaces.'
-                      )}
-                    </Text>
-
-                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setIsAddingNotebook(false);
-                          setEditingNotebookId(undefined);
-                          setNewNotebookTitle('');
-                          setNewNotebookDescription('');
-                          setNewNotebookType('WORKSPACE');
-                          setNewNbPathName('');
-                          setNewNbHandle(null);
-                          setTitleError(false);
-                          setStorageError(false);
-                        }}
-                        style={{ marginRight: 16, padding: 8 }}
-                      >
-                        <Text style={commonStyles.smallText}>{lang('cancel')}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={async () => {
-                          let hasErr = false;
-                          if (!newNotebookTitle.trim()) {
-                            setTitleError(true);
-                            hasErr = true;
-                          } else {
-                            setTitleError(false);
-                          }
-                          if (auth.isLocal && !newNbHandle) {
-                            setStorageError(true);
-                            hasErr = true;
-                          } else {
-                            setStorageError(false);
-                          }
-                          if (hasErr) return;
-
-                          try {
-                            await createNotebook.mutateAsync({
-                              id: editingNotebookId,
-                              title: newNotebookTitle,
-                              description: newNotebookDescription,
-                              notebookType: newNotebookType,
-                              storageConfig: auth.isLocal
-                                ? {
-                                    pathName: newNbPathName,
-                                    handle: newNbHandle,
-                                  }
-                                : undefined,
-                            });
-                            setNewNotebookTitle('');
-                            setNewNotebookDescription('');
-                            setNewNotebookType('WORKSPACE');
-                            setNewNbPathName('');
-                            setNewNbHandle(null);
-                            setIsAddingNotebook(false);
-                            setEditingNotebookId(undefined);
-                            setTitleError(false);
-                            setStorageError(false);
-                          } catch (e: any) {
-                            Alert.alert(
-                              lang('error'),
-                              e.message || lang('Failed to save notebook.')
-                            );
-                          }
-                        }}
-                        style={{ padding: 8 }}
-                      >
-                        <Text style={{ color: '#3498DB', fontWeight: 'bold' }}>
-                          {lang(editingNotebookId ? 'Edit' : 'Add')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={{ marginTop: 12, paddingVertical: 8 }}
-                    onPress={() => {
-                      setIsAddingNotebook(true);
-                      setNewNbPathName('');
-                      setNewNbHandle(null);
-                      setTitleError(false);
-                      setStorageError(false);
-                    }}
-                  >
-                    <Text style={{ color: '#3498DB', fontWeight: '500' }}>
-                      + {lang('Add Notebook Mode')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                  active={usageMode === 'NOTEBOOK'}
+                />
               </View>
 
               {/* Private Mode 설정 영역 */}

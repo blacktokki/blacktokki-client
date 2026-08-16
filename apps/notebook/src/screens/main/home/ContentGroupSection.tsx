@@ -1,9 +1,10 @@
-import { useLangContext, useResizeContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext, useModalsContext } from '@blacktokki/core';
 import { navigate, push } from '@blacktokki/navigation';
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleProp, ViewStyle, View } from 'react-native';
 import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
+import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
@@ -18,6 +19,7 @@ import {
 } from '../../../hooks/useTabStorage';
 import { useTapDetector } from '../../../hooks/useTapDetector';
 import { useUsageMode } from '../../../hooks/useUsageMode';
+import UsageModeModal from '../../../modals/UsageModeModal';
 import { Content } from '../../../types';
 
 // --- Helpers ---
@@ -28,6 +30,25 @@ export const CountBadge = ({ count }: { count: number }) => (
   <View style={{ alignSelf: 'center', backgroundColor: 'transparent' }}>
     {count > 0 && <Badge>{count}</Badge>}
   </View>
+);
+
+export const RippleIconButton = (props: {
+  onPress: () => void;
+  itemPadding: number;
+  children: React.ReactNode;
+}) => (
+  <TouchableRipple
+    onPress={props.onPress}
+    style={{
+      justifyContent: 'center',
+      borderRadius: props.itemPadding,
+      width: 40 + props.itemPadding * 2,
+      height: 40 + props.itemPadding * 2,
+      margin: -props.itemPadding,
+    }}
+  >
+    {props.children}
+  </TouchableRipple>
 );
 
 export const toRecentContents = (data: Content[]) =>
@@ -291,7 +312,7 @@ const ContentGroupSection = (props: Props) => {
           }
         : undefined,
       // 옵션: 지연 없이 클릭 즉시 이동 처리 (기존 로직 동일 구현)
-      { delay: 500, preventSingleOnDouble: false, key: content.id}
+      { delay: 500, preventSingleOnDouble: false, key: content.id }
     );
   };
 
@@ -490,18 +511,12 @@ const ContentGroupSection = (props: Props) => {
             right={
               props.type === 'PAGE'
                 ? () => (
-                    <TouchableRipple
+                    <RippleIconButton
                       onPress={() => deleteRecent.mutate(v.id)}
-                      style={{
-                        justifyContent: 'center',
-                        borderRadius: itemPadding,
-                        width: 40 + itemPadding * 2,
-                        height: 40 + itemPadding * 2,
-                        margin: -itemPadding,
-                      }}
+                      itemPadding={itemPadding}
                     >
                       <List.Icon style={{ left: itemPadding - 7 }} icon={'close'} />
-                    </TouchableRipple>
+                    </RippleIconButton>
                   )
                 : undefined
             }
@@ -559,16 +574,48 @@ export const CurrentTabSection = () => {
 
 export const TabsSection = () => {
   const { lang } = useLangContext();
-  const { notebook } = useUsageMode();
+  const { setModal } = useModalsContext();
+  const itemPadding = useResizeContext() === 'landscape' ? 5 : 8;
+  const { usageMode, notebook } = useUsageMode();
   const { commonStyles } = useNotebookTheme();
+  const titleText = notebook?.title ? `${lang('Tab List')} - ${notebook.title}` : lang('Tab List');
+
   return (
     <View style={commonStyles.backgroundContainer}>
-      <List.Subheader
-        selectable={false}
-        style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
       >
-        {notebook?.title ? `${lang('Tab List')} - ${notebook.title}` : lang('Tab List')}
-      </List.Subheader>
+        <List.Subheader
+          selectable={false}
+          style={{
+            fontFamily: commonStyles.title.fontFamily,
+            color: commonStyles.title.color,
+            flex: 1,
+          }}
+        >
+          {titleText}
+        </List.Subheader>
+
+        {usageMode !== 'SIMPLE' && (
+          <View style={{ flexDirection: 'row' }}>
+            <RippleIconButton
+              onPress={() => setModal(UsageModeModal, {})}
+              itemPadding={itemPadding}
+            >
+              <MciIcon
+                style={{ left: itemPadding + 8 }}
+                name="format-list-bulleted"
+                size={20}
+                color={commonStyles.title.color as string}
+              />
+            </RippleIconButton>
+          </View>
+        )}
+      </View>
       <ContentGroupSection type={'PAGE'} />
     </View>
   );

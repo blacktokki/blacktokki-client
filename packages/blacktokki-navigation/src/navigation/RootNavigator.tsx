@@ -53,6 +53,8 @@ function HeaderLeft({navigation, route, config}:{
   return null;
 }
 
+const DefaultExtraProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
+
 export default ({ config }: { config: NavigationConfig }) => {
   const isMobile = useIsMobile();
   const { auth } = useAuthContext();
@@ -68,7 +70,7 @@ export default ({ config }: { config: NavigationConfig }) => {
     return !auth.isLogin ? [] : config.modals;
   }, [auth]);
   const backgroundStyle = theme === 'light' ? {} : { backgroundColor: '#010409' };
-  const ExtraProvider:React.ComponentType<any> = config.ExtraProvider || ((props) => props.children);
+  const ExtraProvider:React.ComponentType<any> = config.ExtraProvider || DefaultExtraProvider;
   return auth.user !== undefined ? (
     <View style={{ flexDirection: 'row', flex: 1 }}>
       <ModalsProvider modals={modalValues}>

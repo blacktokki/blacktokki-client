@@ -1,5 +1,5 @@
 import { useLangContext, Spacer } from '@blacktokki/core';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, FlatList, Text } from 'react-native';
 import { List, Switch } from 'react-native-paper';
 
@@ -13,6 +13,30 @@ export const ExtensionScreen: React.FC = () => {
 
   const { data: extension } = useExtension();
   const setExtensionConfig = useSetExtensionConfig();
+
+  const renderItem = useCallback(
+    ({ item }: { item: (typeof extension.info)[number] }) => {
+      return (
+        <List.Item
+          title={lang(item.title)}
+          description={lang(item.description)}
+          style={[commonStyles.card, { marginBottom: 16, paddingVertical: 8 }]}
+          right={() => (
+            <Switch
+              style={{ marginTop: 4 }}
+              value={item.active}
+              onValueChange={() =>
+                setExtensionConfig.mutate({ key: item.key, value: !item.active })
+              }
+            />
+          )}
+        />
+      );
+    },
+    [commonStyles, lang, setExtensionConfig]
+  );
+
+  const ItemSeparator = useCallback(() => <Spacer height={4} />, []);
 
   return (
     <>
@@ -33,25 +57,8 @@ export const ExtensionScreen: React.FC = () => {
           data={extension.info}
           keyExtractor={(item) => item.key}
           style={commonStyles.container}
-          renderItem={({ item }) => {
-            return (
-              <List.Item
-                title={lang(item.title)}
-                description={lang(item.description)}
-                style={[commonStyles.card, { marginBottom: 16, paddingVertical: 8 }]}
-                right={() => (
-                  <Switch
-                    style={{ marginTop: 4 }}
-                    value={item.active}
-                    onValueChange={() =>
-                      setExtensionConfig.mutate({ key: item.key, value: !item.active })
-                    }
-                  />
-                )}
-              />
-            );
-          }}
-          ItemSeparatorComponent={() => <Spacer height={4} />}
+          renderItem={renderItem}
+          ItemSeparatorComponent={ItemSeparator}
         />
       </View>
     </>

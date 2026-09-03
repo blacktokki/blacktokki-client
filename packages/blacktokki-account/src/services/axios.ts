@@ -4,6 +4,9 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 const API_URL = 'https://blacktokki.kro.kr';
 
 const needRefresh = (response: AxiosResponse<any, any>) => {
+  if (response.config.url?.includes('/api/v1/user/token/refresh/')) {
+    return false;
+  }
   return (
     (response.config.url === '/api/v1/user/?self=true' &&
       response.request.responseURL.endsWith('account/login')) ||
@@ -44,18 +47,23 @@ export const axiosCreate = (service: string) => {
 const account = axiosCreate('account');
 
 export const refreshToken = async (resetRoles?: boolean) => {
-  return getToken().then(async (token) => {
-    if (token) {
+  const token = await getToken();
+  if (token) {
+    try {
       const r = await account.post(
         '/api/v1/user/token/refresh/',
         { token, resetRoles },
         { headers: { Authorization: '' } }
       );
-      if (r.status === 200 && r.data !== '') {
+      if (r.status === 200) {
         await setToken(r.data);
+      } else {
+        await setToken(null);
       }
+    } catch (error) {
+      await setToken(null);
     }
-  });
+  }
 };
 
 export const setToken = async (token: string | null) => {

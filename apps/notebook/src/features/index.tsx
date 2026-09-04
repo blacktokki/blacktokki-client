@@ -2,7 +2,7 @@ import { Auth } from '@blacktokki/account';
 import { NavigationConfig } from '@blacktokki/navigation';
 import React from 'react';
 
-import { SearchPageScreen } from './agent/SearchPageScreen';
+import { SearchPageScreen } from './search/SearchPageScreen';
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';

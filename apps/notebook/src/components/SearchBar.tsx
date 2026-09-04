@@ -274,7 +274,7 @@ export const SearchBar: React.FC<
   const { data: boards = [] } = useBoardPages();
   const { usageMode } = useUsageMode();
   const { data: extension } = useExtension();
-  const useTextSearchExact = !auth.isLocal && useTextSearch && !!extension.feature.search;
+  const useTextSearchExact = useTextSearch && !!extension.feature.search;
 
   const filteredPages: SearchContent[] = (
     searchText.length > 0

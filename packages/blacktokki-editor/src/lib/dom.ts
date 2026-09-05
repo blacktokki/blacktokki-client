@@ -104,3 +104,32 @@ export function findLists(html: string): { type: 'ul' | 'ol'; items: string[] }[
 
   return results;
 }
+
+export const cleanId = (text: string) =>
+  text
+    .trim()
+    .toLowerCase() // 1. 소문자로 전환
+    .replace(/[()]/g, '') // 2. 소괄호 제거
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '') // 3. 이모지 완벽 제거 (ES2018 정규식)
+    .replace(/\s+/g, '-'); // 4. 공백을 하이픈으로 치환
+
+export const toRaw = (text: string) => {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    const frontmatters = doc.querySelectorAll('.yaml-frontmatter');
+    frontmatters.forEach((el) => el.remove());
+    return doc.body.textContent || '';
+  }
+  return text
+    .replace(/<div class="yaml-frontmatter"[^>]*>.*?<\/div>/gi, '')
+    .replaceAll(/\n/g, '')
+    .replaceAll(/<hr\s*[/]?>\n/gi, '')
+    .replaceAll(/&nbsp;/gi, ' ')
+    .replaceAll(/<br\s*[/]?>/gi, '\r\n')
+    .replaceAll(/<\/?[^>]*>/gi, '');
+};
+
+export type FsData = {
+  contents: { title: string; description?: string }[];
+  jsons: { title: string; data: any }[];
+};

@@ -1,6 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
 import { useLangContext } from '@blacktokki/core';
-import { toHtml } from '@blacktokki/editor';
 import { useIsFocused } from '@react-navigation/core';
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } from 'react-query';
@@ -303,6 +302,7 @@ export const useNoteViewers = () => {
   return useQuery({
     queryKey: ['viewerContents', locale],
     queryFn: async () => {
+      const { toHtml } = await import('@blacktokki/editor');
       return await Promise.all(
         ['Usage'].map(async (key) => {
           const title = lang(key);

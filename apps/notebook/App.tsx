@@ -1,39 +1,30 @@
+import { AuthProvider } from '@blacktokki/account';
 import { IntlProvider, useInitColorScheme } from '@blacktokki/core';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
-import React, { Suspense } from 'react';
+import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from 'react-query';
+
+import Navigation from './src/navigation';
+
+const queryClient = new QueryClient();
+
+const ko = require('./src/lang/ko.json');
 
 export default function App() {
-  const AuthProvider = React.lazy(() =>
-    import('@blacktokki/account').then((m) => ({ default: m.AuthProvider }))
-  );
-  const QueryClientProvider = React.lazy(() =>
-    import('react-query').then(({ QueryClient, QueryClientProvider }) => {
-      const queryClient = new QueryClient();
-      return {
-        default: (props: { children: React.ReactNode }) => (
-          <QueryClientProvider client={queryClient}>{props.children}</QueryClientProvider>
-        ),
-      };
-    })
-  );
-  const ko = require('./src/lang/ko.json');
-  const Navigation = React.lazy(() => import('./src/navigation'));
   const isAppearenceComplete = useInitColorScheme();
 
   return isAppearenceComplete ? (
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      <Suspense fallback={<></>}>
-        <AuthProvider guestType="local">
-          <QueryClientProvider>
-            <IntlProvider translations={{ ko }}>
-              <Navigation />
-            </IntlProvider>
-          </QueryClientProvider>
-        </AuthProvider>
-      </Suspense>
+      <AuthProvider guestType="local">
+        <QueryClientProvider client={queryClient}>
+          <IntlProvider translations={{ ko }}>
+            <Navigation />
+          </IntlProvider>
+        </QueryClientProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   ) : (
     <></>

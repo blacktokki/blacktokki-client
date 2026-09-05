@@ -1,6 +1,7 @@
 import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { login, Navigation, NavigationConfig } from '@blacktokki/navigation';
-import React, { Suspense, useMemo } from 'react';
+import * as Linking from 'expo-linking';
+import React, { useMemo } from 'react';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
 
 import { SearchBar } from '../components/SearchBar';
@@ -17,49 +18,24 @@ const HeaderRight = () => {
   return windowType === 'landscape' ? <SearchBar /> : undefined;
 };
 
-const getConfig = async () => {
-  const Linking = await import('expo-linking');
-  return {
-    main: { ...main, ...features(screenTitle) },
-    login,
-    prefixes: [Linking.createURL('/')],
-    rootPath: 'blacktokki-notebook',
-    documentTitle: {
-      formatter: () => {
-        return 'blacktokki-notebook';
-      },
+const getConfig = (): NavigationConfig => ({
+  main: { ...main, ...features(screenTitle) },
+  login,
+  prefixes: [Linking.createURL('/')],
+  rootPath: 'blacktokki-notebook',
+  documentTitle: {
+    formatter: () => {
+      return 'blacktokki-notebook';
     },
-    rootScreen: {
-      main: 'Home',
-      login: 'LoginScreen',
-    },
-    headerLeftIcon: <List.Icon icon="backburger" style={{ left: -18, top: -14 }} />,
-    headerRight: <HeaderRight />,
-    modals,
-    drawer: <Drawer />,
-  } as NavigationConfig;
-};
-
-const NavigationLazy = React.lazy(async () => {
-  const config = await getConfig();
-  return {
-    default: (props: {
-      headerStyle?: any;
-      headerTitleStyle?: any;
-      headerLeftContainerStyle?: any;
-      active: boolean;
-    }) =>
-      props.active && (
-        <Navigation
-          config={{
-            ...config,
-            headerStyle: props.headerStyle,
-            headerTitleStyle: props.headerTitleStyle,
-            headerLeftContainerStyle: props.headerLeftContainerStyle,
-          }}
-        />
-      ),
-  };
+  },
+  rootScreen: {
+    main: 'Home',
+    login: 'LoginScreen',
+  },
+  headerLeftIcon: <List.Icon icon="backburger" style={{ left: -18, top: -14 }} />,
+  headerRight: <HeaderRight />,
+  modals,
+  drawer: <Drawer />,
 });
 
 export default () => {
@@ -94,16 +70,22 @@ export default () => {
       },
     } as typeof preTheme;
   }, [scheme, commonStyles]);
+
+  const config = useMemo(() => getConfig(), []);
+  const isReady = usageMode !== undefined && notebook !== undefined;
+
   return (
     <PaperProvider theme={theme}>
-      <Suspense fallback={<></>}>
-        <NavigationLazy
-          headerStyle={commonStyles.appHeader}
-          headerTitleStyle={commonStyles.appHeaderTitle}
-          headerLeftContainerStyle={commonStyles.appHeaderLeftContainer}
-          active={usageMode !== undefined && notebook !== undefined}
+      {isReady && (
+        <Navigation
+          config={{
+            ...config,
+            headerStyle: commonStyles.appHeader,
+            headerTitleStyle: commonStyles.appHeaderTitle,
+            headerLeftContainerStyle: commonStyles.appHeaderLeftContainer,
+          }}
         />
-      </Suspense>
+      )}
     </PaperProvider>
   );
 };

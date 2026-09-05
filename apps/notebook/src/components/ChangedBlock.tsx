@@ -158,9 +158,10 @@ const getHtmlSplitDiff = (text1: string, text2: string, theme: 'light' | 'dark')
   return `<div class="diff-container" style="width: 100%; background-color: ${colors.containerBg};">${resultHtml}</div>`;
 };
 
+const RenderHtml = React.lazy(() => import('react-native-render-html'));
+
 const DiffPreview = React.memo(
   ({ source, target, theme }: { source?: string; target: string; theme: 'light' | 'dark' }) => {
-    const RenderHtml = React.lazy(() => import('react-native-render-html'));
     const _window = useResizeContext();
 
     const diffRows = useMemo(() => {

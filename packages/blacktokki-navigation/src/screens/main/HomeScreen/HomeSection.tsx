@@ -9,7 +9,7 @@ function firstComponent(tabViews: TabViewOption[], headerTitle?: string) {
   const Component = tabViews[0].component;
   const FirstTabView = (props: any) => {
     const tempref = useRef<NodeJS.Timeout>(undefined);
-    const indexRef = useRef<number>(undefined);
+    const indexRef = useRef<number>(0);
     const { width } = useWindowDimensions();
     const navigation = useNavigation();
     useEffect(() => {
@@ -59,13 +59,11 @@ export default function HomeSection({
   const [home, setHome] = useState(windowType === 'landscape');
   useLayoutEffect(() => {
     const index = route?.params?.tab | 0;
-    setTimeout(() => {
-      navigation.setOptions({
-        ...(windowType === 'portrait' ? tabViews[index] : homeView),
-        ...(headerTitle ? { title: headerTitle } : {}),
-      });
-    }, 1);
-  }, [navigation, route, windowType]);
+    navigation.setOptions({
+      ...(windowType === 'portrait' ? tabViews[index] : homeView),
+      ...(headerTitle ? { title: headerTitle } : {}),
+    });
+  }, [navigation, route, windowType, headerTitle, tabViews, homeView]);
   useEffect(() => {
     setHome(windowType === 'landscape');
   }, [windowType]);

@@ -1,6 +1,7 @@
 import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import React from 'react';
 
+import { cleanId, type FsData } from './dom';
 import { AutoCompleteProps, EditorProps } from '../types';
 
 // import { createRoot } from 'react-dom/client';
@@ -18,45 +19,40 @@ let markdown:
       importMarkdowns: () => Promise<FsData>;
     }
   | undefined;
-import('./markdown').then((value) => {
-  markdown = value;
-});
+
+const getMarkdown = async () => {
+  if (!markdown) {
+    markdown = await import('./markdown');
+  }
+  return markdown;
+};
 
 export const parser = (htmlCode: string) => {
-  return markdown ? markdown.parser(htmlCode) : htmlCode;
+  if (markdown) {
+    return markdown.parser(htmlCode);
+  }
+  getMarkdown();
+  return htmlCode;
 };
 
 export const renderer = (markdownCode: string) => {
-  return markdown ? markdown.renderer(markdownCode) : markdownCode;
-};
-
-export const toRaw = (text: string) => {
-  return markdown ? markdown.toRaw(text) : text;
-};
-
-export type FsData = {
-  contents: { title: string; description?: string }[];
-  jsons: { title: string; data: any }[];
+  if (markdown) {
+    return markdown.renderer(markdownCode);
+  }
+  getMarkdown();
+  return markdownCode;
 };
 
 export const markdownFs = () => ({
   export: async (data: FsData, filename: string) => {
-    const md = markdown || (await import('./markdown'));
+    const md = markdown || (await getMarkdown());
     return md.exportMarkdowns(data.contents, data.jsons, filename);
   },
   import: async () => {
-    const md = markdown || (await import('./markdown'));
+    const md = markdown || (await getMarkdown());
     return md.importMarkdowns();
   },
 });
-
-export const cleanId = (text: string) =>
-  text
-    .trim()
-    .toLowerCase() // 1. 소문자로 전환
-    .replace(/[()]/g, '') // 2. 소괄호 제거
-    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '') // 3. 이모지 완벽 제거 (ES2018 정규식)
-    .replace(/\s+/g, '-'); // 4. 공백을 하이픈으로 치환
 
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,

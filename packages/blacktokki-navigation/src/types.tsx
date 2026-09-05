@@ -28,6 +28,7 @@ export type NavigationConfig = {
   };
   headerLeftIcon: React.JSX.Element;
   headerRight: React.JSX.Element;
+  headerTitle?: (props?: any) => React.ReactNode;
   headerStyle?: any;
   headerTitleStyle?: any;
   headerLeftContainerStyle?: any;

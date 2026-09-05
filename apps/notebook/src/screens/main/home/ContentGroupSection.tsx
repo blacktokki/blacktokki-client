@@ -1,10 +1,9 @@
-import { useLangContext, useResizeContext, useModalsContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { navigate, push } from '@blacktokki/navigation';
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleProp, ViewStyle, View } from 'react-native';
 import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
-import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
@@ -18,8 +17,6 @@ import {
   useReorderRecentTabs,
 } from '../../../hooks/useTabStorage';
 import { useTapDetector } from '../../../hooks/useTapDetector';
-import { useUsageMode } from '../../../hooks/useUsageMode';
-import UsageModeModal from '../../../modals/UsageModeModal';
 import { Content } from '../../../types';
 
 // --- Helpers ---
@@ -577,48 +574,16 @@ export const CurrentTabSection = () => {
 
 export const TabsSection = () => {
   const { lang } = useLangContext();
-  const { setModal } = useModalsContext();
-  const itemPadding = useResizeContext() === 'landscape' ? 5 : 8;
-  const { usageMode, notebook } = useUsageMode();
   const { commonStyles } = useNotebookTheme();
-  const titleText = notebook?.title ? `${lang('Tab List')} - ${notebook.title}` : lang('Tab List');
 
   return (
     <View style={commonStyles.backgroundContainer}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+      <List.Subheader
+        selectable={false}
+        style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
       >
-        <List.Subheader
-          selectable={false}
-          style={{
-            fontFamily: commonStyles.title.fontFamily,
-            color: commonStyles.title.color,
-            flex: 1,
-          }}
-        >
-          {titleText}
-        </List.Subheader>
-
-        {usageMode !== 'SIMPLE' && (
-          <View style={{ flexDirection: 'row' }}>
-            <RippleIconButton
-              onPress={() => setModal(UsageModeModal, {})}
-              itemPadding={itemPadding}
-            >
-              <MciIcon
-                style={{ left: itemPadding + 8 }}
-                name="format-list-bulleted"
-                size={20}
-                color={commonStyles.title.color as string}
-              />
-            </RippleIconButton>
-          </View>
-        )}
-      </View>
+        {lang('Tab List')}
+      </List.Subheader>
       <ContentGroupSection type={'PAGE'} />
     </View>
   );

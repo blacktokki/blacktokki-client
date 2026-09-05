@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import React, { useMemo } from 'react';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
 
+import HeaderNotebookDropdown from '../components/HeaderNotebookDropdown';
 import { SearchBar } from '../components/SearchBar';
 import features from '../features';
 import Drawer from './Drawer';
@@ -34,6 +35,7 @@ const getConfig = (): NavigationConfig => ({
   },
   headerLeftIcon: <List.Icon icon="backburger" style={{ left: -18, top: -14 }} />,
   headerRight: <HeaderRight />,
+  headerTitle: () => <HeaderNotebookDropdown />,
   modals,
   drawer: <Drawer />,
 });

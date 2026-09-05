@@ -88,6 +88,7 @@ export default ({ config }: { config: NavigationConfig }) => {
                   headerTitleStyle: config.headerTitleStyle || { color: Colors[theme].text },
                   headerLeft: () => <HeaderLeft {...{navigation, route, config}}/>,
                   headerRight: () => config.headerRight,
+                  headerTitle: config.headerTitle,
                   headerLeftContainerStyle: config.headerLeftContainerStyle || {
                     backgroundColor: Colors[theme].header,
                     borderBottomWidth: 1,

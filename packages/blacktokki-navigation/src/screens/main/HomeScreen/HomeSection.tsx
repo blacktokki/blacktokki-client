@@ -27,7 +27,7 @@ function firstComponent(tabViews: TabViewOption[], headerTitle?: string) {
             indexRef.current = i;
             navigation.setOptions({
               ...tabViews[i],
-              title: headerTitle ? headerTitle : tabViews[i].title,
+              ...(headerTitle ? { title: headerTitle } : {}),
             });
           }
         });

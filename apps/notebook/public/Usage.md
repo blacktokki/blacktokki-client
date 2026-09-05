@@ -61,7 +61,9 @@
 ---
 
 ## Usage Mode
-You can adjust the app's complexity and features across 3 levels according to your workflow and purpose. You can change the mode setting in `Config > Note Settings > Usage Mode`.
+You can adjust the app's complexity and features across 3 levels according to your workflow and purpose.
+* **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
+* **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Usage Mode`.
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
@@ -75,7 +77,12 @@ Provides pure document writing and knowledge management features without board o
   * Useful for version control and restoring past content.
 
 ### 📓 Notebook Mode
-An environment where you can organize the app's features into distinct 'Notebooks'. When creating a notebook, you can designate its sub-mode such as general workspace, private workspace, or private note.
+An environment where you can organize the app's features into distinct 'Notebooks'. When creating a notebook, you can designate its sub-mode such as general workspace, private workspace, or private note to work in isolated workspaces.
+
+* **Notebook Management via Header Dropdown:**
+  * Click the active notebook title in the top header to view the list of registered notebooks and switch between workspaces instantly.
+  * Click the three-dot menu (⋮) on any notebook item to edit its title, description, sub-mode, or delete it.
+  * Use the `+ Add Notebook Mode` button to quickly create a new notebook, or use `〈 Switch to Note Mode` to instantly return to standard Note Mode.
 
 * **🗂 Workspace**
   * A notebook type that includes features to visualize and manage note sections as Kanban/Scrum boards.

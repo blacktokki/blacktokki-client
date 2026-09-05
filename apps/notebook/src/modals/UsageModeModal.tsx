@@ -4,14 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet } from 'react-native';
 import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import {
-  useNotebooks,
-  useCreateOrUpdateNotebook,
-  useDeleteNotebook,
-} from '../hooks/useNotebookStorage';
+import { useCreateOrUpdateNotebook, useDeleteNotebook } from '../hooks/useNotebookStorage';
 import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { usePrivate } from '../hooks/usePrivate';
-import { useSetUsageMode, useUsageMode } from '../hooks/useUsageMode';
+import { useSetUsageMode } from '../hooks/useUsageMode';
 import { NotebookStorageFormSection } from '../screens/main/home/StoragePathSection';
 import { getStorageConfig } from '../services/storage';
 import { NotebookOption } from '../types';
@@ -87,8 +83,16 @@ const NotebookForm = ({
         setPathName(conf.pathName || `notebook-${initialNotebook.id}`);
         setHandle(conf.handle || null);
       });
+    } else {
+      setTitle('');
+      setDescription('');
+      setType('WORKSPACE');
+      setPathName('');
+      setHandle(null);
     }
-  }, [initialNotebook?.id]);
+    setTitleError(false);
+    setStorageError(false);
+  }, [initialNotebook]);
 
   const handleSubmit = async () => {
     let hasErr = false;
@@ -133,15 +137,7 @@ const NotebookForm = ({
   };
 
   return (
-    <View
-      style={{
-        padding: 12,
-        backgroundColor: commonStyles.input.backgroundColor,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: commonStyles.card.borderColor,
-      }}
-    >
+    <View>
       <TextInput
         style={[
           commonStyles.input,
@@ -253,27 +249,19 @@ const NotebookForm = ({
   );
 };
 
-export default function UsageModeModal() {
+export default function UsageModeModal(props?: { editingNotebook?: any; isAdding?: boolean }) {
   const { lang } = useLangContext();
   const { setModal } = useModalsContext();
   const { commonStyles } = useNotebookTheme();
-
-  const { data: privateConfig } = usePrivate();
-  const { usageMode, notebook: currentNotebook } = useUsageMode();
   const setUsageMode = useSetUsageMode();
-  const { data: notebooks = [] } = useNotebooks();
-  const currentNotebookId = currentNotebook?.id || 0;
 
-  const [isAddingNotebook, setIsAddingNotebook] = useState(false);
-  const [editingNotebook, setEditingNotebook] = useState<any | null>(null);
+  const editingNotebook = props?.editingNotebook || null;
+  const isEditing = !!editingNotebook;
+  const modalTitle = isEditing ? lang('Edit Notebook Mode') : lang('Add Notebook Mode');
 
   const closeModal = () => {
     setModal(UsageModeModal, null);
   };
-
-  const visibleNotebooks = privateConfig.enabled
-    ? notebooks
-    : notebooks.filter((nb) => !nb.option?.NOTEBOOK_TYPE?.includes('PRIVATE'));
 
   return (
     <View style={styles.overlay}>
@@ -290,7 +278,7 @@ export default function UsageModeModal() {
         {/* Modal Header */}
         <View style={styles.header}>
           <Text style={[commonStyles.text, { fontSize: 18, fontWeight: 'bold' }]}>
-            {lang('Notebook Mode')}
+            {modalTitle}
           </Text>
           <TouchableOpacity onPress={closeModal} style={{ padding: 4 }}>
             <MciIcon name="close" size={22} color={commonStyles.text.color as string} />
@@ -298,132 +286,29 @@ export default function UsageModeModal() {
         </View>
 
         <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 12 }}>
-          {editingNotebook ? (
+          {isEditing ? (
             /* --- Edit Specific Notebook Form --- */
             <NotebookForm
               initialNotebook={editingNotebook}
-              onCancel={() => setEditingNotebook(null)}
+              onCancel={closeModal}
               onSuccess={() => {
-                setEditingNotebook(null);
                 closeModal();
               }}
               submitLabel="Edit"
               showDelete
             />
-          ) : isAddingNotebook ? (
+          ) : (
             /* --- Add Notebook Form --- */
             <NotebookForm
-              onCancel={() => setIsAddingNotebook(false)}
+              onCancel={closeModal}
               onSuccess={(created) => {
-                setIsAddingNotebook(false);
                 if (created?.id) {
                   setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: created.id });
-                  closeModal();
                 }
+                closeModal();
               }}
               submitLabel="Add"
             />
-          ) : (
-            /* --- List Mode View --- */
-            <View>
-              {/* 상단 노트 모드로 변경 글자버튼 */}
-              {usageMode === 'NOTEBOOK' && <TouchableOpacity
-                style={{ paddingVertical: 8 }}
-                onPress={() => {
-                  setUsageMode.mutate({ mode: 'NOTE' });
-                  closeModal();
-                }}
-              >
-                <Text style={{ color: '#3498DB', fontWeight: '500', fontSize: 14 }}>
-                  {'〈'} {lang('Switch to Note Mode')}
-                </Text>
-              </TouchableOpacity>}
-
-              {/* Notebook List for Selection */}
-              {visibleNotebooks.map((nb) => {
-                const isActive = usageMode === 'NOTEBOOK' && currentNotebookId === nb.id;
-                return (
-                  <View
-                    key={nb.id}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingVertical: 10,
-                      borderBottomWidth: 1,
-                      borderBottomColor: commonStyles.card.borderColor,
-                    }}
-                  >
-                    <TouchableOpacity
-                      style={{ flex: 1, flexDirection: 'column' }}
-                      onPress={() => {
-                        setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: nb.id });
-                        closeModal();
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MciIcon
-                          name="notebook-multiple"
-                          size={18}
-                          color={isActive ? '#3498DB' : (commonStyles.text.color as string)}
-                          style={{ marginRight: 8 }}
-                        />
-                        <Text
-                          style={[
-                            commonStyles.text,
-                            isActive && {
-                              color: '#3498DB',
-                              fontWeight: 'bold',
-                              textDecorationLine: 'underline',
-                            },
-                          ]}
-                        >
-                          {nb.title}{' '}
-                          <Text
-                            style={{
-                              fontSize: 12,
-                              color: 'gray',
-                              textDecorationLine: 'none',
-                              fontWeight: 'normal',
-                            }}
-                          >
-                            ({lang('Notebook Mode')} - {lang(nb.option?.NOTEBOOK_TYPE || '')})
-                          </Text>
-                        </Text>
-                      </View>
-                      {isActive && !!nb.description && (
-                        <Text
-                          style={[
-                            commonStyles.smallText,
-                            { marginTop: 4, marginLeft: 26, color: 'gray' },
-                          ]}
-                        >
-                          {nb.description}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Edit button for this notebook */}
-                    <TouchableOpacity
-                      onPress={() => setEditingNotebook(nb)}
-                      style={{ padding: 6, marginLeft: 8 }}
-                    >
-                      <Text style={{ fontSize: 13, color: '#3498DB' }}>{lang('Edit')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-
-              {/* 새 노트북 추가 버튼 */}
-              <TouchableOpacity
-                style={{ marginTop: 12, paddingVertical: 8 }}
-                onPress={() => setIsAddingNotebook(true)}
-              >
-                <Text style={{ color: '#3498DB', fontWeight: '500' }}>
-                  + {lang('Add Notebook Mode')}
-                </Text>
-              </TouchableOpacity>
-            </View>
           )}
         </ScrollView>
       </View>

@@ -9,6 +9,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import ConfigSection from './ConfigSection';
 import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
+import HeaderNotebookDropdown from '../../../components/HeaderNotebookDropdown';
 import { SearchBar } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
@@ -62,8 +63,20 @@ const ConfigTabView = () => {
 export default function HomeScreen({ navigation, route }: StackScreenProps<any, 'Home'>) {
   const { commonStyles } = useNotebookTheme();
   const { auth } = useAuthContext();
-  const { usageMode } = useUsageMode();
-  const title = auth.isLocal ? 'Blacktokki Notebook - Local' : 'Blacktokki Notebook';
+  const { usageMode, notebook } = useUsageMode();
+  const title =
+    usageMode === 'NOTEBOOK' && notebook?.title
+      ? notebook.title
+      : auth.isLocal
+      ? 'Blacktokki Notebook - Local'
+      : 'Blacktokki Notebook';
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => <HeaderNotebookDropdown />,
+    });
+  }, [navigation, title, usageMode, notebook]);
+
   const tabViews: TabViewOption[] = useMemo(
     () => [
       {

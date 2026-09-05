@@ -182,27 +182,6 @@ An environment where you can organize the app's features into distinct 'Notebook
 * New tokens can be issued in a dedicated section within the Account Edit modal; for security reasons, the token value is displayed only once immediately after issuance, so it must be copied and stored in a safe place right away.
 * You can view the list of currently active tokens and their expiration dates, and maintain security by deleting tokens that are no longer in use at any time.
 
-### ✨ MCP server integration
-
-* The issued personal access token can be linked to Blacktokki Notebook’s MCP server.
-* The MCP setting method based on Claude Desktop is as follows:
-```json
-{
-  "mcpServers": {
-    "blacktokkiNotebook": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://blacktokki.kro.kr/agent/sse",
-        "--header",
-        "Authorization: Bearer ***"
-     ]
-    }
-  }
-}
-```
-
 ---
 
 ## Extension Features

@@ -497,7 +497,10 @@ const ContentGroupSection = (props: Props) => {
               { fontFamily: commonStyles.text.fontFamily, color: tabStyles.color },
               isActive && { fontWeight: '500' },
             ]}
-            style={[{ padding: itemPadding }, { backgroundColor: tabStyles.backgroundColor }]}
+            style={[
+              { padding: itemPadding },
+              isActive && { backgroundColor: tabStyles.backgroundColor },
+            ]}
             left={RenderIcon(
               props.type === 'PAGE'
                 ? v.type === 'BOARD'

@@ -197,5 +197,10 @@
   "All notes and boards are in sync.": "모든 노트와 보드가 동기화되어 있습니다.",
   "No items selected for sync.": "동기화할 항목이 없습니다.",
   "Sync completed successfully.": "동기화가 완료되었습니다.",
-  "Failed to sync.": "동기화에 실패했습니다."
+  "Failed to sync.": "동기화에 실패했습니다.",
+  "Concurrent edit detected (Conflict)": "동시 편집됨 (충돌)",
+  "Reflect Local Account": "로컬 계정 반영",
+  "Reflect My Account": "내 계정 반영",
+  "Newer": "최신",
+  "Auto-sync": "자동 동기화"
 }

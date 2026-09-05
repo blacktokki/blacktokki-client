@@ -270,6 +270,8 @@ An environment where you can organize the app's features into distinct 'Notebook
 * **Automatic Pairing & Badge**: When logged in and working in Notebook mode, the Sync button in the Drawer and Discovery tab displays a badge indicating the number of modified, added, or differing files.
 * **Auto-Creation**: If a notebook exists only on one side (e.g. account only), the sync operation will automatically create the corresponding notebook on the local account side.
 * **Visual Diff & Smart Sync**: Inspect visual text differences before applying changes with smart conflict resolution (latest modified wins).
+* **Conflict Detection & Choice**: When a note has been modified concurrently on both local and account sides, it is marked as a conflict, allowing you to choose between [Reflect Local Account] and [Reflect My Account] directly on the card.
+* **Auto-sync(non-conflicting notes)**: When enabled, non-conflicted items (new notes, one-way modified notes, and boards) are automatically synchronized in the background while leaving conflicts for manual resolution.
 * **Sync Triggers**: Configure auto-checks on app focus and save directly from the sync screen.
 
 ---

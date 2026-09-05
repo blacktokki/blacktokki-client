@@ -1,9 +1,10 @@
 import { useLangContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
+import { SyncDiffItem } from './types';
 import { useExecuteSync, useNotebookSync, useSyncOptions } from './useNotebookSync';
 import { ChangedItem } from '../../components/ChangedBlock';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
@@ -15,12 +16,19 @@ import {
   MovePageContainer,
 } from '../../screens/main/MovePageScreen';
 
+type SyncChangedItem = ChangedItem & { rawDiffItem?: SyncDiffItem };
+
 export const SyncNotebookScreen: React.FC = () => {
   const navigation = useNavigation();
   const { lang } = useLangContext();
-  const { commonStyles } = useNotebookTheme();
+  const { commonStyles, colorScheme } = useNotebookTheme();
   const { notebook } = useUsageMode();
   const { options, setOptions } = useSyncOptions();
+
+  // 충돌 노트별 사용자 선택 상태: id -> 'LOCAL_TO_REMOTE' | 'REMOTE_TO_LOCAL'
+  const [conflictChoices, setConflictChoices] = useState<
+    Record<string, 'LOCAL_TO_REMOTE' | 'REMOTE_TO_LOCAL'>
+  >({});
 
   const {
     isSyncAvailable,
@@ -38,10 +46,11 @@ export const SyncNotebookScreen: React.FC = () => {
   const localNotebookName = matchedLocalNotebook?.title || notebook?.title || lang('Local Account');
   const accountNotebookName = notebook?.title || lang('My Account');
 
-  // 항상 스마트 동기화 (보드는 항상 포함):
+  // 동기화 방향 결정:
   // - LOCAL_ONLY -> LOCAL_TO_REMOTE
   // - REMOTE_ONLY -> REMOTE_TO_LOCAL
-  // - MODIFIED -> 최신 수정본 우선
+  // - CONFLICT -> 사용자 선택(conflictChoices) 우선, 없으면 최신 수정본 우선
+  // - MODIFIED -> useNotebookSync에서 결정된 방향(item.action) 유지
   const resolvedItems = useMemo(() => {
     return diffItems.map((item) => {
       let action: 'LOCAL_TO_REMOTE' | 'REMOTE_TO_LOCAL';
@@ -49,18 +58,26 @@ export const SyncNotebookScreen: React.FC = () => {
         action = 'LOCAL_TO_REMOTE';
       } else if (item.status === 'REMOTE_ONLY') {
         action = 'REMOTE_TO_LOCAL';
+      } else if (item.status === 'CONFLICT') {
+        if (conflictChoices[item.id]) {
+          action = conflictChoices[item.id];
+        } else {
+          const localTime =
+            item.localTime || new Date(item.localContent?.lastModified || 0).getTime();
+          const remoteTime =
+            item.remoteTime || new Date(item.remoteContent?.updated || 0).getTime();
+          action = localTime > remoteTime ? 'LOCAL_TO_REMOTE' : 'REMOTE_TO_LOCAL';
+        }
       } else {
-        const localTime = new Date(item.localContent?.lastModified || 0).getTime();
-        const remoteTime = new Date(item.remoteContent?.updated || 0).getTime();
-        action = localTime > remoteTime ? 'LOCAL_TO_REMOTE' : 'REMOTE_TO_LOCAL';
+        action = item.action === 'SKIP' ? 'LOCAL_TO_REMOTE' : item.action;
       }
       return { ...item, action };
     });
-  }, [diffItems]);
+  }, [diffItems, conflictChoices]);
 
   // MoveChangedPreview에 전달할 ChangedItem[] 생성 (보드는 미리보기에 미노출, 반영은 수행)
   const previewData = useMemo(() => {
-    const data: ChangedItem[] = [];
+    const data: SyncChangedItem[] = [];
 
     for (const item of resolvedItems) {
       if (item.type !== 'NOTE') continue;
@@ -73,7 +90,7 @@ export const SyncNotebookScreen: React.FC = () => {
         ? `${lang('My Account')}: ${accountNotebookName}`
         : `${lang('Local Account')}: ${localNotebookName}`;
 
-      if (item.status === 'MODIFIED') {
+      if (item.status === 'MODIFIED' || item.status === 'CONFLICT') {
         const sourceDesc = isLocalToRemote
           ? item.localContent?.description || ''
           : item.remoteContent?.description || '';
@@ -109,6 +126,11 @@ export const SyncNotebookScreen: React.FC = () => {
 
     return data;
   }, [resolvedItems, localNotebookName, accountNotebookName, lang]);
+
+  const conflictedNotes = useMemo(
+    () => resolvedItems.filter((i) => i.type === 'NOTE' && i.status === 'CONFLICT'),
+    [resolvedItems]
+  );
 
   const anyExists = useMemo(
     () => previewData.some((item) => item.renderType === 'diff' || item.renderType === 'override'),
@@ -221,6 +243,14 @@ export const SyncNotebookScreen: React.FC = () => {
         label={lang('Check on Save')}
       />
 
+      <MoveOptionCheckbox
+        checked={options.autoSyncNonConflicted}
+        onPress={() =>
+          setOptions({ ...options, autoSyncNonConflicted: !options.autoSyncNonConflicted })
+        }
+        label={lang('Auto-sync')}
+      />
+
       {/* 로딩 인디케이터 */}
       {isLoading && (
         <View style={{ padding: 24, alignItems: 'center' }}>
@@ -228,6 +258,149 @@ export const SyncNotebookScreen: React.FC = () => {
           <Text style={[commonStyles.smallText, { marginTop: 8 }]}>
             {lang('Comparing local and account contents...')}
           </Text>
+        </View>
+      )}
+
+      {/* 동시 편집(충돌) 항목 해결 카드 목록 */}
+      {!isLoading && conflictedNotes.length > 0 && (
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Icon
+              name="exclamation-triangle"
+              size={14}
+              color="#E67E22"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#E67E22' }}>
+              {lang('Concurrent edit detected (Conflict)')} ({conflictedNotes.length})
+            </Text>
+          </View>
+
+          {conflictedNotes.map((item) => {
+            const isLocalSelected = item.action === 'LOCAL_TO_REMOTE';
+            const isRemoteSelected = item.action === 'REMOTE_TO_LOCAL';
+            const localTime = item.localTime || 0;
+            const remoteTime = item.remoteTime || 0;
+            const isLocalNewer = localTime > remoteTime;
+            const isRemoteNewer = remoteTime > localTime;
+
+            return (
+              <View
+                key={item.id}
+                style={[
+                  commonStyles.card,
+                  {
+                    padding: 12,
+                    marginBottom: 8,
+                    backgroundColor: colorScheme === 'dark' ? '#2A241C' : '#FFFDF5',
+                    borderColor: colorScheme === 'dark' ? '#8A6D3B' : '#FFE082',
+                  },
+                ]}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { fontWeight: 'bold' }]}>{item.title}</Text>
+                  <Text style={{ fontSize: 11, color: '#888' }}>
+                    {isLocalNewer
+                      ? `${lang('Local Account')} (${lang('Newer')})`
+                      : isRemoteNewer
+                      ? `${lang('My Account')} (${lang('Newer')})`
+                      : ''}
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      setConflictChoices((prev) => ({
+                        ...prev,
+                        [item.id]: 'LOCAL_TO_REMOTE',
+                      }))
+                    }
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: isLocalSelected ? '#3498DB' : '#ccc',
+                      backgroundColor: isLocalSelected
+                        ? colorScheme === 'dark'
+                          ? '#1B3A4B'
+                          : '#EBF5FB'
+                        : 'transparent',
+                    }}
+                  >
+                    <Icon
+                      name={isLocalSelected ? 'dot-circle-o' : 'circle-o'}
+                      size={14}
+                      color={isLocalSelected ? '#3498DB' : '#888'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: isLocalSelected ? 'bold' : 'normal',
+                        color: isLocalSelected ? '#3498DB' : commonStyles.text.color,
+                      }}
+                    >
+                      {lang('Reflect Local Account')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setConflictChoices((prev) => ({
+                        ...prev,
+                        [item.id]: 'REMOTE_TO_LOCAL',
+                      }))
+                    }
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: isRemoteSelected ? '#3498DB' : '#ccc',
+                      backgroundColor: isRemoteSelected
+                        ? colorScheme === 'dark'
+                          ? '#1B3A4B'
+                          : '#EBF5FB'
+                        : 'transparent',
+                    }}
+                  >
+                    <Icon
+                      name={isRemoteSelected ? 'dot-circle-o' : 'circle-o'}
+                      size={14}
+                      color={isRemoteSelected ? '#3498DB' : '#888'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: isRemoteSelected ? 'bold' : 'normal',
+                        color: isRemoteSelected ? '#3498DB' : commonStyles.text.color,
+                      }}
+                    >
+                      {lang('Reflect My Account')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
         </View>
       )}
 

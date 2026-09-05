@@ -264,6 +264,14 @@ An environment where you can organize the app's features into distinct 'Notebook
 * Export the current note (or selected sub-paragraph) as a PDF document retaining your active theme colors (dark mode, skins, etc.).
 * Click the PDF icon button at the top of the note viewing screen to export.
 
+### 🔄 Notebook Sync (Local Account - My Account Synchronization)
+
+* Synchronizes notes (`.md`) and boards (`.json`) between your local account and your account.
+* **Automatic Pairing & Badge**: When logged in and working in Notebook mode, the Sync button in the Drawer and Discovery tab displays a badge indicating the number of modified, added, or differing files.
+* **Auto-Creation**: If a notebook exists only on one side (e.g. account only), the sync operation will automatically create the corresponding notebook on the local account side.
+* **Visual Diff & Smart Sync**: Inspect visual text differences before applying changes with smart conflict resolution (latest modified wins).
+* **Sync Triggers**: Configure auto-checks on app focus and save directly from the sync screen.
+
 ---
 
 ## 📞 Contact

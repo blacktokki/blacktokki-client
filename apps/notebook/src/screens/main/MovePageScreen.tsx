@@ -3,7 +3,15 @@ import { cleanId } from '@blacktokki/editor';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import ChangedBlock, { ChangedItem } from '../../components/ChangedBlock';
@@ -130,6 +138,99 @@ const replaceBacklinks = (
   );
 
   return hasMatch ? processedHtml : html;
+};
+
+export const MoveOptionCheckbox: React.FC<{
+  checked: boolean;
+  onPress: () => void;
+  label: string;
+}> = ({ checked, onPress, label }) => {
+  const { commonStyles } = useNotebookTheme();
+  return (
+    <TouchableOpacity style={moveStyles.optionContainer} onPress={onPress}>
+      <Icon
+        name={checked ? 'check-square-o' : 'square-o'}
+        size={20}
+        color={commonStyles.text.color}
+      />
+      <Text style={[commonStyles.text, { marginLeft: 8, fontSize: 14 }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
+
+export const MoveChangedPreview: React.FC<{
+  items: ChangedItem[];
+  emptyMessage?: string;
+}> = ({ items, emptyMessage }) => {
+  const { lang } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
+
+  return (
+    <>
+      <Text style={commonStyles.text}>
+        {lang('Notes changed')} ({items.length})
+      </Text>
+      {items.length === 0 && emptyMessage ? (
+        <Text style={[commonStyles.smallText, { marginVertical: 16 }]}>{emptyMessage}</Text>
+      ) : (
+        <View style={moveStyles.prPreviewContainer}>
+          {items.map((item, idx) => (
+            <ChangedBlock key={idx} item={item} />
+          ))}
+        </View>
+      )}
+    </>
+  );
+};
+
+export const MoveActionButtons: React.FC<{
+  onCancel: () => void;
+  onSubmit: () => void;
+  submitLabel: string;
+  disabled?: boolean;
+  isDanger?: boolean;
+  isLoading?: boolean;
+}> = ({ onCancel, onSubmit, submitLabel, disabled, isDanger, isLoading }) => {
+  const { lang } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
+
+  return (
+    <View style={commonStyles.buttonContainer}>
+      <TouchableOpacity style={[commonStyles.secondaryButton, { flex: 1 }]} onPress={onCancel}>
+        <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          commonStyles.button,
+          moveStyles.moveButton,
+          disabled ? { backgroundColor: 'gray' } : isDanger ? { backgroundColor: '#d9534f' } : {},
+        ]}
+        onPress={onSubmit}
+        disabled={disabled}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={commonStyles.buttonText}>{submitLabel}</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export const MovePageContainer: React.FC<{
+  children: React.ReactNode;
+  actionButtons?: React.ReactNode;
+}> = ({ children, actionButtons }) => {
+  const { commonStyles } = useNotebookTheme();
+  return (
+    <ScrollView style={commonStyles.container}>
+      <View style={commonStyles.card}>
+        <View style={{ zIndex: 1 }}>{children}</View>
+        {actionButtons}
+      </View>
+    </ScrollView>
+  );
 };
 
 type MovePageScreenRouteProp = RouteProp<NavigationParamList, 'MovePage'>;
@@ -521,82 +622,37 @@ export const MovePageScreen: React.FC = () => {
           />
           <Spacer height={12} />
           {path.length === 0 && subNotes.length > 0 && (
-            <TouchableOpacity
-              style={styles.optionContainer}
+            <MoveOptionCheckbox
+              checked={includeSubNotes}
               onPress={() => setIncludeSubNotes(!includeSubNotes)}
-            >
-              <Icon
-                name={includeSubNotes ? 'check-square-o' : 'square-o'}
-                size={20}
-                color={commonStyles.text.color}
-              />
-              <Text style={[commonStyles.text, { marginLeft: 8, fontSize: 14 }]}>
-                {lang('Move sub-notes')} ({subNotes.length})
-              </Text>
-            </TouchableOpacity>
+              label={`${lang('Move sub-notes')} (${subNotes.length})`}
+            />
           )}
 
           {backLinks.length > 0 && isTitleChangedOrParagraph && (
-            <TouchableOpacity
-              style={styles.optionContainer}
+            <MoveOptionCheckbox
+              checked={updateBacklinks}
               onPress={() => setUpdateBacklinks(!updateBacklinks)}
-            >
-              <Icon
-                name={updateBacklinks ? 'check-square-o' : 'square-o'}
-                size={20}
-                color={commonStyles.text.color}
-              />
-              <Text style={[commonStyles.text, { marginLeft: 8, fontSize: 14 }]}>
-                {lang('Update backlinks')} ({backLinks.length})
-              </Text>
-            </TouchableOpacity>
+              label={`${lang('Update backlinks')} (${backLinks.length})`}
+            />
           )}
 
-          {!moveDisabled && (
-            <>
-              <Text style={commonStyles.text}>
-                {lang('Notes changed')} ({previewData.length})
-              </Text>
-              <View style={styles.prPreviewContainer}>
-                {previewData.map((item, idx) => (
-                  <ChangedBlock key={idx} item={item} />
-                ))}
-              </View>
-            </>
-          )}
+          {!moveDisabled && <MoveChangedPreview items={previewData} />}
         </View>
 
-        <View style={commonStyles.buttonContainer}>
-          <TouchableOpacity
-            style={[commonStyles.secondaryButton, { flex: 1 }]}
-            onPress={handleCancel}
-          >
-            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              commonStyles.button,
-              styles.moveButton,
-              moveDisabled
-                ? { backgroundColor: 'gray' }
-                : anyExists
-                ? { backgroundColor: '#d9534f' }
-                : {},
-            ]}
-            onPress={handleMove}
-            disabled={moveDisabled}
-          >
-            <Text style={commonStyles.buttonText}>
-              {lang(!moveDisabled && anyExists ? 'overwrite' : 'move')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <MoveActionButtons
+          onCancel={handleCancel}
+          onSubmit={handleMove}
+          submitLabel={lang(!moveDisabled && anyExists ? 'overwrite' : 'move')}
+          disabled={moveDisabled}
+          isDanger={!moveDisabled && anyExists}
+        />
       </View>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+export const moveStyles = StyleSheet.create({
   optionContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   moveButton: { flex: 1, marginLeft: 8 },
   prPreviewContainer: { marginTop: 12 },

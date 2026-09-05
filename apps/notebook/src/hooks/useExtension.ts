@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { useUsageMode } from './useUsageMode';
+import { UsageMode, useUsageMode } from './useUsageMode';
 import { Paragraph } from '../components/HeaderSelectBar';
 
 export type SearchFeature = (item: any) =>
@@ -24,7 +24,7 @@ export type NoteSectionProps = {
 type FeatureInfo = {
   title: string;
   description: string;
-  isDefault: boolean;
+  useNoteMode?: boolean;
   screens: NavigationConfig['main'];
 };
 
@@ -41,14 +41,21 @@ type Feature = {
 
 export const features: Record<string, FeatureInfo & Feature> = {};
 
-const getDefaultConfig = () => {
-  return Object.keys(features).filter((k) => features[k].isDefault);
-};
+const getDefaultConfig = () => [];
 
-const getExtension = (config: string[]) => {
-  const feature = config.reduce(
+const getExtension = (config: string[], usageMode?: UsageMode | string) => {
+  const activeKeys = config.filter((curr) => {
+    const feat = features[curr as keyof typeof features];
+    if (!feat) return false;
+    if (usageMode === 'NOTE' && feat.useNoteMode === false) {
+      return false;
+    }
+    return true;
+  });
+
+  const feature = activeKeys.reduce(
     (prev, curr) => {
-      const feat = features[curr as keyof typeof features];      
+      const feat = features[curr as keyof typeof features];
       const _search = prev.search;
       prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
       prev.elements = [...prev.elements, ...feat.elements];
@@ -78,12 +85,19 @@ const getExtension = (config: string[]) => {
     }
   );
   return {
-    info: Object.entries(features).map(([k, v]) => ({
-      key: k,
-      title: v.title,
-      description: v.description,
-      active: !!config.find((k2) => k === k2),
-    })),
+    info: Object.entries(features)
+      .filter(([, v]) => {
+        if (usageMode === 'NOTE' && v.useNoteMode === false) {
+          return false;
+        }
+        return true;
+      })
+      .map(([k, v]) => ({
+        key: k,
+        title: v.title,
+        description: v.description,
+        active: !!activeKeys.find((k2) => k === k2),
+      })),
     feature: {
       ...feature,
       elements: (type: ElementType) =>
@@ -122,7 +136,7 @@ export const useExtension = () => {
 
   const query = useQuery({
     queryKey: ['extension', subkey],
-    queryFn: () => getExtensionConfig(subkey).then(getExtension),
+    queryFn: () => getExtensionConfig(subkey),
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,
@@ -130,9 +144,11 @@ export const useExtension = () => {
   });
 
   const data = useMemo(() => {
-    return usageMode === 'SIMPLE'
-      ? getExtension([])
-      : query.data || getExtension(getDefaultConfig());
+    if (usageMode === 'SIMPLE') {
+      return getExtension([], usageMode);
+    }
+    const config = query.data || getDefaultConfig();
+    return getExtension(config, usageMode);
   }, [usageMode, query.data]);
 
   return {
@@ -144,7 +160,7 @@ export const useExtension = () => {
 export const useSetExtensionConfig = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthContext();
-  const { notebook } = useUsageMode();
+  const { notebook, usageMode } = useUsageMode();
   const currentNotebookId = notebook?.id || 0;
   const subkey = `${auth.isLocal ? '' : auth.user?.id}:${currentNotebookId}`;
 
@@ -152,6 +168,10 @@ export const useSetExtensionConfig = () => {
     mutationFn: async ({ key, value }: { key: string; value: boolean }) => {
       const config = await getExtensionConfig(subkey);
       const newConfig = Object.keys(features).filter((k) => {
+        const feat = features[k as keyof typeof features];
+        if (usageMode === 'NOTE' && feat?.useNoteMode === false) {
+          return false;
+        }
         const exists = !!config.find((k2) => k === k2);
         if (value) {
           return exists || key === k;

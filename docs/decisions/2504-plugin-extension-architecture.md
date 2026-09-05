@@ -59,7 +59,7 @@ date: 2025-06-01
 **Option 2: 전역 레지스트리 및 슬롯 인젝션 훅 아키텍처 (`features` Registry + `useExtension` Hook)**를 채택합니다.
 
 1. **확장기능 규격 정의 (`useExtension.ts`)**:
-   - `FeatureInfo` (title, description, isDefault, screens) 및 `Feature` (search, elements, NoteSections, HeaderIconButtons, extraArchiveButtons, createCommonStylesList) 인터페이스를 정의합니다.
+   - `FeatureInfo` (title, description, useNoteMode, screens) 및 `Feature` (search, elements, NoteSections, HeaderIconButtons, extraArchiveButtons, createCommonStylesList) 인터페이스를 정의합니다.
    - 중앙 전역 객체 `export const features: Record<string, FeatureInfo & Feature> = {};`를 만듭니다.
 
 2. **기능 등록 및 내비게이션 바인딩 (`features/index.tsx`)**:

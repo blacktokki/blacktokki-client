@@ -201,6 +201,9 @@
   "Concurrent edit detected (Conflict)": "동시 편집됨 (충돌)",
   "Reflect Local Account": "로컬 계정 반영",
   "Reflect My Account": "내 계정 반영",
-  "Newer": "최신",
-  "Auto-sync": "자동 동기화"
+  "Auto-sync": "자동 동기화",
+  "Local notebook does not exist.": "로컬 노트북이 존재하지 않습니다.",
+  "Create Local Notebook": "로컬 노트북 생성",
+  "Create Local Notebook & Connect Folder": "로컬 노트북 생성 및 폴더 연결",
+  "Please connect a local folder to start sync.": "동기화를 시작하려면 로컬 폴더를 연결해주세요."
 }

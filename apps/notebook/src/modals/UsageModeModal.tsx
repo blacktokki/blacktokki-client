@@ -10,8 +10,35 @@ import { usePrivate } from '../hooks/usePrivate';
 import { useSetUsageMode } from '../hooks/useUsageMode';
 import { NotebookStorageFormSection } from '../screens/main/home/StoragePathSection';
 import { getStorageConfig } from '../services/storage';
-import { NotebookOption } from '../types';
+import { Content, NotebookOption } from '../types';
 
+type NotebookInitialData = {
+  id?: number;
+  title?: string;
+  description?: string;
+  option?: Partial<NotebookOption>;
+};
+
+interface NotebookFormProps {
+  initialNotebook?: Content | NotebookInitialData | null;
+  onSuccess: (createdNotebook?: Content) => void;
+  onCancel: () => void;
+  submitLabel: string;
+  showDelete?: boolean;
+  forceLocal?: boolean;
+}
+
+type UsageModeModalProps = (
+  | {
+      isAdding: true;
+      forceLocal?: boolean;
+      initialNotebook?: Content | NotebookInitialData | null;
+    }
+  | {
+      isAdding?: false;
+      editingNotebook?: Content | null;
+    }
+) & { onSuccess?: (created?: Content) => void };
 const OptionButton = (props: { title: string; onPress: () => void; active: boolean }) => {
   const { commonStyles } = useNotebookTheme();
   const color = commonStyles.text.color;
@@ -40,18 +67,13 @@ const OptionButton = (props: { title: string; onPress: () => void; active: boole
   );
 };
 
-const NotebookForm = ({
+const NotebookForm: React.FC<NotebookFormProps> = ({
   initialNotebook,
   onSuccess,
   onCancel,
   submitLabel,
   showDelete,
-}: {
-  initialNotebook?: any;
-  onSuccess: (createdNotebook?: any) => void;
-  onCancel: () => void;
-  submitLabel: string;
-  showDelete?: boolean;
+  forceLocal,
 }) => {
   const { lang } = useLangContext();
   const { auth } = useAuthContext();
@@ -59,6 +81,9 @@ const NotebookForm = ({
   const { data: privateConfig } = usePrivate();
   const createNotebook = useCreateOrUpdateNotebook();
   const deleteNotebook = useDeleteNotebook();
+
+  const isTargetLocal = forceLocal !== undefined ? forceLocal : auth.isLocal;
+  const isTitleDisabled = !!initialNotebook;
 
   const [title, setTitle] = useState(initialNotebook?.title || '');
   const [description, setDescription] = useState(initialNotebook?.description || '');
@@ -79,10 +104,15 @@ const NotebookForm = ({
       setTitle(initialNotebook.title || '');
       setDescription(initialNotebook.description || '');
       setType(initialNotebook.option?.NOTEBOOK_TYPE || 'WORKSPACE');
-      getStorageConfig(initialNotebook.id).then((conf) => {
-        setPathName(conf.pathName || `notebook-${initialNotebook.id}`);
-        setHandle(conf.handle || null);
-      });
+      if (initialNotebook.id) {
+        getStorageConfig(initialNotebook.id).then((conf) => {
+          setPathName(conf.pathName || `notebook-${initialNotebook.id}`);
+          setHandle(conf.handle || null);
+        });
+      } else {
+        setPathName('');
+        setHandle(null);
+      }
     } else {
       setTitle('');
       setDescription('');
@@ -102,7 +132,7 @@ const NotebookForm = ({
     } else {
       setTitleError(false);
     }
-    if (auth.isLocal && !handle) {
+    if (isTargetLocal && !handle) {
       setStorageError(true);
       hasErr = true;
     } else {
@@ -116,12 +146,13 @@ const NotebookForm = ({
         title,
         description,
         notebookType: type,
-        storageConfig: auth.isLocal
+        storageConfig: isTargetLocal
           ? {
               pathName,
               handle,
             }
           : undefined,
+        isLocal: isTargetLocal,
       });
       onSuccess(res);
     } catch (e: any) {
@@ -142,21 +173,25 @@ const NotebookForm = ({
         style={[
           commonStyles.input,
           {
-            backgroundColor: 'transparent',
+            backgroundColor: isTitleDisabled ? 'rgba(128, 128, 128, 0.12)' : 'transparent',
             borderColor: titleError
               ? commonStyles.button.backgroundColor
               : commonStyles.input.borderColor,
             borderWidth: titleError ? 1.5 : commonStyles.input.borderWidth || 1,
+            opacity: isTitleDisabled ? 0.75 : 1,
           },
         ]}
+        editable={!isTitleDisabled}
         placeholder={lang('Enter Notebook Title')}
         placeholderTextColor={
           titleError ? commonStyles.button.backgroundColor : commonStyles.placeholder.color
         }
         value={title}
         onChangeText={(t) => {
-          setTitle(t);
-          if (t.trim()) setTitleError(false);
+          if (!isTitleDisabled) {
+            setTitle(t);
+            if (t.trim()) setTitleError(false);
+          }
         }}
       />
       {titleError && (
@@ -194,7 +229,7 @@ const NotebookForm = ({
         onChangeText={setDescription}
       />
 
-      {auth.isLocal && (
+      {isTargetLocal && (
         <NotebookStorageFormSection
           pathName={pathName}
           setPathName={(s) => {
@@ -249,18 +284,35 @@ const NotebookForm = ({
   );
 };
 
-export default function UsageModeModal(props?: { editingNotebook?: any; isAdding?: boolean }) {
+export default function UsageModeModal(props?: UsageModeModalProps) {
   const { lang } = useLangContext();
   const { setModal } = useModalsContext();
   const { commonStyles } = useNotebookTheme();
   const setUsageMode = useSetUsageMode();
 
-  const editingNotebook = props?.editingNotebook || null;
-  const isEditing = !!editingNotebook;
-  const modalTitle = isEditing ? lang('Edit Notebook Mode') : lang('Add Notebook Mode');
+  const isAdding = props?.isAdding === true;
+  const editingNotebook = props && !props.isAdding ? props.editingNotebook || null : null;
+  const isEditing = !isAdding && !!editingNotebook;
+  const initialNotebook = props && props.isAdding ? props.initialNotebook || null : editingNotebook;
+  const forceLocal = props && props.isAdding ? props.forceLocal : undefined;
+
+  const modalTitle = isEditing
+    ? lang('Edit Notebook Mode')
+    : forceLocal
+    ? lang('Create Local Notebook')
+    : lang('Add Notebook Mode');
 
   const closeModal = () => {
     setModal(UsageModeModal, null);
+  };
+
+  const handleSuccess = (created?: Content) => {
+    if (props?.onSuccess) {
+      props.onSuccess(created);
+    } else if (created?.id && !forceLocal) {
+      setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: created.id });
+    }
+    closeModal();
   };
 
   return (
@@ -291,23 +343,19 @@ export default function UsageModeModal(props?: { editingNotebook?: any; isAdding
             <NotebookForm
               initialNotebook={editingNotebook}
               onCancel={closeModal}
-              onSuccess={() => {
-                closeModal();
-              }}
+              onSuccess={handleSuccess}
               submitLabel="Edit"
               showDelete
+              forceLocal={forceLocal}
             />
           ) : (
             /* --- Add Notebook Form --- */
             <NotebookForm
+              initialNotebook={initialNotebook}
               onCancel={closeModal}
-              onSuccess={(created) => {
-                if (created?.id) {
-                  setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: created.id });
-                }
-                closeModal();
-              }}
-              submitLabel="Add"
+              onSuccess={handleSuccess}
+              submitLabel={forceLocal ? 'Save' : 'Add'}
+              forceLocal={forceLocal}
             />
           )}
         </ScrollView>

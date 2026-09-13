@@ -1,4 +1,4 @@
-import { useLangContext } from '@blacktokki/core';
+import { useLangContext, useModalsContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
@@ -9,18 +9,21 @@ import { useExecuteSync, useNotebookSync, useSyncOptions } from './useNotebookSy
 import { ChangedItem } from '../../components/ChangedBlock';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../hooks/useUsageMode';
+import UsageModeModal from '../../modals/UsageModeModal';
 import {
   MoveActionButtons,
   MoveChangedPreview,
   MoveOptionCheckbox,
   MovePageContainer,
 } from '../../screens/main/MovePageScreen';
+import { Content } from '../../types';
 
 type SyncChangedItem = ChangedItem & { rawDiffItem?: SyncDiffItem };
 
 export const SyncNotebookScreen: React.FC = () => {
   const navigation = useNavigation();
   const { lang } = useLangContext();
+  const { setModal } = useModalsContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
   const { notebook } = useUsageMode();
   const { options, setOptions } = useSyncOptions();
@@ -137,9 +140,47 @@ export const SyncNotebookScreen: React.FC = () => {
     [previewData]
   );
 
+  const handleOpenCreateLocalModal = (onAfterCreate?: (created: Content) => void) => {
+    setModal(UsageModeModal, {
+      isAdding: true,
+      forceLocal: true,
+      initialNotebook: {
+        title: notebook?.title || '',
+        description: notebook?.description || '',
+        option: notebook?.option || {},
+      },
+      onSuccess: async (created: Content) => {
+        await manualRefresh();
+        if (onAfterCreate && created) {
+          onAfterCreate(created);
+        }
+      },
+    });
+  };
+
   const handleSync = async () => {
     if (resolvedItems.length === 0) {
       Alert.alert(lang('error'), lang('No items selected for sync.'));
+      return;
+    }
+
+    if (isLocalNotebookMissing || !matchedLocalNotebook) {
+      handleOpenCreateLocalModal(async (created) => {
+        try {
+          await executeSync.mutateAsync({
+            diffItems: resolvedItems,
+            matchedLocalNotebook: created,
+          });
+          Alert.alert(lang('Saved'), lang('Sync completed successfully.'), [
+            {
+              text: lang('back'),
+              onPress: () => navigation.goBack(),
+            },
+          ]);
+        } catch (error: any) {
+          Alert.alert(lang('error'), error.message || lang('Failed to sync.'));
+        }
+      });
       return;
     }
 
@@ -211,22 +252,45 @@ export const SyncNotebookScreen: React.FC = () => {
         {notebook?.title}
       </Text>
 
-      {/* 로컬 노트북 부재 시 자동 생성 안내 */}
+      {/* 로컬 노트북 부재 시 생성 및 폴더 연결 안내 배너 */}
       {isLocalNotebookMissing && (
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
             backgroundColor: '#FEF9E7',
-            padding: 10,
-            borderRadius: 6,
+            padding: 12,
+            borderRadius: 8,
             marginBottom: 16,
+            borderWidth: 1,
+            borderColor: '#F9E79F',
           }}
         >
-          <Icon name="info-circle" size={16} color="#E67E22" style={{ marginRight: 8 }} />
-          <Text style={{ fontSize: 13, color: '#E67E22', flex: 1 }}>
-            {lang('Local notebook does not exist. It will be created automatically upon sync.')}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Icon name="info-circle" size={16} color="#E67E22" style={{ marginRight: 8 }} />
+            <Text style={{ fontSize: 13, color: '#D35400', flex: 1, fontWeight: 'bold' }}>
+              {lang('Local notebook does not exist.')}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: '#7E5109', marginBottom: 10, lineHeight: 17 }}>
+            {lang('Please connect a local folder to start sync.')}
           </Text>
+          <TouchableOpacity
+            onPress={() => handleOpenCreateLocalModal()}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#E67E22',
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 6,
+              alignSelf: 'flex-start',
+            }}
+          >
+            <Icon name="folder-open-o" size={14} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: 'bold' }}>
+              {lang('Create Local Notebook & Connect Folder')}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 

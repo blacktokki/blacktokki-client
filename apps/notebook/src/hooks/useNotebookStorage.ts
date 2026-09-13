@@ -104,6 +104,7 @@ export const useCreateOrUpdateNotebook = () => {
       description,
       notebookType,
       storageConfig,
+      isLocal,
     }: {
       id?: number;
       title: string;
@@ -113,14 +114,16 @@ export const useCreateOrUpdateNotebook = () => {
         pathName?: string;
         handle?: any;
       };
+      isLocal?: boolean;
     }) => {
-      const updated = auth.isLocal ? new Date().toISOString() : undefined;
+      const isTargetLocal = isLocal !== undefined ? isLocal : auth.isLocal;
+      const updated = isTargetLocal ? new Date().toISOString() : undefined;
 
       const notebookData: PostContent | Content = {
         title,
         description: description || '',
         input: title,
-        userId: auth.user?.id || 0,
+        userId: isTargetLocal ? 0 : auth.user?.id || 0,
         parentId: 0,
         type: 'NOTEBOOK',
         order: 0,
@@ -134,10 +137,10 @@ export const useCreateOrUpdateNotebook = () => {
         (notebookData as Content).id = id;
       }
 
-      const savedId = await saveNotebookContent(!auth.isLocal, [notebookData], id);
+      const savedId = await saveNotebookContent(!isTargetLocal, [notebookData], id);
       const targetId = savedId || id;
 
-      if (auth.isLocal && targetId && storageConfig) {
+      if (isTargetLocal && targetId && storageConfig) {
         await setStorageConfig({
           parentId: targetId,
           type: 'local',
@@ -146,7 +149,12 @@ export const useCreateOrUpdateNotebook = () => {
         });
       }
 
-      return { id: targetId };
+      return {
+        id: targetId,
+        title,
+        description: description || '',
+        option: notebookData.option,
+      } as Content;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });

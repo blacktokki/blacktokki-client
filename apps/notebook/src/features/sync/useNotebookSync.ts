@@ -137,31 +137,19 @@ export const useExecuteSync = () => {
 
       let targetLocalNotebookId = matchedLocalNotebook?.id;
 
-      // 1. 로컬 노트북이 없는 경우 자동 생성
+      // 로컬 노트북 ID가 없을 경우 재조회, 그래도 없으면 에러
       if (!targetLocalNotebookId) {
-        const newLocalNotebookData: Content | PostContent = {
-          title: notebook.title,
-          description: notebook.description || '',
-          input: notebook.title,
-          userId: 0,
-          parentId: 0,
-          type: 'NOTEBOOK',
-          order: 0,
-          updated: new Date().toISOString(),
-          option: notebook.option || ({} as any),
-        } as Content;
-
-        await saveStoreItems('NOTEBOOK', [newLocalNotebookData], undefined, 0);
-
-        // 생성된 로컬 노트북 다시 조회하여 ID 획득
         const localNotebooks = await getStoreItems('NOTEBOOK', 0);
         const created = localNotebooks.find(
           (nb) => nb.title?.trim().toLowerCase() === notebook.title?.trim().toLowerCase()
         );
-        if (!created) {
-          throw new Error('로컬 노트북 자동 생성에 실패하였습니다.');
+        if (created) {
+          targetLocalNotebookId = created.id;
+        } else {
+          throw new Error(
+            '동기화할 로컬 노트북이 없습니다. 로컬 노트북을 먼저 생성하고 폴더를 연결해주세요.'
+          );
         }
-        targetLocalNotebookId = created.id;
       }
 
       // 2. 각 항목별 동기화 실행
@@ -552,6 +540,7 @@ export const useNotebookSync = () => {
   useEffect(() => {
     if (!options.autoSyncNonConflicted || !isSyncAvailable) return;
     if (isLoading || isFetching || executeSync.isLoading || isAutoSyncingRef.current) return;
+    if (!data?.matchedLocalNotebook) return;
 
     const nonConflictedItems = (data?.diffItems || []).filter(
       (item) => !item.isConflict && item.status !== 'CONFLICT' && item.action !== 'SKIP'

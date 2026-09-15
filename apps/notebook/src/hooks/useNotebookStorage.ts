@@ -1,6 +1,7 @@
 import { useAuthContext } from '@blacktokki/account';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
+import { deleteSyncAnchor } from '../features/sync/useNotebookSync';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import {
   deleteStorageConfig,
@@ -167,12 +168,23 @@ export const useDeleteNotebook = () => {
   const { auth } = useAuthContext();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (param: number | { id: number; title?: string }) => {
+      const id = typeof param === 'number' ? param : param.id;
+      const title = typeof param === 'number' ? undefined : param.title;
       await saveNotebookContent(!auth.isLocal, [], id);
+
+      if (title && auth.user?.id) {
+        try {
+          await deleteSyncAnchor(auth.user.id, title);
+        } catch (e) {
+          console.error('Failed to delete sync anchor for notebook', e);
+        }
+      }
       return id;
     },
-    onSuccess: (id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
+      queryClient.invalidateQueries({ queryKey: ['notebookSyncDiff'] });
     },
   });
 };

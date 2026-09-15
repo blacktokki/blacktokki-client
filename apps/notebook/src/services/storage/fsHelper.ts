@@ -166,24 +166,6 @@ export async function readContentsFromDir(
     }
   }
 
-  if (storeName === 'SNAPSHOT' || storeName === 'DELTA') {
-    try {
-      const histDir = await rootHandle.getDirectoryHandle('.history', { create: false });
-      const entries = await scanDirectoryRecursive(histDir);
-      const results: Content[] = [];
-      for (const entry of entries) {
-        if (!entry.isFile || !entry.name.endsWith('.json')) continue;
-        try {
-          const { text } = await readFileText(entry.handle);
-          results.push(JSON.parse(text));
-        } catch (e) {}
-      }
-      return results;
-    } catch (e) {
-      return [];
-    }
-  }
-
   if (storeName === 'NOTE' || storeName === 'BOARD') {
     const fsData = await readFsDataFromDir(rootHandle);
     const results: Content[] = [];
@@ -331,18 +313,6 @@ export async function saveContentsToDir(
       return;
     }
 
-    if (storeName === 'SNAPSHOT' || storeName === 'DELTA') {
-      const histDir = await rootHandle.getDirectoryHandle('.history', { create: true });
-      for (const item of contents) {
-        const fileName = `${item.type}_${Date.now()}_${Math.random()
-          .toString(36)
-          .substring(2, 7)}.json`;
-        const fileHandle = await histDir.getFileHandle(fileName, { create: true });
-        await writeFileText(fileHandle, JSON.stringify(item, null, 2));
-      }
-      return;
-    }
-
     if (storeName === 'NOTE' || storeName === 'BOARD') {
       const fsData: FsData = {
         contents:
@@ -365,7 +335,9 @@ export async function saveContentsToDir(
   } else if (deleteIdOrTitle !== undefined) {
     if (storeName === 'NOTEBOOK') {
       const currentNotebooks = await readContentsFromDir(rootHandle, 'NOTEBOOK', parentId);
-      const filtered = currentNotebooks.filter((c) => c.id !== deleteIdOrTitle);
+      const filtered = currentNotebooks.filter(
+        (c) => String(c.id) !== String(deleteIdOrTitle) && c.title !== deleteIdOrTitle
+      );
       const fileHandle = await rootHandle.getFileHandle('notebooks.json', { create: true });
       await writeFileText(fileHandle, JSON.stringify(filtered, null, 2));
       return;
@@ -397,28 +369,4 @@ export async function saveContentsToDir(
       }
     }
   }
-}
-
-export async function getDirStats(
-  dirHandle: any
-): Promise<{ count: number; totalSize: number; lastModified: number }> {
-  let count = 0;
-  let totalSize = 0;
-  let lastModified = 0;
-  if (!dirHandle || !dirHandle.entries) return { count, totalSize, lastModified };
-  try {
-    const entries = await scanDirectoryRecursive(dirHandle);
-    for (const entry of entries) {
-      if (!entry.isFile) continue;
-      try {
-        const file = await entry.handle.getFile();
-        count++;
-        totalSize += file.size || 0;
-        if (file.lastModified > lastModified) {
-          lastModified = file.lastModified;
-        }
-      } catch (e) {}
-    }
-  } catch (e) {}
-  return { count, totalSize, lastModified };
 }

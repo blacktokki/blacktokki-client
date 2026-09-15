@@ -43,6 +43,11 @@ export const SyncNotebookScreen: React.FC = () => {
     manualRefresh,
   } = useNotebookSync();
 
+  // 화면 진입 시 최신 차이점 및 로컬 노트북 매칭 상태 강제 갱신
+  React.useEffect(() => {
+    manualRefresh();
+  }, [manualRefresh]);
+
   const executeSync = useExecuteSync();
 
   // 로컬 계정 / 내 계정 노트북 이름
@@ -206,7 +211,12 @@ export const SyncNotebookScreen: React.FC = () => {
     }
   };
 
-  const syncDisabled = resolvedItems.length === 0 || executeSync.isLoading || isLoading;
+  const syncDisabled =
+    isLocalNotebookMissing ||
+    !matchedLocalNotebook ||
+    resolvedItems.length === 0 ||
+    executeSync.isLoading ||
+    isLoading;
 
   if (!isSyncAvailable) {
     return (

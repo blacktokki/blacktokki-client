@@ -1,8 +1,8 @@
 import { useAuthContext } from '@blacktokki/account';
-import { toHtml, toMarkdown } from '@blacktokki/editor';
+import { getMarkdownUtil, toHtml, toMarkdown } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useEffect, useMemo } from 'react';
+import { useIsMutating, useMutation, useQuery, useQueryClient } from 'react-query';
 
 import {
   DEFAULT_SYNC_OPTIONS,
@@ -118,6 +118,11 @@ const isContentEqual = (type: 'NOTE' | 'BOARD', localDesc: string, remoteDesc: s
 };
 
 /**
+ * 현재 동기화(mutation)가 진행 중인 원격 노트북 ID 추적 (중복/동시 실행 전역 차단)
+ */
+export const runningSyncNotebookIds = new Set<number | string>();
+
+/**
  * 동기화 실행 뮤테이션
  */
 export const useExecuteSync = () => {
@@ -126,6 +131,7 @@ export const useExecuteSync = () => {
   const { notebook } = useUsageMode();
 
   return useMutation({
+    mutationKey: ['executeSync', notebook?.id],
     mutationFn: async ({
       diffItems,
       matchedLocalNotebook,
@@ -135,122 +141,159 @@ export const useExecuteSync = () => {
     }) => {
       if (!notebook) throw new Error('현재 선택된 원격 노트북이 없습니다.');
 
-      let targetLocalNotebookId = matchedLocalNotebook?.id;
-
-      // 로컬 노트북 ID가 없을 경우 재조회, 그래도 없으면 에러
-      if (!targetLocalNotebookId) {
-        const localNotebooks = await getStoreItems('NOTEBOOK', 0);
-        const created = localNotebooks.find(
-          (nb) => nb.title?.trim().toLowerCase() === notebook.title?.trim().toLowerCase()
+      const currentNotebookId = notebook.id;
+      if (runningSyncNotebookIds.has(currentNotebookId)) {
+        console.warn(
+          `[Sync] Notebook ${currentNotebookId} is already syncing. Skipping duplicate execution.`
         );
-        if (created) {
-          targetLocalNotebookId = created.id;
-        } else {
-          throw new Error(
-            '동기화할 로컬 노트북이 없습니다. 로컬 노트북을 먼저 생성하고 폴더를 연결해주세요.'
+        return { success: false, skipped: true };
+      }
+      runningSyncNotebookIds.add(currentNotebookId);
+
+      try {
+        let targetLocalNotebookId = matchedLocalNotebook?.id;
+
+        // 로컬 노트북 ID가 없을 경우 재조회, 그래도 없으면 에러
+        if (!targetLocalNotebookId) {
+          const localNotebooks = await getStoreItems('NOTEBOOK', 0);
+          const created = localNotebooks.find(
+            (nb) => nb.title?.trim().toLowerCase() === notebook.title?.trim().toLowerCase()
           );
-        }
-      }
-
-      // 2. 각 항목별 동기화 실행
-      for (const item of diffItems) {
-        if (item.action === 'SKIP') continue;
-
-        if (item.action === 'LOCAL_TO_REMOTE') {
-          // 로컬 -> 원격
-          const htmlDesc =
-            item.type === 'NOTE'
-              ? toHtml(item.localContent?.description || '')
-              : item.localContent?.description || '';
-
-          if (item.remoteContent?.id) {
-            // 원격에 이미 존재하므로 수정 (PATCH)
-            await patchContent(item.remoteContent.id, {
-              title: item.title,
-              description: htmlDesc,
-              input: item.title,
-              userId: auth.user?.id || 0,
-              parentId: notebook.id,
-              type: item.type,
-              order: 0,
-              option: (item.localContent?.raw?.option as any) || {},
-            });
+          if (created) {
+            targetLocalNotebookId = created.id;
           } else {
-            // 원격에 새로 생성 (POST)
-            await postContent({
-              title: item.title,
-              description: htmlDesc,
-              input: item.title,
-              userId: auth.user?.id || 0,
-              parentId: notebook.id,
-              type: item.type,
-              order: 0,
-              option: (item.localContent?.raw?.option as any) || {},
-            });
-          }
-        } else if (item.action === 'REMOTE_TO_LOCAL') {
-          // 원격 -> 로컬
-          if (item.type === 'NOTE') {
-            const noteContent: Content | PostContent = {
-              title: item.title,
-              description: item.remoteContent?.description || '',
-              input: item.title,
-              userId: 0,
-              parentId: targetLocalNotebookId,
-              type: 'NOTE',
-              order: 0,
-              updated: item.remoteContent?.updated || new Date().toISOString(),
-              option: item.remoteContent?.raw?.option || ({} as any),
-            } as Content;
-            await saveStoreItems('NOTE', [noteContent], undefined, targetLocalNotebookId);
-          } else if (item.type === 'BOARD') {
-            const boardContent: Content | PostContent = {
-              title: item.title,
-              description: item.remoteContent?.description || '',
-              input: item.title,
-              userId: 0,
-              parentId: targetLocalNotebookId,
-              type: 'BOARD',
-              order: 0,
-              updated: item.remoteContent?.updated || new Date().toISOString(),
-              option: item.remoteContent?.raw?.option || ({} as any),
-            } as Content;
-            await saveStoreItems('BOARD', [boardContent], undefined, targetLocalNotebookId);
+            throw new Error(
+              '동기화할 로컬 노트북이 없습니다. 로컬 노트북을 먼저 생성하고 폴더를 연결해주세요.'
+            );
           }
         }
-      }
 
-      // 3. 동기화 성공 항목들 sync anchor 업데이트
-      const anchorKey = getSyncAnchorKey(auth.user?.id || 0, notebook.title);
-      const anchorData = await getSyncAnchor(anchorKey);
-      const now = new Date().toISOString();
+        // 원격 생성 시 중복 방지(Deduplication Guard)를 위해 최신 원격 컨텐츠 목록 사전 조회
+        const latestRemoteMap = new Map<string, Content>();
+        try {
+          const latestRemotes = await getContentList(notebook.id, ['NOTE', 'BOARD']);
+          for (const r of latestRemotes) {
+            latestRemoteMap.set(`${r.type}:${r.title.trim()}`, r);
+          }
+        } catch (e) {
+          console.warn('[Sync] Failed to fetch latest remote contents for deduplication check:', e);
+        }
 
-      for (const item of diffItems) {
-        if (item.action === 'SKIP') continue;
-        let finalDesc = '';
-        if (item.action === 'LOCAL_TO_REMOTE') {
-          finalDesc = item.localContent?.description || '';
-        } else if (item.action === 'REMOTE_TO_LOCAL') {
-          finalDesc =
+        // 2. 각 항목별 동기화 실행
+        for (const item of diffItems) {
+          if (item.action === 'SKIP') continue;
+
+          if (item.action === 'LOCAL_TO_REMOTE') {
+            // 로컬 -> 원격
+            const rawDesc = item.localContent?.description || '';
+            const htmlDesc =
+              item.type === 'NOTE'
+                ? rawDesc.trim().startsWith('<')
+                  ? rawDesc
+                  : (await getMarkdownUtil()).renderer(rawDesc)
+                : rawDesc;
+
+            // 멱등성 보장: diffItems의 remoteContent.id가 없더라도 최신 원격 목록에 동일 항목이 존재하면 PATCH로 전환
+            const existingRemote = latestRemoteMap.get(`${item.type}:${item.title.trim()}`);
+            const remoteId = item.remoteContent?.id || existingRemote?.id;
+
+            if (remoteId) {
+              // 원격에 이미 존재하므로 수정 (PATCH)
+              await patchContent(remoteId, {
+                title: item.title,
+                description: htmlDesc,
+                input: item.title,
+                userId: auth.user?.id || 0,
+                parentId: notebook.id,
+                type: item.type,
+                order: 0,
+                option: (item.localContent?.raw?.option as any) || {},
+              });
+            } else {
+              // 원격에 새로 생성 (POST)
+              const newRemoteId = await postContent({
+                title: item.title,
+                description: htmlDesc,
+                input: item.title,
+                userId: auth.user?.id || 0,
+                parentId: notebook.id,
+                type: item.type,
+                order: 0,
+                option: (item.localContent?.raw?.option as any) || {},
+              });
+              latestRemoteMap.set(`${item.type}:${item.title.trim()}`, {
+                id: newRemoteId,
+                title: item.title,
+                type: item.type,
+                description: htmlDesc,
+              } as Content);
+            }
+          } else if (item.action === 'REMOTE_TO_LOCAL') {
+            // 원격 -> 로컬
+            if (item.type === 'NOTE') {
+              const noteContent: Content | PostContent = {
+                title: item.title,
+                description: item.remoteContent?.description || '',
+                input: item.title,
+                userId: 0,
+                parentId: targetLocalNotebookId,
+                type: 'NOTE',
+                order: 0,
+                updated: item.remoteContent?.updated || new Date().toISOString(),
+                option: item.remoteContent?.raw?.option || ({} as any),
+              } as Content;
+              await saveStoreItems('NOTE', [noteContent], undefined, targetLocalNotebookId);
+            } else if (item.type === 'BOARD') {
+              const boardContent: Content | PostContent = {
+                title: item.title,
+                description: item.remoteContent?.description || '',
+                input: item.title,
+                userId: 0,
+                parentId: targetLocalNotebookId,
+                type: 'BOARD',
+                order: 0,
+                updated: item.remoteContent?.updated || new Date().toISOString(),
+                option: item.remoteContent?.raw?.option || ({} as any),
+              } as Content;
+              await saveStoreItems('BOARD', [boardContent], undefined, targetLocalNotebookId);
+            }
+          }
+        }
+
+        // 3. 동기화 성공 항목들 sync anchor 업데이트
+        const anchorKey = getSyncAnchorKey(auth.user?.id || 0, notebook.title);
+        const anchorData = await getSyncAnchor(anchorKey);
+        const now = new Date().toISOString();
+
+        for (const item of diffItems) {
+          if (item.action === 'SKIP') continue;
+          let finalDesc = '';
+          if (item.action === 'LOCAL_TO_REMOTE') {
+            finalDesc = item.localContent?.description || '';
+          } else if (item.action === 'REMOTE_TO_LOCAL') {
+            finalDesc =
+              item.type === 'NOTE'
+                ? toMarkdown(item.remoteContent?.description || '')
+                : item.remoteContent?.description || '';
+          }
+          const norm =
             item.type === 'NOTE'
-              ? toMarkdown(item.remoteContent?.description || '')
-              : item.remoteContent?.description || '';
+              ? finalDesc
+              : typeof finalDesc === 'string'
+              ? finalDesc
+              : JSON.stringify(finalDesc);
+
+          anchorData[item.id] = {
+            hash: hashContent(norm),
+            syncedAt: now,
+          };
         }
-        const norm =
-          item.type === 'NOTE'
-            ? finalDesc
-            : typeof finalDesc === 'string'
-            ? finalDesc
-            : JSON.stringify(finalDesc);
+        await saveSyncAnchor(anchorKey, anchorData);
 
-        anchorData[item.id] = {
-          hash: hashContent(norm),
-          syncedAt: now,
-        };
+        return { success: true };
+      } finally {
+        runningSyncNotebookIds.delete(currentNotebookId);
       }
-      await saveSyncAnchor(anchorKey, anchorData);
-
-      return { success: true };
     },
     onSuccess: () => {
       // 관련 모든 쿼리 캐시 무효화
@@ -268,7 +311,6 @@ export const useNotebookSync = () => {
   const { options } = useSyncOptions();
   const queryClient = useQueryClient();
   const executeSync = useExecuteSync();
-  const isAutoSyncingRef = useRef(false);
 
   const isSyncAvailable =
     !auth.isLocal &&
@@ -279,6 +321,13 @@ export const useNotebookSync = () => {
 
   const currentRemoteNotebookId = notebook?.id || 0;
   const currentNotebookTitle = notebook?.title?.trim() || '';
+
+  const isAnySyncMutating =
+    useIsMutating({ mutationKey: ['executeSync', currentRemoteNotebookId] }) > 0;
+  const isNotebookSyncing =
+    runningSyncNotebookIds.has(currentRemoteNotebookId) ||
+    isAnySyncMutating ||
+    executeSync.isLoading;
 
   const queryKey = ['notebookSyncDiff', currentRemoteNotebookId, currentNotebookTitle];
 
@@ -360,6 +409,32 @@ export const useNotebookSync = () => {
         const localItem = localItemsMap.get(key);
         const remoteItem = remoteItemsMap.get(key);
 
+        const localNorm = localItem
+          ? type === 'NOTE'
+            ? toMarkdown(localItem.description || '')
+            : typeof localItem.description === 'string'
+            ? localItem.description
+            : JSON.stringify(localItem.description || '')
+          : null;
+        const localHash = localNorm !== null ? hashContent(localNorm) : null;
+
+        const remoteNorm = remoteItem
+          ? type === 'NOTE'
+            ? toMarkdown(remoteItem.description || '')
+            : typeof remoteItem.description === 'string'
+            ? remoteItem.description
+            : JSON.stringify(remoteItem.description || '')
+          : null;
+        const remoteHash = remoteNorm !== null ? hashContent(remoteNorm) : null;
+
+        const anchorHash = anchorData[key]?.hash ?? null;
+
+        console.log(
+          `[Sync] "${title}" | anchor.hash: ${anchorHash ?? 'none'} | remoteHash: ${
+            remoteHash ?? 'none'
+          } | localHash: ${localHash ?? 'none'}`
+        );
+
         if (localItem && !remoteItem) {
           // 로컬에만 존재
           diffItems.push({
@@ -370,7 +445,7 @@ export const useNotebookSync = () => {
             action: 'LOCAL_TO_REMOTE',
             isConflict: false,
             localContent: {
-              description: toMarkdown(localItem.description || ''),
+              description: toHtml(toMarkdown(localItem.description || '')),
               lastModified: localItem.updated,
               raw: localItem,
             },
@@ -406,24 +481,9 @@ export const useNotebookSync = () => {
             const anchor = anchorData[key];
             let isConflict = false;
             let status: SyncDiffStatus = 'MODIFIED';
+            let action: SyncActionType = defaultAction;
 
-            if (anchor) {
-              const localNorm =
-                type === 'NOTE'
-                  ? localDesc
-                  : typeof localDesc === 'string'
-                  ? localDesc
-                  : JSON.stringify(localDesc);
-              const remoteNorm =
-                type === 'NOTE'
-                  ? toMarkdown(remoteDesc)
-                  : typeof remoteDesc === 'string'
-                  ? remoteDesc
-                  : JSON.stringify(remoteDesc);
-
-              const localHash = hashContent(localNorm);
-              const remoteHash = hashContent(remoteNorm);
-
+            if (anchor && localHash !== null && remoteHash !== null) {
               const localChanged = localHash !== anchor.hash;
               const remoteChanged = remoteHash !== anchor.hash;
 
@@ -433,9 +493,11 @@ export const useNotebookSync = () => {
               } else if (localChanged && !remoteChanged) {
                 isConflict = false;
                 status = 'MODIFIED';
+                action = 'LOCAL_TO_REMOTE';
               } else if (!localChanged && remoteChanged) {
                 isConflict = false;
                 status = 'MODIFIED';
+                action = 'REMOTE_TO_LOCAL';
               } else {
                 // 해시가 기준점과 동일하지만 내용이 다른 예외 상황 -> 충돌로 안전 처리
                 isConflict = true;
@@ -452,12 +514,12 @@ export const useNotebookSync = () => {
               type,
               title,
               status,
-              action: defaultAction,
+              action,
               isConflict,
               localTime,
               remoteTime,
               localContent: {
-                description: localDesc,
+                description: toHtml(toMarkdown(localItem.description || '')),
                 lastModified: localItem.updated,
                 raw: localItem,
               },
@@ -522,7 +584,7 @@ export const useNotebookSync = () => {
       if (!event) return;
       const key = event.query?.queryKey?.[0];
       if (
-        !isAutoSyncingRef.current &&
+        !runningSyncNotebookIds.has(currentRemoteNotebookId) &&
         !executeSync.isLoading &&
         (key === 'pageContents' || key === 'boardContents') &&
         (event.type === 'queryUpdated' || event.type === 'observerResultsUpdated')
@@ -534,12 +596,19 @@ export const useNotebookSync = () => {
     return () => {
       unsubscribe();
     };
-  }, [options.autoCheckOnSave, isSyncAvailable, queryClient, queryKey, executeSync.isLoading]);
+  }, [
+    options.autoCheckOnSave,
+    isSyncAvailable,
+    queryClient,
+    queryKey,
+    executeSync.isLoading,
+    currentRemoteNotebookId,
+  ]);
 
   // 미충돌 노트 한정 자동 동기화
   useEffect(() => {
     if (!options.autoSyncNonConflicted || !isSyncAvailable) return;
-    if (isLoading || isFetching || executeSync.isLoading || isAutoSyncingRef.current) return;
+    if (isLoading || isFetching || isNotebookSyncing) return;
     if (!data?.matchedLocalNotebook) return;
 
     const nonConflictedItems = (data?.diffItems || []).filter(
@@ -548,7 +617,6 @@ export const useNotebookSync = () => {
 
     if (nonConflictedItems.length === 0) return;
 
-    isAutoSyncingRef.current = true;
     executeSync
       .mutateAsync({
         diffItems: nonConflictedItems,
@@ -556,15 +624,13 @@ export const useNotebookSync = () => {
       })
       .catch((err) => {
         console.error('Auto sync non-conflicted items failed:', err);
-      })
-      .finally(() => {
-        isAutoSyncingRef.current = false;
       });
   }, [
     options.autoSyncNonConflicted,
     isSyncAvailable,
     isLoading,
     isFetching,
+    isNotebookSyncing,
     executeSync,
     data?.diffItems,
     data?.matchedLocalNotebook,
@@ -574,7 +640,7 @@ export const useNotebookSync = () => {
     isSyncAvailable,
     isLoading,
     isFetching,
-    isAutoSyncing: isAutoSyncingRef.current || executeSync.isLoading,
+    isAutoSyncing: isNotebookSyncing,
     ...syncResult,
     refetch,
     manualRefresh: async () => {

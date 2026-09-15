@@ -20,7 +20,7 @@ let markdown:
     }
   | undefined;
 
-const getMarkdown = async () => {
+export const getMarkdown = async () => {
   if (!markdown) {
     markdown = await import('./markdown');
   }

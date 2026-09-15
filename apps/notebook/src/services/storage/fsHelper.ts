@@ -1,4 +1,4 @@
-import { toHtml, toMarkdown, type FsData } from '@blacktokki/editor';
+import { getMarkdownUtil, toMarkdown, type FsData } from '@blacktokki/editor';
 
 import { Content, PostContent } from '../../types';
 
@@ -52,6 +52,8 @@ export async function deleteNestedEntry(root: any, pathName: string): Promise<bo
   }
 }
 
+const ALLOWED_EXTENSIONS = /\.(md|markdown|json)$/i;
+
 export async function scanDirectoryRecursive(
   dirHandle: any,
   basePath = ''
@@ -60,14 +62,17 @@ export async function scanDirectoryRecursive(
   if (!dirHandle || !dirHandle.entries) return results;
   try {
     for await (const [name, handle] of dirHandle.entries()) {
-      if (name.startsWith('.')) continue;
       const fullPath = basePath ? `${basePath}/${name}` : name;
       if (handle.kind === 'file') {
-        results.push({ path: fullPath, name, handle, isFile: true });
+        if (ALLOWED_EXTENSIONS.test(name)) {
+          results.push({ path: fullPath, name, handle, isFile: true });
+        }
       } else if (handle.kind === 'directory') {
-        results.push({ path: fullPath, name, handle, isFile: false });
-        const subResults = await scanDirectoryRecursive(handle, fullPath);
-        results.push(...subResults);
+        if (!name.startsWith('.')) {
+          results.push({ path: fullPath, name, handle, isFile: false });
+          const subResults = await scanDirectoryRecursive(handle, fullPath);
+          results.push(...subResults);
+        }
       }
     }
   } catch (e) {
@@ -103,7 +108,7 @@ async function readFsDataFromDir(rootHandle: any): Promise<FsData> {
       try {
         const { text, lastModified } = await readFileText(entry.handle);
         const title = entry.path.replace(/\.(md|markdown)$/i, '');
-        const htmlDescription = toHtml(text || '');
+        const htmlDescription = (await getMarkdownUtil()).renderer(text || '');
         contents.push({
           title,
           description: htmlDescription,
@@ -291,8 +296,7 @@ export function generateVirtualFolderNotes(results: Content[], parentId: number)
     if (directChildren.length > 0) {
       targetNote.description = directChildren
         .map(
-          (child) =>
-            `<p><a href="?title=${encodeURIComponent(child.title)}">${child.title}</a></p>`
+          (child) => `<p><a href="?title=${encodeURIComponent(child.title)}">${child.title}</a></p>`
         )
         .join('');
     }
@@ -357,7 +361,6 @@ export async function saveContentsToDir(
             : [],
       };
       await saveFsDataToDir(rootHandle, fsData);
-      return;
     }
   } else if (deleteIdOrTitle !== undefined) {
     if (storeName === 'NOTEBOOK') {
@@ -406,7 +409,7 @@ export async function getDirStats(
   try {
     const entries = await scanDirectoryRecursive(dirHandle);
     for (const entry of entries) {
-      if (!entry.isFile || entry.name.startsWith('.')) continue;
+      if (!entry.isFile) continue;
       try {
         const file = await entry.handle.getFile();
         count++;

@@ -354,7 +354,7 @@ export default function UsageModeModal(props?: UsageModeModalProps) {
               initialNotebook={initialNotebook}
               onCancel={closeModal}
               onSuccess={handleSuccess}
-              submitLabel={forceLocal ? 'Save' : 'Add'}
+              submitLabel="save"
               forceLocal={forceLocal}
             />
           )}

@@ -10,15 +10,6 @@ export async function getDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('NOTE')) {
-        db.createObjectStore('NOTE', { keyPath: 'title' });
-      }
-      if (!db.objectStoreNames.contains('BOARD')) {
-        db.createObjectStore('BOARD', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('NOTEBOOK')) {
-        db.createObjectStore('NOTEBOOK', { keyPath: 'id' });
-      }
       if (!db.objectStoreNames.contains('FS_CONFIG')) {
         db.createObjectStore('FS_CONFIG', { keyPath: 'parentId' });
       }

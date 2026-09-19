@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo } from 'react';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from 'react-query';
 
+import { deleteSyncAnchorFromDB, getSyncAnchorFromDB, saveSyncAnchorToDB } from './db';
 import {
   DEFAULT_SYNC_OPTIONS,
   SyncActionType,
@@ -14,7 +15,7 @@ import {
 } from './types';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import { getContentList, patchContent, postContent } from '../../services/notebook';
-import { getStoreItems, saveStoreItems } from '../../services/storage';
+import { getStorageConfig, getStoreItems, saveStoreItems } from '../../services/storage';
 import { Content, PostContent } from '../../types';
 
 const SYNC_OPTIONS_KEY = '@blacktokki:notebook:sync_options:';
@@ -35,20 +36,19 @@ export const getSyncAnchorKey = (userId: number | string, notebookTitle: string)
 };
 
 export const getSyncAnchor = async (anchorKey: string): Promise<SyncAnchor> => {
-  try {
-    const value = await AsyncStorage.getItem(anchorKey);
-    return value ? JSON.parse(value) : {};
-  } catch (e) {
-    return {};
-  }
+  return await getSyncAnchorFromDB<SyncAnchor>(anchorKey);
 };
 
 export const saveSyncAnchor = async (anchorKey: string, anchor: SyncAnchor): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(anchorKey, JSON.stringify(anchor));
-  } catch (e) {
-    console.error('Failed to save sync anchor', e);
-  }
+  await saveSyncAnchorToDB(anchorKey, anchor);
+};
+
+export const deleteSyncAnchor = async (
+  userId: number | string,
+  notebookTitle: string
+): Promise<void> => {
+  const anchorKey = getSyncAnchorKey(userId, notebookTitle);
+  await deleteSyncAnchorFromDB(anchorKey);
 };
 
 export const getSyncOptions = async (subkey: string): Promise<SyncOptions> => {
@@ -351,12 +351,47 @@ export const useNotebookSync = () => {
         console.error('Error fetching local notebooks for sync:', e);
       }
 
-      const matchedLocalNotebook =
+      let matchedLocalNotebook =
         localNotebooks.find(
           (nb) => nb.title?.trim().toLowerCase() === currentNotebookTitle.toLowerCase()
         ) || null;
 
+      // 로컬 노트북이 목록에 있더라도 실제 PC 폴더(handle)가 연결되어 있지 않으면 미존재(미연결)로 판정
+      if (matchedLocalNotebook) {
+        try {
+          const config = await getStorageConfig(matchedLocalNotebook.id);
+          if (!config.handle) {
+            console.log(
+              `[useNotebookSync] Local notebook "${currentNotebookTitle}" (id: ${matchedLocalNotebook.id}) has no valid local folder handle. Treating as missing.`
+            );
+            matchedLocalNotebook = null;
+          }
+        } catch (e) {
+          console.warn('[useNotebookSync] Error checking storage config for local notebook:', e);
+          matchedLocalNotebook = null;
+        }
+      }
+
       const isLocalNotebookMissing = matchedLocalNotebook === null;
+
+      console.log(
+        `[useNotebookSync] Notebook "${currentNotebookTitle}" | matchedLocalNotebook:`,
+        matchedLocalNotebook?.id ?? 'none',
+        '| isLocalNotebookMissing:',
+        isLocalNotebookMissing
+      );
+
+      // 로컬에 매칭되는 노트북이 없는 경우(삭제되었거나 미연결):
+      // 계정 노트를 임의로 신규 동기화 항목(REMOTE_ONLY)으로 수집하지 않고,
+      // diffItems를 빈 배열로 반환하여 불필요한 배지 및 오동작 차단
+      if (!matchedLocalNotebook) {
+        return {
+          matchedLocalNotebook: null,
+          isLocalNotebookMissing: true,
+          diffItems: [] as SyncDiffItem[],
+          diffCount: 0,
+        };
+      }
 
       // 2. 원격 컨텐츠 수집 (NOTE, BOARD)
       let remoteContents: Content[] = [];
@@ -470,7 +505,9 @@ export const useNotebookSync = () => {
           // 양쪽에 모두 존재 -> 내용 비교
           const localDesc = toMarkdown(localItem.description || '');
           const remoteDesc = remoteItem.description || '';
-          const equal = isContentEqual(type, localDesc, remoteDesc);
+          const equal =
+            (localHash !== null && remoteHash !== null && localHash === remoteHash) ||
+            isContentEqual(type, localDesc, remoteDesc);
 
           if (!equal) {
             const localTime = new Date(localItem.updated || 0).getTime();
@@ -530,8 +567,8 @@ export const useNotebookSync = () => {
                 raw: remoteItem,
               },
             });
-          } else if (!anchorData[key]) {
-            // 이미 동일한 항목은 기준점이 없으면 자동 등록
+          } else if (!anchorData[key] || anchorData[key].hash !== localHash) {
+            // 이미 동일한 항목은 기준점이 없거나 이전 해시와 다르면 현재 해시로 자동 갱신
             const norm =
               type === 'NOTE'
                 ? localDesc
@@ -539,7 +576,7 @@ export const useNotebookSync = () => {
                 ? localDesc
                 : JSON.stringify(localDesc);
             anchorData[key] = {
-              hash: hashContent(norm),
+              hash: localHash || hashContent(norm),
               syncedAt: new Date().toISOString(),
             };
             anchorUpdated = true;
@@ -562,7 +599,8 @@ export const useNotebookSync = () => {
     refetchOnWindowFocus: options.autoCheckOnFocus,
     refetchInterval:
       options.pollingIntervalMinutes > 0 ? options.pollingIntervalMinutes * 60 * 1000 : false,
-    staleTime: 1000 * 30, // 30초 캐싱
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const syncResult = useMemo(

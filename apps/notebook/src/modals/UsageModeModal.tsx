@@ -8,7 +8,6 @@ import { useCreateOrUpdateNotebook, useDeleteNotebook } from '../hooks/useNotebo
 import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { usePrivate } from '../hooks/usePrivate';
 import { useSetUsageMode } from '../hooks/useUsageMode';
-import { NotebookStorageFormSection } from '../screens/main/home/StoragePathSection';
 import { getStorageConfig } from '../services/storage';
 import { Content, NotebookOption } from '../types';
 
@@ -64,6 +63,116 @@ const OptionButton = (props: { title: string; onPress: () => void; active: boole
         {props.title}
       </Text>
     </TouchableOpacity>
+  );
+};
+
+const NotebookPathFormSection = ({
+  pathName,
+  setPathName,
+  setHandle,
+  hasError,
+}: {
+  pathName: string;
+  setPathName: (s: string) => void;
+  setHandle: (h: any) => void;
+  hasError?: boolean;
+}) => {
+  const { lang } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
+
+  const handlePickLocal = async () => {
+    if (!(window as any).showDirectoryPicker) {
+      Alert.alert(
+        lang('error'),
+        lang('PC folder direct integration is not supported in this browser.')
+      );
+      return;
+    }
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker();
+      setHandle(dirHandle);
+      setPathName(dirHandle.name);
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        Alert.alert(lang('error'), e.message || lang('Failed to select folder.'));
+      }
+    }
+  };
+
+  return (
+    <View style={{ marginBottom: hasError ? 4 : 12 }}>
+      <TouchableOpacity
+        onPress={handlePickLocal}
+        style={[
+          commonStyles.input,
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: 'transparent',
+            paddingVertical: 10,
+            borderColor: hasError
+              ? commonStyles.button.backgroundColor
+              : commonStyles.input.borderColor,
+            borderWidth: hasError ? 1.5 : commonStyles.input.borderWidth || 1,
+          },
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+          <MciIcon
+            name="folder-outline"
+            size={18}
+            color={
+              hasError
+                ? commonStyles.button.backgroundColor
+                : pathName
+                ? commonStyles.button.backgroundColor
+                : commonStyles.placeholder.color
+            }
+            style={{ marginRight: 8 }}
+          />
+          <Text
+            style={[
+              commonStyles.text,
+              {
+                color: hasError
+                  ? commonStyles.button.backgroundColor
+                  : pathName
+                  ? commonStyles.text.color
+                  : commonStyles.placeholder.color,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {pathName || lang('Select Local Storage Folder (Required):')}
+          </Text>
+        </View>
+        <Text
+          style={{
+            color: commonStyles.button.backgroundColor,
+            fontSize: 12,
+            fontWeight: '500',
+          }}
+        >
+          {lang(pathName ? 'Change' : 'Select')}
+        </Text>
+      </TouchableOpacity>
+      {hasError && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginLeft: 4 }}>
+          <MciIcon
+            name="alert-circle-outline"
+            size={14}
+            color={commonStyles.button.backgroundColor}
+            style={{ marginRight: 4 }}
+          />
+          <Text
+            style={{ color: commonStyles.button.backgroundColor, fontSize: 12, fontWeight: '500' }}
+          >
+            {lang('Please select a local folder on your computer to save.')}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 };
 
@@ -162,7 +271,7 @@ const NotebookForm: React.FC<NotebookFormProps> = ({
 
   const handleDelete = () => {
     if (initialNotebook?.id) {
-      deleteNotebook.mutate(initialNotebook.id);
+      deleteNotebook.mutate({ id: initialNotebook.id, title: initialNotebook.title });
       onSuccess();
     }
   };
@@ -230,7 +339,7 @@ const NotebookForm: React.FC<NotebookFormProps> = ({
       />
 
       {isTargetLocal && (
-        <NotebookStorageFormSection
+        <NotebookPathFormSection
           pathName={pathName}
           setPathName={(s) => {
             setPathName(s);

@@ -1,7 +1,6 @@
 import { getAllStorageConfigs, getStorageConfig } from './config';
-import { getDirStats } from './fsHelper';
 import { localDirGetStoreItems, localDirSaveItems } from './localDirDriver';
-import { getOpfsDirHandle, opfsGetStoreItems, opfsSaveItems } from './opfsDriver';
+import { opfsGetStoreItems, opfsSaveItems } from './opfsDriver';
 import { Content, PostContent } from '../../types';
 
 export * from './config';
@@ -55,21 +54,5 @@ export async function saveStoreItems(
     await localDirSaveItems(storeName, targetParentId, config.handle, contents, deleteIdOrTitle);
   } else {
     await opfsSaveItems(storeName, targetParentId, config.pathName, contents, deleteIdOrTitle);
-  }
-}
-
-export async function getStorageStats(
-  parentId = 0
-): Promise<{ count: number; totalSize: number; lastModified: number }> {
-  try {
-    const config = await getStorageConfig(parentId);
-    if (parentId > 0 || config.type === 'local') {
-      if (!config.handle) return { count: 0, totalSize: 0, lastModified: 0 };
-      return await getDirStats(config.handle);
-    }
-    const dirHandle = await getOpfsDirHandle(config.pathName);
-    return await getDirStats(dirHandle);
-  } catch (e) {
-    return { count: 0, totalSize: 0, lastModified: 0 };
   }
 }

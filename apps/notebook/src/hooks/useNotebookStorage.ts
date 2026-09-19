@@ -1,7 +1,8 @@
 import { useAuthContext } from '@blacktokki/account';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { deleteSyncAnchor } from '../features/sync/useNotebookSync';
+import { deleteSyncAnchor, deleteSyncOptions } from '../features/sync/useNotebookSync';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import {
   deleteStorageConfig,
@@ -82,16 +83,14 @@ export const useNotebooks = () => {
 };
 
 export const useNotebook = (id: number) => {
-  const { data: notebooks } = useNotebooks();
-  return useQuery({
-    queryKey: ['notebookContent', id],
-    queryFn: () => notebooks?.find((n) => n.id === id) || null,
-    enabled: notebooks !== undefined,
-    staleTime: Infinity,
-    cacheTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
+  const { data: notebooks, isLoading } = useNotebooks();
+  const notebook = useMemo(() => {
+    if (notebooks === undefined) return undefined;
+    if (!id) return null;
+    return notebooks.find((n) => String(n.id) === String(id)) || null;
+  }, [notebooks, id]);
+
+  return { data: notebook, isLoading };
 };
 
 export const useCreateOrUpdateNotebook = () => {
@@ -159,7 +158,7 @@ export const useCreateOrUpdateNotebook = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
-      queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
+      // queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
     },
   });
 };
@@ -174,11 +173,18 @@ export const useDeleteNotebook = () => {
       const title = typeof param === 'number' ? undefined : param.title;
       await saveNotebookContent(!auth.isLocal, [], id);
 
-      if (title && auth.user?.id) {
+      if (auth.user?.id) {
+        if (title) {
+          try {
+            await deleteSyncAnchor(auth.user.id, title);
+          } catch (e) {
+            console.error('Failed to delete sync anchor for notebook', e);
+          }
+        }
         try {
-          await deleteSyncAnchor(auth.user.id, title);
+          await deleteSyncOptions(auth.user.id, id);
         } catch (e) {
-          console.error('Failed to delete sync anchor for notebook', e);
+          console.error('Failed to delete sync options for notebook', e);
         }
       }
       return id;
@@ -186,10 +192,10 @@ export const useDeleteNotebook = () => {
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
       queryClient.invalidateQueries({ queryKey: ['notebookSyncDiff'] });
-      queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
-      if (id) {
-        queryClient.removeQueries({ queryKey: ['notebookContent', id] });
-      }
+      // queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
+      // if (id) {
+      //   queryClient.removeQueries({ queryKey: ['notebookContent', id] });
+      // }
     },
   });
 };

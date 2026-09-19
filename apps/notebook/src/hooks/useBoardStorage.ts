@@ -3,7 +3,12 @@ import { useIsFocused } from '@react-navigation/core';
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { focusListener, getContents, saveContents } from './useNoteStorage';
+import {
+  DEFAULT_POLLING_INTERVAL,
+  focusListener,
+  getContents,
+  saveContents,
+} from './useNoteStorage';
 import { useUsageMode } from './useUsageMode';
 import { BoardOption, Content, PostContent } from '../types';
 
@@ -24,6 +29,7 @@ export const useBoardPages = () => {
 
       return contents.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
     },
+    refetchInterval: DEFAULT_POLLING_INTERVAL,
   });
 };
 

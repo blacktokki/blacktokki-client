@@ -53,12 +53,16 @@ export const useUsageMode = () => {
   const { data: notebook, isLoading: isNotebookLoading } = useNotebook(currentNotebookId || 0);
   const isLoading = isModeLoading || isIdLoading || isNotebookLoading;
   return useMemo(() => {
-    if (usageMode === undefined || notebook === undefined) {
+    if (
+      isLoading ||
+      usageMode === undefined ||
+      (usageMode === 'NOTEBOOK' && currentNotebookId && notebook === undefined)
+    ) {
       return {
         usageMode: undefined,
         notebook: undefined,
         isBoardEnabled: undefined,
-        currentNotebookId: undefined,
+        currentNotebookId: currentNotebookId ?? undefined,
       };
     }
 
@@ -111,7 +115,11 @@ export const useSetUsageMode = () => {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.setQueryData(['usageMode', subkey], variables.mode);
+      if (variables.notebookId !== undefined) {
+        queryClient.setQueryData(['currentNotebookId', subkey], variables.notebookId);
+      }
       queryClient.invalidateQueries({ queryKey: ['usageMode', subkey] });
       queryClient.invalidateQueries({ queryKey: ['currentNotebookId', subkey] });
     },

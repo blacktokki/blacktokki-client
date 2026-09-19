@@ -1,7 +1,7 @@
 import { useAuthContext } from '@blacktokki/account';
 import { getMarkdownUtil, toHtml, toMarkdown } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { deleteSyncAnchorFromDB, getSyncAnchorFromDB, saveSyncAnchorToDB } from './db';
@@ -13,6 +13,7 @@ import {
   SyncDiffStatus,
   SyncOptions,
 } from './types';
+import { DEFAULT_POLLING_INTERVAL } from '../../hooks/useNoteStorage';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import { getContentList, patchContent, postContent } from '../../services/notebook';
 import { getStorageConfig, getStoreItems, saveStoreItems } from '../../services/storage';
@@ -69,10 +70,25 @@ export const setSyncOptions = async (subkey: string, options: SyncOptions): Prom
   }
 };
 
+export const deleteSyncOptions = async (
+  userId: number | string,
+  notebookId: number | string
+): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(`${SYNC_OPTIONS_KEY}${userId}:${notebookId}`);
+  } catch (e) {
+    console.error('Failed to delete sync options', e);
+  }
+};
+
 export const useSyncOptions = () => {
   const { auth } = useAuthContext();
-  const subkey = auth.isLocal ? '' : `${auth.user?.id || ''}`;
+  const { notebook } = useUsageMode();
   const queryClient = useQueryClient();
+
+  const notebookId = notebook?.id;
+  const userId = auth.isLocal ? '' : `${auth.user?.id || ''}`;
+  const subkey = userId && notebookId ? `${userId}:${notebookId}` : userId;
 
   const { data: options = DEFAULT_SYNC_OPTIONS } = useQuery({
     queryKey: ['syncOptions', subkey],
@@ -329,7 +345,10 @@ export const useNotebookSync = () => {
     isAnySyncMutating ||
     executeSync.isLoading;
 
-  const queryKey = ['notebookSyncDiff', currentRemoteNotebookId, currentNotebookTitle];
+  const queryKey = useMemo(
+    () => ['notebookSyncDiff', currentRemoteNotebookId, currentNotebookTitle],
+    [currentRemoteNotebookId, currentNotebookTitle]
+  );
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey,
@@ -597,8 +616,8 @@ export const useNotebookSync = () => {
     },
     enabled: isSyncAvailable,
     refetchOnWindowFocus: options.autoCheckOnFocus,
-    refetchInterval:
-      options.pollingIntervalMinutes > 0 ? options.pollingIntervalMinutes * 60 * 1000 : false,
+    refetchInterval: options.autoSyncNonConflicted ? 15 * 1000 : DEFAULT_POLLING_INTERVAL,
+    refetchIntervalInBackground: true,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -674,6 +693,11 @@ export const useNotebookSync = () => {
     data?.matchedLocalNotebook,
   ]);
 
+  const manualRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries(queryKey);
+    return await refetch();
+  }, [queryClient, queryKey, refetch]);
+
   return {
     isSyncAvailable,
     isLoading,
@@ -681,9 +705,6 @@ export const useNotebookSync = () => {
     isAutoSyncing: isNotebookSyncing,
     ...syncResult,
     refetch,
-    manualRefresh: async () => {
-      await queryClient.invalidateQueries(queryKey);
-      return await refetch();
-    },
+    manualRefresh,
   };
 };

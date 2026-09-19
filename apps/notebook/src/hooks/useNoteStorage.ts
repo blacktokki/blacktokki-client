@@ -9,6 +9,8 @@ import { deleteContent, getContentList, patchContent, postContent } from '../ser
 import { getStoreItems, saveStoreItems } from '../services/storage';
 import { Content, PostContent } from '../types';
 
+export const DEFAULT_POLLING_INTERVAL = 30 * 1000;
+
 export const getSplitTitle = (title: string) => {
   const splitTitle = title.split('/');
   if (splitTitle.length < 2) {
@@ -94,6 +96,7 @@ export const useNotePages = (targetNotebookId?: number | null) => {
       });
       return contents;
     },
+    refetchInterval: DEFAULT_POLLING_INTERVAL,
   });
 };
 

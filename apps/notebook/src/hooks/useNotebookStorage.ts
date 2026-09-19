@@ -159,6 +159,7 @@ export const useCreateOrUpdateNotebook = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
+      queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
     },
   });
 };
@@ -182,9 +183,13 @@ export const useDeleteNotebook = () => {
       }
       return id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
       queryClient.invalidateQueries({ queryKey: ['notebookSyncDiff'] });
+      queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
+      if (id) {
+        queryClient.removeQueries({ queryKey: ['notebookContent', id] });
+      }
     },
   });
 };

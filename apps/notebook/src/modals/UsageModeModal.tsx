@@ -7,7 +7,7 @@ import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCreateOrUpdateNotebook, useDeleteNotebook } from '../hooks/useNotebookStorage';
 import { useNotebookTheme } from '../hooks/useNotebookTheme';
 import { usePrivate } from '../hooks/usePrivate';
-import { useSetUsageMode } from '../hooks/useUsageMode';
+import { useSetUsageMode, useUsageMode } from '../hooks/useUsageMode';
 import { getStorageConfig } from '../services/storage';
 import { Content, NotebookOption } from '../types';
 
@@ -21,6 +21,7 @@ type NotebookInitialData = {
 interface NotebookFormProps {
   initialNotebook?: Content | NotebookInitialData | null;
   onSuccess: (createdNotebook?: Content) => void;
+  onDelete?: () => void;
   onCancel: () => void;
   submitLabel: string;
   showDelete?: boolean;
@@ -179,6 +180,7 @@ const NotebookPathFormSection = ({
 const NotebookForm: React.FC<NotebookFormProps> = ({
   initialNotebook,
   onSuccess,
+  onDelete,
   onCancel,
   submitLabel,
   showDelete,
@@ -272,7 +274,11 @@ const NotebookForm: React.FC<NotebookFormProps> = ({
   const handleDelete = () => {
     if (initialNotebook?.id) {
       deleteNotebook.mutate({ id: initialNotebook.id, title: initialNotebook.title });
-      onSuccess();
+      if (onDelete) {
+        onDelete();
+      } else {
+        onSuccess();
+      }
     }
   };
 
@@ -398,6 +404,7 @@ export default function UsageModeModal(props?: UsageModeModalProps) {
   const { setModal } = useModalsContext();
   const { commonStyles } = useNotebookTheme();
   const setUsageMode = useSetUsageMode();
+  const { usageMode, notebook: currentNotebook, currentNotebookId } = useUsageMode();
 
   const isAdding = props?.isAdding === true;
   const editingNotebook = props && !props.isAdding ? props.editingNotebook || null : null;
@@ -420,6 +427,21 @@ export default function UsageModeModal(props?: UsageModeModalProps) {
       props.onSuccess(created);
     } else if (created?.id && !forceLocal) {
       setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: created.id });
+    }
+    closeModal();
+  };
+
+  const handleDelete = () => {
+    const deletedId = editingNotebook?.id;
+    const isCurrentActive =
+      usageMode === 'NOTEBOOK' &&
+      deletedId !== undefined &&
+      (currentNotebook?.id === deletedId || currentNotebookId === deletedId);
+    if (isCurrentActive) {
+      setUsageMode.mutate({ mode: 'NOTE', notebookId: null });
+    }
+    if (props?.onSuccess) {
+      props.onSuccess();
     }
     closeModal();
   };
@@ -453,6 +475,7 @@ export default function UsageModeModal(props?: UsageModeModalProps) {
               initialNotebook={editingNotebook}
               onCancel={closeModal}
               onSuccess={handleSuccess}
+              onDelete={handleDelete}
               submitLabel="Edit"
               showDelete
               forceLocal={forceLocal}

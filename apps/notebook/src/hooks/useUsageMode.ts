@@ -58,6 +58,7 @@ export const useUsageMode = () => {
         usageMode: undefined,
         notebook: undefined,
         isBoardEnabled: undefined,
+        currentNotebookId: undefined,
       };
     }
 
@@ -66,6 +67,7 @@ export const useUsageMode = () => {
         usageMode,
         notebook: null,
         isBoardEnabled: false,
+        currentNotebookId: currentNotebookId ?? null,
       };
     }
     if (currentNotebookId === 0 || !notebook) {
@@ -73,6 +75,7 @@ export const useUsageMode = () => {
         usageMode: 'NOTE',
         notebook: null,
         isBoardEnabled: false,
+        currentNotebookId: currentNotebookId ?? null,
       };
     }
 
@@ -82,6 +85,7 @@ export const useUsageMode = () => {
       usageMode,
       notebook,
       isBoardEnabled: notebookType === 'WORKSPACE' || notebookType === 'PRIVATE_WORKSPACE',
+      currentNotebookId: currentNotebookId ?? null,
     };
   }, [usageMode, notebook, currentNotebookId, isLoading]);
 };
@@ -96,8 +100,8 @@ export const useSetUsageMode = () => {
       mode,
       notebookId,
     }:
-      | { mode: 'SIMPLE' | 'NOTE'; notebookId?: undefined }
-      | { mode: 'NOTEBOOK'; notebookId: number }) => {
+      | { mode: 'SIMPLE' | 'NOTE'; notebookId?: number | null }
+      | { mode: 'NOTEBOOK'; notebookId: number | null }) => {
       await AsyncStorage.setItem(USAGE_MODE_KEY + subkey, mode);
       if (notebookId !== undefined) {
         if (notebookId === null) {

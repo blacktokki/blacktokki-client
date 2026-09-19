@@ -25,6 +25,7 @@ import {
 } from '../../../hooks/usePrivate';
 import { useSetUsageMode, useUsageMode } from '../../../hooks/useUsageMode';
 import AccountEditModal from '../../../modals/AccountEditModal';
+import UsageModeModal from '../../../modals/UsageModeModal';
 import { NavigationParamList } from '../../../types';
 
 export const SkinConfigSection = () => {
@@ -96,7 +97,7 @@ export default () => {
   const { data: privateOtp } = usePrivateOtp();
   const setPrivate = useSetPrivate();
   const setPrivateOtp = useSetPrivateOtp();
-  const { usageMode } = useUsageMode();
+  const { usageMode, currentNotebookId } = useUsageMode();
   const setUsageMode = useSetUsageMode();
   const { data: extension } = useExtension();
 
@@ -189,8 +190,17 @@ export default () => {
                 <OptionButton
                   title={lang('Notebook Mode')}
                   onPress={() => {
-                    const firstId = notebooks[0]?.id;
-                    setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: firstId });
+                    const availableNotebooks = privateConfig.enabled
+                      ? notebooks
+                      : notebooks.filter((nb) => !nb.option?.NOTEBOOK_TYPE?.includes('PRIVATE'));
+                    const targetId = availableNotebooks.some((nb) => nb.id === currentNotebookId)
+                      ? currentNotebookId
+                      : availableNotebooks[0]?.id;
+                    if (targetId) {
+                      setUsageMode.mutate({ mode: 'NOTEBOOK', notebookId: targetId });
+                    } else {
+                      setModal(UsageModeModal, { isAdding: true });
+                    }
                   }}
                   active={usageMode === 'NOTEBOOK'}
                 />

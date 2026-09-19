@@ -63,7 +63,7 @@
 ## Usage Mode
 You can adjust the app's complexity and features across 3 levels according to your workflow and purpose.
 * **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
-* **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Usage Mode`.
+* **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Mode Settings`. If no notebook mode has been created, selecting Notebook Mode will automatically open the modal to create a new notebook.
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
@@ -81,7 +81,7 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 * **Notebook Management via Header Dropdown:**
   * Click the active notebook title in the top header to view the list of registered notebooks and switch between workspaces instantly.
-  * Click the three-dot menu (⋮) on any notebook item to edit its title, description, sub-mode, or delete it.
+  * Click the three-dot menu (⋮) on any notebook item to edit its title, description, sub-mode, or delete it. Deleting the currently active notebook mode automatically returns to standard Note Mode.
   * Use the `+ Add Notebook Mode` button to quickly create a new notebook, or use `〈 Switch to Note Mode` to instantly return to standard Note Mode.
 
 * **🗂 Workspace**

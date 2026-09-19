@@ -3,6 +3,10 @@ import { NavigationConfig } from '@blacktokki/navigation';
 import React from 'react';
 
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
+import OntologyButton from './ontology/OntologyButton';
+import { OntologyScreen } from './ontology/OntologyScreen';
+import { OntologyTopicScreen } from './ontology/OntologyTopicScreen';
+import SubjectTagSection from './ontology/SubjectTagSection';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
@@ -98,6 +102,32 @@ features['timeline'] = {
     {
       type: 'button',
       Component: <TimeLineButton key={'timeline'} />,
+    },
+  ],
+};
+
+features['ontology'] = {
+  title: 'Ontology',
+  description:
+    'Maps notes, boards, topics, and references into an ontology graph with scoped validation and explainable inference.',
+  useNoteMode: true,
+  screens: {
+    Ontology: {
+      title: '',
+      component: OntologyScreen,
+      path: 'ontology',
+    },
+    OntologyTopic: {
+      title: '',
+      component: OntologyTopicScreen,
+      path: 'ontology/topic',
+    },
+  },
+  NoteSections: [SubjectTagSection],
+  elements: [
+    {
+      type: 'button',
+      Component: <OntologyButton key={'ontology'} />,
     },
   ],
 };

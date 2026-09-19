@@ -80,4 +80,6 @@ export type NavigationParamList = {
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
   Extension: undefined;
+  Ontology: undefined;
+  OntologyTopic: undefined;
 };

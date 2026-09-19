@@ -16,3 +16,4 @@
 | **2508** | Accepted | 2025-11-23 | 2단계 인증(2FA / OTP) 보안 인증 레이어 | [2508-2fa-otp-security-layer.md](2508-2fa-otp-security-layer.md) |
 | **2509** | Accepted | 2025-12-14 | 프라이버시 모드(Privacy Mode) 민감 정보 구획화 | [2509-privacy-mode-data-isolation.md](2509-privacy-mode-data-isolation.md) |
 | **2601** | Accepted | 2026-09-06 | 로컬-계정 간 노트북 스마트 동기화 및 3-Way 충돌 해결 아키텍처 | [2601-smart-sync-conflict-resolution.md](2601-smart-sync-conflict-resolution.md) |
+| **2602** | Accepted | 2026-09-17 | 온톨로지 뷰(Ontology View) 확장 기능 아키텍처 | [2602-ontology-graph-view-extension.md](2602-ontology-graph-view-extension.md) |

@@ -50,9 +50,9 @@ export const NoteListSection = ({
               <View style={{ flexDirection: 'row' }}>
                 <Icon
                   style={{ top: 6, paddingRight: 6 }}
-                  name={item.link ? 'external-link' : 'file-text'}
+                  name={item.link ? 'magic' : 'file-text'}
                   size={12}
-                  color={commonStyles.text.color}
+                  color={item.link ? '#AD3D76' : commonStyles.text.color}
                 />
                 <Text style={commonStyles.title}>{titleFormat(item)}</Text>
               </View>

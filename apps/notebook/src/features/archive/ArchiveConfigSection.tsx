@@ -40,7 +40,7 @@ export const ExportButton = ({ title, id }: { title: string; id: number }) => {
       };
     });
 
-    mdfs.export({contents: exportData, jsons: []} , title);
+    mdfs.export({ contents: exportData, jsons: [] }, title);
   };
 
   return (
@@ -77,7 +77,7 @@ export default () => {
                   .filter((c) => c.type === 'BOARD')
                   .map((c) => ({ title: c.title, data: c.option }));
                 mdfs.export(
-                  { contents: notes, jsons:boards },
+                  { contents: notes, jsons: boards },
                   usageMode === 'NOTEBOOK' && notebook ? notebook.title : 'notebook'
                 );
               })
@@ -95,7 +95,7 @@ export default () => {
                     ...note,
                     isLast: i + 1 === contents.length && jsons.length === 0,
                     newParentId: notebook?.id || 0,
-                    description : note.description || ''
+                    description: note.description || '',
                   });
                 }
                 for (let i = 0; i < jsons.length; i++) {

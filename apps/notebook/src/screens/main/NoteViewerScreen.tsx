@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 
 import {
+  FullNoteSection,
   HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
@@ -32,6 +33,7 @@ export const NoteViewerScreen: React.FC = () => {
   const { commonStyles } = useNotebookTheme();
   const [toc, toggleToc] = useState(false);
   const [fullParagraph, toggleFullParagraph] = useState(false);
+  const [onlyPageSection, setOnlyPageSection] = useState(false);
   const { data: viewers } = useNoteViewers();
 
   const page = viewers?.find((v) => v.key === key);
@@ -53,6 +55,36 @@ export const NoteViewerScreen: React.FC = () => {
   useEffect(() => {
     toggleToc(false);
   }, [route]);
+  useEffect(() => {
+    setOnlyPageSection(false);
+  }, [key]);
+
+  if (onlyPageSection) {
+    return (
+      isFocused && (
+        <FullNoteSection
+          description={description}
+          onClose={() => setOnlyPageSection(false)}
+          toc={toc}
+          fullParagraph={fullParagraph}
+          root={key}
+          path={paragraphItem?.path}
+          paragraphs={paragraphs}
+          onPress={(moveParagraph) => {
+            toggleFullParagraph(true);
+            const params: ParagraphKey = toNoteParams(
+              key,
+              moveParagraph.level === 0 ? undefined : moveParagraph.title,
+              moveParagraph.autoSection
+            );
+            delete (params as { title?: string }).title;
+            navigation.navigate('NoteViewer', { key, ...params });
+          }}
+        />
+      )
+    );
+  }
+
   return (
     isFocused && (
       <>
@@ -78,6 +110,15 @@ export const NoteViewerScreen: React.FC = () => {
                   onPress={() => toggleFullParagraph(!fullParagraph)}
                 />
               )}
+              {(_window === 'landscape' || !toc) && (
+                <HeaderIconButton
+                  name="window-maximize"
+                  onPress={() => {
+                    toggleFullParagraph(true);
+                    setOnlyPageSection(true);
+                  }}
+                />
+              )}
               {!!(paragraph || description || _window === 'portrait') && (
                 <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
               )}
@@ -85,24 +126,22 @@ export const NoteViewerScreen: React.FC = () => {
           </View>
           <View style={commonStyles.flex}>
             <NotePageSection active={!toc} description={description} />
-            {
-              <NoteBottomSection
-                toc={toc}
-                fullParagraph={fullParagraph}
-                root={key}
-                path={paragraphItem?.path}
-                paragraphs={paragraphs}
-                onPress={(moveParagraph) => {
-                  const params: ParagraphKey = toNoteParams(
-                    key,
-                    moveParagraph.level === 0 ? undefined : moveParagraph.title,
-                    moveParagraph.autoSection
-                  );
-                  delete (params as { title?: string }).title;
-                  navigation.navigate('NoteViewer', { key, ...params });
-                }}
-              />
-            }
+            <NoteBottomSection
+              toc={toc}
+              fullParagraph={fullParagraph}
+              root={key}
+              path={paragraphItem?.path}
+              paragraphs={paragraphs}
+              onPress={(moveParagraph) => {
+                const params: ParagraphKey = toNoteParams(
+                  key,
+                  moveParagraph.level === 0 ? undefined : moveParagraph.title,
+                  moveParagraph.autoSection
+                );
+                delete (params as { title?: string }).title;
+                navigation.navigate('NoteViewer', { key, ...params });
+              }}
+            />
           </View>
         </ScrollView>
       </>

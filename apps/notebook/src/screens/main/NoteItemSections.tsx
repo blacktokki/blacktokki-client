@@ -1,10 +1,19 @@
 import { EditorViewer } from '@blacktokki/editor';
-import { push } from '@blacktokki/navigation';
+import { push, setDrawerVisible } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
 import DiffMatchPatch from 'diff-match-patch';
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  GestureResponderEvent,
+  ScrollView,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -176,6 +185,9 @@ export const NoteBottomSection = ({
   paragraphs,
   root,
   onPress,
+  style,
+  hideTitle,
+  preventRoot,
 }: {
   toc: boolean;
   fullParagraph: boolean;
@@ -183,55 +195,304 @@ export const NoteBottomSection = ({
   paragraphs: Paragraph[];
   root: string;
   onPress: (paragraph: Paragraph) => void;
+  style?: StyleProp<ViewStyle>;
+  hideTitle?: boolean;
+  preventRoot?: boolean;
 }) => {
-  const idx = paragraphs.findIndex((v) => v.path === path);
+  const idx = paragraphs.findIndex((v) => v.path === (path || ''));
+  const isRoot = !path || idx === 0;
   const { commonStyles } = useNotebookTheme();
+  const firstParagraph = paragraphs.find((v, i) => i > 0 && v.level > 0) || paragraphs[1];
+  const prevParagraph =
+    idx > 0
+      ? paragraphs.findLast(
+          (v, i) =>
+            i < idx &&
+            (!preventRoot || i > 0) &&
+            (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
+        )
+      : undefined;
+  const nextParagraph = isRoot
+    ? firstParagraph
+    : idx > 0
+    ? paragraphs.find(
+        (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
+      )
+    : undefined;
+
   const moveParagraphs = [
     {
       icon: 'arrow-left',
-      moveParagraph: paragraphs.findLast(
-        (v, i) => i < idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
-      ),
+      moveParagraph: prevParagraph,
       reverse: false,
     },
     {
       icon: 'arrow-right',
-      moveParagraph: paragraphs.find(
-        (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
-      ),
+      moveParagraph: nextParagraph,
       reverse: true,
     },
   ];
   return toc ? (
     <HeaderSelectBar data={paragraphs} path={path || ''} root={root} onPress={onPress} />
   ) : (
-    !!path && (
-      <View style={styles.bottomContainer}>
-        {moveParagraphs.map(
-          ({ moveParagraph, icon, reverse }) =>
-            moveParagraph !== undefined && (
-              <TouchableOpacity
-                key={icon}
-                onPress={() => onPress(moveParagraph)}
-                style={[styles.bottomButton, { flexDirection: reverse ? 'row-reverse' : 'row' }]}
-              >
-                <Icon
-                  name={icon}
-                  size={16}
-                  color={commonStyles.icon.color}
-                  style={{ alignSelf: 'center' }}
-                />
+    (!!path || (preventRoot && !!firstParagraph)) && (
+      <View style={[styles.bottomContainer, style]}>
+        {moveParagraphs.map(({ moveParagraph, icon, reverse }) =>
+          moveParagraph !== undefined ? (
+            <TouchableOpacity
+              key={icon}
+              focusable={false}
+              accessibilityLabel={moveParagraph.level === 0 ? root : moveParagraph.title}
+              onPress={() => onPress(moveParagraph)}
+              style={[
+                styles.bottomButton,
+                { flexDirection: reverse ? 'row-reverse' : 'row' },
+                hideTitle && { paddingHorizontal: 8 },
+                { outlineStyle: 'none' } as any,
+              ]}
+            >
+              <Icon
+                name={icon}
+                size={16}
+                color={commonStyles.icon.color}
+                style={{ alignSelf: 'center' }}
+              />
+              {!hideTitle && (
                 <Text
                   ellipsizeMode="tail"
                   style={[commonStyles.text, { fontWeight: 'bold', marginHorizontal: 16 }]}
                 >
                   {moveParagraph.level === 0 ? root : moveParagraph.title}
                 </Text>
-              </TouchableOpacity>
-            )
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View key={icon} style={styles.bottomButton} />
+          )
         )}
       </View>
     )
+  );
+};
+
+export const FullNoteSection = ({
+  description,
+  children,
+  onClose,
+  toc,
+  fullParagraph,
+  path,
+  paragraphs,
+  root,
+  onPress,
+  bottom,
+}: {
+  description?: string;
+  children?: React.ReactNode;
+  onClose: () => void;
+  toc?: boolean;
+  fullParagraph?: boolean;
+  path?: string;
+  paragraphs?: Paragraph[];
+  root?: string;
+  onPress?: (paragraph: Paragraph) => void;
+  bottom?: React.ReactNode;
+}) => {
+  const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const { commonStyles, colorScheme } = useNotebookTheme();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+
+  const idx = paragraphs ? paragraphs.findIndex((v) => v.path === (path || '')) : -1;
+  const isRoot = !path || idx === 0;
+  const firstParagraph = paragraphs?.find((v, i) => i > 0 && v.level > 0) || paragraphs?.[1];
+  const prevParagraph =
+    paragraphs && idx > 0
+      ? paragraphs.findLast(
+          (v, i) => i < idx && i > 0 && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
+        )
+      : undefined;
+  const nextParagraph =
+    paragraphs && isRoot
+      ? firstParagraph
+      : paragraphs && idx > 0
+      ? paragraphs.find(
+          (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
+        )
+      : undefined;
+
+  const handlePress = (targetParagraph: Paragraph) => {
+    if (targetParagraph.level === 0) {
+      return;
+    }
+    onPress?.(targetParagraph);
+  };
+
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+    setDrawerVisible(false);
+    return () => {
+      navigation.setOptions({ headerShown: true });
+      setDrawerVisible(true);
+    };
+  }, [navigation]);
+
+  useEffect(() => {
+    setIsScrollable(false);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, [path]);
+
+  useEffect(() => {
+    if (!isScrollable) {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [isScrollable]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (
+        e.key === 'Escape' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowDown' ||
+        e.key === ' ' ||
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowUp'
+      ) {
+        e.preventDefault();
+        if (typeof window !== 'undefined' && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }
+
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+        if (nextParagraph) {
+          handlePress(nextParagraph);
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        if (prevParagraph) {
+          handlePress(prevParagraph);
+        }
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [onClose, nextParagraph, prevParagraph, onPress]);
+
+  return (
+    <>
+      <ScrollView
+        ref={scrollViewRef}
+        scrollEnabled={isScrollable}
+        //@ts-ignore
+        style={[
+          commonStyles.container,
+          styles.presentationContainer,
+          !isScrollable && { overflow: 'hidden' },
+        ]}
+        contentContainerStyle={[
+          pageStyles.contentContainer,
+          styles.presentationContent,
+          !isScrollable && { height: '100%', overflow: 'hidden' },
+        ]}
+      >
+        <View
+          style={[
+            styles.presentationWrapper,
+            !isScrollable && { height: '100%', overflow: 'hidden' },
+          ]}
+        >
+          {children ? (
+            children
+          ) : (
+            <View
+              style={
+                description
+                  ? [
+                      commonStyles.card,
+                      {
+                        backgroundColor: createCommonStyles(colorScheme).card.backgroundColor,
+                      },
+                      pageStyles.presentationCard,
+                      !isScrollable && { flex: 1, minHeight: 0, overflow: 'hidden' },
+                    ]
+                  : { flex: 1, position: 'absolute' }
+              }
+            >
+              <View
+                style={
+                  {
+                    flex: 1,
+                    zoom: 1.5,
+                  } as any
+                }
+              >
+                <EditorViewer
+                  active
+                  value={description || ''}
+                  theme={colorScheme}
+                  onLink={(url) => onLink(url, navigation)}
+                  autoResize
+                />
+              </View>
+            </View>
+          )}
+          {paragraphs && root && onPress ? (
+            <NoteBottomSection
+              toc={!!toc}
+              fullParagraph={!!fullParagraph}
+              path={path}
+              paragraphs={paragraphs}
+              root={root}
+              onPress={handlePress}
+              style={styles.presentationBottom}
+              hideTitle
+              preventRoot
+            />
+          ) : (
+            bottom
+          )}
+        </View>
+      </ScrollView>
+
+      <View
+        style={[
+          commonStyles.card,
+          {
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 100,
+            padding: 4,
+            margin: 0,
+            borderRadius: 20,
+            opacity: 0.85,
+            flexDirection: 'row',
+            alignItems: 'center',
+          },
+        ]}
+      >
+        <HeaderIconButton
+          name="arrows-v"
+          color={isScrollable ? '#FFFFFF' : commonStyles.icon.color}
+          onPress={() => setIsScrollable(!isScrollable)}
+        />
+        <HeaderIconButton name="window-restore" onPress={onClose} />
+      </View>
+    </>
   );
 };
 
@@ -257,6 +518,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     maxWidth: '50%',
   },
+  presentationContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingRight: 16,
+  },
+  presentationContent: {
+    flexGrow: 1,
+    width: '100%',
+  },
+  presentationWrapper: {
+    flex: 1,
+    width: '100%',
+  },
+  presentationBottom: {
+    flex: 0,
+    marginTop: 0,
+    marginBottom: 4,
+  },
 });
 
 export const pageStyles = StyleSheet.create({
@@ -277,5 +556,17 @@ export const pageStyles = StyleSheet.create({
     padding: 8,
     paddingTop: 5,
     marginLeft: 8,
+  },
+  presentationCard: {
+    flex: 1,
+    width: '100%',
+    minHeight: 500,
+    borderRadius: 12,
+    padding: 24,
+    marginBottom: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
 });

@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
 import {
   diffToSnapshot,
+  FullNoteSection,
   HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
@@ -42,6 +43,7 @@ export const NotePageScreen: React.FC = () => {
   const [_toc, toggleToc] = useState(false);
   const toc = _window === 'portrait' ? _toc : false;
   const [fullParagraph, toggleFullParagraph] = useState(!!(paragraph && board));
+  const [onlyPageSection, setOnlyPageSection] = useState(false);
 
   const { data: page, isFetching } = useNotePage(title);
   const { data: boardPage } = useBoardPage(title);
@@ -85,13 +87,18 @@ export const NotePageScreen: React.FC = () => {
         : paragraphItem
         ? fullParagraph
           ? paragraphDescription(paragraphs, paragraphItem.path, true).trim()
-          : paragraphItem?.description
+          : paragraphItem?.description?.trim()
         : page?.description?.trim()
     );
   }, [page, archive, paragraphItem?.path, fullParagraph]);
+  const isEmptyParagraph =
+    !!paragraph && !fullParagraph && paragraphItem?.description?.trim().length === 0;
   useEffect(() => {
     toggleToc(false);
   }, [route]);
+  useEffect(() => {
+    setOnlyPageSection(false);
+  }, [title]);
   useEffect(() => {
     if (page !== undefined && paragraph !== undefined && paragraphItem === undefined) {
       navigation.navigate('NotePage', { title, paragraph: undefined, board });
@@ -112,6 +119,55 @@ export const NotePageScreen: React.FC = () => {
         ))}
       </>
     );
+
+  if (onlyPageSection) {
+    return (
+      isFocused && (
+        <FullNoteSection
+          description={description}
+          onClose={() => setOnlyPageSection(false)}
+          toc={toc}
+          fullParagraph={fullParagraph}
+          root={title}
+          path={paragraphItem?.path}
+          paragraphs={paragraphs}
+          onPress={(moveParagraph) => {
+            toggleFullParagraph(true);
+            navigation.navigate('NotePage', {
+              ...toNoteParams(
+                title,
+                moveParagraph.level === 0 ? undefined : moveParagraph.title,
+                moveParagraph.autoSection
+              ),
+              board,
+            });
+          }}
+        >
+          {isEmptyParagraph && (
+            <View
+              style={[
+                commonStyles.card,
+                commonStyles.centerContent,
+                pageStyles.presentationCard,
+                { minHeight: 0 },
+              ]}
+            >
+              <Text style={commonStyles.text}>
+                {lang('There is no direct content in this paragraph.')}
+              </Text>
+              <TouchableOpacity
+                onPress={() => toggleFullParagraph(true)}
+                style={commonStyles.button}
+              >
+                <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </FullNoteSection>
+      )
+    );
+  }
+
   return (
     isFocused && (
       <>
@@ -171,6 +227,15 @@ export const NotePageScreen: React.FC = () => {
               {!!(paragraph || description) && !archive && (_window === 'landscape' || !toc) && (
                 <HeaderIconButton name="pencil" onPress={handleEdit} />
               )}
+              {(_window === 'landscape' || !toc) && (
+                <HeaderIconButton
+                  name="window-maximize"
+                  onPress={() => {
+                    toggleFullParagraph(true);
+                    setOnlyPageSection(true);
+                  }}
+                />
+              )}
               {!!(paragraph || description) && !archive && _window === 'portrait' && (
                 <HeaderIconButton name="list" onPress={() => toggleToc(!toc)} />
               )}
@@ -180,23 +245,23 @@ export const NotePageScreen: React.FC = () => {
             {_window === 'portrait' && !toc && renderHeaderSections()}
           </View>
           <View style={commonStyles.flex}>
-            <NotePageSection active={!toc} description={description}>
-              {!!paragraph && !fullParagraph && paragraphItem?.description?.trim().length === 0 && (
-                <View style={{ position: 'absolute', width: '100%' }}>
-                  <View style={[commonStyles.card, commonStyles.centerContent]}>
-                    <Text style={commonStyles.text}>
-                      {lang('There is no direct content in this paragraph.')}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => toggleFullParagraph(true)}
-                      style={commonStyles.button}
-                    >
-                      <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
-                    </TouchableOpacity>
-                  </View>
+            {isEmptyParagraph ? (
+              !toc && (
+                <View style={[commonStyles.card, commonStyles.centerContent]}>
+                  <Text style={commonStyles.text}>
+                    {lang('There is no direct content in this paragraph.')}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => toggleFullParagraph(true)}
+                    style={commonStyles.button}
+                  >
+                    <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            </NotePageSection>
+              )
+            ) : (
+              <NotePageSection active={!toc} description={description} />
+            )}
             {isFetching || description === undefined ? (
               <LoadingView />
             ) : page?.description ? (

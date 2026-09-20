@@ -149,6 +149,11 @@ An environment where you can organize the app's features into distinct 'Notebook
     * Viewing its content **plus all nested sub-sections.**
   * This helps when you want to read or edit an entire section hierarchy as a single note.
 
+### 🔲 Note Page Section Only (Focus View)
+
+* In note screens, click the 'Maximize' icon in the header to hide navigation bars, search bars, and bottom navigation/TOC sections, focusing entirely on the note body.
+* You can return to the standard view at any time by clicking the 'Restore' icon in the top right or by pressing the `Escape` key.
+
 ### 🔗 Link Recognition and Navigation
 
 * Links within notes are automatically detected and categorized.

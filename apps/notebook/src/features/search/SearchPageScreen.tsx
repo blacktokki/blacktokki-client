@@ -7,6 +7,7 @@ import { View, Text } from 'react-native';
 
 import { useSearch } from './useSearch';
 import { onLink, ResponsiveSearchBar } from '../../components/SearchBar';
+import { useEffectExtensionScreen } from '../../hooks/useExtension';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NoteListSection } from '../../screens/main/NoteListSection';
 import { NavigationParamList } from '../../types';
@@ -14,6 +15,7 @@ import { NavigationParamList } from '../../types';
 type SearchPageRouteProp = RouteProp<{ SearchPage: { query: string } }, 'SearchPage'>;
 
 export const SearchPageScreen: React.FC = () => {
+  useEffectExtensionScreen('agent');
   const route = useRoute<SearchPageRouteProp>();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { query } = route.params;

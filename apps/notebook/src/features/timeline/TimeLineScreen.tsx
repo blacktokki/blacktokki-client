@@ -9,11 +9,13 @@ import { today } from './TimerTag';
 import useTimeLine from './useTimeLine';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import UsageButton from '../../components/UsageButton';
+import { useEffectExtensionScreen } from '../../hooks/useExtension';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { NoteListSection } from '../../screens/main/NoteListSection';
 import { NavigationParamList } from '../../types';
 
 export const TimeLineScreen: React.FC = () => {
+  useEffectExtensionScreen('timeline');
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
   const [date, setDate] = useState(today());

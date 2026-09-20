@@ -10,6 +10,7 @@ import HeaderSelectBar, {
   parseHtmlToParagraphs,
 } from '../../components/HeaderSelectBar';
 import { SearchBar, titleFormat } from '../../components/SearchBar';
+import { useEffectExtensionScreen } from '../../hooks/useExtension';
 import { useNotePage, useCreateOrUpdatePage } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { EditPageSection } from '../../screens/main/EditPageScreen';
@@ -27,6 +28,7 @@ const pathToTitle = (path?: string) => {
 };
 
 export const QuickMemoScreen: React.FC = () => {
+  useEffectExtensionScreen('quickMemo');
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();

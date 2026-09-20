@@ -7,6 +7,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { SyncDiffItem } from './types';
 import { useExecuteSync, useNotebookSync, useSyncOptions } from './useNotebookSync';
 import { ChangedItem } from '../../components/ChangedBlock';
+import { useEffectExtensionScreen } from '../../hooks/useExtension';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import UsageModeModal from '../../modals/UsageModeModal';
@@ -21,6 +22,7 @@ import { Content } from '../../types';
 type SyncChangedItem = ChangedItem & { rawDiffItem?: SyncDiffItem };
 
 export const SyncNotebookScreen: React.FC = () => {
+  useEffectExtensionScreen('sync');
   const navigation = useNavigation();
   const { lang } = useLangContext();
   const { setModal } = useModalsContext();

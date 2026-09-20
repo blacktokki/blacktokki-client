@@ -1,7 +1,8 @@
 import { useAuthContext } from '@blacktokki/account';
 import { NavigationConfig } from '@blacktokki/navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useMemo } from 'react';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { UsageMode, useUsageMode } from './useUsageMode';
@@ -185,4 +186,48 @@ export const useSetExtensionConfig = () => {
       await queryClient.invalidateQueries({ queryKey: ['extension', subkey] });
     },
   });
+};
+
+export const useEffectExtensionScreen = (featureKey?: string) => {
+  const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
+  const route = useRoute<any>();
+  const { usageMode } = useUsageMode();
+  const { data: extension, isLoading } = useExtension();
+  const hasNavigatedRef = useRef(false);
+
+  const resolvedFeatureKey = useMemo(() => {
+    if (featureKey) return featureKey;
+    const screenName = route?.name;
+    if (!screenName) return undefined;
+    for (const [k, feat] of Object.entries(features)) {
+      if (feat.screens && Object.prototype.hasOwnProperty.call(feat.screens, screenName)) {
+        return k;
+      }
+    }
+    return undefined;
+  }, [featureKey, route?.name]);
+
+  const isReady = usageMode !== undefined && (usageMode === 'SIMPLE' || !isLoading);
+  const item = extension?.info?.find((i) => i.key === resolvedFeatureKey);
+  const isActive = usageMode === 'SIMPLE' ? false : !!item?.active;
+
+  useEffect(() => {
+    if (!isFocused) {
+      hasNavigatedRef.current = false;
+      return;
+    }
+    if (!isReady || !resolvedFeatureKey) return;
+
+    if (!isActive && !hasNavigatedRef.current) {
+      hasNavigatedRef.current = true;
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Home');
+      }
+    }
+  }, [isFocused, isReady, isActive, resolvedFeatureKey, navigation]);
+
+  return { isActive, isReady };
 };

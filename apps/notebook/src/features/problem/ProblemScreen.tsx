@@ -6,10 +6,12 @@ import React from 'react';
 import useProblem from './useProblem';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
 import UsageButton from '../../components/UsageButton';
+import { useEffectExtensionScreen } from '../../hooks/useExtension';
 import { NoteListSection } from '../../screens/main/NoteListSection';
 import { NavigationParamList } from '../../types';
 
 export const ProblemsScreen: React.FC = () => {
+  useEffectExtensionScreen('problem');
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { data, isLoading } = useProblem(1);
   const { lang } = useLangContext();

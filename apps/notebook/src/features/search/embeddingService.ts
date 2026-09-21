@@ -59,7 +59,7 @@ export const initEmbeddingPipeline = async () => {
   if (!pipelinePromise) {
     pipelinePromise = (async () => {
       try {
-        const { pipeline, env } = await import('@xenova/transformers');
+        const { pipeline, env } = await import('@huggingface/transformers');
         env.allowLocalModels = false;
         const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
         pipelineInstance = extractor;

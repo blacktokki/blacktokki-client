@@ -21,7 +21,7 @@
     "@blacktokki/eslint-config": "*",
     "@react-native-async-storage/async-storage": ">= 2.0.0",
     "@tsconfig/recommended": "^1.0.1",
-    "axios": "^1.13.5",
+    "axios": "^1.18.0",
     "react": "*",
     "react-native": "*",
     "react-native-builder-bob": "^0.18.3",

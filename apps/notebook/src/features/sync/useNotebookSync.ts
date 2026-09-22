@@ -1,5 +1,5 @@
 import { useAuthContext } from '@blacktokki/account';
-import { getMarkdownUtil, toHtml, toMarkdown } from '@blacktokki/editor';
+import { toHtml, toMarkdown } from '@blacktokki/editor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from 'react-query';
@@ -206,7 +206,7 @@ export const useExecuteSync = () => {
               item.type === 'NOTE'
                 ? rawDesc.trim().startsWith('<')
                   ? rawDesc
-                  : (await getMarkdownUtil()).renderer(rawDesc)
+                  : toHtml(rawDesc)
                 : rawDesc;
 
             // 멱등성 보장: diffItems의 remoteContent.id가 없더라도 최신 원격 목록에 동일 항목이 존재하면 PATCH로 전환

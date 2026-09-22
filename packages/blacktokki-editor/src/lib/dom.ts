@@ -129,7 +129,3 @@ export const toRaw = (text: string) => {
     .replaceAll(/<\/?[^>]*>/gi, '');
 };
 
-export type FsData = {
-  contents: { title: string; description?: string }[];
-  jsons: { title: string; data: any }[];
-};

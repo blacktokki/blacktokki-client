@@ -1,58 +1,12 @@
 import { Editor, IAllProps } from '@tinymce/tinymce-react';
 import React from 'react';
 
-import { cleanId, type FsData } from './dom';
+import { cleanId } from './dom';
+import { parser, renderer } from './markdown';
 import { AutoCompleteProps, EditorProps } from '../types';
 
 // import { createRoot } from 'react-dom/client';
 
-let markdown:
-  | {
-      parser: (htmlCode: string) => string;
-      renderer: (markdownCode: string) => string;
-      toRaw: (text: string) => string;
-      exportMarkdowns: (
-        contents: { title: string; description?: string }[],
-        jsons: { title: string; data: any }[],
-        filename: string
-      ) => Promise<void>;
-      importMarkdowns: () => Promise<FsData>;
-    }
-  | undefined;
-
-export const getMarkdown = async () => {
-  if (!markdown) {
-    markdown = await import('./markdown');
-  }
-  return markdown;
-};
-
-export const parser = (htmlCode: string) => {
-  if (markdown) {
-    return markdown.parser(htmlCode);
-  }
-  getMarkdown();
-  return htmlCode;
-};
-
-export const renderer = (markdownCode: string) => {
-  if (markdown) {
-    return markdown.renderer(markdownCode);
-  }
-  getMarkdown();
-  return markdownCode;
-};
-
-export const markdownFs = () => ({
-  export: async (data: FsData, filename: string) => {
-    const md = markdown || (await getMarkdown());
-    return md.exportMarkdowns(data.contents, data.jsons, filename);
-  },
-  import: async () => {
-    const md = markdown || (await getMarkdown());
-    return md.importMarkdowns();
-  },
-});
 
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
@@ -95,7 +49,10 @@ export default (
     .toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
     .replace(/\s/g, ' ');
   const composingRef = React.useRef(false);
-  const completeRef = React.useRef<{ complete: () => void; timeout: NodeJS.Timeout }>(undefined);
+  const completeRef = React.useRef<{
+    complete: () => void;
+    timeout: ReturnType<typeof setTimeout>;
+  }>(undefined);
   return (
     <Editor
       tinymceScriptSrc={path}

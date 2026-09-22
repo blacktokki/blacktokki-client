@@ -1,4 +1,4 @@
-import { getMarkdownUtil, toMarkdown, type FsData } from '@blacktokki/editor';
+import { toHtml, toMarkdown, type FsData } from '@blacktokki/editor';
 
 import { Content, PostContent } from '../../types';
 
@@ -108,7 +108,7 @@ async function readFsDataFromDir(rootHandle: any): Promise<FsData> {
       try {
         const { text, lastModified } = await readFileText(entry.handle);
         const title = entry.path.replace(/\.(md|markdown)$/i, '');
-        const htmlDescription = (await getMarkdownUtil()).renderer(text || '');
+        const htmlDescription = toHtml(text || '');
         contents.push({
           title,
           description: htmlDescription,

@@ -10,6 +10,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web --port 19006",
     "customize": "expo customize",
+    "test:ontology": "node --test src/features/knowledgeGraph/__tests__/",
+    "test:knowledgeGraph": "node --test src/features/knowledgeGraph/__tests__/",
     "github": "expo export -p web && replace-in-file --configFile=scripts/seo.js && gh-pages -d dist --nojekyll -r https://github.com/blacktokki/blacktokki-notebook",
     "script:md": "node scripts/script-to-md.js"
   },
@@ -26,6 +28,7 @@
     "diff-match-patch": "^1.0.5",
     "expo": "^53.0.27",
     "expo-constants": "~17.1.8",
+    "expo-file-system": "~18.1.11",
     "expo-linking": "~7.1.7",
     "expo-print": "~14.1.4",
     "expo-sharing": "~13.1.5",
@@ -48,6 +51,7 @@
     "@types/react": "*",
     "@types/react-native-vector-icons": "^6.4.18",
     "gh-pages": "^6.1.0",
+    "n3": "^2.7.12",
     "replace-in-file": "^7.0.1"
   },
   "eslintConfig": {

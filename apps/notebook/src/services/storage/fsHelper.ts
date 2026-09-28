@@ -190,8 +190,30 @@ export async function readContentsFromDir(
       generateVirtualFolderNotes(results, parentId);
     } else if (storeName === 'BOARD') {
       for (const item of fsData.jsons) {
-        if (item.data && typeof item.data === 'object') {
-          results.push(item.data as Content);
+        if (item.data && typeof item.data === 'object' && !Array.isArray(item.data)) {
+          const boardData = item.data as Partial<Content>;
+          const isBoard =
+            boardData.type === 'BOARD' ||
+            (boardData.option &&
+              ('BOARD_HEADER_LEVEL' in boardData.option || 'BOARD_TYPE' in boardData.option));
+          if (!isBoard) continue;
+
+          const title = boardData.title || item.title || '';
+          if (!title) continue;
+
+          const id = boardData.id || hashStringToId(title);
+          results.push({
+            id,
+            parentId,
+            type: 'BOARD',
+            title,
+            description: boardData.description || '',
+            order: boardData.order || 0,
+            updated: boardData.updated || new Date().toISOString(),
+            option: (boardData.option as any) || { BOARD_HEADER_LEVEL: 3 },
+            userId: boardData.userId || 0,
+            input: boardData.input || title,
+          });
         }
       }
     }
@@ -208,10 +230,11 @@ export async function readContentsFromDir(
  * (local 모드에서만 호출되며 results를 in-place로 수정합니다.)
  */
 export function generateVirtualFolderNotes(results: Content[], parentId: number): void {
-  const existingTitles = new Set(results.map((r) => r.title));
+  const existingTitles = new Set(results.map((r) => r.title).filter(Boolean));
   const virtualPrefixes = new Set<string>();
 
   for (const item of results) {
+    if (!item.title) continue;
     const parts = item.title.split('/');
     if (parts.length > 1) {
       for (let i = 1; i < parts.length; i++) {
@@ -324,10 +347,19 @@ export async function saveContentsToDir(
             : [],
         jsons:
           storeName === 'BOARD'
-            ? contents.map((item) => ({
-                title: item.title || 'board',
-                data: item,
-              }))
+            ? contents.map((item) => {
+                const title = item.title || 'board';
+                const id = (item as Content).id || hashStringToId(title);
+                return {
+                  title,
+                  data: {
+                    ...item,
+                    id,
+                    type: 'BOARD',
+                    title,
+                  },
+                };
+              })
             : [],
       };
       await saveFsDataToDir(rootHandle, fsData);

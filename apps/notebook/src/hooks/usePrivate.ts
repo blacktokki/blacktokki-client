@@ -6,35 +6,25 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { useUsageMode } from './useUsageMode';
 import OtpModal from '../modals/OtpModal';
-import { getPrivateConfigs, patchContent, postContent } from '../services/notebook';
+import {
+  defaultConfig,
+  getPrivateConfig,
+  getPrivateConfigs,
+  patchContent,
+  postContent,
+  savePrivateConfig,
+  type PrivateConfig,
+} from '../services/notebook';
 import { PostContent } from '../types';
 
-const PRIVATE_KEY = '@blacktokki:notebook:private:';
+export type { PrivateConfig };
+export { defaultConfig, getPrivateConfig, savePrivateConfig };
+
 const PRIVATE_TIMER_KEY = '@blacktokki:notebook:private_timer:';
 const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10분
 
-export type PrivateConfig = {
-  enabled: boolean;
-  autoUnlock: boolean;
-};
-
-const defaultConfig: PrivateConfig = {
-  enabled: false,
-  autoUnlock: false,
-};
-
 export const isHiddenTitle = (title: string) => {
   return title.startsWith('.') || title.includes('/.');
-};
-
-const getPrivateConfig = async (subkey: string): Promise<PrivateConfig> => {
-  try {
-    const jsonValue = await AsyncStorage.getItem(`${PRIVATE_KEY}${subkey}`);
-    return jsonValue ? { ...defaultConfig, ...JSON.parse(jsonValue) } : defaultConfig;
-  } catch (e) {
-    console.error('Error loading local private data', e);
-    return defaultConfig;
-  }
 };
 
 const getOtpRequired = async (isOnline: boolean): Promise<{ value: boolean; id?: number }> => {
@@ -43,15 +33,6 @@ const getOtpRequired = async (isOnline: boolean): Promise<{ value: boolean; id?:
     return serverConfigs.otpRequired || { value: false };
   }
   return { value: false };
-};
-
-const savePrivateConfig = async (subkey: string, config: PrivateConfig): Promise<void> => {
-  try {
-    const jsonValue = JSON.stringify(config);
-    await AsyncStorage.setItem(PRIVATE_KEY + subkey, jsonValue);
-  } catch (e) {
-    console.error('Error saving private mode', e);
-  }
 };
 
 const setOtpRequired = async (userId: number, value: boolean, id?: number) => {

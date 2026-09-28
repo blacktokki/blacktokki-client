@@ -28,7 +28,7 @@ export default () => {
   const { data: extension } = useExtension();
   const [currentView, setCurrentView] = useState<ContentGroupType>('RECENT');
   const [currentSubView, setCurrentSubView] = useState<ContentGroupSubType>('TOC');
-  const currentNote = lastTab?.type === 'NOTE' ? lastTab : undefined;
+  const currentNote = lastTab?.type === 'NOTE' && lastTab.title ? lastTab : undefined;
 
   const renderBadge = (type: ContentGroupSubType, label: string, icon: string) => {
     const isActive = currentSubView === type;
@@ -127,7 +127,7 @@ export default () => {
               renderTab('BOARD', lang('Board'), 'view-dashboard', currentView === 'BOARD')}
             {renderTab(
               'CURRENT_NOTE',
-              currentNote
+              currentNote?.title
                 ? (() => {
                     const splitTitle = getSplitTitle(currentNote.title);
                     return splitTitle.length > 1 ? `../${splitTitle[1]}` : splitTitle[0];

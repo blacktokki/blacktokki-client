@@ -158,7 +158,16 @@ export const useCreateOrUpdateNotebook = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
-      // queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
+      queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+      queryClient.invalidateQueries({ queryKey: ['pageContent'] });
+      queryClient.invalidateQueries({ queryKey: ['boardContents'] });
+      queryClient.invalidateQueries({ queryKey: ['boardContent'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+      queryClient.invalidateQueries({ queryKey: ['lastTab'] });
+      queryClient.invalidateQueries({ queryKey: ['notebookSyncDiff'] });
+      queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
+      queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
+      queryClient.invalidateQueries({ queryKey: ['keywords'] });
     },
   });
 };
@@ -173,8 +182,9 @@ export const useDeleteNotebook = () => {
       const title = typeof param === 'number' ? undefined : param.title;
       await saveNotebookContent(!auth.isLocal, [], id);
 
-      if (auth.user?.id) {
-        if (title) {
+      const syncUserId = auth.isLocal ? 'local' : auth.user?.id;
+      if (syncUserId) {
+        if (title && auth.user?.id) {
           try {
             await deleteSyncAnchor(auth.user.id, title);
           } catch (e) {
@@ -182,20 +192,25 @@ export const useDeleteNotebook = () => {
           }
         }
         try {
-          await deleteSyncOptions(auth.user.id, id);
+          await deleteSyncOptions(syncUserId, id);
         } catch (e) {
           console.error('Failed to delete sync options for notebook', e);
         }
       }
       return id;
     },
-    onSuccess: (id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
       queryClient.invalidateQueries({ queryKey: ['notebookSyncDiff'] });
-      // queryClient.invalidateQueries({ queryKey: ['notebookContent'] });
-      // if (id) {
-      //   queryClient.removeQueries({ queryKey: ['notebookContent', id] });
-      // }
+      queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+      queryClient.invalidateQueries({ queryKey: ['pageContent'] });
+      queryClient.invalidateQueries({ queryKey: ['boardContents'] });
+      queryClient.invalidateQueries({ queryKey: ['boardContent'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+      queryClient.invalidateQueries({ queryKey: ['lastTab'] });
+      queryClient.invalidateQueries({ queryKey: ['snapshotContents'] });
+      queryClient.invalidateQueries({ queryKey: ['snapshotContentsAll'] });
+      queryClient.invalidateQueries({ queryKey: ['keywords'] });
     },
   });
 };

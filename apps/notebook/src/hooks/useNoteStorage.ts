@@ -12,6 +12,9 @@ import { Content, PostContent } from '../types';
 export const DEFAULT_POLLING_INTERVAL = 30 * 1000;
 
 export const getSplitTitle = (title: string) => {
+  if (!title || typeof title !== 'string') {
+    return [''];
+  }
   const splitTitle = title.split('/');
   if (splitTitle.length < 2) {
     return [title];

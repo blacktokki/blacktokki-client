@@ -1,4 +1,5 @@
 import { axiosCreate } from '@blacktokki/account';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Content, PostContent, Link, Pat } from '../types';
 
@@ -56,4 +57,35 @@ export const getPatList = async () => {
 
 export const deletePat = async (id: number) => {
   await axios.delete(`/api/v1/pat/${id}`);
+};
+
+export type PrivateConfig = {
+  enabled: boolean;
+  autoUnlock: boolean;
+};
+
+export const defaultConfig: PrivateConfig = {
+  enabled: false,
+  autoUnlock: false,
+};
+
+export const PRIVATE_KEY = '@blacktokki:notebook:private:';
+
+export const getPrivateConfig = async (subkey: string): Promise<PrivateConfig> => {
+  try {
+    const jsonValue = await AsyncStorage.getItem(`${PRIVATE_KEY}${subkey}`);
+    return jsonValue ? { ...defaultConfig, ...JSON.parse(jsonValue) } : defaultConfig;
+  } catch (e) {
+    console.error('Error loading local private data', e);
+    return defaultConfig;
+  }
+};
+
+export const savePrivateConfig = async (subkey: string, config: PrivateConfig): Promise<void> => {
+  try {
+    const jsonValue = JSON.stringify(config);
+    await AsyncStorage.setItem(PRIVATE_KEY + subkey, jsonValue);
+  } catch (e) {
+    console.error('Error saving private mode', e);
+  }
 };

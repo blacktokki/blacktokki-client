@@ -12,10 +12,14 @@ let lastTab: number | undefined;
 export const useLastTab = () => {
   const { data: contents = [], isFetching } = useNotePages();
   const { data: boards = [], isFetching: isFetchingBoard } = useBoardPages();
+  const { notebook } = useUsageMode();
+  const notebookId = notebook?.id || 0;
+
   return useQuery({
-    queryKey: ['lastTab'],
+    queryKey: ['lastTab', notebookId, lastTab],
     queryFn: async () => {
-      return [...boards, ...contents].find((v) => v.id === lastTab);
+      if (!lastTab) return undefined;
+      return [...boards, ...contents].find((v) => v.id === lastTab && !!v.title);
     },
     enabled: !isFetching && !isFetchingBoard,
   });
@@ -53,7 +57,7 @@ export const useRecentTabs = () => {
       const recentTabs = await getRecentTabs(notebookId);
       return recentTabs
         .map((id) => [...contents, ...boards].find((c) => id === c.id))
-        .filter((c) => c !== undefined);
+        .filter((c): c is NonNullable<typeof c> => c !== undefined && !!c.title);
     },
     enabled: !isFetching && !isFetchingBoard,
   });

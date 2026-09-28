@@ -87,7 +87,7 @@ export const useSyncOptions = () => {
   const queryClient = useQueryClient();
 
   const notebookId = notebook?.id;
-  const userId = auth.isLocal ? '' : `${auth.user?.id || ''}`;
+  const userId = auth.isLocal ? 'local' : `${auth.user?.id || ''}`;
   const subkey = userId && notebookId ? `${userId}:${notebookId}` : userId;
 
   const { data: options = DEFAULT_SYNC_OPTIONS } = useQuery({
@@ -151,11 +151,13 @@ export const useExecuteSync = () => {
     mutationFn: async ({
       diffItems,
       matchedLocalNotebook,
+      matchedRemoteNotebook,
     }: {
       diffItems: SyncDiffItem[];
-      matchedLocalNotebook: Content | null;
+      matchedLocalNotebook?: Content | null;
+      matchedRemoteNotebook?: Content | null;
     }) => {
-      if (!notebook) throw new Error('현재 선택된 원격 노트북이 없습니다.');
+      if (!notebook) throw new Error('현재 선택된 노트북이 없습니다.');
 
       const currentNotebookId = notebook.id;
       if (runningSyncNotebookIds.has(currentNotebookId)) {
@@ -167,7 +169,7 @@ export const useExecuteSync = () => {
       runningSyncNotebookIds.add(currentNotebookId);
 
       try {
-        let targetLocalNotebookId = matchedLocalNotebook?.id;
+        let targetLocalNotebookId = auth.isLocal ? notebook.id : matchedLocalNotebook?.id;
 
         // 로컬 노트북 ID가 없을 경우 재조회, 그래도 없으면 에러
         if (!targetLocalNotebookId) {
@@ -184,10 +186,35 @@ export const useExecuteSync = () => {
           }
         }
 
+        let targetRemoteNotebookId = !auth.isLocal ? notebook.id : matchedRemoteNotebook?.id;
+
+        // 원격 노트북 ID가 없을 경우(로컬 모드에서 원격 노트북 최초 생성 등)
+        if (!targetRemoteNotebookId) {
+          const remoteNotebooks = await getContentList(undefined, ['NOTEBOOK'], undefined);
+          const found = remoteNotebooks.find(
+            (nb) => nb.title?.trim().toLowerCase() === notebook.title?.trim().toLowerCase()
+          );
+          if (found) {
+            targetRemoteNotebookId = found.id;
+          } else {
+            // 원격에 새로 생성
+            targetRemoteNotebookId = await postContent({
+              title: notebook.title,
+              description: notebook.description || '',
+              input: notebook.title,
+              userId: auth.user?.id || 0,
+              parentId: 0,
+              type: 'NOTEBOOK',
+              order: 0,
+              option: (notebook.option as any) || {},
+            });
+          }
+        }
+
         // 원격 생성 시 중복 방지(Deduplication Guard)를 위해 최신 원격 컨텐츠 목록 사전 조회
         const latestRemoteMap = new Map<string, Content>();
         try {
-          const latestRemotes = await getContentList(notebook.id, ['NOTE', 'BOARD']);
+          const latestRemotes = await getContentList(targetRemoteNotebookId, ['NOTE', 'BOARD']);
           for (const r of latestRemotes) {
             latestRemoteMap.set(`${r.type}:${r.title.trim()}`, r);
           }
@@ -220,7 +247,7 @@ export const useExecuteSync = () => {
                 description: htmlDesc,
                 input: item.title,
                 userId: auth.user?.id || 0,
-                parentId: notebook.id,
+                parentId: targetRemoteNotebookId,
                 type: item.type,
                 order: 0,
                 option: (item.localContent?.raw?.option as any) || {},
@@ -232,7 +259,7 @@ export const useExecuteSync = () => {
                 description: htmlDesc,
                 input: item.title,
                 userId: auth.user?.id || 0,
-                parentId: notebook.id,
+                parentId: targetRemoteNotebookId,
                 type: item.type,
                 order: 0,
                 option: (item.localContent?.raw?.option as any) || {},
@@ -329,25 +356,18 @@ export const useNotebookSync = () => {
   const executeSync = useExecuteSync();
 
   const isSyncAvailable =
-    !auth.isLocal &&
-    auth.user !== null &&
-    auth.user !== undefined &&
-    usageMode === 'NOTEBOOK' &&
-    !!notebook?.title;
+    auth.user !== null && auth.user !== undefined && usageMode === 'NOTEBOOK' && !!notebook?.title;
 
-  const currentRemoteNotebookId = notebook?.id || 0;
+  const currentNotebookId = notebook?.id || 0;
   const currentNotebookTitle = notebook?.title?.trim() || '';
 
-  const isAnySyncMutating =
-    useIsMutating({ mutationKey: ['executeSync', currentRemoteNotebookId] }) > 0;
+  const isAnySyncMutating = useIsMutating({ mutationKey: ['executeSync', currentNotebookId] }) > 0;
   const isNotebookSyncing =
-    runningSyncNotebookIds.has(currentRemoteNotebookId) ||
-    isAnySyncMutating ||
-    executeSync.isLoading;
+    runningSyncNotebookIds.has(currentNotebookId) || isAnySyncMutating || executeSync.isLoading;
 
   const queryKey = useMemo(
-    () => ['notebookSyncDiff', currentRemoteNotebookId, currentNotebookTitle],
-    [currentRemoteNotebookId, currentNotebookTitle]
+    () => ['notebookSyncDiff', !!auth.isLocal, currentNotebookId, currentNotebookTitle],
+    [auth.isLocal, currentNotebookId, currentNotebookTitle]
   );
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -356,32 +376,79 @@ export const useNotebookSync = () => {
       if (!isSyncAvailable) {
         return {
           matchedLocalNotebook: null,
+          matchedRemoteNotebook: null,
           isLocalNotebookMissing: false,
+          isRemoteNotebookMissing: false,
           diffItems: [] as SyncDiffItem[],
           diffCount: 0,
         };
       }
 
-      // 1. 로컬 노트북 목록 조회
-      let localNotebooks: Content[] = [];
-      try {
-        localNotebooks = await getStoreItems('NOTEBOOK', 0);
-      } catch (e) {
-        console.error('Error fetching local notebooks for sync:', e);
-      }
+      let matchedLocalNotebook: Content | null = null;
+      let matchedRemoteNotebook: Content | null = null;
+      let isLocalNotebookMissing = false;
+      let isRemoteNotebookMissing = false;
 
-      let matchedLocalNotebook =
-        localNotebooks.find(
-          (nb) => nb.title?.trim().toLowerCase() === currentNotebookTitle.toLowerCase()
-        ) || null;
+      if (!auth.isLocal) {
+        // 계정(원격) 모드: 활성 노트북은 원격 노트북
+        matchedRemoteNotebook = notebook as Content;
 
-      // 로컬 노트북이 목록에 있더라도 실제 PC 폴더(handle)가 연결되어 있지 않으면 미존재(미연결)로 판정
-      if (matchedLocalNotebook) {
+        // 1. 로컬 노트북 목록 조회
+        let localNotebooks: Content[] = [];
         try {
-          const config = await getStorageConfig(matchedLocalNotebook.id);
+          localNotebooks = await getStoreItems('NOTEBOOK', 0);
+        } catch (e) {
+          console.error('Error fetching local notebooks for sync:', e);
+        }
+
+        matchedLocalNotebook =
+          localNotebooks.find(
+            (nb) => nb.title?.trim().toLowerCase() === currentNotebookTitle.toLowerCase()
+          ) || null;
+
+        if (matchedLocalNotebook) {
+          try {
+            const config = await getStorageConfig(matchedLocalNotebook.id);
+            if (!config.handle) {
+              console.log(
+                `[useNotebookSync] Local notebook "${currentNotebookTitle}" (id: ${matchedLocalNotebook.id}) has no valid local folder handle. Treating as missing.`
+              );
+              matchedLocalNotebook = null;
+            }
+          } catch (e) {
+            console.warn('[useNotebookSync] Error checking storage config for local notebook:', e);
+            matchedLocalNotebook = null;
+          }
+        }
+
+        isLocalNotebookMissing = matchedLocalNotebook === null;
+
+        console.log(
+          `[useNotebookSync] Notebook "${currentNotebookTitle}" | matchedLocalNotebook:`,
+          matchedLocalNotebook?.id ?? 'none',
+          '| isLocalNotebookMissing:',
+          isLocalNotebookMissing
+        );
+
+        if (isLocalNotebookMissing) {
+          return {
+            matchedLocalNotebook: null,
+            matchedRemoteNotebook,
+            isLocalNotebookMissing: true,
+            isRemoteNotebookMissing: false,
+            diffItems: [] as SyncDiffItem[],
+            diffCount: 0,
+          };
+        }
+      } else {
+        // 로컬 모드: 활성 노트북은 로컬 노트북
+        matchedLocalNotebook = notebook as Content;
+
+        try {
+          const config = await getStorageConfig(notebook.id);
           if (!config.handle) {
             console.log(
-              `[useNotebookSync] Local notebook "${currentNotebookTitle}" (id: ${matchedLocalNotebook.id}) has no valid local folder handle. Treating as missing.`
+              `[useNotebookSync] Active local notebook "${currentNotebookTitle}" (id: ${notebook.id}) has no valid local folder handle. Treating as missing.`
             );
             matchedLocalNotebook = null;
           }
@@ -389,35 +456,51 @@ export const useNotebookSync = () => {
           console.warn('[useNotebookSync] Error checking storage config for local notebook:', e);
           matchedLocalNotebook = null;
         }
-      }
 
-      const isLocalNotebookMissing = matchedLocalNotebook === null;
+        isLocalNotebookMissing = matchedLocalNotebook === null;
 
-      console.log(
-        `[useNotebookSync] Notebook "${currentNotebookTitle}" | matchedLocalNotebook:`,
-        matchedLocalNotebook?.id ?? 'none',
-        '| isLocalNotebookMissing:',
-        isLocalNotebookMissing
-      );
+        if (isLocalNotebookMissing) {
+          return {
+            matchedLocalNotebook: null,
+            matchedRemoteNotebook: null,
+            isLocalNotebookMissing: true,
+            isRemoteNotebookMissing: false,
+            diffItems: [] as SyncDiffItem[],
+            diffCount: 0,
+          };
+        }
 
-      // 로컬에 매칭되는 노트북이 없는 경우(삭제되었거나 미연결):
-      // 계정 노트를 임의로 신규 동기화 항목(REMOTE_ONLY)으로 수집하지 않고,
-      // diffItems를 빈 배열로 반환하여 불필요한 배지 및 오동작 차단
-      if (!matchedLocalNotebook) {
-        return {
-          matchedLocalNotebook: null,
-          isLocalNotebookMissing: true,
-          diffItems: [] as SyncDiffItem[],
-          diffCount: 0,
-        };
+        // 원격 노트북 목록 조회
+        let remoteNotebooks: Content[] = [];
+        try {
+          remoteNotebooks = await getContentList(undefined, ['NOTEBOOK'], undefined);
+        } catch (e) {
+          console.error('Error fetching remote notebooks for sync:', e);
+        }
+
+        matchedRemoteNotebook =
+          remoteNotebooks.find(
+            (nb) => nb.title?.trim().toLowerCase() === currentNotebookTitle.toLowerCase()
+          ) || null;
+
+        isRemoteNotebookMissing = matchedRemoteNotebook === null;
+
+        console.log(
+          `[useNotebookSync] (Local Mode) Notebook "${currentNotebookTitle}" | matchedRemoteNotebook:`,
+          matchedRemoteNotebook?.id ?? 'none',
+          '| isRemoteNotebookMissing:',
+          isRemoteNotebookMissing
+        );
       }
 
       // 2. 원격 컨텐츠 수집 (NOTE, BOARD)
       let remoteContents: Content[] = [];
-      try {
-        remoteContents = await getContentList(currentRemoteNotebookId, ['NOTE', 'BOARD']);
-      } catch (e) {
-        console.error('Error fetching remote contents for sync:', e);
+      if (matchedRemoteNotebook) {
+        try {
+          remoteContents = await getContentList(matchedRemoteNotebook.id, ['NOTE', 'BOARD']);
+        } catch (e) {
+          console.error('Error fetching remote contents for sync:', e);
+        }
       }
 
       // 3. 로컬 컨텐츠 수집
@@ -609,7 +692,9 @@ export const useNotebookSync = () => {
 
       return {
         matchedLocalNotebook,
+        matchedRemoteNotebook,
         isLocalNotebookMissing,
+        isRemoteNotebookMissing,
         diffItems,
         diffCount: diffItems.length,
       };
@@ -626,7 +711,9 @@ export const useNotebookSync = () => {
     () =>
       data || {
         matchedLocalNotebook: null,
+        matchedRemoteNotebook: null,
         isLocalNotebookMissing: false,
+        isRemoteNotebookMissing: false,
         diffItems: [] as SyncDiffItem[],
         diffCount: 0,
       },
@@ -641,7 +728,7 @@ export const useNotebookSync = () => {
       if (!event) return;
       const key = event.query?.queryKey?.[0];
       if (
-        !runningSyncNotebookIds.has(currentRemoteNotebookId) &&
+        !runningSyncNotebookIds.has(currentNotebookId) &&
         !executeSync.isLoading &&
         (key === 'pageContents' || key === 'boardContents') &&
         (event.type === 'queryUpdated' || event.type === 'observerResultsUpdated')
@@ -659,14 +746,14 @@ export const useNotebookSync = () => {
     queryClient,
     queryKey,
     executeSync.isLoading,
-    currentRemoteNotebookId,
+    currentNotebookId,
   ]);
 
   // 미충돌 노트 한정 자동 동기화
   useEffect(() => {
     if (!options.autoSyncNonConflicted || !isSyncAvailable) return;
     if (isLoading || isFetching || isNotebookSyncing) return;
-    if (!data?.matchedLocalNotebook) return;
+    if (data?.isLocalNotebookMissing) return;
 
     const nonConflictedItems = (data?.diffItems || []).filter(
       (item) => !item.isConflict && item.status !== 'CONFLICT' && item.action !== 'SKIP'
@@ -678,6 +765,7 @@ export const useNotebookSync = () => {
       .mutateAsync({
         diffItems: nonConflictedItems,
         matchedLocalNotebook: data?.matchedLocalNotebook || null,
+        matchedRemoteNotebook: data?.matchedRemoteNotebook || null,
       })
       .catch((err) => {
         console.error('Auto sync non-conflicted items failed:', err);
@@ -691,6 +779,8 @@ export const useNotebookSync = () => {
     executeSync,
     data?.diffItems,
     data?.matchedLocalNotebook,
+    data?.matchedRemoteNotebook,
+    data?.isLocalNotebookMissing,
   ]);
 
   const manualRefresh = useCallback(async () => {

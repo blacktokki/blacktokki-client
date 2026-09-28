@@ -1,3 +1,4 @@
+import { useAuthContext } from '@blacktokki/account';
 import { useLangContext, useModalsContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/native';
 import React, { useMemo, useState } from 'react';
@@ -24,10 +25,11 @@ type SyncChangedItem = ChangedItem & { rawDiffItem?: SyncDiffItem };
 export const SyncNotebookScreen: React.FC = () => {
   useEffectExtensionScreen('sync');
   const navigation = useNavigation();
+  const { auth, dispatch } = useAuthContext();
   const { lang } = useLangContext();
   const { setModal } = useModalsContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
-  const { notebook } = useUsageMode();
+  const { usageMode, notebook } = useUsageMode();
   const { options, setOptions } = useSyncOptions();
 
   // 충돌 노트별 사용자 선택 상태: id -> 'LOCAL_TO_REMOTE' | 'REMOTE_TO_LOCAL'
@@ -36,11 +38,12 @@ export const SyncNotebookScreen: React.FC = () => {
   >({});
 
   const {
-    isSyncAvailable,
     isLoading,
     isFetching,
     matchedLocalNotebook,
+    matchedRemoteNotebook,
     isLocalNotebookMissing,
+    isRemoteNotebookMissing,
     diffItems,
     manualRefresh,
   } = useNotebookSync();
@@ -48,8 +51,12 @@ export const SyncNotebookScreen: React.FC = () => {
   const executeSync = useExecuteSync();
 
   // 로컬 계정 / 내 계정 노트북 이름
-  const localNotebookName = matchedLocalNotebook?.title || notebook?.title || lang('Local Account');
-  const accountNotebookName = notebook?.title || lang('My Account');
+  const localNotebookName = auth.isLocal
+    ? notebook?.title || lang('Local Account')
+    : matchedLocalNotebook?.title || notebook?.title || lang('Local Account');
+  const accountNotebookName = auth.isLocal
+    ? matchedRemoteNotebook?.title || notebook?.title || lang('My Account')
+    : notebook?.title || lang('My Account');
 
   // 동기화 방향 결정:
   // - LOCAL_ONLY -> LOCAL_TO_REMOTE
@@ -166,12 +173,13 @@ export const SyncNotebookScreen: React.FC = () => {
       return;
     }
 
-    if (isLocalNotebookMissing || !matchedLocalNotebook) {
+    if (!auth.isLocal && (isLocalNotebookMissing || !matchedLocalNotebook)) {
       handleOpenCreateLocalModal(async (created) => {
         try {
           await executeSync.mutateAsync({
             diffItems: resolvedItems,
             matchedLocalNotebook: created,
+            matchedRemoteNotebook,
           });
           Alert.alert(lang('Saved'), lang('Sync completed successfully.'), [
             {
@@ -190,6 +198,7 @@ export const SyncNotebookScreen: React.FC = () => {
       await executeSync.mutateAsync({
         diffItems: resolvedItems,
         matchedLocalNotebook,
+        matchedRemoteNotebook,
       });
       Alert.alert(lang('Saved'), lang('Sync completed successfully.'), [
         {
@@ -210,17 +219,43 @@ export const SyncNotebookScreen: React.FC = () => {
 
   const syncDisabled =
     isLocalNotebookMissing ||
-    !matchedLocalNotebook ||
+    (!auth.isLocal && !matchedLocalNotebook) ||
     resolvedItems.length === 0 ||
     executeSync.isLoading ||
     isLoading;
 
-  if (!isSyncAvailable) {
+  if (usageMode !== 'NOTEBOOK' || !notebook?.title) {
     return (
       <MovePageContainer>
         <Text style={commonStyles.text}>
-          {lang('Notebook sync is only available in account notebook mode.')}
+          {lang('Notebook sync is only available in notebook mode.')}
         </Text>
+      </MovePageContainer>
+    );
+  }
+
+  if (!auth.user) {
+    return (
+      <MovePageContainer>
+        <Text style={[commonStyles.text, { marginBottom: 16 }]}>
+          {lang('Login is required to synchronize with your account.')}
+        </Text>
+        <TouchableOpacity
+          onPress={() => dispatch({ type: 'LOGOUT_LOCAL' })}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#3498DB',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            borderRadius: 6,
+            alignSelf: 'flex-start',
+          }}
+        >
+          <Icon name="sign-in" size={16} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>{lang('Sign in')}</Text>
+        </TouchableOpacity>
       </MovePageContainer>
     );
   }
@@ -255,9 +290,41 @@ export const SyncNotebookScreen: React.FC = () => {
       </View>
 
       <Text style={[commonStyles.title, { marginTop: 8, marginBottom: 16 }]}>
-        <Text style={{ fontSize: 14, color: 'gray' }}>[{accountNotebookName}] </Text>
+        <Text style={{ fontSize: 14, color: 'gray' }}>
+          [{auth.isLocal ? lang('Local Account') : lang('My Account')}]{' '}
+        </Text>
         {notebook?.title}
       </Text>
+
+      {/* 로컬 모드에서 원격 노트북 부재 시 안내 배너 */}
+      {auth.isLocal && isRemoteNotebookMissing && (
+        <View
+          style={{
+            backgroundColor: colorScheme === 'dark' ? '#1A2A3A' : '#EBF5FB',
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: colorScheme === 'dark' ? '#2980B9' : '#AED6F1',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Icon name="info-circle" size={16} color="#3498DB" style={{ marginRight: 8 }} />
+            <Text style={{ fontSize: 13, color: '#2980B9', flex: 1, fontWeight: 'bold' }}>
+              {lang('Remote notebook does not exist.')}
+            </Text>
+          </View>
+          <Text
+            style={{
+              fontSize: 12,
+              color: colorScheme === 'dark' ? '#BDC3C7' : '#2C3E50',
+              lineHeight: 17,
+            }}
+          >
+            {lang('A new notebook will be created in your account when syncing.')}
+          </Text>
+        </View>
+      )}
 
       {/* 로컬 노트북 부재 시 생성 및 폴더 연결 안내 배너 */}
       {isLocalNotebookMissing && (

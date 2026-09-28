@@ -1,9 +1,10 @@
 import { useAuthContext } from '@blacktokki/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { useNotebook } from './useNotebookStorage';
+import { getPrivateConfig } from '../services/notebook';
 
 export type UsageMode = 'SIMPLE' | 'NOTE' | 'NOTEBOOK';
 
@@ -50,8 +51,30 @@ export const useUsageMode = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: privateConfig, isLoading: isPrivateLoading } = useQuery({
+    queryKey: ['privateMode', subkey],
+    queryFn: () => getPrivateConfig(subkey),
+    staleTime: Infinity,
+    cacheTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
   const { data: notebook, isLoading: isNotebookLoading } = useNotebook(currentNotebookId || 0);
-  const isLoading = isModeLoading || isIdLoading || isNotebookLoading;
+  const isLoading = isModeLoading || isIdLoading || isNotebookLoading || isPrivateLoading;
+  const setUsageMode = useSetUsageMode();
+
+  const isPrivateNotebook = !!notebook?.option?.NOTEBOOK_TYPE?.includes('PRIVATE');
+  const isPrivateDisabled = isPrivateNotebook && !privateConfig?.enabled;
+  const isNotebookInvalid =
+    usageMode === 'NOTEBOOK' && (currentNotebookId === 0 || !notebook || isPrivateDisabled);
+
+  useEffect(() => {
+    if (!isLoading && isNotebookInvalid) {
+      setUsageMode.mutate({ mode: 'NOTE', notebookId: null });
+    }
+  }, [isLoading, isNotebookInvalid, setUsageMode]);
+
   return useMemo(() => {
     if (
       isLoading ||
@@ -66,20 +89,12 @@ export const useUsageMode = () => {
       };
     }
 
-    if (usageMode !== 'NOTEBOOK') {
+    if (usageMode !== 'NOTEBOOK' || isNotebookInvalid) {
       return {
-        usageMode,
+        usageMode: usageMode === 'SIMPLE' ? 'SIMPLE' : 'NOTE',
         notebook: null,
         isBoardEnabled: false,
-        currentNotebookId: currentNotebookId ?? null,
-      };
-    }
-    if (currentNotebookId === 0 || !notebook) {
-      return {
-        usageMode: 'NOTE',
-        notebook: null,
-        isBoardEnabled: false,
-        currentNotebookId: currentNotebookId ?? null,
+        currentNotebookId: isNotebookInvalid ? null : currentNotebookId ?? null,
       };
     }
 
@@ -91,7 +106,7 @@ export const useUsageMode = () => {
       isBoardEnabled: notebookType === 'WORKSPACE' || notebookType === 'PRIVATE_WORKSPACE',
       currentNotebookId: currentNotebookId ?? null,
     };
-  }, [usageMode, notebook, currentNotebookId, isLoading]);
+  }, [usageMode, notebook, currentNotebookId, isLoading, isNotebookInvalid]);
 };
 
 export const useSetUsageMode = () => {
@@ -122,6 +137,14 @@ export const useSetUsageMode = () => {
       }
       queryClient.invalidateQueries({ queryKey: ['usageMode', subkey] });
       queryClient.invalidateQueries({ queryKey: ['currentNotebookId', subkey] });
+      queryClient.invalidateQueries({ queryKey: ['pageContents'] });
+      queryClient.invalidateQueries({ queryKey: ['pageContent'] });
+      queryClient.invalidateQueries({ queryKey: ['boardContents'] });
+      queryClient.invalidateQueries({ queryKey: ['boardContent'] });
+      queryClient.invalidateQueries({ queryKey: ['recentTabs'] });
+      queryClient.invalidateQueries({ queryKey: ['lastTab'] });
+      queryClient.invalidateQueries({ queryKey: ['notebookSyncDiff'] });
+      queryClient.invalidateQueries({ queryKey: ['keywords'] });
     },
   });
 };

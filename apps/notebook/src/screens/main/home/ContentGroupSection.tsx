@@ -70,12 +70,14 @@ export const updatedFormat = (_updated: string) => {
 
 export const getBoardStatsList = (boards: Content[], allPages: Content[]) => {
   return boards
+    .filter((board) => board && board.title)
     .map((board) => {
       const option = board.option;
       const headerLevel = option && 'BOARD_HEADER_LEVEL' in option ? option.BOARD_HEADER_LEVEL : 3;
 
       const noteColumns = allPages.filter(
         (p) =>
+          p.title &&
           p.title !== board.title &&
           p.title.startsWith(board.title + '/') &&
           p.title.slice(board.title.length + 1).split('/').length === 1
@@ -261,19 +263,21 @@ const ContentGroupSection = (props: Props) => {
   const reorderRecent = useReorderRecentTabs();
 
   // Derived Data
-  const currentSplitTitle = lastTab ? getSplitTitle(lastTab.title) : undefined;
+  const currentSplitTitle = lastTab?.title ? getSplitTitle(lastTab.title) : undefined;
 
   const listData = useMemo(() => {
     if (props.type === 'RECENT') return notes.data ? toRecentContents(notes.data) : [];
-    if (props.type === 'SUBNOTE' && lastTab && notes.data) {
+    if (props.type === 'SUBNOTE' && lastTab?.title && notes.data) {
       return toRecentContents(notes.data.filter((v) => v.title.startsWith(lastTab.title + '/')));
     }
     if (props.type === 'LAST') {
-      return lastTab && tabs.data?.find((v) => v.id === lastTab.id) === undefined ? [lastTab] : [];
+      return lastTab?.title && tabs.data?.find((v) => v.id === lastTab.id) === undefined
+        ? [lastTab]
+        : [];
     }
     if (props.type === 'PAGE') return tabs.data || [];
     return [];
-  }, [props.type, notes.data, tabs.data, lastTab, boards, lastTab]);
+  }, [props.type, notes.data, tabs.data, lastTab, boards]);
   const tocList = useMemo(
     () =>
       props.type === 'TOC' && lastTab?.description
@@ -355,7 +359,7 @@ const ContentGroupSection = (props: Props) => {
   }
 
   if (props.type === 'TOC') {
-    if (!lastTab) return null;
+    if (!lastTab?.title) return null;
     return (
       <List.Section>
         <List.Item
@@ -392,7 +396,7 @@ const ContentGroupSection = (props: Props) => {
   }
 
   if (props.type === 'HISTORY') {
-    if (!lastTab) return null;
+    if (!lastTab?.title) return null;
     return (
       <List.Section>
         {historyList.slice(0, 20).map((h, i) => (
@@ -416,7 +420,7 @@ const ContentGroupSection = (props: Props) => {
   }
 
   if (props.type === 'LAST') {
-    if (!lastTab) return null;
+    if (!lastTab?.title) return null;
     const tabStyles = commonStyles.activeTab;
     return (
       <List.Section>

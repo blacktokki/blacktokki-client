@@ -6,7 +6,7 @@ import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useCreateOrUpdateNotebook, useDeleteNotebook } from '../hooks/useNotebookStorage';
 import { useNotebookTheme } from '../hooks/useNotebookTheme';
-import { usePrivate } from '../hooks/usePrivate';
+import { usePrivate, useSetPrivate } from '../hooks/usePrivate';
 import { useSetUsageMode, useUsageMode } from '../hooks/useUsageMode';
 import { getStorageConfig } from '../services/storage';
 import { Content, NotebookOption } from '../types';
@@ -190,6 +190,7 @@ const NotebookForm: React.FC<NotebookFormProps> = ({
   const { auth } = useAuthContext();
   const { commonStyles } = useNotebookTheme();
   const { data: privateConfig } = usePrivate();
+  const setPrivate = useSetPrivate();
   const createNotebook = useCreateOrUpdateNotebook();
   const deleteNotebook = useDeleteNotebook();
 
@@ -206,9 +207,10 @@ const NotebookForm: React.FC<NotebookFormProps> = ({
   const [titleError, setTitleError] = useState(false);
   const [storageError, setStorageError] = useState(false);
 
-  const availableNotebookTypes: NotebookOption['NOTEBOOK_TYPE'][] = privateConfig.enabled
-    ? ['PRIVATE_NOTE', 'WORKSPACE', 'PRIVATE_WORKSPACE']
-    : ['WORKSPACE'];
+  const availableNotebookTypes: NotebookOption['NOTEBOOK_TYPE'][] =
+    isTargetLocal || privateConfig.enabled || (type && type.includes('PRIVATE'))
+      ? ['PRIVATE_NOTE', 'WORKSPACE', 'PRIVATE_WORKSPACE']
+      : ['WORKSPACE'];
 
   useEffect(() => {
     if (initialNotebook) {
@@ -252,6 +254,11 @@ const NotebookForm: React.FC<NotebookFormProps> = ({
     if (hasErr) return;
 
     try {
+      const isPrivateType = type.includes('PRIVATE');
+      if (isPrivateType && !privateConfig.enabled) {
+        await setPrivate.mutateAsync({ enabled: true });
+      }
+
       const res = await createNotebook.mutateAsync({
         id: initialNotebook?.id,
         title,

@@ -78,7 +78,7 @@ const matchUnlinkedKeyword = (text: string, keyword: string) => {
   return text.match(new RegExp(`(?:^|[\\s\\p{P}])${escpaedKeyword}(?=$|[\\s\\p{P}])`, 'iu'));
 };
 
-type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
+export type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
 type ProblemSource = {
   id: number;
   title: string;
@@ -274,7 +274,7 @@ const getDataMatrix = (
 
     //empty parent note
     if (source.parentTitle === target.title && !hasBoard) {
-      record.push([source.parentTitle, undefined, `Empty parent note(${source.title})`]);
+      record.push([source.parentTitle, undefined, `Empty parent note(${source.parentTitle})`]);
     }
   }
 
@@ -320,7 +320,12 @@ const getDataAggregate = (source: ProblemSource, boardCount: number): ProblemIte
   return aggregateRecords;
 };
 
-const getData = (userId: number, notebookId: number, pages: Content[], boards: Content[]) => {
+export const getData = (
+  userId: number,
+  notebookId: number,
+  pages: Content[],
+  boards: Content[]
+) => {
   const records: {
     title: string;
     path: string | undefined;

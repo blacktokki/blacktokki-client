@@ -98,7 +98,7 @@ export const useUsageMode = () => {
       };
     }
 
-    const notebookType = notebook.option?.NOTEBOOK_TYPE;
+    const notebookType = notebook?.option?.NOTEBOOK_TYPE;
 
     return {
       usageMode,

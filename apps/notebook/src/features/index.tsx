@@ -3,6 +3,8 @@ import { NavigationConfig } from '@blacktokki/navigation';
 import React from 'react';
 
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
+import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
+import { KnowledgeGraphScreen } from './knowledgeGraph/KnowledgeGraphScreen';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
@@ -16,11 +18,11 @@ import { SyncButton } from './sync/SyncButton';
 import { SyncNotebookScreen } from './sync/SyncNotebookScreen';
 import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';
 import { createCommonStyles as createNamuwikiStyles } from './themeNamuwiki/styles';
+import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
 import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
 import { features } from '../hooks/useExtension';
-import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
 
 features['sync'] = {
   title: 'Notebook Sync',
@@ -98,6 +100,26 @@ features['timeline'] = {
     {
       type: 'button',
       Component: <TimeLineButton key={'timeline'} />,
+    },
+  ],
+};
+
+features['knowledgeGraph'] = {
+  title: 'Knowledge Graph',
+  description: 'Maps notes, boards, and references into a knowledge graph with scoped validation.',
+  useNoteMode: true,
+  screens: {
+    KnowledgeGraph: {
+      title: '',
+      component: KnowledgeGraphScreen,
+      path: 'graph',
+    },
+  },
+  NoteSections: [],
+  elements: [
+    {
+      type: 'button',
+      Component: <KnowledgeGraphButton key={'knowledgeGraph'} />,
     },
   ],
 };

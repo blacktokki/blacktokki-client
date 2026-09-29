@@ -12,34 +12,52 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { KnowledgeGraphCanvasView } from './KnowledgeGraphCanvasView';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { OwlRdfInferenceControl, useOwlRdfInferenceView } from '../owlrdf/InferenceControl';
+import {
+  knowledgeGraphLabelModeTitle,
+  knowledgeGraphRelationLegendDetail,
+  nextKnowledgeGraphLabelMode,
+} from '../owlrdf/display';
+import type { InferredKnowledgeGraphEdge } from '../owlrdf/inference';
+import {
+  getKnowledgeGraphRelationDisplayLabel,
+  getKnowledgeGraphNodeKindLabel,
+  getOwlRdfRelationLegendColor,
+  KnowledgeGraphRelationLabelMode,
+  KnowledgeGraphRelationSummary,
+  summarizeKnowledgeGraphRelations,
+} from '../owlrdf/relations';
 import { AxiomEvaluationResult, KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { shouldHideExternalLinkClass } from '../utils/externalLinkClassification';
 import { getKnowledgeGraphPalette } from '../utils/palette';
-import {
-  getKnowledgeGraphRelationDisplayLabel,
-  getKnowledgeGraphNodeKind,
-  getKnowledgeGraphNodeKindLabel,
-  KnowledgeGraphNodeKindLabel,
-  KnowledgeGraphRelationSummary,
-  summarizeKnowledgeGraphRelations,
-} from '../utils/relations';
+import { getKnowledgeGraphNodeKind, KnowledgeGraphNodeKindLabel } from '../utils/relations';
 
 interface KnowledgeGraphViewProps {
   nodes: KnowledgeGraphNode[];
   edges: KnowledgeGraphEdge[];
+  datatypeNodes?: KnowledgeGraphNode[];
+  datatypeEdges?: KnowledgeGraphEdge[];
+  inferredEdges?: InferredKnowledgeGraphEdge[];
   axioms: AxiomEvaluationResult;
   selectedNode: KnowledgeGraphNode | null;
   selectionTrigger: number;
   reservedBottomHeight: number;
   focusedNodeIds: Set<string> | null;
+  labelMode: KnowledgeGraphRelationLabelMode;
+  onChangeLabelMode: (mode: KnowledgeGraphRelationLabelMode) => void;
   onSelectNode: (node: KnowledgeGraphNode | null) => void;
+  highlightedNodeIds?: Set<string>;
+  clusterClassIds?: Set<string>;
+  extensionClassLabels?: readonly [string, string];
 }
 
 const relationLegendColor = (summary: KnowledgeGraphRelationSummary, isDark: boolean): string => {
   if (summary.label === 'connectedPartOf') return isDark ? '#F2A2A8' : '#B84B56';
   if (summary.label === 'paragraphPartOf' || summary.label === 'cardPartOf')
     return isDark ? '#7D6608' : '#B7950B';
-  switch (summary.type) {
+  const owlRdfColor = getOwlRdfRelationLegendColor(summary, isDark);
+  if (owlRdfColor) return owlRdfColor;
+  switch (summary.baseType) {
     case 'REFERENCES':
     case 'EXTERNAL_REFERENCE':
       return isDark ? '#5DADE2' : '#2874A6';
@@ -163,12 +181,20 @@ const HudButton: React.FC<{
 export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   nodes,
   edges,
+  datatypeNodes = [],
+  datatypeEdges = [],
+  inferredEdges,
   axioms,
   selectedNode,
   selectionTrigger,
   reservedBottomHeight,
   focusedNodeIds,
+  labelMode,
+  onChangeLabelMode,
   onSelectNode,
+  highlightedNodeIds,
+  clusterClassIds,
+  extensionClassLabels,
 }) => {
   const { commonStyles, colorScheme } = useNotebookTheme();
   const { lang } = useLangContext();
@@ -183,8 +209,10 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     trigger: number;
   } | null>(null);
 
+  const [showDatatypes, setShowDatatypes] = useState<boolean>(false);
   const [showParagraphs, setShowParagraphs] = useState<boolean>(false);
   const [showOrdinaryExternalLinks, setShowOrdinaryExternalLinks] = useState<boolean>(false);
+  const toggleLabelMode = () => onChangeLabelMode(nextKnowledgeGraphLabelMode(labelMode));
   const [isLegendExpanded, setIsLegendExpanded] = useState<boolean>(true);
 
   const [showAxiomModal, setShowAxiomModal] = useState<boolean>(false);
@@ -203,15 +231,32 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           (node.id !== 'class:externalLink' &&
             !(node.role === 'CLASS' && node.classKind === 'EXTERNAL_LINK')))
     );
-    return visibleNodes;
-  }, [nodes, showParagraphs, showOrdinaryExternalLinks, hideExternalLinkClass]);
+    if (!showDatatypes || datatypeNodes.length === 0) {
+      return visibleNodes;
+    }
+    return [...visibleNodes, ...datatypeNodes];
+  }, [
+    nodes,
+    datatypeNodes,
+    showDatatypes,
+    showParagraphs,
+    showOrdinaryExternalLinks,
+    hideExternalLinkClass,
+  ]);
 
   const activeNodeIds = useMemo(() => new Set(activeNodes.map((node) => node.id)), [activeNodes]);
   const nodeMap = useMemo(() => new Map(activeNodes.map((node) => [node.id, node])), [activeNodes]);
+  const inference = useOwlRdfInferenceView(edges, inferredEdges, lang);
 
   const allEdges = useMemo(() => {
-    return edges.filter((edge) => activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target));
-  }, [edges, activeNodeIds]);
+    let result = inference.visibleEdges;
+    if (showDatatypes && datatypeEdges.length > 0) {
+      result = [...result, ...datatypeEdges];
+    }
+    return result.filter(
+      (edge) => activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target)
+    );
+  }, [inference.visibleEdges, datatypeEdges, showDatatypes, activeNodeIds]);
 
   useEffect(() => {
     if (!selectedNode) return;
@@ -299,15 +344,16 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       }
       counts[getKnowledgeGraphNodeKind(node)]++;
     }
+    counts.literal = datatypeNodes.length;
     return counts;
-  }, [nodes, hideExternalLinkClass]);
+  }, [nodes, datatypeNodes.length, hideExternalLinkClass]);
   const displayEdges = useMemo(
     () =>
       allEdges.map((edge) => ({
         ...edge,
-        propertyLabel: getKnowledgeGraphRelationDisplayLabel(edge, lang),
+        propertyLabel: getKnowledgeGraphRelationDisplayLabel(edge, labelMode, lang),
       })),
-    [allEdges, lang]
+    [allEdges, labelMode, lang]
   );
   const relationSummaries = useMemo(() => summarizeKnowledgeGraphRelations(allEdges), [allEdges]);
   const validationColor = axioms.hasErrors ? '#E74C3C' : axioms.hasWarnings ? '#F39C12' : '#27AE60';
@@ -349,6 +395,13 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     [isDark]
   );
 
+  const visibleHighlightedNodeIds = useMemo(
+    () =>
+      new Set(
+        activeNodes.filter((node) => highlightedNodeIds?.has(node.id)).map((node) => node.id)
+      ),
+    [activeNodes, highlightedNodeIds]
+  );
   const toolbarToggles: (
     | Omit<GraphToolbarToggleProps, 'isDark' | 'inactiveTextColor'>
     | false
@@ -372,6 +425,15 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       activeTextColor: isDark ? '#FFFFFF' : commonStyles.text?.color,
       onToggle: () => setShowOrdinaryExternalLinks((previous) => !previous),
     },
+    datatypeNodes.length > 0 && {
+      active: showDatatypes,
+      label: `${lang('Datatypes')} (${datatypeNodes.length})`,
+      icon: 'square-o',
+      activeBackgroundColor: isDark ? '#B7950B' : '#F1C40F',
+      activeBorderColor: '#D4AC0D',
+      activeTextColor: isDark ? '#FFFFFF' : '#4E3800',
+      onToggle: () => setShowDatatypes((previous) => !previous),
+    },
   ];
 
   return (
@@ -388,7 +450,10 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           reservedBottomHeight={reservedBottomHeight}
           focusedNodeIds={focusedNodeIds}
           violatingNodeIds={violatingNodeIdSet}
+          highlightedNodeIds={visibleHighlightedNodeIds}
+          clusterClassIds={clusterClassIds}
           isDark={isDark}
+          labelMode={labelMode}
           spacingScale={spacingScale}
           zoomAction={zoomAction}
           onViewportChange={handleViewportChange}
@@ -439,6 +504,26 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               />
             )
         )}
+
+        <OwlRdfInferenceControl
+          active={inference.active}
+          count={inference.count}
+          notice={inference.notice}
+          onToggle={inference.toggle}
+          isDark={isDark}
+          textColor={commonStyles.text?.color}
+          translate={lang}
+        />
+
+        <GraphToolbarToggle
+          active={false}
+          label={`${lang('Label')}: ${knowledgeGraphLabelModeTitle(labelMode, lang)}`}
+          icon="tag"
+          isDark={isDark}
+          inactiveTextColor={commonStyles.text?.color}
+          inactiveBorderColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)'}
+          onToggle={toggleLabelMode}
+        />
       </View>
 
       <View
@@ -556,7 +641,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                   (kind) =>
                     nodeLegendCounts[kind] > 0 &&
                     (kind !== 'paragraph' || showParagraphs) &&
-                    (kind !== 'externalLink' || showOrdinaryExternalLinks)
+                    (kind !== 'externalLink' || showOrdinaryExternalLinks) &&
+                    (kind !== 'literal' || showDatatypes)
                 )
                 .map((kind) => (
                   <View key={kind} style={styles.legendItem}>
@@ -566,13 +652,14 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                         {
                           backgroundColor: palette[kind].fill,
                           borderColor: palette[kind].stroke,
-                          borderWidth: kind === 'card' ? 1.2 : 1.5,
-                          borderRadius: 7,
+                          borderWidth: kind === 'card' || kind === 'literal' ? 1.2 : 1.5,
+                          borderRadius: kind === 'literal' ? 2 : 7,
                         },
                       ]}
                     />
                     <Text style={[styles.legendText, { color: commonStyles.text?.color }]}>
-                      {getKnowledgeGraphNodeKindLabel(kind, lang)} ({nodeLegendCounts[kind]})
+                      {getKnowledgeGraphNodeKindLabel(kind, labelMode, lang, extensionClassLabels)}{' '}
+                      ({nodeLegendCounts[kind]})
                     </Text>
                   </View>
                 ))}
@@ -584,7 +671,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               {relationSummaries.map((summary) => {
                 const color = relationLegendColor(summary, isDark);
                 const relation = { type: summary.type, propertyLabel: summary.label };
-                const label = getKnowledgeGraphRelationDisplayLabel(relation, lang);
+                const label = getKnowledgeGraphRelationDisplayLabel(relation, labelMode, lang);
+                const detail = knowledgeGraphRelationLegendDetail(relation, labelMode, lang);
                 return (
                   <View key={summary.key} style={styles.legendItem}>
                     <View style={styles.arrowIconContainer}>
@@ -604,7 +692,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                       <View style={[styles.arrowHead, { borderLeftColor: color }]} />
                     </View>
                     <Text style={[styles.legendText, { color: commonStyles.text?.color }]}>
-                      {label}({summary.count})
+                      {label}
+                      {detail} ({summary.count})
                     </Text>
                   </View>
                 );

@@ -5,23 +5,32 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { knowledgeGraphClassMembershipTitle } from '../owlrdf/display';
+import {
+  getKnowledgeGraphNodeKindLabel,
+  KnowledgeGraphRelationLabelMode,
+} from '../owlrdf/relations';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { findInstanceClassIds } from '../utils/classMembership';
 import { getNhopDepthOptions } from '../utils/nhop';
 import { getKnowledgeGraphPalette } from '../utils/palette';
 import { getBoardParagraphSourceNotes } from '../utils/paragraphClassification';
-import { getKnowledgeGraphNodeKind, getKnowledgeGraphNodeKindLabel } from '../utils/relations';
+import { getKnowledgeGraphNodeKind } from '../utils/relations';
 
 interface KnowledgeGraphPreviewSheetProps {
   node: KnowledgeGraphNode;
   edges: KnowledgeGraphEdge[];
   allNodes: KnowledgeGraphNode[];
   nhopDepth: number;
+  labelMode: KnowledgeGraphRelationLabelMode;
   onChangeNhopDepth: (depth: number) => void;
   onClose: () => void;
   onSelectNode: (node: KnowledgeGraphNode) => void;
   onOpenNode: (node: KnowledgeGraphNode, targetSection?: string) => void;
   onHeightChange: (height: number) => void;
+  nodeAction?: { label: string; onPress: () => void };
+  canOpenNode?: boolean;
+  extensionClassLabels?: readonly [string, string];
 }
 
 const PreviewChip: React.FC<{
@@ -40,11 +49,15 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
   edges,
   allNodes,
   nhopDepth,
+  labelMode,
   onChangeNhopDepth,
   onClose,
   onSelectNode,
   onOpenNode,
   onHeightChange,
+  nodeAction,
+  canOpenNode = true,
+  extensionClassLabels,
 }) => {
   const { lang } = useLangContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
@@ -57,11 +70,13 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
 
   const nodeKind = getKnowledgeGraphNodeKind(node);
   const badgeColor = palette[nodeKind].stroke;
-  const typeLabel = getKnowledgeGraphNodeKindLabel(nodeKind, lang);
+  const typeLabel = getKnowledgeGraphNodeKindLabel(nodeKind, labelMode, lang, extensionClassLabels);
 
   const typeIcon = {
     builtInClass: 'sitemap',
     boardClass: 'sitemap',
+    extensionClass: 'sitemap',
+    literal: 'square-o',
     externalLink: 'external-link',
     connectedExternalLink: 'external-link',
     note: 'file-text-o',
@@ -92,9 +107,25 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
           .map((classId) => allNodes.find((candidate) => candidate.id === classId))
           .filter((candidate): candidate is KnowledgeGraphNode => candidate?.role === 'CLASS')
       : [];
+  const classById = new Map(
+    allNodes
+      .filter((candidate) => candidate.role === 'CLASS')
+      .map((candidate) => [candidate.id, candidate])
+  );
+  const parentClasses = edges
+    .filter((edge) => edge.type === 'SUBCLASS_OF' && edge.source === node.id)
+    .map((edge) => classById.get(edge.target))
+    .filter((candidate): candidate is KnowledgeGraphNode => !!candidate);
+  const childClasses = edges
+    .filter((edge) => edge.type === 'SUBCLASS_OF' && edge.target === node.id)
+    .map((edge) => classById.get(edge.source))
+    .filter((candidate): candidate is KnowledgeGraphNode => !!candidate);
   const classChipBackground = (classNode: KnowledgeGraphNode): string => {
     if (classNode.classCategory === 'BOARD') {
       return isDark ? 'rgba(130, 224, 170, 0.16)' : 'rgba(34, 153, 84, 0.12)';
+    }
+    if (classNode.classCategory && classNode.classCategory !== 'BUILT_IN') {
+      return isDark ? 'rgba(241, 139, 184, 0.16)' : 'rgba(173, 61, 118, 0.12)';
     }
     return isDark ? 'rgba(170, 204, 255, 0.14)' : 'rgba(85, 136, 204, 0.1)';
   };
@@ -169,6 +200,12 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
               <Icon name={typeIcon} size={9.5} color="#FFFFFF" style={{ marginRight: 4 }} />
               <Text style={styles.badgeText}>{typeLabel}</Text>
             </View>
+            {nodeAction && (
+              <View style={[styles.badge, { backgroundColor: '#AD3D76' }]}>
+                <Icon name="globe" size={9.5} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Text style={styles.badgeText}>{nodeAction.label}</Text>
+              </View>
+            )}
             <Text style={[styles.title, { color: commonStyles.title?.color }]} numberOfLines={1}>
               {node.name}
             </Text>
@@ -203,7 +240,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
                 style={{ marginRight: 6 }}
               />
               <Text style={[styles.sectionsLabelText, { color: commonStyles.smallText?.color }]}>
-                {lang('Category')} ({directClasses.length})
+                {knowledgeGraphClassMembershipTitle(labelMode, lang)} ({directClasses.length})
               </Text>
             </View>
             <View style={styles.classChips}>
@@ -224,6 +261,29 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
               )}
             </View>
           </View>
+        )}
+
+        {node.role === 'CLASS' && (parentClasses.length > 0 || childClasses.length > 0) && (
+          <>
+            {renderSections(
+              lang('Parent Categories'),
+              parentClasses.map((parent) => ({
+                key: parent.id,
+                label: parent.name,
+                onPress: () => onSelectNode(parent),
+              })),
+              'level-up'
+            )}
+            {renderSections(
+              lang('Child Categories'),
+              childClasses.map((child) => ({
+                key: child.id,
+                label: child.name,
+                onPress: () => onSelectNode(child),
+              })),
+              'level-down'
+            )}
+          </>
         )}
 
         {boardParagraphSourceNotes.length > 0 &&
@@ -338,7 +398,9 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
             })}
           </View>
 
-          {node.classKind !== 'EXTERNAL_LINK' &&
+          {node.role !== 'LITERAL' &&
+            canOpenNode &&
+            node.classKind !== 'EXTERNAL_LINK' &&
             !(node.instanceKind === 'BOARD_PARAGRAPH' && boardParagraphSourceNotes.length > 1) && (
               <TouchableOpacity
                 style={[
@@ -351,6 +413,16 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
                 <Text style={styles.openButtonText}>{lang('move')}</Text>
               </TouchableOpacity>
             )}
+
+          {nodeAction && (
+            <TouchableOpacity
+              style={[styles.openButton, { backgroundColor: '#AD3D76' }]}
+              onPress={nodeAction.onPress}
+            >
+              <Icon name="book" size={11} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.openButtonText}>{nodeAction.label}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>

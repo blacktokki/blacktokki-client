@@ -1,7 +1,7 @@
 import { Paragraph } from '../../components/HeaderSelectBar';
 
 // 1. Graph entity roles
-export type KnowledgeGraphEntityRole = 'CLASS' | 'INSTANCE';
+export type KnowledgeGraphEntityRole = 'CLASS' | 'INSTANCE' | 'LITERAL';
 export type KnowledgeGraphInstanceKind =
   | 'CARD'
   | 'NOTE'
@@ -10,8 +10,12 @@ export type KnowledgeGraphInstanceKind =
   | 'CONNECTED_PARAGRAPH'
   | 'EXTERNAL_LINK'
   | 'CONNECTED_EXTERNAL_LINK';
-export type KnowledgeGraphClassKind = 'NOTE' | 'BOARD_CARD' | 'EXTERNAL_LINK';
-export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD';
+export type KnowledgeGraphClassKind =
+  | 'NOTE'
+  | 'BOARD_CARD'
+  | 'EXTERNAL_LINK'
+  | (string & Record<never, never>);
+export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD' | (string & Record<never, never>);
 
 // 2. Note metadata (YAML frontmatter only)
 // Enforced constraint: Only NOTE instances can have non-empty properties.
@@ -44,7 +48,9 @@ export type KnowledgeGraphRelationType =
   | 'REPRESENTED_BY_NOTE' // Class -> corresponding note annotation
   | 'REFERENCES' // Document _NOTELINK (reference/citation)
   | 'EXTERNAL_REFERENCE' // Document -> external link individual
-  | 'PART_OF'; // Parent/Child document path hierarchy
+  | 'PART_OF' // Parent/Child document path hierarchy
+  | 'DATATYPE_PROPERTY' // Instance -> Literal (e.g. hasSchedule)
+  | (string & Record<never, never>); // Extension relation types
 
 // 4. Axioms (Constraints, Validation)
 export type AxiomType =
@@ -100,6 +106,8 @@ export interface KnowledgeGraphNode {
   radius: number;
   color: string;
   strokeColor?: string;
+  width?: number; // For rectangular literal nodes
+  height?: number;
 }
 
 export interface KnowledgeGraphEdge {
@@ -122,5 +130,12 @@ export interface KnowledgeGraphLinkEvidence {
 export interface KnowledgeGraphData {
   nodes: KnowledgeGraphNode[];
   edges: KnowledgeGraphEdge[];
+  /** Source headings contained in card bodies, available to extensions. */
+  cardSubheadings?: {
+    cardNodeId: string;
+    occurrenceId: string;
+    title: string;
+    noteTitle: string;
+  }[];
   axioms: AxiomEvaluationResult;
 }

@@ -19,8 +19,12 @@ export const getKnowledgeGraphNodeKind = (
   node: KnowledgeGraphNode
 ): KnowledgeGraphNodeKindLabel => {
   if (node.role === 'CLASS') {
-    return node.classCategory === 'BOARD' ? 'boardClass' : 'builtInClass';
+    if (node.classCategory === 'BOARD') return 'boardClass';
+    return node.classCategory === 'BUILT_IN' || !node.classCategory
+      ? 'builtInClass'
+      : 'extensionClass';
   }
+  if (node.role === 'LITERAL') return 'literal';
   if (node.instanceKind === 'NOTE') return node.boardTitle ? 'boardNote' : 'note';
   return INSTANCE_NODE_KINDS[node.instanceKind || 'CARD'] || 'card';
 };
@@ -33,6 +37,7 @@ export const getKnowledgeGraphNodeKindLabel = (
   const labels: Record<KnowledgeGraphNodeKindLabel, string> = {
     builtInClass: 'Built-in category',
     boardClass: 'Board category',
+    extensionClass: 'Extension category',
     note: 'Note',
     boardNote: 'Board note',
     boardParagraph: 'Board paragraph',
@@ -41,6 +46,7 @@ export const getKnowledgeGraphNodeKindLabel = (
     connectedParagraph: 'Connected paragraph',
     externalLink: 'External link',
     connectedExternalLink: 'Connected external link',
+    literal: 'Property value',
   };
   return translate(labels[kind]);
 };

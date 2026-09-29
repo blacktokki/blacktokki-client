@@ -17,8 +17,22 @@ let drawEdges;
 let drawNodes;
 
 try {
-  for (const name of ['relations', 'axioms', 'forceLayout', 'canvasRenderer']) {
-    const source = readFileSync(path.join(__dirname, '../utils', `${name}.ts`), 'utf8');
+  for (const name of [
+    'relations',
+    'inference',
+    'owlRelations',
+    'axioms',
+    'forceLayout',
+    'canvasRenderer',
+  ]) {
+    const file =
+      name === 'owlRelations' || name === 'inference'
+        ? path.join(__dirname, '../owlrdf', `${name === 'owlRelations' ? 'relations' : name}.ts`)
+        : path.join(__dirname, '../utils', `${name}.ts`);
+    const source = readFileSync(file, 'utf8')
+      .replaceAll('../utils/relations', './relations')
+      .replaceAll('../owlrdf/relations', './owlRelations')
+      .replaceAll('../owlrdf/inference', './inference');
     const compiled = ts.transpileModule(source, {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
     });
@@ -86,6 +100,7 @@ test('renders the entire notebook name on the Note class node', () => {
       focusedNodeIds: null,
       violatingNodeIds: new Set(),
       isDark: false,
+      labelMode: 'intuitive',
     }
   );
   assert.deepEqual(labels, [name]);

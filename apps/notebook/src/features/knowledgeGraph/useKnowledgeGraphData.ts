@@ -16,6 +16,7 @@ import {
   buildParagraphPartOfAssignments,
   findConnectedParagraphIds,
 } from './utils/paragraphClassification';
+import { findNearestParentHeader, normalizeTitle } from './utils/text';
 import {
   Paragraph,
   paragraphDescription,
@@ -45,26 +46,7 @@ export const isNotEmptyContent = (description?: string): boolean => {
   return false;
 };
 
-const normalizeTitle = (value: string): string =>
-  value
-    .normalize('NFKC')
-    .replace(/<[^>]*>/g, ' ')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
-
-const findNearestParentHeader = (headers: Paragraph[], card: Paragraph): Paragraph | undefined =>
-  headers
-    .filter(
-      (header) =>
-        header.level > 0 &&
-        header.level < card.level &&
-        card.path.startsWith(header.path + ',') &&
-        header.title.trim()
-    )
-    .sort((left, right) => right.path.split(',').length - left.path.split(',').length)[0];
-
-// ADR-2602: docs/decisions/2602-knowledge-graph-view-extension.md
+// ADR-2603: docs/decisions/2603-separate-knowledge-graph-extensions.md
 export const useKnowledgeGraphData = (): KnowledgeGraphData & {
   isLoading: boolean;
   getNeighbors: (nodeId: string, depth?: number) => Set<string>;
@@ -163,6 +145,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       paragraph: Paragraph;
     }
     const candidateParagraphs: CandidateParagraph[] = [];
+    const cardSubheadings: NonNullable<KnowledgeGraphData['cardSubheadings']> = [];
     const boardParagraphIdByOccurrenceId = new Map<string, string>();
     const cardParagraphNodeIds = new Set<string>();
 
@@ -307,6 +290,10 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
           const cardDesc = paragraphDescription(paragraphs, cp.path, false).trim();
 
           const cardParentHeader = findNearestParentHeader(paragraphs, cp);
+          const cardSubHeaders = paragraphs.filter(
+            (p) =>
+              p.level > headerLevel && p.path.startsWith(cp.path + ',') && p.title.trim().length > 0
+          );
 
           addNode('card', {
             id: cardNodeId,
@@ -320,6 +307,14 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
             radius: 8.5,
           });
 
+          for (const relatedHeader of cardSubHeaders) {
+            cardSubheadings.push({
+              cardNodeId,
+              occurrenceId: paragraphNodeId(relatedHeader),
+              title: relatedHeader.title,
+              noteTitle: col.title,
+            });
+          }
           if (cardParentHeader) {
             boardParagraphIdByName.set(
               normalizeTitle(cardParentHeader.title),
@@ -619,6 +614,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
     return {
       nodes,
       edges,
+      cardSubheadings,
       axioms,
     };
   }, [boardPages, notePages, problemData, isDark, lang, palette, noteClassLabel, noteClassName]);

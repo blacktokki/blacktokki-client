@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
+import { KnowledgeGraphRelationLabelMode } from '../owlrdf/relations';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import {
   CanvasRenderOptions,
@@ -23,7 +24,10 @@ export interface KnowledgeGraphCanvasViewProps {
   reservedBottomHeight: number;
   focusedNodeIds?: Set<string> | string[] | null;
   violatingNodeIds?: Set<string> | string[];
+  highlightedNodeIds?: Set<string>;
+  clusterClassIds?: Set<string>;
   isDark: boolean;
+  labelMode: KnowledgeGraphRelationLabelMode;
   spacingScale?: number;
   zoomAction?: { type: 'in' | 'out' | 'fit'; trigger: number } | null;
   onViewportChange?: (viewport: { zoom: number; panX: number; panY: number }) => void;
@@ -39,7 +43,10 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   reservedBottomHeight,
   focusedNodeIds,
   violatingNodeIds,
+  highlightedNodeIds,
+  clusterClassIds,
   isDark,
+  labelMode,
   spacingScale = 1.0,
   zoomAction,
   onViewportChange,
@@ -81,6 +88,9 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       ? violatingNodeIds
       : new Set(violatingNodeIds)
     : new Set();
+
+  const highlightedNodeIdsRef = useRef<Set<string>>(new Set());
+  highlightedNodeIdsRef.current = highlightedNodeIds || new Set();
 
   const nodeMapRef = useRef<Map<string, KnowledgeGraphNode>>(new Map());
   const fitAfterSimulationRef = useRef(false);
@@ -129,11 +139,13 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       hoveredNodeId: hoveredNodeIdRef.current,
       focusedNodeIds: focusedSet.current,
       violatingNodeIds: violatingSet.current,
+      highlightedNodeIds: highlightedNodeIdsRef.current,
       isDark,
+      labelMode,
     };
 
     renderKnowledgeGraphCanvas(ctx, currentNodes, edges, nodeMapRef.current, options);
-  }, [dimensions, edges, isDark, nodes, selectedNodeId]);
+  }, [dimensions, edges, isDark, labelMode, nodes, selectedNodeId]);
 
   drawFrameRef.current = drawFrame;
 
@@ -326,6 +338,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       height: dimensions.height,
       spacingScale,
       centerOrigin: false,
+      clusterClassIds,
     });
     simContextRef.current = context;
 
@@ -359,6 +372,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     dimensions.width,
     edges.length,
     nodes,
+    clusterClassIds,
     runAnimationLoop,
     spacingScale,
   ]);
@@ -416,7 +430,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     if (!isSimulatingRef.current) {
       drawFrame();
     }
-  }, [drawFrame, isDark, selectedNodeId, focusedNodeIds, violatingNodeIds]);
+  }, [drawFrame, isDark, selectedNodeId, focusedNodeIds, violatingNodeIds, highlightedNodeIds]);
 
   const findNodeAtClient = (clientX: number, clientY: number, rect: DOMRect) =>
     findNodeAtScreenCoord(

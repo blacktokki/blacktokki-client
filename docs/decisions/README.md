@@ -17,3 +17,4 @@
 | **2509** | Accepted | 2025-12-14 | 프라이버시 모드(Privacy Mode) 민감 정보 구획화 | [2509-privacy-mode-data-isolation.md](2509-privacy-mode-data-isolation.md) |
 | **2601** | Accepted | 2026-09-06 | 로컬-계정 간 노트북 스마트 동기화 및 3-Way 충돌 해결 아키텍처 | [2601-smart-sync-conflict-resolution.md](2601-smart-sync-conflict-resolution.md) |
 | **2602** | Accepted | 2026-09-17 | 지식 그래프 뷰 확장 기능 아키텍처 | [2602-knowledge-graph-view-extension.md](2602-knowledge-graph-view-extension.md) |
+| **2603** | Accepted | 2026-09-29 | 지식 그래프의 RDF/OWL과 주제 노트 소유 경계 분리 | [2603-separate-knowledge-graph-extensions.md](2603-separate-knowledge-graph-extensions.md) |

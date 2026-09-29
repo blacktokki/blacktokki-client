@@ -14,6 +14,7 @@ for (const name of [
   'relations',
   'palette',
   'externalLinkClassification',
+  'text',
   'axioms',
   'links',
   'paragraphClassification',

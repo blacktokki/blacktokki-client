@@ -1,3 +1,8 @@
+import {
+  getOwlRdfEdgeLabelColors,
+  getKnowledgeGraphNodeDisplayLabel,
+  KnowledgeGraphRelationLabelMode,
+} from '../owlrdf/relations';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 
 export interface CanvasRenderOptions {
@@ -11,7 +16,9 @@ export interface CanvasRenderOptions {
   hoveredNodeId: string | null;
   focusedNodeIds: Set<string> | null;
   violatingNodeIds: Set<string>;
+  highlightedNodeIds?: Set<string>;
   isDark: boolean;
+  labelMode: KnowledgeGraphRelationLabelMode;
 }
 
 /**
@@ -64,11 +71,25 @@ export const findNodeAtScreenCoord = (
 
   for (let i = nodes.length - 1; i >= 0; i--) {
     const node = nodes[i];
-    const hitRadius = Math.max(node.radius + 8, 18);
-    const dx = worldX - node.x;
-    const dy = worldY - node.y;
-    if (dx * dx + dy * dy <= hitRadius * hitRadius) {
-      return node;
+    const isLiteral = node.role === 'LITERAL';
+    if (isLiteral) {
+      const halfW = (node.width || 50) / 2 + 6;
+      const halfH = (node.height || 20) / 2 + 6;
+      if (
+        worldX >= node.x - halfW &&
+        worldX <= node.x + halfW &&
+        worldY >= node.y - halfH &&
+        worldY <= node.y + halfH
+      ) {
+        return node;
+      }
+    } else {
+      const hitRadius = Math.max(node.radius + 8, 18);
+      const dx = worldX - node.x;
+      const dy = worldY - node.y;
+      if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+        return node;
+      }
     }
   }
 
@@ -99,9 +120,21 @@ const drawRoundedRect = (
   ctx.closePath();
 };
 
-const drawNodeRing = (ctx: CanvasRenderingContext2D, node: KnowledgeGraphNode, padding: number) => {
-  ctx.beginPath();
-  ctx.arc(node.x, node.y, node.radius + padding + 0.5, 0, Math.PI * 2);
+const drawNodeRing = (
+  ctx: CanvasRenderingContext2D,
+  node: KnowledgeGraphNode,
+  isLiteral: boolean,
+  padding: number,
+  cornerRadius: number
+) => {
+  if (isLiteral) {
+    const width = (node.width || 50) + padding * 2;
+    const height = (node.height || 20) + padding * 2;
+    drawRoundedRect(ctx, node.x - width / 2, node.y - height / 2, width, height, cornerRadius);
+  } else {
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.radius + padding + 0.5, 0, Math.PI * 2);
+  }
   ctx.stroke();
 };
 
@@ -188,6 +221,7 @@ export const drawEdges = (
     labelGroup?: string;
     labelId?: string;
     labelOffsetY?: number;
+    labelColors: ReturnType<typeof getOwlRdfEdgeLabelColors>;
     opacity: number;
   }
   const decorations: EdgeDecoration[] = [];
@@ -291,7 +325,8 @@ export const drawEdges = (
     const shouldRenderLabel = Boolean(propLabel) && isConnectedToActive;
 
     if (shouldRenderArrow || shouldRenderLabel) {
-      const targetRadius = target.radius;
+      const targetRadius =
+        target.role === 'LITERAL' ? Math.max(target.width || 50, 24) / 2 : target.radius;
       decorations.push({
         sourceX: source.x,
         sourceY: source.y,
@@ -306,6 +341,7 @@ export const drawEdges = (
             )
           : undefined,
         labelId: shouldRenderLabel ? edge.id : undefined,
+        labelColors: getOwlRdfEdgeLabelColors(edge, isDark),
         opacity,
       });
     }
@@ -351,18 +387,14 @@ export const drawEdges = (
         );
         const boxHeight = 13;
 
-        const boxFill = isDark ? '#1F2937' : '#FFFFFF';
-        const boxBorder = isDark ? '#4B5563' : '#CBD5E1';
-        const propTextColor = isDark ? '#D1D5DB' : '#475569';
-
-        ctx.fillStyle = boxFill;
-        ctx.strokeStyle = boxBorder;
+        ctx.fillStyle = d.labelColors.fill;
+        ctx.strokeStyle = d.labelColors.border;
         ctx.lineWidth = 0.8;
         drawRoundedRect(ctx, midX - textWidth / 2, midY - boxHeight / 2, textWidth, boxHeight, 3);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = propTextColor;
+        ctx.fillStyle = d.labelColors.text;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(labelText, midX, midY + 0.5);
@@ -387,6 +419,7 @@ export const drawNodes = (
     hoveredNodeId,
     focusedNodeIds,
     violatingNodeIds,
+    highlightedNodeIds,
     isDark,
     width,
     height,
@@ -420,8 +453,10 @@ export const drawNodes = (
     const isHovered = hoveredNodeId === node.id;
     const isFocused = !focusedNodeIds || focusedNodeIds.has(node.id);
     const isViolating = violatingNodeIds.has(node.id);
+    const isHighlighted = Boolean(highlightedNodeIds?.has(node.id));
 
     const opacity = isFocused ? 1 : 0.12;
+    const isLiteral = node.role === 'LITERAL';
 
     if (opacity !== currentAlpha) {
       ctx.globalAlpha = opacity;
@@ -434,14 +469,14 @@ export const drawNodes = (
       ctx.strokeStyle = '#F39C12';
       ctx.lineWidth = 2.6;
       ctx.setLineDash([]);
-      drawNodeRing(ctx, node, 4);
+      drawNodeRing(ctx, node, isLiteral, 4, 5);
     }
 
     if (isHovered && !isSelected) {
       ctx.strokeStyle = isDark ? '#90CDF4' : '#3182CE';
       ctx.lineWidth = 2.0;
       ctx.setLineDash([]);
-      drawNodeRing(ctx, node, 3);
+      drawNodeRing(ctx, node, isLiteral, 3, 4);
     }
 
     if (isViolating && !isSelected) {
@@ -454,11 +489,43 @@ export const drawNodes = (
       ctx.stroke();
     }
 
+    if (isHighlighted && !isSelected && !isViolating) {
+      ctx.strokeStyle = isDark ? '#F18BB8' : '#AD3D76';
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([3, 3]);
+      hasCustomDash = true;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius + 3.8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     if (hasCustomDash) {
       ctx.setLineDash([]);
     }
 
-    if (node.role === 'CLASS') {
+    if (isLiteral) {
+      const w = node.width || 50;
+      const h = node.height || 20;
+      ctx.fillStyle = node.color;
+      ctx.strokeStyle = isSelected
+        ? '#F39C12'
+        : node.strokeColor || (isDark ? '#FFD700' : '#D4AC0D');
+      ctx.lineWidth = isSelected ? 2.0 : 1.2;
+
+      drawRoundedRect(ctx, node.x - w / 2, node.y - h / 2, w, h, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      if (!hideLabelsByZoom || isSelected || isHovered) {
+        const displayName = getKnowledgeGraphNodeDisplayLabel(node, options.labelMode);
+        const text = displayName.length > 18 ? displayName.slice(0, 17) + '…' : displayName;
+        ctx.fillStyle = isDark ? '#FFEAA7' : '#5D4037';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, node.x, node.y + 0.5);
+      }
+    } else if (node.role === 'CLASS') {
       ctx.fillStyle = node.color;
       ctx.strokeStyle = isSelected
         ? '#F39C12'
@@ -497,10 +564,11 @@ export const drawNodes = (
       ctx.stroke();
     }
 
-    const shouldShowLabel = !hideLabelsByZoom || isSelected || isHovered || isViolating;
+    const shouldShowLabel =
+      !isLiteral && (!hideLabelsByZoom || isSelected || isHovered || isViolating || isHighlighted);
 
     if (shouldShowLabel) {
-      const displayName = node.name;
+      const displayName = getKnowledgeGraphNodeDisplayLabel(node, options.labelMode);
       const labelText =
         node.classKind !== 'NOTE' && displayName.length > 26
           ? displayName.slice(0, 25) + '…'

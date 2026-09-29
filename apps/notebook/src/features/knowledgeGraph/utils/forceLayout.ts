@@ -7,12 +7,14 @@ export const DEFAULT_LAYOUT_CONFIG = {
   minDistance: {
     classNode: 170,
     instanceNode: 120,
+    literalNode: 75,
   },
   edgeLength: {
     references: 190,
     instanceOf: 150,
     subClassOf: 150,
     partOf: 160,
+    datatypeProperty: 75,
     defaultEdge: 160,
   },
   physics: {
@@ -20,6 +22,9 @@ export const DEFAULT_LAYOUT_CONFIG = {
     spring: 0.018,
     gravity: 0.0006,
     collisionForce: 0.75,
+    classClusterSpring: 0.008,
+    classRootMinDistanceScale: 0.76,
+    classMemberMinDistanceScale: 0.88,
     rootRingSpring: 0.026,
     ordinaryExternalReferenceSpringScale: 0.15,
     rootAnchorSpring: 0.018,
@@ -42,6 +47,12 @@ export interface ForceSimulationOptions {
   height: number;
   spacingScale?: number;
   centerOrigin?: boolean;
+  clusterClassIds?: ReadonlySet<string>;
+}
+
+export interface ClassClusterIndex {
+  rootIds: Set<string>;
+  rootsByNodeId: Map<string, Set<string>>;
 }
 
 export interface ClassRootDistanceIndex {
@@ -60,6 +71,13 @@ export interface PrecomputedEdge {
   target: SimNode;
   targetLen: number;
   springScale: number;
+}
+
+export interface PrecomputedClassPull {
+  node: SimNode;
+  root: SimNode;
+  targetRadius: number;
+  rootReactionScale: number;
 }
 
 export interface PrecomputedRootPull {
@@ -86,6 +104,7 @@ export interface ForceSimulationContext {
   simNodes: SimNode[];
   pairMinDist: Float32Array;
   precomputedEdges: PrecomputedEdge[];
+  precomputedClassPulls: PrecomputedClassPull[];
   precomputedRootPulls: PrecomputedRootPull[];
   precomputedRootAnchors: PrecomputedRootAnchor[];
   precomputedExternalClassAnchor: PrecomputedExternalClassAnchor | null;
@@ -96,6 +115,7 @@ export interface ForceSimulationContext {
   kSpring: number;
   kGravity: number;
   collisionForce: number;
+  classClusterSpring: number;
   rootRingSpring: number;
   rootAnchorSpring: number;
   externalClassAnchorSpring: number;
@@ -109,7 +129,76 @@ const append = <T>(map: Map<string, T[]>, key: string, value: T) => {
   map.set(key, values);
 };
 
-/** Place nodes by distance from the Note or Board class that contains or cites them. */
+/**
+ * Index selected classes and their directly classified instances by each root class.
+ * Only asserted class/member edges participate so enabling inferred edges does not reshape clusters.
+ */
+export const buildClassClusterIndex = (
+  nodes: KnowledgeGraphNode[],
+  edges: KnowledgeGraphEdge[],
+  clusterClassIds: ReadonlySet<string> = new Set<string>()
+): ClassClusterIndex => {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const childIds = new Set<string>();
+  const childrenByParent = new Map<string, string[]>();
+  const instancesByClass = new Map<string, string[]>();
+
+  for (const edge of edges) {
+    if (
+      edge.type === 'SUBCLASS_OF' &&
+      clusterClassIds.has(edge.source) &&
+      clusterClassIds.has(edge.target)
+    ) {
+      childIds.add(edge.source);
+      append(childrenByParent, edge.target, edge.source);
+    } else if (
+      edge.type === 'INSTANCE_OF' &&
+      clusterClassIds.has(edge.target) &&
+      nodeIds.has(edge.source)
+    ) {
+      append(instancesByClass, edge.target, edge.source);
+    }
+  }
+
+  const rootIds = new Set([...clusterClassIds].filter((id) => !childIds.has(id)));
+
+  const rootsByNodeId = new Map<string, Set<string>>();
+  const addRoot = (nodeId: string, rootId: string) => {
+    const roots = rootsByNodeId.get(nodeId) || new Set<string>();
+    roots.add(rootId);
+    rootsByNodeId.set(nodeId, roots);
+  };
+
+  for (const rootId of rootIds) {
+    const pending = [rootId];
+    const visitedClasses = new Set<string>();
+    while (pending.length > 0) {
+      const classId = pending.pop()!;
+      if (visitedClasses.has(classId)) continue;
+      visitedClasses.add(classId);
+      addRoot(classId, rootId);
+      for (const instanceId of instancesByClass.get(classId) || []) {
+        addRoot(instanceId, rootId);
+      }
+      pending.push(...(childrenByParent.get(classId) || []));
+    }
+  }
+
+  return { rootIds, rootsByNodeId };
+};
+
+const sharesClassRoot = (
+  leftRoots: Set<string> | undefined,
+  rightRoots: Set<string> | undefined
+): boolean => {
+  if (!leftRoots || !rightRoots) return false;
+  for (const rootId of leftRoots) {
+    if (rightRoots.has(rootId)) return true;
+  }
+  return false;
+};
+
+/** Assign each node to its nearest Note or Board Card class by asserted graph hops. */
 export const buildClassRootDistanceIndex = (
   nodes: KnowledgeGraphNode[],
   edges: KnowledgeGraphEdge[]
@@ -266,6 +355,7 @@ export const initForceSimulation = (
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   const initialRadius = Math.min(fieldWidth, fieldHeight) * 0.38;
 
+  const classClusters = buildClassClusterIndex(nodes, edges, options.clusterClassIds);
   const classRootDistances = buildClassRootDistanceIndex(nodes, edges);
   const inputNodeById = new Map(nodes.map((node) => [node.id, node]));
   const noteRootId = classRootDistances.rootIds.find(
@@ -396,7 +486,8 @@ export const initForceSimulation = (
     });
   }
 
-  const isAnchorNode = (node: KnowledgeGraphNode) => node.role === 'CLASS';
+  const isAnchorNode = (node: KnowledgeGraphNode) =>
+    node.role === 'CLASS' || classClusters.rootIds.has(node.id);
 
   const anchorNodes = nodes.filter((n) => isAnchorNode(n) && !existingPosMap.has(n.id));
   const memberNodes = nodes.filter((n) => !isAnchorNode(n) && !existingPosMap.has(n.id));
@@ -419,11 +510,23 @@ export const initForceSimulation = (
   });
 
   memberNodes.forEach((node, idx) => {
+    const roots = classClusters.rootsByNodeId.get(node.id);
     let anchorPos: { x: number; y: number } | undefined;
-    const neighbors = neighborMap.get(node.id) || [];
-    const knownNeighborId = neighbors.find((nId) => existingPosMap.has(nId));
-    if (knownNeighborId) {
-      anchorPos = existingPosMap.get(knownNeighborId);
+    if (roots && roots.size > 0) {
+      for (const rootId of roots) {
+        if (existingPosMap.has(rootId)) {
+          anchorPos = existingPosMap.get(rootId);
+          break;
+        }
+      }
+    }
+
+    if (!anchorPos) {
+      const neighbors = neighborMap.get(node.id) || [];
+      const knownNeighborId = neighbors.find((nId) => existingPosMap.has(nId));
+      if (knownNeighborId) {
+        anchorPos = existingPosMap.get(knownNeighborId);
+      }
     }
 
     if (anchorPos) {
@@ -463,9 +566,12 @@ export const initForceSimulation = (
     spring: kSpring,
     gravity: kGravity,
     collisionForce,
+    classClusterSpring,
     rootRingSpring,
     rootAnchorSpring,
     externalClassAnchorSpring,
+    classRootMinDistanceScale,
+    classMemberMinDistanceScale,
     maxRepulsionDistance,
     maxVelocity: baseMaxVelocity,
   } = DEFAULT_LAYOUT_CONFIG.physics;
@@ -480,11 +586,26 @@ export const initForceSimulation = (
   let pairIdx = 0;
   for (let i = 0; i < nodeCount; i++) {
     const n1 = simNodes[i];
+    const n1ClassRoots = classClusters.rootsByNodeId.get(n1.id);
+    const n1IsRoot = classClusters.rootIds.has(n1.id);
     for (let j = i + 1; j < nodeCount; j++) {
       const n2 = simNodes[j];
       const hasClass = n1.role === 'CLASS' || n2.role === 'CLASS';
-      const baseMinDist = hasClass ? minDistance.classNode : minDistance.instanceNode;
-      pairMinDist[pairIdx++] = baseMinDist * spacingScale;
+      const isLiteral = n1.role === 'LITERAL' || n2.role === 'LITERAL';
+      const baseMinDist = hasClass
+        ? minDistance.classNode
+        : isLiteral
+        ? minDistance.literalNode
+        : minDistance.instanceNode;
+      const n2ClassRoots = classClusters.rootsByNodeId.get(n2.id);
+      const sameClassCluster = sharesClassRoot(n1ClassRoots, n2ClassRoots);
+      const hasClassRoot = n1IsRoot || classClusters.rootIds.has(n2.id);
+      const localDistanceScale = sameClassCluster
+        ? hasClassRoot
+          ? classRootMinDistanceScale
+          : classMemberMinDistanceScale
+        : 1;
+      pairMinDist[pairIdx++] = baseMinDist * spacingScale * localDistanceScale;
     }
   }
 
@@ -509,7 +630,9 @@ export const initForceSimulation = (
     if (!source || !target) continue;
 
     let baseTargetLen = edgeLength.defaultEdge;
-    if (edge.type === 'INSTANCE_OF') {
+    if (edge.type === 'DATATYPE_PROPERTY') {
+      baseTargetLen = edgeLength.datatypeProperty;
+    } else if (edge.type === 'INSTANCE_OF') {
       baseTargetLen = edgeLength.instanceOf;
     } else if (edge.type === 'SUBCLASS_OF') {
       baseTargetLen = edgeLength.subClassOf;
@@ -528,6 +651,33 @@ export const initForceSimulation = (
           : 1,
     });
   }
+
+  const rawPulls: { node: SimNode; root: SimNode; targetRadius: number }[] = [];
+  const memberCountsByRoot = new Map<string, number>();
+
+  for (const [nodeId, rootIds] of classClusters.rootsByNodeId) {
+    if (classClusters.rootIds.has(nodeId)) continue;
+    const node = nodeMap.get(nodeId);
+    if (!node) continue;
+    const baseRadius = node.role === 'CLASS' ? 125 : 155;
+    const targetRadius = baseRadius * spacingScale;
+    for (const rootId of rootIds) {
+      const root = nodeMap.get(rootId);
+      if (!root) continue;
+      rawPulls.push({ node, root, targetRadius });
+      memberCountsByRoot.set(rootId, (memberCountsByRoot.get(rootId) || 0) + 1);
+    }
+  }
+
+  const precomputedClassPulls: PrecomputedClassPull[] = rawPulls.map((p) => {
+    const count = memberCountsByRoot.get(p.root.id) || 1;
+    // 다수의 문단이 한 루트를 당길 때 루트가 외곽으로 튕겨 나가는 현상을 막기 위해 반작용 스케일링
+    const rootReactionScale = Math.min(0.25, 0.4 / Math.sqrt(count));
+    return {
+      ...p,
+      rootReactionScale,
+    };
+  });
 
   const precomputedRootPulls: PrecomputedRootPull[] = [];
   for (const [nodeId, hop] of classRootDistances.hopByNodeId) {
@@ -566,6 +716,7 @@ export const initForceSimulation = (
     simNodes,
     pairMinDist,
     precomputedEdges,
+    precomputedClassPulls,
     precomputedRootPulls,
     precomputedRootAnchors,
     precomputedExternalClassAnchor,
@@ -576,6 +727,7 @@ export const initForceSimulation = (
     kSpring,
     kGravity,
     collisionForce,
+    classClusterSpring,
     rootRingSpring,
     rootAnchorSpring,
     externalClassAnchorSpring,
@@ -595,6 +747,7 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     simNodes,
     pairMinDist,
     precomputedEdges,
+    precomputedClassPulls,
     precomputedRootPulls,
     precomputedRootAnchors,
     precomputedExternalClassAnchor,
@@ -605,6 +758,7 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     kSpring,
     kGravity,
     collisionForce,
+    classClusterSpring,
     rootRingSpring,
     rootAnchorSpring,
     externalClassAnchorSpring,
@@ -682,6 +836,22 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     source.vy += fy;
     target.vx -= fx;
     target.vy -= fy;
+  }
+
+  for (let tIdx = 0; tIdx < precomputedClassPulls.length; tIdx++) {
+    const { node, root, targetRadius, rootReactionScale } = precomputedClassPulls[tIdx];
+    const dx = root.x - node.x;
+    const dy = root.y - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    if (dist <= targetRadius) continue;
+    const invDist = 1 / dist;
+    const force = (dist - targetRadius) * classClusterSpring;
+    const fx = dx * invDist * force;
+    const fy = dy * invDist * force;
+    node.vx += fx;
+    node.vy += fy;
+    root.vx -= fx * rootReactionScale;
+    root.vy -= fy * rootReactionScale;
   }
 
   for (let rIdx = 0; rIdx < precomputedRootPulls.length; rIdx++) {

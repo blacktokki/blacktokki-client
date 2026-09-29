@@ -114,10 +114,11 @@ export const buildConnectedParagraphNotePartOfAssignments = (
   });
 };
 
-/** Find paragraphs directly connected by a non-containment, non-classification relation. */
+/** Find paragraphs directly connected by a semantic relation or selected class membership. */
 export const findConnectedParagraphIds = (
   nodes: KnowledgeGraphNode[],
-  edges: KnowledgeGraphEdge[]
+  edges: KnowledgeGraphEdge[],
+  classificationClassIds: ReadonlySet<string> = new Set<string>()
 ): string[] => {
   const paragraphIds = new Set(
     nodes
@@ -132,7 +133,7 @@ export const findConnectedParagraphIds = (
 
   for (const edge of edges) {
     if (isContainmentRelation(edge.type)) continue;
-    if (isClassificationRelation(edge.type)) continue;
+    if (isClassificationRelation(edge.type) && !classificationClassIds.has(edge.target)) continue;
     if (paragraphIds.has(edge.source)) connectedIds.add(edge.source);
     if (paragraphIds.has(edge.target)) connectedIds.add(edge.target);
   }

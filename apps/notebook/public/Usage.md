@@ -149,11 +149,6 @@ An environment where you can organize the app's features into distinct 'Notebook
     * Viewing its content **plus all nested sub-sections.**
   * This helps when you want to read or edit an entire section hierarchy as a single note.
 
-### 🔲 Note Page Section Only (Focus View)
-
-* In note screens, click the 'Maximize' icon in the header to hide navigation bars, search bars, and bottom navigation/TOC sections, focusing entirely on the note body.
-* You can return to the standard view at any time by clicking the 'Restore' icon in the top right or by pressing the `Escape` key.
-
 ### 🔗 Link Recognition and Navigation
 
 * Links within notes are automatically detected and categorized.
@@ -268,6 +263,12 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 * Export the current note (or selected sub-paragraph) as a PDF document retaining your active theme colors (dark mode, skins, etc.).
 * Click the PDF icon button at the top of the note viewing screen to export.
+
+### 🔲 Focus View (Note Page Section Only)
+
+* Can be enabled in Extension Settings.
+* In note screens, click the 'Maximize' icon in the header to hide navigation bars, search bars, and bottom navigation/TOC sections, focusing entirely on the note body.
+* You can return to the standard view at any time by clicking the 'Restore' icon in the top right or by pressing the `Escape` key.
 
 ### 🔄 Notebook Sync (Local Account - My Account Synchronization)
 

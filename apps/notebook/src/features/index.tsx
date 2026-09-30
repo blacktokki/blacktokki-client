@@ -3,6 +3,7 @@ import { NavigationConfig } from '@blacktokki/navigation';
 import React from 'react';
 
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
+import FocusHeaderIconButton from './focus/FocusHeaderIconButton';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
@@ -34,6 +35,7 @@ features['sync'] = {
     },
   },
   NoteSections: [],
+  NotePageSections: [],
   elements: [
     {
       type: 'button',
@@ -54,6 +56,7 @@ features['quickMemo'] = {
     },
   },
   NoteSections: [],
+  NotePageSections: [],
   elements: [
     {
       type: 'button',
@@ -78,6 +81,7 @@ features['agent'] = {
     params: { query: item.query },
   }),
   NoteSections: [],
+  NotePageSections: [],
   elements: [],
 };
 
@@ -94,6 +98,7 @@ features['timeline'] = {
     },
   },
   NoteSections: [TimerTagSection],
+  NotePageSections: [],
   elements: [
     {
       type: 'button',
@@ -115,6 +120,7 @@ features['problem'] = {
     },
   },
   NoteSections: [],
+  NotePageSections: [],
   elements: [
     {
       type: 'button',
@@ -129,6 +135,7 @@ features['archive'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   extraArchiveButtons: [ExportButton],
   elements: [
     {
@@ -144,6 +151,7 @@ features['random'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   elements: [
     {
       type: 'extraSearchButton',
@@ -159,6 +167,7 @@ features['pdfExportDefault'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   HeaderIconButtons: [PdfExportDefaultSection],
   elements: [],
 };
@@ -169,6 +178,7 @@ features['pdfExportTheme'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   HeaderIconButtons: [PdfExportThemeSection],
   elements: [],
 };
@@ -180,7 +190,19 @@ features['pdfExportMidnight'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   HeaderIconButtons: [PdfExportMidnightSection],
+  elements: [],
+};
+
+features['focus'] = {
+  title: 'Focus View',
+  description: 'Display only the note body in full screen, hiding navigation and headers.',
+  useNoteMode: true,
+  screens: {},
+  NoteSections: [],
+  NotePageSections: [],
+  HeaderIconButtons: [FocusHeaderIconButton],
   elements: [],
 };
 
@@ -190,6 +212,7 @@ features['themeVscode'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   elements: [],
   createCommonStylesList: [createVSCodeStyles],
 };
@@ -200,6 +223,7 @@ features['themeGithub'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   elements: [],
   createCommonStylesList: [createGitHubStyles],
 };
@@ -210,6 +234,7 @@ features['themeNamuwiki'] = {
   useNoteMode: true,
   screens: {},
   NoteSections: [],
+  NotePageSections: [],
   elements: [],
   createCommonStylesList: [createNamuwikiStyles],
 };

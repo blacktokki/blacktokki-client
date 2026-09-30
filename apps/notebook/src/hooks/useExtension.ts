@@ -22,6 +22,18 @@ export type NoteSectionProps = {
   paragraphs: Paragraph[];
 };
 
+export type NotePageSectionProps = {
+  title: string;
+  path?: string;
+  fullParagraph: boolean;
+  paragraphs: Paragraph[];
+  description?: string;
+  board?: string;
+  archive?: any;
+  toc?: boolean;
+  toggleFullParagraph?: (full: boolean) => void;
+};
+
 type FeatureInfo = {
   title: string;
   description: string;
@@ -35,6 +47,7 @@ type Feature = {
   search?: SearchFeature;
   elements: { type: ElementType; Component: React.JSX.Element }[];
   NoteSections: ((props: NoteSectionProps) => React.JSX.Element)[];
+  NotePageSections: ((props: NotePageSectionProps) => React.JSX.Element | undefined)[];
   HeaderIconButtons?: ((props: NoteSectionProps) => React.JSX.Element)[];
   extraArchiveButtons?: ((props: { id: number; title: string }) => React.JSX.Element)[];
   createCommonStylesList?: ((colorScheme: 'light' | 'dark') => any)[];
@@ -61,6 +74,7 @@ const getExtension = (config: string[], usageMode?: UsageMode | string) => {
       prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
       prev.elements = [...prev.elements, ...feat.elements];
       prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
+      prev.NotePageSections = [...(prev.NotePageSections || []), ...feat.NotePageSections];
       if (feat.HeaderIconButtons) {
         prev.HeaderIconButtons = [...(prev.HeaderIconButtons || []), ...feat.HeaderIconButtons];
       }
@@ -78,6 +92,7 @@ const getExtension = (config: string[], usageMode?: UsageMode | string) => {
     {
       elements: [],
       NoteSections: [],
+      NotePageSections: [],
       HeaderIconButtons: [],
       extraArchiveButtons: [],
       createCommonStylesList: [],

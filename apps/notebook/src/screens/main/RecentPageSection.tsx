@@ -1,7 +1,7 @@
 import { useResizeContext, Text, useLangContext } from '@blacktokki/core';
 import { useNavigation } from '@react-navigation/core';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -76,7 +76,15 @@ export const TitleHeader = ({
 };
 
 export const RecentPagesSection = React.memo(
-  ({ title, setTitle }: { title?: string; setTitle: (title?: string) => void }) => {
+  ({
+    title,
+    setTitle,
+    onBoardViewChange,
+  }: {
+    title?: string;
+    setTitle: (title?: string) => void;
+    onBoardViewChange?: (boardView: boolean) => void;
+  }) => {
     const { commonStyles } = useNotebookTheme();
     const { lang } = useLangContext();
     const window = useResizeContext();
@@ -88,6 +96,10 @@ export const RecentPagesSection = React.memo(
     const isNotebookMode = usageMode === 'NOTEBOOK';
 
     const { data: board } = useBoardPage(title || '');
+    const isBoardView = !!title && !!board;
+    useEffect(() => {
+      onBoardViewChange?.(isBoardView);
+    }, [isBoardView, onBoardViewChange]);
     const { data: boards = [] } = useBoardPages();
     const createBoard = useCreateOrUpdateBoard();
     const deleteBoard = useDeleteBoard();

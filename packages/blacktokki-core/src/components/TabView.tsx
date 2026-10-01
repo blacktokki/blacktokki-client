@@ -26,6 +26,7 @@ export default (props: {
   tabBarPosition: 'top' | 'bottom';
   index?: number;
   onTab?: (index: number) => void;
+  swipeEnabled?: boolean;
 }) => {
   const { lang } = useLangContext();
   const index = props.index || 0;
@@ -52,6 +53,7 @@ export default (props: {
   const color = '#2196F3';
   return (
     <TabView
+      swipeEnabled={props.swipeEnabled}
       renderTabBar={(props: SceneRendererProps & { navigationState: NavigationState<any> }) => {
         return (
           <TabBar

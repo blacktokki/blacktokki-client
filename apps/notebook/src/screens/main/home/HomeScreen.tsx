@@ -43,9 +43,15 @@ const NotesTabView = () => {
   );
 };
 
-const RecentChangesTabView = () => {
+const RecentChangesTabView = ({
+  onBoardViewChange,
+}: {
+  onBoardViewChange: (boardView: boolean) => void;
+}) => {
   const [title, setTitle] = useState<string>();
-  return <RecentPagesSection title={title} setTitle={setTitle} />;
+  return (
+    <RecentPagesSection title={title} setTitle={setTitle} onBoardViewChange={onBoardViewChange} />
+  );
 };
 
 const ConfigTabView = () => {
@@ -61,6 +67,7 @@ const ConfigTabView = () => {
 };
 
 export default function HomeScreen({ navigation, route }: StackScreenProps<any, 'Home'>) {
+  const [boardView, setBoardView] = useState(false);
   const { commonStyles } = useNotebookTheme();
   const { auth } = useAuthContext();
   const { usageMode, notebook } = useUsageMode();
@@ -87,7 +94,7 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
       },
       {
         title: 'All Notes',
-        component: RecentChangesTabView,
+        component: () => <RecentChangesTabView onBoardViewChange={setBoardView} />,
         icon: <List.Icon icon={'notebook'} />,
         headerRight: () => <></>,
       },
@@ -103,6 +110,7 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
   return (
     <HomeSection
       tabViews={tabViews}
+      swipeEnabled={!boardView || parseInt(route.params?.['tab'] || 0, 10) !== 1}
       homeView={{ title, headerRight: () => <SearchBar /> }}
       headerTitle={title}
     >

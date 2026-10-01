@@ -47,11 +47,13 @@ export default function HomeSection({
   homeView,
   headerTitle,
   children,
+  swipeEnabled,
 }: {
   tabViews: TabViewOption[];
   homeView: { title: string; headerRight: () => React.JSX.Element };
   headerTitle?: string;
   children?: React.ReactNode;
+  swipeEnabled?: boolean;
 }) {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -87,6 +89,7 @@ export default function HomeSection({
       {homeView.headerRight()}
       <TabView
         tabs={tabs}
+        swipeEnabled={swipeEnabled}
         tabBarPosition="bottom"
         index={parseInt(route.params?.['tab'] || 0, 10)}
         onTab={(index) => {

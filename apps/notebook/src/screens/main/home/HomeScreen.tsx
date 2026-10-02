@@ -1,8 +1,9 @@
 import { useAuthContext } from '@blacktokki/account';
 import { ContractFooter, useLangContext } from '@blacktokki/core';
 import { HomeSection, push, TabViewOption } from '@blacktokki/navigation';
+import { useIsFocused } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { List } from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
@@ -11,10 +12,14 @@ import ConfigSection from './ConfigSection';
 import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
 import HeaderNotebookDropdown from '../../../components/HeaderNotebookDropdown';
 import { SearchBar } from '../../../components/SearchBar';
+import { useBoardPages } from '../../../hooks/useBoardStorage';
 import { useExtension } from '../../../hooks/useExtension';
+import { useNotePages } from '../../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../../hooks/useUsageMode';
 import { RecentPagesSection } from '../RecentPageSection';
+import { findBoardReferencePatterns } from '../findBoardReferencePatterns';
+import { inferBoardCandidates, inferTopLevelBoardCandidates } from '../inferBoardCandidates';
 
 const NotesTabView = () => {
   const { commonStyles } = useNotebookTheme();
@@ -67,10 +72,34 @@ const ConfigTabView = () => {
 };
 
 export default function HomeScreen({ navigation, route }: StackScreenProps<any, 'Home'>) {
+  const isFocused = useIsFocused();
   const [boardView, setBoardView] = useState(false);
   const { commonStyles } = useNotebookTheme();
   const { auth } = useAuthContext();
   const { usageMode, notebook } = useUsageMode();
+  const { data: boards = [], isFetching: isBoardFetching } = useBoardPages();
+  const { data: pages = [], isFetching: isNoteFetching } = useNotePages();
+  const hasLoggedCandidatesRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      hasLoggedCandidatesRef.current = false;
+      return;
+    }
+    if (isBoardFetching || isNoteFetching || hasLoggedCandidatesRef.current) return;
+
+    const candidates = [
+      ...inferBoardCandidates(pages, boards),
+      ...inferTopLevelBoardCandidates(pages, boards),
+    ];
+    console.log('[HomeScreen] Board candidates', candidates);
+    console.log(
+      '[HomeScreen] Board reference patterns',
+      findBoardReferencePatterns(pages, boards, candidates)
+    );
+    hasLoggedCandidatesRef.current = true;
+  }, [isFocused, isBoardFetching, isNoteFetching, pages, boards]);
+
   const title =
     usageMode === 'NOTEBOOK' && notebook?.title
       ? notebook.title

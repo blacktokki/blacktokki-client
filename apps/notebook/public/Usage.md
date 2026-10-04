@@ -242,6 +242,40 @@ An environment where you can organize the app's features into distinct 'Notebook
 * Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
   * `+1 day`, `+1 month`, `Extend`, or `Delete`.
 
+### 🕸️ Knowledge Graph
+
+Visualizes relationships among notes, boards, paragraphs, cards, and external links as a knowledge graph, providing relation exploration and graph validation.
+
+* **Knowledge Graph Access & Validation Badge**:
+  * Open the feature from the **Knowledge Graph** item in the Drawer or Discovery menu.
+  * A badge (`CountBadge`) on the menu button displays the number of detected graph validation issues (referential integrity and isolated entity violations).
+* **Navigation Toolbar**:
+  * Select `[Usage >]` in the top toolbar to navigate to this guide.
+* **Graph Exploration & Viewport Controls**:
+  * Pan by dragging the canvas; zoom using the mouse wheel, trackpad pinch, or the top-right Zoom HUD (`+`, current percentage `%`, `-`, `Fit to screen`).
+  * Adjust node spacing density from 0.4x to 2.5x using the `Spacing` HUD (`-`, current density `x`, `+`); clicking the middle density button resets it to 1.0x.
+  * Members and descendants are placed outward from their Note or Board class through membership and containment. External links spread around the Note or Board class of the citing content, including when ordinary external links are shown. The External Link class stays near the Note class, or between the Note class and citing Board classes when board links are present. It is not a layout hub.
+* **Node Preview Sheet & N-hop Range**:
+  * Selecting a node moves it to the center of the visible area above the bottom preview sheet without changing zoom. Dragging or zooming stops the automatic movement; the sheet lets you inspect details and set the related-node scope (N-hop).
+  * The N-hop range offers `1`, `2`, and `All`.
+  * When a node is selected, direct 1-hop edges are highlighted with bold lines (2.2px), arrows, and relation label boxes, N-hop edges are highlighted with lines (1.8px) and arrows, and non-focused nodes and edges are dimmed.
+  * Instance previews show clickable category (`Category`) chips for quick navigation.
+  * Shared board paragraphs originating from multiple notes display `Source Notes` chips to navigate to each source document, cards show `Sub-sections` chips, and note instances display YAML frontmatter property chips (`schedule`, `updated`, etc.).
+  * Nodes display a `[Move]` button to navigate to the note viewer or open the external browser. (Multi-origin board paragraphs navigate via their individual `Source Notes` chips instead.)
+* **View Options**:
+  * The top toolbar toggles display their active state and item counts:
+    * `Paragraphs (n)`: Shows or hides ordinary paragraph nodes. (Hidden by default; appears when ordinary paragraphs exist.)
+    * `Ordinary External Links (n)`: Shows or hides external links without other relations. (Hidden by default; appears when external links exist.)
+* **Legend & Validation Modal**:
+  * The bottom legend displays currently shown node types (first row) and relation types (second row) with counts and can be expanded or collapsed.
+  * On the canvas, the selected node is highlighted with an orange solid ring, hovered nodes with a blue solid ring, and violating nodes with a red dashed ring.
+  * Select the top validation badge (`Validation Passed`, `Validation Warning (n)`, or `Validation Error (n)`) to open the validation modal.
+  * Inspect referential integrity (unknown note/paragraph links, empty parent notes) and isolated entity issues (unconnected standalone notes), and select an affected node chip to jump directly to that node on the graph.
+* **Entity Model & Empty Note Handling Rules**:
+  * Notes with no content are normally omitted from the graph.
+  * An existing empty note is retained as a structural skeletal Note instance only when directly referenced or used as an immediate parent by a non-empty note.
+  * Board paragraphs sharing the same name within a board are unified into a single `BOARD_PARAGRAPH` instance across multiple column origins, and card headings are modeled solely as `CARD` instances without duplicating paragraph nodes.
+
 ### 📦 Archive (Backup and Restore)
 
 * Export all notes and boards in a ZIP archive for comprehensive backup.

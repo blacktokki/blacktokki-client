@@ -276,6 +276,22 @@ Visualizes relationships among notes, boards, paragraphs, cards, and external li
   * An existing empty note is retained as a structural skeletal Note instance only when directly referenced or used as an immediate parent by a non-empty note.
   * Board paragraphs sharing the same name within a board are unified into a single `BOARD_PARAGRAPH` instance across multiple column origins, and card headings are modeled solely as `CARD` instances without duplicating paragraph nodes.
 
+### 📊 Topic Dashboard
+
+**Topic boards** are virtual boards that automatically visualize your existing notes into Kanban and Scrum boards (columns and cards) based on child note paths and heading structures. Browse and organize cards across a board matrix without manually creating explicit board entities.
+
+* **Virtual Topic Boards from Candidates**:
+  * Maps direct child notes to columns and heading (`H2`–`H6`) paragraphs to cards to formulate optimal Kanban (`KANBAN`) or Scrum (`SCRUM`) board layouts.
+  * Groups top-level notes sharing common rows into virtual top-level boards (`Board(A, B, ...)`).
+* **Dashboard Metrics & View Switching**:
+  * Top KPI cards provide instant metrics for total topics, total cards, and Kanban/Scrum distribution.
+  * **Overview**: Browse topic boards using clean board item cards identical to the board list screen, complete with note and card metrics, and jump directly to any board summary.
+  * **Board Summary**: Displays detailed metadata, column chips, row tags, and card previews for the selected board, with quick access to open the full board view.
+  * **Board View**: Visualizes cards in a 2D Kanban or Scrum matrix; dragging a card to another column or row atomically updates the underlying markdown notes.
+* **Save as Board & Batch Move**:
+  * Path-based candidates can be saved as explicit, permanent boards using the `[Save as Board]` button.
+  * For top-level note topics without a common parent path, the `[Save as Board]` button opens the batch move screen (`TopicBatchMoveScreen`) to group child notes under the default board title (`Board(note titles,...)`) while simultaneously configuring board conversion (Kanban/Scrum) and creating the actual board entity.
+
 ### 📦 Archive (Backup and Restore)
 
 * Export all notes and boards in a ZIP archive for comprehensive backup.

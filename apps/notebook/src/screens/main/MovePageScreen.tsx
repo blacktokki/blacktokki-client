@@ -96,7 +96,7 @@ const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
 };
 
 // --- 역링크(백링크) 내용 치환 로직 ---
-const replaceBacklinks = (
+export const replaceBacklinks = (
   html: string,
   mappings: { oldTitle: string; newTitle: string }[],
   targetParagraph?: string

@@ -4,8 +4,8 @@ import React from 'react';
 
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import FocusHeaderIconButton from './focus/FocusHeaderIconButton';
-import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
 import { KnowledgeGraphScreen } from './knowledgeGraph/KnowledgeGraphScreen';
+import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
@@ -23,6 +23,9 @@ import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
 import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
+import { TopicBatchMoveScreen } from './topicDashboard/TopicBatchMoveScreen';
+import TopicDashboardButton from './topicDashboard/TopicDashboardButton';
+import { TopicDashboardScreen } from './topicDashboard/TopicDashboardScreen';
 import { features } from '../hooks/useExtension';
 
 features['sync'] = {
@@ -126,6 +129,32 @@ features['knowledgeGraph'] = {
     {
       type: 'button',
       Component: <KnowledgeGraphButton key={'knowledgeGraph'} />,
+    },
+  ],
+};
+
+features['topicDashboard'] = {
+  title: 'Topic Dashboard',
+  description: 'Automatically visualizes your notes as topic boards based on their structure.',
+  useNoteMode: true,
+  screens: {
+    TopicDashboard: {
+      title: '',
+      component: TopicDashboardScreen,
+      path: 'topic-dashboard',
+    },
+    TopicBatchMove: {
+      title: '',
+      component: TopicBatchMoveScreen,
+      path: 'topic-batch-move',
+    },
+  },
+  NoteSections: [],
+  NotePageSections: [],
+  elements: [
+    {
+      type: 'button',
+      Component: <TopicDashboardButton key={'topicDashboard'} />,
     },
   ],
 };

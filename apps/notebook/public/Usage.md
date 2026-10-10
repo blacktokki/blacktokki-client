@@ -246,6 +246,23 @@ An environment where you can organize the app's features into distinct 'Notebook
 * Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
   * `+1 day`, `+1 month`, `Extend`, or `Delete`.
 
+### Topic Explorer
+
+Enable **Topic Explorer** in extension settings, then open it from Discovery. It groups related content blocks in the current notebook using recurring body content and explicit references. No document provider, language, metadata, tags, folder structure, or fixed heading level is required.
+
+- Select a topic to inspect body blocks, matching fragments, and supporting references. Select an original location to open its note and paragraph.
+- Equal body content contributes once; **Original locations** retains each copy. A shared heading or link alone does not establish a topic.
+- Overlapping character fragments count as one phrase. A short shared word needs additional nearby body evidence, shown as **Matching surrounding content**. Conflicting subjects inside a repeated template are rejected.
+- Automatic names come from body evidence shared by every member. Compatible overlapping groups are consolidated while retaining source locations; a bridge between different subjects does not merge them.
+- Topics with the same name can also merge after every member pair is verified, even when their original groups are separate. Duplicate names use distinguishing common body phrases, including the endings of long passages. If common evidence cannot distinguish the groups, **Content example** shows one original body excerpt below the name. An example describes one block rather than every member; your saved names remain under your control.
+- Larger notebooks require recurrence across more independent contents. Detailed matching content and specific shared corroboration can still support a small topic. A widely reused name alone does not justify a small grouping; weaker matches remain in **Unclassified content**.
+- Groups with the same core can expand beyond the initial candidate neighborhood after verifying each new member pair. Redundant smaller groups are removed when an equally or more distinctive topic already contains their content. There is no fixed limit on the number of supported topics.
+- Filter topics by name or body, rename topics, and exclude blocks. Select blocks to split a topic, or select topics in the list to merge them into a **User collection**. Original notes are not modified.
+- Curation is stored per account and notebook. **Reset topic changes** clears names, exclusions, hidden topics, and user collections. Unsupported or hidden blocks remain accessible as **Unclassified content**.
+- Analysis runs in short slices only while its screen is active and is cancelled on navigation. External local-file changes appear after the existing 30-second polling query; unchanged document extraction is reused.
+- Embedded HTML in prose is converted to readable text; table rows retain cell boundaries. Literal HTML inside code examples is preserved. Unchanged analysis results are reused on revisiting the screen.
+- A topic is a grouping with reviewable evidence, not a probability of correctness or a workflow status. Different expressions of the same meaning may remain separate. The display language does not affect inference.
+
 ### 🕸️ Knowledge Graph
 
 Local notebooks read file contents on each refresh and compare checksums, reusing conversions of unchanged files to speed up repeated loading of large folders. The knowledge graph reuses note paragraph analysis. On an active screen, notes and boards refresh every 30 seconds; external edits, additions, renames and deletions appear on the next read, including edits that preserve both the file modification time and byte size.

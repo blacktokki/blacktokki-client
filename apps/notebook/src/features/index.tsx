@@ -23,6 +23,8 @@ import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
 import TimeLineButton from './timeline/TimeLineButton';
 import { TimeLineScreen } from './timeline/TimeLineScreen';
 import TimerTagSection from './timeline/TimerTagSection';
+import TopicInferenceButton from './topicInference/TopicInferenceButton';
+import { TopicInferenceScreens } from './topicInference/TopicInferenceScreens';
 import { features } from '../hooks/useExtension';
 
 features['sync'] = {
@@ -128,6 +130,19 @@ features['knowledgeGraph'] = {
       Component: <KnowledgeGraphButton key={'knowledgeGraph'} />,
     },
   ],
+};
+
+features['topicInference'] = {
+  title: 'Topic Explorer',
+  description:
+    'Discover topics from recurring content and references, with evidence and local curation.',
+  useNoteMode: true,
+  screens: {
+    TopicInference: { title: '', component: TopicInferenceScreens, path: 'topics' },
+  },
+  NoteSections: [],
+  NotePageSections: [],
+  elements: [{ type: 'button', Component: <TopicInferenceButton key="topicInference" /> }],
 };
 
 features['problem'] = {

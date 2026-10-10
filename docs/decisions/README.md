@@ -17,3 +17,4 @@
 | **2509** | Accepted | 2025-12-14 | 프라이버시 모드(Privacy Mode) 민감 정보 구획화 | [2509-privacy-mode-data-isolation.md](2509-privacy-mode-data-isolation.md) |
 | **2601** | Accepted | 2026-09-06 | 로컬-계정 간 노트북 스마트 동기화 및 3-Way 충돌 해결 아키텍처 | [2601-smart-sync-conflict-resolution.md](2601-smart-sync-conflict-resolution.md) |
 | **2602** | Accepted | 2026-09-17 | 지식 그래프 뷰 확장 기능 아키텍처 | [2602-knowledge-graph-view-extension.md](2602-knowledge-graph-view-extension.md) |
+| **2603** | Accepted | 2026-10-10 | 출처와 언어에 독립적인 근거 기반 주제 추론 채택                | [2603-source-neutral-topic-inference.md](2603-source-neutral-topic-inference.md)               |

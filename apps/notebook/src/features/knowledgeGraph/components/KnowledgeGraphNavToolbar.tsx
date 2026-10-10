@@ -7,7 +7,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../../types';
-
 export const KnowledgeGraphNavToolbar: React.FC = () => {
   const { lang } = useLangContext();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();

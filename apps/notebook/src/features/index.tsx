@@ -4,8 +4,8 @@ import React from 'react';
 
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import FocusHeaderIconButton from './focus/FocusHeaderIconButton';
-import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
 import { KnowledgeGraphScreen } from './knowledgeGraph/KnowledgeGraphScreen';
+import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';

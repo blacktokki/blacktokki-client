@@ -21,7 +21,6 @@ export const KnowledgeGraphScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
   const { usageMode, notebook } = useUsageMode();
-
   const { nodes, edges, axioms, isLoading, getNeighbors } = useKnowledgeGraphData();
   const [selectedNode, setSelectedNode] = useState<KnowledgeGraphNode | null>(null);
   const [selectionTrigger, setSelectionTrigger] = useState(0);

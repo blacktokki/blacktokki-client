@@ -1,3 +1,4 @@
+const jsYaml = require('js-yaml');
 const assert = require('node:assert/strict');
 const { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const Module = require('node:module');
@@ -5,7 +6,6 @@ const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
 const ts = require('typescript');
-const jsYaml = require('js-yaml');
 
 const output = mkdtempSync(path.join(tmpdir(), 'knowledge-graph-use-data-'));
 const knowledgeGraphDirectory = path.join(__dirname, '..');
@@ -40,11 +40,14 @@ const state = {
   notebook: null,
   htmlLinks: new Map(),
   noteLinkTargets: new Map(),
+  memoCache: undefined,
+  memoIndex: 0,
 };
+const lang = () => '';
 const originalLoad = Module._load;
 Module._load = function loadKnowledgeGraphTestDependency(request, parent, isMain) {
   if (request === '@blacktokki/core') {
-    return { useLangContext: () => ({ lang: () => '' }) };
+    return { useLangContext: () => ({ lang }) };
   }
   if (request === 'js-yaml') {
     return jsYaml;
@@ -58,7 +61,16 @@ Module._load = function loadKnowledgeGraphTestDependency(request, parent, isMain
   if (request === 'react') {
     return {
       useCallback: (callback) => callback,
-      useMemo: (factory) => factory(),
+      useMemo: (factory, dependencies) => {
+        if (!state.memoCache) return factory();
+        const index = state.memoIndex++;
+        const previous = state.memoCache[index];
+        if (previous && dependencies.every((value, i) => value === previous.dependencies[i]))
+          return previous.value;
+        const value = factory();
+        state.memoCache[index] = { dependencies, value };
+        return value;
+      },
     };
   }
   if (request.endsWith('/components/HeaderSelectBar')) {
@@ -125,6 +137,29 @@ const note = (id, title, description = '<p>내용</p>') => ({
   description,
   updated: '2026-09-18T00:00:00.000Z',
   option: {},
+});
+
+test('validation updates reuse graph nodes and edges without rebuilding their layout data', () => {
+  state.boardPages = [];
+  state.notePages = [note(991, '검증 대상')];
+  state.problemData = [];
+  state.usageMode = 'NOTE';
+  state.notebook = null;
+  state.memoCache = [];
+  state.memoIndex = 0;
+  try {
+    const first = useKnowledgeGraphData();
+    state.problemData = [{ title: '검증 대상', subtitles: ['Isolated note'] }];
+    state.memoIndex = 0;
+    const second = useKnowledgeGraphData();
+    assert.equal(second.nodes, first.nodes);
+    assert.equal(second.edges, first.edges);
+    assert.equal(first.axioms.violations.length, 0);
+    assert.equal(second.axioms.violations.length, 1);
+  } finally {
+    state.memoCache = undefined;
+    state.problemData = [];
+  }
 });
 
 const board = (id, title) => ({
@@ -667,4 +702,40 @@ test('shared headings do not create additional classes or subclass relations', (
     false
   );
   assert.equal(graph.nodes.filter((node) => node.instanceKind === 'PARAGRAPH').length, 3);
+});
+
+test('keeps structured ordinary notes as notes without creating board classes', () => {
+  state.boardPages = [];
+  state.notePages = [
+    note(91, '프로젝트/할일', '<h3>작업 1</h3><p>내용</p>'),
+    note(92, '프로젝트/진행', '<h3>작업 2</h3><p>내용</p>'),
+    note(93, '프로젝트/완료', '<h3>작업 3</h3><p>내용</p>'),
+  ];
+  state.htmlLinks = new Map();
+  state.noteLinkTargets = new Map();
+
+  try {
+    for (const usageMode of ['NOTE', 'NOTEBOOK', 'SIMPLE']) {
+      state.usageMode = usageMode;
+      state.notebook = usageMode === 'NOTEBOOK' ? { id: 10, title: '노트북' } : null;
+      const graph = useKnowledgeGraphData();
+      assert.equal(
+        graph.nodes.some((node) => node.boardTitle === '프로젝트'),
+        false
+      );
+      assert.equal(
+        graph.nodes.some((node) => node.classKind === 'BOARD_CARD'),
+        false
+      );
+      assert.equal(
+        graph.nodes.some((node) => node.instanceKind === 'CARD'),
+        false
+      );
+      assert.equal(graph.nodes.filter((node) => node.instanceKind === 'NOTE').length, 3);
+      assert.equal(graph.nodes.filter((node) => node.instanceKind === 'PARAGRAPH').length, 3);
+    }
+  } finally {
+    state.usageMode = 'NOTE';
+    state.notebook = null;
+  }
 });

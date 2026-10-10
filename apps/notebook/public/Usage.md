@@ -244,6 +244,8 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 ### 🕸️ Knowledge Graph
 
+Large graphs update their layout incrementally and animate between layout steps so you can keep panning and zooming while nodes settle. During movement, the canvas temporarily uses a lower resolution, tiny nodes appear as points, and relationship decorations are simplified. All nodes and relationships remain available; selected, hovered, and warning nodes retain their detailed indicators. The original resolution, node shapes, and relationship decorations return after movement stops. Edge highlights then start on large graphs.
+
 Visualizes relationships among notes, boards, paragraphs, cards, and external links as a knowledge graph, providing relation exploration and graph validation.
 
 * **Knowledge Graph Access & Validation Badge**:
@@ -255,6 +257,7 @@ Visualizes relationships among notes, boards, paragraphs, cards, and external li
   * Pan by dragging the canvas; zoom using the mouse wheel, trackpad pinch, or the top-right Zoom HUD (`+`, current percentage `%`, `-`, `Fit to screen`).
   * Adjust node spacing density from 0.4x to 2.5x using the `Spacing` HUD (`-`, current density `x`, `+`); clicking the middle density button resets it to 1.0x.
   * Members and descendants are placed outward from their Note or Board class through membership and containment. External links spread around the Note or Board class of the citing content, including when ordinary external links are shown. The External Link class stays near the Note class, or between the Note class and citing Board classes when board links are present. It is not a layout hub.
+  * All `Note containment` edges keep the same length, and all `Paragraph containment` edges keep the same length within their category. This also applies during selection and paragraph/external-link visibility changes; adjusting `Spacing` scales these lengths together.
 * **Node Preview Sheet & N-hop Range**:
   * Selecting a node moves it to the center of the visible area above the bottom preview sheet without changing zoom. Dragging or zooming stops the automatic movement; the sheet lets you inspect details and set the related-node scope (N-hop).
   * The N-hop range offers `1`, `2`, and `All`.

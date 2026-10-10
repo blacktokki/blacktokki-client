@@ -13,7 +13,30 @@ export interface CanvasRenderOptions {
   focusedNodeIds: Set<string> | null;
   violatingNodeIds: Set<string>;
   isDark: boolean;
+  /** Reuse node sprites and bounded edge paths while a large layout is moving. */
+  moving?: boolean;
 }
+
+/** Keep displayed coordinates moving between completed physics steps; model coordinates stay exact. */
+export const advanceGraphPresentation = (
+  displayed: KnowledgeGraphNode[],
+  targets: KnowledgeGraphNode[],
+  elapsedMs: number,
+  settled: boolean
+): boolean => {
+  const fraction = settled ? 1 : -Math.expm1(-Math.max(0, Math.min(elapsedMs, 80)) / 40);
+  let changed = false;
+  for (let i = 0; i < displayed.length; i++) {
+    const node = displayed[i];
+    const target = targets[i];
+    const x = settled ? target.x : node.x + (target.x - node.x) * fraction;
+    const y = settled ? target.y : node.y + (target.y - node.y) * fraction;
+    if (x !== node.x || y !== node.y) changed = true;
+    node.x = x;
+    node.y = y;
+  }
+  return changed;
+};
 
 /**
  * 화면 좌표(Screen Coord)를 가상 월드 좌표(World Coord)로 변환
@@ -198,6 +221,30 @@ const drawArrowHead = (
 /**
  * 엣지(관계선) 일괄 렌더링
  */
+const overviewEdgeOrders = new WeakMap<KnowledgeGraphEdge[], Map<boolean, KnowledgeGraphEdge[]>>();
+const getOverviewEdgeOrder = (edges: KnowledgeGraphEdge[], isDark: boolean) => {
+  const cached = overviewEdgeOrders.get(edges)?.get(isDark);
+  if (cached?.length === edges.length) return cached;
+  const groups = new Map<string, KnowledgeGraphEdge[]>();
+  for (const edge of edges) {
+    const color =
+      edge.type === 'REFERENCES'
+        ? isDark
+          ? '#5DADE2'
+          : '#2874A6'
+        : edge.color || (isDark ? '#7F8C8D' : '#BDC3C7');
+    const key = `${color}:${Boolean(edge.dashed)}:${edge.type === 'REFERENCES'}`;
+    const group = groups.get(key) || [];
+    group.push(edge);
+    groups.set(key, group);
+  }
+  const order = [...groups.values()].flat();
+  const themes = overviewEdgeOrders.get(edges) || new Map();
+  themes.set(isDark, order);
+  overviewEdgeOrders.set(edges, themes);
+  return order;
+};
+
 export const drawEdges = (
   ctx: CanvasRenderingContext2D,
   edges: KnowledgeGraphEdge[],
@@ -215,6 +262,10 @@ export const drawEdges = (
 
   const isZoomedOut = zoom < 0.42;
   const activeFocusId = selectedNodeId || hoveredNodeId;
+  const drawOrder =
+    (zoom < 0.22 || options.moving) && edges.length >= 1000
+      ? getOverviewEdgeOrder(edges, isDark)
+      : edges;
 
   ctx.save();
 
@@ -223,6 +274,7 @@ export const drawEdges = (
   let currentAlpha = -1;
   let currentDashed = false;
   let inPath = false;
+  let pathSegments = 0;
 
   interface EdgeDecoration {
     sourceX: number;
@@ -239,8 +291,8 @@ export const drawEdges = (
   }
   const decorations: EdgeDecoration[] = [];
 
-  for (let i = 0; i < edges.length; i++) {
-    const edge = edges[i];
+  for (let i = 0; i < drawOrder.length; i++) {
+    const edge = drawOrder[i];
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;
@@ -296,7 +348,7 @@ export const drawEdges = (
           : '#2874A6'
         : edge.color || (isDark ? '#7F8C8D' : '#BDC3C7');
 
-    const dashed = Boolean(edge.dashed);
+    const dashed = Boolean(edge.dashed) && !options.moving;
 
     if (
       strokeColor !== currentStrokeColor ||
@@ -329,13 +381,21 @@ export const drawEdges = (
     if (!inPath) {
       ctx.beginPath();
       inPath = true;
+      pathSegments = 0;
     }
     ctx.moveTo(source.x, source.y);
     ctx.lineTo(target.x, target.y);
+    pathSegments++;
+    if (options.moving && pathSegments >= 256) {
+      ctx.stroke();
+      inPath = false;
+      pathSegments = 0;
+    }
 
-    const shouldRenderArrow = isConnectedToActive || (sourceIn && targetIn && !isZoomedOut);
+    const shouldRenderArrow =
+      !options.moving && (isConnectedToActive || (sourceIn && targetIn && !isZoomedOut));
     const propLabel = edge.propertyLabel || edge.label;
-    const shouldRenderLabel = Boolean(propLabel) && isConnectedToActive;
+    const shouldRenderLabel = !options.moving && Boolean(propLabel) && isConnectedToActive;
 
     if (shouldRenderArrow || shouldRenderLabel) {
       const targetRadius = target.radius;
@@ -506,6 +566,201 @@ export const drawGraphTraversal = (
 /**
  * 노드 일괄 렌더링
  */
+interface OverviewNodeGroup {
+  nodes: KnowledgeGraphNode[];
+  fill: string;
+  stroke: string;
+  lineWidth: number;
+  outerRing: boolean;
+}
+const overviewNodeGroups = new WeakMap<KnowledgeGraphNode[], Map<boolean, OverviewNodeGroup[]>>();
+const getOverviewNodeGroups = (nodes: KnowledgeGraphNode[], isDark: boolean) => {
+  const cached = overviewNodeGroups.get(nodes)?.get(isDark);
+  if (cached && cached.reduce((count, group) => count + group.nodes.length, 0) === nodes.length)
+    return cached;
+  const groups = new Map<string, OverviewNodeGroup>();
+  for (const node of nodes) {
+    const outerRing = node.role !== 'CLASS' && node.instanceKind === 'NOTE';
+    const lineWidth = node.role === 'CLASS' ? 2.2 : outerRing ? 1.2 : 1.4;
+    const stroke =
+      node.strokeColor ||
+      (node.role === 'CLASS'
+        ? isDark
+          ? '#AACCFF'
+          : '#5588CC'
+        : outerRing
+        ? isDark
+          ? '#48C78E'
+          : '#27AE60'
+        : isDark
+        ? '#70A1FF'
+        : '#3060C0');
+    const key = `${node.color}:${stroke}:${lineWidth}:${outerRing}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { nodes: [], fill: node.color, stroke, lineWidth, outerRing };
+      groups.set(key, group);
+    }
+    group.nodes.push(node);
+  }
+  const result = [...groups.values()];
+  const themes = overviewNodeGroups.get(nodes) || new Map();
+  themes.set(isDark, result);
+  overviewNodeGroups.set(nodes, themes);
+  return result;
+};
+
+const movingNodeSprites = new WeakMap<
+  CanvasRenderingContext2D,
+  {
+    scale: number;
+    nodes: KnowledgeGraphNode[];
+    groups: Map<OverviewNodeGroup, Map<number, HTMLCanvasElement>>;
+  }
+>();
+
+/** Rasterize each circle style once at the current pixel scale instead of rebuilding large paths. */
+const drawMovingNodes = (
+  ctx: CanvasRenderingContext2D,
+  nodes: KnowledgeGraphNode[],
+  options: CanvasRenderOptions,
+  bounds: { minX: number; maxX: number; minY: number; maxY: number }
+): boolean => {
+  const ownerDocument = ctx.canvas?.ownerDocument;
+  if (!ownerDocument || typeof ctx.drawImage !== 'function') return false;
+  const {
+    zoom,
+    dpr,
+    panX,
+    panY,
+    isDark,
+    selectedNodeId,
+    hoveredNodeId,
+    focusedNodeIds,
+    violatingNodeIds,
+  } = options;
+  const scale = zoom * dpr;
+  let cache = movingNodeSprites.get(ctx);
+  if (!cache || cache.scale !== scale || cache.nodes !== nodes) {
+    cache = { scale, nodes, groups: new Map() };
+    movingNodeSprites.set(ctx, cache);
+  }
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (const group of getOverviewNodeGroups(nodes, isDark)) {
+    ctx.fillStyle = group.fill;
+    let sprites = cache.groups.get(group);
+    if (!sprites) {
+      sprites = new Map();
+      cache.groups.set(group, sprites);
+    }
+    for (const node of group.nodes) {
+      if (
+        node.id === selectedNodeId ||
+        node.id === hoveredNodeId ||
+        violatingNodeIds.has(node.id) ||
+        node.x < bounds.minX ||
+        node.x > bounds.maxX ||
+        node.y < bounds.minY ||
+        node.y > bounds.maxY
+      )
+        continue;
+      const opacity = !focusedNodeIds || focusedNodeIds.has(node.id) ? 1 : 0.12;
+      const pixelX = (node.x * zoom + panX) * dpr;
+      const pixelY = (node.y * zoom + panY) * dpr;
+      if (node.role !== 'CLASS' && node.radius * scale < 0.75) {
+        const extent = (node.radius + group.lineWidth / 2 + (group.outerRing ? 2.5 : 0)) * scale;
+        ctx.globalAlpha = opacity * Math.min(1, Math.PI * extent * extent);
+        ctx.fillRect(Math.floor(pixelX), Math.floor(pixelY), 1, 1);
+        continue;
+      }
+      let sprite = sprites.get(node.radius);
+      if (!sprite) {
+        sprite = ownerDocument.createElement('canvas');
+        const extent = node.radius + (group.outerRing ? 2.5 : 0) + group.lineWidth / 2;
+        sprite.width = Math.ceil(extent * scale) * 2 + 4;
+        sprite.height = sprite.width;
+        const spriteCtx = sprite.getContext('2d');
+        if (!spriteCtx) {
+          ctx.restore();
+          return false;
+        }
+        spriteCtx.translate(sprite.width / 2, sprite.height / 2);
+        spriteCtx.scale(scale, scale);
+        spriteCtx.fillStyle = group.fill;
+        spriteCtx.strokeStyle = group.stroke;
+        spriteCtx.lineWidth = group.lineWidth;
+        if (group.outerRing) {
+          spriteCtx.beginPath();
+          spriteCtx.arc(0, 0, node.radius + 2.5, 0, Math.PI * 2);
+          spriteCtx.stroke();
+        }
+        spriteCtx.beginPath();
+        spriteCtx.arc(0, 0, node.radius, 0, Math.PI * 2);
+        spriteCtx.fill();
+        spriteCtx.stroke();
+        sprites.set(node.radius, sprite);
+      }
+      ctx.globalAlpha = opacity;
+      ctx.drawImage(
+        sprite,
+        Math.round(pixelX) - sprite.width / 2,
+        Math.round(pixelY) - sprite.height / 2
+      );
+    }
+  }
+  ctx.restore();
+  return true;
+};
+
+/** Batch overview circles by style; selected, hovered and warning nodes retain detailed drawing. */
+const drawOverviewNodes = (
+  ctx: CanvasRenderingContext2D,
+  nodes: KnowledgeGraphNode[],
+  options: CanvasRenderOptions,
+  bounds: { minX: number; maxX: number; minY: number; maxY: number }
+) => {
+  const { selectedNodeId, hoveredNodeId, focusedNodeIds, violatingNodeIds, isDark } = options;
+  ctx.save();
+  ctx.setLineDash([]);
+  for (const group of getOverviewNodeGroups(nodes, isDark)) {
+    ctx.fillStyle = group.fill;
+    ctx.strokeStyle = group.stroke;
+    ctx.lineWidth = group.lineWidth;
+    for (const focused of focusedNodeIds ? [true, false] : [true]) {
+      ctx.globalAlpha = focused ? 1 : 0.12;
+      const appendCircles = (padding: number) => {
+        let count = 0;
+        ctx.beginPath();
+        for (const node of group.nodes) {
+          if (
+            node.id === selectedNodeId ||
+            node.id === hoveredNodeId ||
+            violatingNodeIds.has(node.id) ||
+            node.x < bounds.minX ||
+            node.x > bounds.maxX ||
+            node.y < bounds.minY ||
+            node.y > bounds.maxY ||
+            (focusedNodeIds && focusedNodeIds.has(node.id) !== focused)
+          )
+            continue;
+          const radius = node.radius + padding;
+          ctx.moveTo(node.x + radius, node.y);
+          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+          count++;
+        }
+        return count;
+      };
+      if (group.outerRing && appendCircles(2.5)) ctx.stroke();
+      if (appendCircles(0)) {
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+};
+
 export const drawNodes = (
   ctx: CanvasRenderingContext2D,
   nodes: KnowledgeGraphNode[],
@@ -539,8 +794,21 @@ export const drawNodes = (
   ctx.save();
   let currentAlpha = -1;
 
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
+  const batchOverview = (hideLabelsByZoom || options.moving) && nodes.length >= 1000;
+  if (batchOverview) {
+    const bounds = { minX, maxX, minY, maxY };
+    if (!options.moving || !drawMovingNodes(ctx, nodes, options, bounds))
+      drawOverviewNodes(ctx, nodes, options, bounds);
+  }
+  const individualNodes = batchOverview
+    ? nodes.filter(
+        (node) =>
+          node.id === selectedNodeId || node.id === hoveredNodeId || violatingNodeIds.has(node.id)
+      )
+    : nodes;
+
+  for (let i = 0; i < individualNodes.length; i++) {
+    const node = individualNodes[i];
 
     if (node.x < minX || node.x > maxX || node.y < minY || node.y > maxY) {
       continue;

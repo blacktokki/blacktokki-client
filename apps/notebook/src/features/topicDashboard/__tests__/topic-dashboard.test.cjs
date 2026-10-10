@@ -220,6 +220,19 @@ test('returns empty topic dashboards when no candidates exist', () => {
   assert.equal(dashboards.length, 0);
 });
 
+test('reuses paragraph analysis across callers and invalidates it when a note changes', () => {
+  const page = note('Project/Todo', '<h3>First</h3><p>body</p>');
+  const first = inferCandidates.getBoardCandidateParagraphs(page);
+  assert.equal(inferCandidates.getBoardCandidateParagraphs(page), first);
+  inferBoardCandidates([page, note('Project/Done', '<h3>Done</h3>')], []);
+  assert.equal(inferCandidates.getBoardCandidateParagraphs(page), first);
+  page.description = '<h3>Changed</h3><p>new body</p>';
+  const second = inferCandidates.getBoardCandidateParagraphs(page);
+  assert.notEqual(second, first);
+  assert.equal(second[1].title, 'Changed');
+  assert.equal(first[1].title, 'First');
+});
+
 test('excludes candidates that already have actual boards created', () => {
   const pages = [
     note('Project/Todo', '<h3>Task 1</h3><p>First task</p>'),

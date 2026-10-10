@@ -7,7 +7,6 @@ import { AutoCompleteProps, EditorProps } from '../types';
 
 // import { createRoot } from 'react-dom/client';
 
-
 const INIT: IAllProps['init'] = {
   plugins: 'image link advlist lists supercode codesample searchreplace autolink insertdatetime', // textcolor imagetools,
   toolbar:
@@ -155,7 +154,7 @@ export default (
                 if (props.onLink) {
                   e.preventDefault();
                   e.stopPropagation();
-                  props.onLink(anchor.href);
+                  props.onLink(anchor.getAttribute('href') || anchor.href);
                 }
               } else {
                 e.preventDefault();

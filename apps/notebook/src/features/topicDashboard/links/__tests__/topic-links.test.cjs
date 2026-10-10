@@ -10,7 +10,7 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const fixtureFile = path.resolve(__dirname, 'board-reference-patterns.test.cjs');
 const fixture = compileFunction(
   readFileSync(fixtureFile, 'utf8').split("for (const source of ['ROW', 'COLUMN', 'CARD'])")[0] +
-    '\nreturn { find, note, board, href, anchor, paragraphs, noteStorage, loadSource, inferBoardCandidates, inferTopLevelBoardCandidates, sourceBody, targetBody };',
+    '\nreturn { find, note, board, href, anchor, paragraphs, noteStorage, loadSource, inferBoardCandidates, inferTopLevelBoardCandidates, sourceBody, targetBody, candidateUtils };',
   ['require', '__dirname']
 )(require, path.dirname(fixtureFile));
 const { find, note, board, href, anchor, loadSource } = fixture;
@@ -19,9 +19,43 @@ const detailModule = loadSource(
   {
     '../../../components/HeaderSelectBar': fixture.paragraphs,
     '../../../hooks/useNoteStorage': fixture.noteStorage,
+    '../inferBoardCandidates': fixture.candidateUtils,
   }
 );
 const { buildTopicLinkDetails } = detailModule;
+
+test('menu and dashboard share connection analysis and refresh on changed query snapshots', () => {
+  let scans = 0;
+  const notes = { data: sourceData() };
+  const actualBoards = { data: boards() };
+  const { useTopicConnections } = loadSource(
+    readFileSync(path.resolve(__dirname, '../useTopicConnections.ts'), 'utf8'),
+    {
+      react: { useMemo: (factory) => factory() },
+      '../../../hooks/useNoteStorage': { useNotePages: () => notes },
+      '../../../hooks/useBoardStorage': { useBoardPages: () => actualBoards },
+      '../inferBoardCandidates': fixture,
+      './topicLinkDetails': detailModule,
+      './findBoardReferencePatterns': {
+        findBoardReferencePatterns: (...args) => {
+          scans++;
+          return find(...args);
+        },
+      },
+    }
+  );
+  const menu = useTopicConnections();
+  const dashboard = useTopicConnections();
+  assert.equal(menu.details, dashboard.details);
+  assert.equal(scans, 1);
+  notes.data = sourceData();
+  const nextNotebook = useTopicConnections();
+  assert.notEqual(nextNotebook.details, menu.details);
+  assert.equal(scans, 2);
+  actualBoards.data = [board('A', 'SCRUM'), board('B', 'KANBAN')];
+  assert.notEqual(useTopicConnections().details, nextNotebook.details);
+  assert.equal(scans, 3);
+});
 const boards = () => [board('A', 'KANBAN'), board('B', 'KANBAN')];
 function details(notes, actualBoards = boards(), candidates = []) {
   const result = find(notes, actualBoards, candidates);
@@ -198,7 +232,9 @@ let queryState = {};
 const navigationCalls = [];
 const buttons = [];
 const native = {
+  Platform: { OS: 'web' },
   StyleSheet: { create: (styles) => styles },
+  useWindowDimensions: () => ({ width: 1280, height: 900 }),
   View: 'div',
   ScrollView: ({ children }) => React.createElement('div', null, children),
   ActivityIndicator: () => React.createElement('span', null, 'loading'),
@@ -703,7 +739,7 @@ test('diagram accents lines and arrows by their ratio and dims filtered connecti
   }
 });
 
-test('diagram centers the complete graph in wider viewports and centers short graphs vertically', () => {
+test('small diagrams keep their content size instead of adding blank space to fill a wide viewport', () => {
   const graph = diagramModule.buildTopicConnectionDiagram(
     [diagramRule('A', 'CARD', 'B', 'CARD')],
     1200
@@ -712,9 +748,585 @@ test('diagram centers the complete graph in wider viewports and centers short gr
   const right = Math.max(...graph.nodes.map((node) => node.x + node.width));
   const top = Math.min(...graph.nodes.map((node) => node.y));
   const bottom = Math.max(...graph.nodes.map((node) => node.y + node.height));
-  assert.equal(graph.width, 1200);
+  assert.equal(
+    graph.width,
+    diagramModule.buildTopicConnectionDiagram([diagramRule('A', 'CARD', 'B', 'CARD')]).width
+  );
+  assert.ok(graph.width < 1200);
   assert.equal((left + right) / 2, graph.width / 2);
   assert.equal((top + bottom) / 2, graph.height / 2);
+});
+
+test('independent relationships share available row space and stay visible from the left edge', () => {
+  const items = [diagramRule('A', 'CARD', 'B', 'CARD'), diagramRule('C', 'CARD', 'D', 'CARD')];
+  const narrow = diagramModule.buildTopicConnectionDiagram(items, 600);
+  const wide = diagramModule.buildTopicConnectionDiagram(items, 1200);
+  const node = (graph, title) => graph.nodes.find((node) => node.title === title);
+  assert.ok(narrow.height > wide.height);
+  assert.equal(node(wide, 'A').y, node(wide, 'C').y);
+  assert.ok(node(wide, 'B').x + node(wide, 'B').width < node(wide, 'C').x);
+  assert.equal(node(narrow, 'A').x, 32);
+  assert.equal(node(narrow, 'C').x, 32);
+  assert.ok(wide.width < 1200);
+  assert.deepEqual(diagramModule.buildTopicConnectionDiagram([...items].reverse(), 1200), wide);
+});
+
+test('zoom controls scale cards and scroll extents together, clamp their limits, reset and fit', () => {
+  const states = new Map();
+  const toggles = [];
+  let viewport;
+  const items = [
+    ...Array.from({ length: 8 }, (_, index) =>
+      diagramRule(`A${index}`, 'CARD', `A${index + 1}`, 'CARD')
+    ),
+    ...Array.from({ length: 6 }, (_, index) =>
+      diagramRule(`B${index}`, 'CARD', `C${index}`, 'CARD')
+    ),
+  ];
+  const { TopicConnectionDiagram } = loadSource(diagramSource, {
+    ...diagramDependencies,
+    react: {
+      ...React,
+      useLayoutEffect: () => {},
+      useState: (initial) => {
+        const id = React.useId();
+        if (!states.has(id)) states.set(id, initial);
+        return [
+          states.get(id),
+          (value) => states.set(id, typeof value === 'function' ? value(states.get(id)) : value),
+        ];
+      },
+    },
+    'react-native': {
+      ...native,
+      useWindowDimensions: () => ({ width: 400, height: 600 }),
+      ScrollView: (props) => {
+        viewport = props;
+        return React.createElement('div', null, props.children);
+      },
+    },
+  });
+  const graph = diagramModule.buildTopicConnectionDiagram(items);
+  const render = () => {
+    buttons.length = 0;
+    const html = renderToStaticMarkup(
+      React.createElement(TopicConnectionDiagram, {
+        connections: { details: items },
+        selections: [],
+        onToggle: (selection) => toggles.push(selection),
+      })
+    );
+    const scale = viewport.children.props.children.props.style.at(-1).transform[0].scale;
+    assert.equal(viewport.contentContainerStyle.width, Math.ceil(graph.width * scale));
+    assert.equal(viewport.contentContainerStyle.height, Math.ceil(graph.height * scale));
+    assert.equal(viewport.children.props.style.width, viewport.contentContainerStyle.width);
+    assert.equal(viewport.children.props.style.height, viewport.contentContainerStyle.height);
+    assert.ok(html.includes(`${Math.round(scale * 100)}%`));
+    return scale;
+  };
+  const button = (label) =>
+    buttons.find((button) => button.accessibilityLabel === `연결 규칙 관계 ${label}`);
+  const press = (label) => {
+    button(label).onPress();
+    return render();
+  };
+  assert.equal(render(), 1);
+  assert.equal(press('확대'), 1.25);
+  assert.equal(press('축소'), 1);
+  for (let index = 0; index < 10; index++) press('확대');
+  assert.equal(render(), 2);
+  assert.equal(button('확대').disabled, true);
+  assert.equal(press('100%로 복원'), 1);
+  for (let index = 0; index < 10; index++) press('축소');
+  assert.equal(render(), 0.01);
+  assert.equal(button('축소').disabled, true);
+  assert.equal(press('100%로 복원'), 1);
+  const fit = press('화면에 맞춤');
+  assert.ok(fit < 1);
+  assert.ok(viewport.contentContainerStyle.width <= 400);
+  assert.ok(viewport.contentContainerStyle.height <= 584);
+  buttons.find((button) => button.accessibilityLabel === '연결 규칙 필터: A0').onPress();
+  assert.deepEqual(toggles, [{ title: 'A0' }]);
+});
+
+test('diagram keeps both web scrollbars on the visible viewport and keeps native vertical scrolling outside horizontal scrolling', () => {
+  const viewports = [];
+  const states = new Map();
+  const effects = new Map();
+  let pendingEffects = [];
+  let dimensions;
+  let viewportTop;
+  let diagramView;
+  let platform;
+  const { TopicConnectionDiagram } = loadSource(diagramSource, {
+    ...diagramDependencies,
+    react: {
+      ...React,
+      useState: (initial) => {
+        const id = React.useId();
+        if (!states.has(id)) states.set(id, initial);
+        return [
+          states.get(id),
+          (update) =>
+            states.set(id, typeof update === 'function' ? update(states.get(id)) : update),
+        ];
+      },
+      useLayoutEffect: (callback, dependencies) => {
+        const id = React.useId();
+        const previous = effects.get(id);
+        if (!previous || dependencies.some((value, index) => value !== previous[index])) {
+          effects.set(id, dependencies);
+          pendingEffects.push(callback);
+        }
+      },
+    },
+    'react-native': {
+      ...native,
+      Platform: {
+        get OS() {
+          return platform;
+        },
+      },
+      useWindowDimensions: () => dimensions,
+      View: (props) => {
+        if (props.ref) {
+          diagramView = props;
+          props.ref.current = {
+            measureInWindow: (callback) => callback(0, viewportTop, dimensions.width, 0),
+          };
+        }
+        return React.createElement('div', null, props.children);
+      },
+      ScrollView: (props) => {
+        viewports.push(props);
+        return React.createElement('div', null, props.children);
+      },
+    },
+  });
+  for (const scenario of ['web:1', 'web:8', 'ios:1', 'ios:8']) {
+    const [os, size] = scenario.split(':');
+    platform = os;
+    const count = Number(size);
+    states.clear();
+    effects.clear();
+    const items = Array.from({ length: count }, (_, index) =>
+      diagramRule(`Source ${index}`, 'CARD', `Target ${index}`, 'CARD')
+    );
+    if (count > 1) {
+      for (let index = 0; index < 5; index++) {
+        items.push(diagramRule(`Wide ${index}`, 'CARD', `Wide ${index + 1}`, 'CARD'));
+      }
+    }
+    const render = () => {
+      viewports.length = 0;
+      pendingEffects = [];
+      renderToStaticMarkup(
+        React.createElement(TopicConnectionDiagram, {
+          connections: { details: items },
+          selections: [],
+          onToggle: () => {},
+        })
+      );
+      pendingEffects.forEach((effect) => effect());
+    };
+    for (const frame of [
+      { width: 1200, height: 900, top: 200 },
+      { width: 400, height: 640, top: 180 },
+      { width: 900, height: 360, top: 160 },
+    ]) {
+      dimensions = frame;
+      viewportTop = frame.top;
+      render();
+      render();
+      diagramView.onLayout({ nativeEvent: { layout: { width: dimensions.width } } });
+      render();
+      const graph = diagramModule.buildTopicConnectionDiagram(items, dimensions.width);
+      assert.equal(graph.height, Math.max(...graph.nodes.map((node) => node.y + node.height)) + 32);
+      assert.ok(count === 1 ? graph.height < 220 : graph.height > 360);
+      const expectedHeight = Math.min(graph.height, dimensions.height - viewportTop - 16);
+      assert.equal(diagramView.style[1].maxWidth, dimensions.width);
+      const viewport = viewports[0];
+      const viewportStyle = Object.assign({}, ...viewport.style);
+      assert.ok(viewportStyle.width <= dimensions.width);
+      assert.equal(viewportStyle.flexShrink, 0);
+      assert.equal(viewportStyle.flexGrow, 0);
+      if (platform === 'web') {
+        assert.equal(viewports.length, 1);
+        assert.equal(viewportStyle.overflowX, 'auto');
+        assert.equal(viewportStyle.overflowY, 'auto');
+        assert.equal(viewportStyle.maxHeight, dimensions.height - viewportTop - 16);
+        assert.equal(
+          viewportStyle.height,
+          undefined,
+          'short content determines its own viewport height'
+        );
+        assert.equal(viewport.showsVerticalScrollIndicator, true);
+        assert.equal(viewport.showsHorizontalScrollIndicator, true);
+        assert.equal(viewport.contentContainerStyle.width, graph.width);
+        assert.equal(viewport.contentContainerStyle.height, graph.height);
+        assert.equal(viewport.children.props.style.width, graph.width);
+      } else {
+        assert.equal(viewports.length, 2);
+        const horizontal = viewports[1];
+        const horizontalStyle = Object.assign({}, ...horizontal.style);
+        assert.equal(viewport.children.props, horizontal);
+        assert.equal(viewport.horizontal, undefined);
+        assert.equal(viewportStyle.height, expectedHeight);
+        assert.equal(horizontal.horizontal, true);
+        assert.equal(horizontalStyle.width, viewportStyle.width);
+        assert.equal(horizontalStyle.height, graph.height);
+        assert.equal(horizontal.children.props.style.height, graph.height);
+      }
+      if (count > 1) assert.ok(graph.width > dimensions.width);
+    }
+  }
+});
+
+test('diagram lays out disconnected cycles and chains independently without pushing their columns apart', () => {
+  const items = [
+    diagramRule('A', 'CARD', 'B', 'CARD'),
+    diagramRule('B', 'CARD', 'A', 'CARD'),
+    diagramRule('C', 'CARD', 'D', 'CARD'),
+    diagramRule('D', 'CARD', 'E', 'CARD'),
+  ];
+  const graph = diagramModule.buildTopicConnectionDiagram(items);
+  const node = (title) => graph.nodes.find((node) => node.title === title);
+  assert.deepEqual(diagramModule.buildTopicConnectionDiagram([...items].reverse()), graph);
+  assert.deepEqual(
+    graph.nodes.map((node) => node.column),
+    [0, 1, 0, 1, 2]
+  );
+  assert.ok(Math.max(node('A').y + node('A').height, node('B').y + node('B').height) < node('C').y);
+  assert.ok(node('C').x < node('D').x && node('D').x < node('E').x);
+});
+
+test('diagram orders branch nodes by their connections instead of crossing them alphabetically', () => {
+  const graph = diagramModule.buildTopicConnectionDiagram([
+    diagramRule('A', 'CARD', 'D', 'CARD'),
+    diagramRule('B', 'CARD', 'C', 'CARD'),
+    diagramRule('A', 'CARD', 'E', 'CARD'),
+    diagramRule('B', 'CARD', 'E', 'CARD'),
+  ]);
+  const node = (title) => graph.nodes.find((node) => node.title === title);
+  assert.ok(node('A').y < node('B').y);
+  assert.ok(node('D').y < node('E').y && node('E').y < node('C').y);
+});
+
+function sampleDiagramPath(path) {
+  const tokens = path.match(/[A-Z]|-?\d+(?:\.\d+)?/g);
+  const points = [];
+  let x = 0;
+  let y = 0;
+  let index = 0;
+  const lineTo = (nextX, nextY) => {
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(nextX - x), Math.abs(nextY - y)) / 4));
+    for (let step = 1; step <= steps; step++) {
+      const t = step / steps;
+      points.push([x + (nextX - x) * t, y + (nextY - y) * t]);
+    }
+    x = nextX;
+    y = nextY;
+  };
+  while (index < tokens.length) {
+    const command = tokens[index++];
+    if (command === 'M') {
+      x = Number(tokens[index++]);
+      y = Number(tokens[index++]);
+      points.push([x, y]);
+    } else if (command === 'H') {
+      lineTo(Number(tokens[index++]), y);
+    } else if (command === 'V') {
+      lineTo(x, Number(tokens[index++]));
+    } else {
+      assert.equal(command, 'C');
+      const [cx1, cy1, cx2, cy2, nextX, nextY] = tokens.slice(index, index + 6).map(Number);
+      index += 6;
+      for (let step = 1; step <= 40; step++) {
+        const t = step / 40;
+        const u = 1 - t;
+        points.push([
+          x + 3 * u ** 2 * t * (cx1 - x) + 3 * u * t ** 2 * (cx2 - x) + t ** 3 * (nextX - x),
+          y + 3 * u ** 2 * t * (cy1 - y) + 3 * u * t ** 2 * (cy2 - y) + t ** 3 * (nextY - y),
+        ]);
+      }
+      x = nextX;
+      y = nextY;
+    }
+  }
+  return points;
+}
+
+test('dense connections keep reverse paths direct and self lanes distinct while avoiding other cards', () => {
+  const kinds = ['ROW', 'COLUMN', 'CARD', 'SUBNOTE', 'PARAGRAPH'];
+  const items = [
+    ...kinds.flatMap((kind, index) => [
+      diagramRule('A', kind, 'B', kind),
+      diagramRule('B', kind, 'A', kinds[(index + 1) % kinds.length]),
+      diagramRule('A', kind, 'A', kinds[(index + 1) % kinds.length]),
+    ]),
+    diagramRule('A', 'CARD', 'C', 'CARD'),
+    diagramRule('C', 'CARD', 'D', 'CARD'),
+    diagramRule('A', 'CARD', 'D', 'CARD'),
+    diagramRule('X', 'CARD', 'Y', 'CARD'),
+  ];
+  const graph = diagramModule.buildTopicConnectionDiagram(items, 400);
+  assert.deepEqual(diagramModule.buildTopicConnectionDiagram([...items].reverse(), 400), graph);
+  const reverse = graph.edges.filter((edge) => edge.source.title === 'B');
+  assert.equal(reverse.length, kinds.length);
+  for (const edge of reverse) {
+    assert.ok(edge.path.includes(' C '));
+    assert.ok(!edge.path.includes(' V '));
+  }
+  const self = graph.edges.filter((edge) => edge.source.title === 'A' && edge.target.title === 'A');
+  assert.equal(
+    new Set(self.map((edge) => Math.max(...sampleDiagramPath(edge.path).map(([x]) => x)))).size,
+    kinds.length
+  );
+  for (const edge of graph.edges) {
+    assert.ok(edge.path.includes(' C '));
+    assert.ok(!/[HV]/.test(edge.path));
+    for (const [x, y] of sampleDiagramPath(edge.path)) {
+      assert.ok(Number.isFinite(x) && Number.isFinite(y));
+      assert.ok(x >= 0 && x <= graph.width && y >= 0 && y <= graph.height);
+      for (const node of graph.nodes) {
+        if (node.title === edge.source.title || node.title === edge.target.title) continue;
+        assert.ok(
+          x <= node.x || x >= node.x + node.width || y <= node.y || y >= node.y + node.height,
+          `${edge.source.title} -> ${edge.target.title} intersects ${node.title}`
+        );
+      }
+    }
+  }
+});
+
+test('adjacent reverse connections use facing sides without adding height or leaving endpoint rows', () => {
+  const items = [diagramRule('A', 'ROW', 'B', 'ROW'), diagramRule('A', 'CARD', 'B', 'CARD')];
+  const forward = diagramModule.buildTopicConnectionDiagram(items);
+  const graph = diagramModule.buildTopicConnectionDiagram([
+    ...items,
+    diagramRule('B', 'ROW', 'A', 'CARD'),
+  ]);
+  assert.equal(graph.height, forward.height);
+  const edge = graph.edges.find((edge) => edge.source.title === 'B');
+  const sy = edge.source.y + edge.source.height / 2;
+  const ty = edge.target.y + edge.target.height / 2;
+  const tx = edge.target.x + edge.target.width + 4;
+  assert.ok(edge.path.startsWith(`M ${edge.source.x - 4} ${sy}`));
+  assert.equal(edge.arrow, `${tx},${ty} ${tx + 8},${ty - 4} ${tx + 8},${ty + 4}`);
+  for (const [x, y] of sampleDiagramPath(edge.path)) {
+    assert.ok(x >= tx && x <= edge.source.x - 4);
+    assert.ok(y >= Math.min(sy, ty) && y <= Math.max(sy, ty));
+  }
+});
+
+test('same-card connections stay beside their elements, including a small same-element loop', () => {
+  const graph = diagramModule.buildTopicConnectionDiagram([
+    diagramRule('A', 'ROW', 'A', 'CARD'),
+    diagramRule('A', 'CARD', 'A', 'CARD'),
+  ]);
+  const node = graph.nodes[0];
+  assert.equal(graph.height, node.height + 64);
+  for (const edge of graph.edges) {
+    assert.ok(edge.path.includes(' C '));
+    assert.ok(!/[HV]/.test(edge.path));
+    const sy = edge.source.y + edge.source.height / 2;
+    const ty = edge.target.y + edge.target.height / 2;
+    for (const [x, y] of sampleDiagramPath(edge.path)) {
+      assert.ok(x >= node.x + node.width - 12 && x <= graph.width);
+      assert.ok(y >= Math.min(sy, ty) - 16 && y <= Math.max(sy, ty) + 16);
+    }
+  }
+});
+
+test('skip connections curve along a clear row or throughout a nearby detour around a card', () => {
+  const kinds = ['ROW', 'COLUMN', 'CARD', 'SUBNOTE', 'PARAGRAPH'];
+  const clear = diagramModule.buildTopicConnectionDiagram([
+    ...kinds.map((kind) => diagramRule('A', kind, 'B', 'CARD')),
+    ...kinds.map((kind) => diagramRule('B', 'CARD', 'C', kind)),
+    diagramRule('A', 'PARAGRAPH', 'C', 'PARAGRAPH'),
+  ]);
+  const direct = clear.edges.find((edge) => edge.source.title === 'A' && edge.target.title === 'C');
+  const rowY = direct.source.y + direct.source.height / 2;
+  assert.equal(rowY, direct.target.y + direct.target.height / 2);
+  const directPoints = sampleDiagramPath(direct.path);
+  assert.ok(directPoints.some(([, y]) => y < rowY - 4));
+  assert.ok(directPoints.every(([, y]) => y <= rowY && y >= rowY - 12));
+
+  const blocked = diagramModule.buildTopicConnectionDiagram([
+    diagramRule('A', 'CARD', 'B', 'CARD'),
+    diagramRule('B', 'CARD', 'C', 'CARD'),
+    diagramRule('A', 'CARD', 'C', 'CARD'),
+    diagramRule('C', 'CARD', 'A', 'CARD'),
+  ]);
+  const middle = blocked.nodes.find((node) => node.title === 'B');
+  const detours = blocked.edges.filter(
+    (edge) =>
+      (edge.source.title === 'A' && edge.target.title === 'C') ||
+      (edge.source.title === 'C' && edge.target.title === 'A')
+  );
+  assert.equal(detours.length, 2);
+  for (const edge of detours) {
+    const sy = edge.source.y + edge.source.height / 2;
+    const ty = edge.target.y + edge.target.height / 2;
+    const points = sampleDiagramPath(edge.path);
+    assert.ok(
+      points.slice(1).every(([x, y], index) => {
+        const previous = points[index];
+        return Math.abs(x - previous[0]) > 1e-6 && Math.abs(y - previous[1]) > 1e-6;
+      }),
+      'the entire detour must bend rather than retain horizontal or vertical straight sections'
+    );
+    const sx = points[0][0];
+    const tx = points[points.length - 1][0];
+    const quarterX = sx + (tx - sx) / 4;
+    const quarter = points.reduce((closest, point) =>
+      Math.abs(point[0] - quarterX) < Math.abs(closest[0] - quarterX) ? point : closest
+    );
+    const peak = Math.max(...points.map(([, y]) => y));
+    assert.ok(
+      peak - quarter[1] > (peak - sy) * 0.1,
+      'an open detour must form a broad arc across its span'
+    );
+    for (const [x, y] of points) {
+      assert.ok(y >= Math.min(sy, ty) && y <= middle.y + middle.height + 32);
+      assert.ok(
+        x <= middle.x ||
+          x >= middle.x + middle.width ||
+          y <= middle.y ||
+          y >= middle.y + middle.height
+      );
+    }
+  }
+});
+
+test('same-height adjacent connections have a visible arc with horizontal endpoint tangents', () => {
+  const graph = diagramModule.buildTopicConnectionDiagram([diagramRule('A', 'CARD', 'B', 'CARD')]);
+  const edge = graph.edges[0];
+  const rowY = edge.source.y + edge.source.height / 2;
+  const points = sampleDiagramPath(edge.path);
+  assert.equal(points[0][1], rowY);
+  assert.equal(points[points.length - 1][1], rowY);
+  assert.ok(points.some(([, y]) => y < rowY - 4));
+  const controls = edge.path.match(/-?\d+(?:\.\d+)?/g).map(Number);
+  assert.equal(controls[3], rowY);
+  assert.equal(controls[controls.length - 3], rowY);
+});
+
+test('stacked endpoint cards use a smooth nearby corridor between taller intermediate cards', () => {
+  const items = [
+    ...['0', '1', '2'].flatMap((index) => [
+      diagramRule('Root', 'CARD', `A${index}`, 'CARD'),
+      diagramRule(`A${index}`, 'CARD', `M${index}`, 'CARD'),
+      diagramRule(`M${index}`, 'CARD', `N${index}`, 'CARD'),
+      diagramRule(`N${index}`, 'CARD', `B${index}`, 'CARD'),
+      diagramRule(`B${index}`, 'CARD', 'End', 'CARD'),
+    ]),
+    ...['ROW', 'COLUMN', 'SUBNOTE', 'PARAGRAPH'].flatMap((kind) => [
+      diagramRule('M0', kind, 'N0', 'CARD'),
+      diagramRule('M2', 'CARD', 'N2', kind),
+    ]),
+    diagramRule('A1', 'CARD', 'B1', 'CARD'),
+  ];
+  const graph = diagramModule.buildTopicConnectionDiagram(items);
+  assert.deepEqual(diagramModule.buildTopicConnectionDiagram([...items].reverse()), graph);
+  const node = (title) => graph.nodes.find((node) => node.title === title);
+  for (const title of ['A', 'B']) {
+    assert.equal(node(`${title}0`).column, node(`${title}1`).column);
+    assert.equal(node(`${title}1`).column, node(`${title}2`).column);
+    assert.ok(node(`${title}0`).y < node(`${title}1`).y);
+    assert.ok(node(`${title}1`).y < node(`${title}2`).y);
+  }
+  const edge = graph.edges.find((edge) => edge.source.title === 'A1' && edge.target.title === 'B1');
+  const points = sampleDiagramPath(edge.path);
+  const commands = edge.path
+    .split(' C ')
+    .slice(1)
+    .map((command) => command.match(/-?\d+(?:\.\d+)?/g).map(Number));
+  const first = commands[0];
+  const last = commands.at(-1);
+  assert.equal(first[1], points[0][1], 'the curve must leave the source horizontally');
+  assert.equal(
+    first[3],
+    first[5],
+    'enter the narrow corridor horizontally instead of turning vertically'
+  );
+  assert.equal(last[1], commands.at(-2)[5], 'leave the corridor with the same horizontal tangent');
+  assert.equal(last[3], last[5], 'the curve must enter the target horizontally');
+  assert.ok(points.some(([, y]) => y < points[0][1] - 24));
+  assert.ok(
+    points.every(([, y]) => y >= node('M0').y + node('M0').height + 6 && y <= points[0][1])
+  );
+  for (const candidate of graph.edges) {
+    for (const [x, y] of sampleDiagramPath(candidate.path)) {
+      for (const obstacle of graph.nodes) {
+        if ([candidate.source.title, candidate.target.title].includes(obstacle.title)) continue;
+        assert.ok(
+          x <= obstacle.x ||
+            x >= obstacle.x + obstacle.width ||
+            y <= obstacle.y ||
+            y >= obstacle.y + obstacle.height,
+          `${candidate.source.title} -> ${candidate.target.title} intersects ${obstacle.title}`
+        );
+      }
+    }
+  }
+});
+
+test('cross-row adjacent curves have enough width when both endpoint columns contain other cards', () => {
+  const graph = diagramModule.buildTopicConnectionDiagram([
+    ...['0', '1', '2'].flatMap((index) => [
+      diagramRule('Root', 'CARD', `A${index}`, 'CARD'),
+      diagramRule(`A${index}`, 'CARD', `B${index}`, 'CARD'),
+      diagramRule(`B${index}`, 'CARD', 'End', 'CARD'),
+    ]),
+    diagramRule('A0', 'CARD', 'B2', 'CARD'),
+    diagramRule('A2', 'CARD', 'B0', 'CARD'),
+  ]);
+  for (const edge of graph.edges.filter(
+    (edge) =>
+      edge.source.title.startsWith('A') && edge.source.title.slice(1) !== edge.target.title.slice(1)
+  )) {
+    const points = sampleDiagramPath(edge.path);
+    const slopes = points
+      .slice(1)
+      .map(([x, y], index) => Math.abs((y - points[index][1]) / (x - points[index][0])));
+    assert.ok(
+      Math.max(...slopes) < 3,
+      'cross-row curves must not compress into almost vertical segments'
+    );
+  }
+});
+
+test('long skip connections follow local gaps instead of detouring below all surrounding cards', () => {
+  const graph = diagramModule.buildTopicConnectionDiagram([
+    ...['0', '1', '2'].flatMap((index) => [
+      diagramRule('Root', 'CARD', `A${index}`, 'CARD'),
+      diagramRule(`A${index}`, 'CARD', `M${index}`, 'CARD'),
+      diagramRule(`M${index}`, 'CARD', `B${index}`, 'CARD'),
+      diagramRule(`B${index}`, 'CARD', 'End', 'CARD'),
+    ]),
+    ...['ROW', 'COLUMN', 'SUBNOTE', 'PARAGRAPH'].flatMap((kind) => [
+      diagramRule('A0', kind, 'M0', 'CARD'),
+      diagramRule('M2', 'CARD', 'B2', kind),
+    ]),
+    diagramRule('A0', 'PARAGRAPH', 'B2', 'PARAGRAPH'),
+    diagramRule('B0', 'CARD', 'A2', 'CARD'),
+  ]);
+  const edge = graph.edges.find((edge) => edge.source.title === 'A0' && edge.target.title === 'B2');
+  const points = sampleDiagramPath(edge.path);
+  assert.ok(points.every(([, y]) => y <= Math.max(points[0][1], points.at(-1)[1]) + 12));
+  for (const [x, y] of points) {
+    for (const obstacle of graph.nodes) {
+      if ([edge.source.title, edge.target.title].includes(obstacle.title)) continue;
+      assert.ok(
+        x <= obstacle.x ||
+          x >= obstacle.x + obstacle.width ||
+          y <= obstacle.y ||
+          y >= obstacle.y + obstacle.height,
+        `local corridor intersects ${obstacle.title}`
+      );
+    }
+  }
 });
 
 test('diagram preserves a same-title relationship between different note and board roles', () => {
@@ -818,9 +1430,9 @@ test('diagram preserves cycles, reverse and skip connections with stable nonover
   for (const edge of graph.edges) {
     assert.ok(!edge.path.includes('NaN'));
     assert.ok(edge.label.includes(' → '));
-    assert.ok(
-      edge.arrow.startsWith(`${edge.target.x - 4},${edge.target.y + edge.target.height / 2}`)
-    );
+    const tx =
+      edge.source.x >= edge.target.x ? edge.target.x + edge.target.width + 4 : edge.target.x - 4;
+    assert.ok(edge.arrow.startsWith(`${tx},${edge.target.y + edge.target.height / 2}`));
   }
 });
 

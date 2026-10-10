@@ -37,14 +37,17 @@ const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
     a: HTMLAnchorElement,
     mapping: T,
     noteLink: NonNullable<ReturnType<typeof urlToNoteLink>>
-  ) => void
+  ) => void,
+  baseNoteTitle?: string
 ) => {
   if (!html) return { hasMatch: false, processedHtml: html };
 
-  // 1차 필터링: 원본 문자열에 대상 이름이 아예 포함되지 않았다면 조기 종료
-  const mightHaveLink = mappings.some(
-    (m) => html.includes(m.oldTitle) || html.includes(encodeURIComponent(m.oldTitle))
-  );
+  // 1차 필터링: 대상 이름이나 마크다운 파일 링크가 없으면 조기 종료
+  const mightHaveLink =
+    /\.(md|markdown)(?:[?#"'\s>]|$)/i.test(html) ||
+    mappings.some(
+      (m) => html.includes(m.oldTitle) || html.includes(encodeURIComponent(m.oldTitle))
+    );
   if (!mightHaveLink) return { hasMatch: false, processedHtml: html };
 
   const parser = new DOMParser();
@@ -55,8 +58,7 @@ const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
   for (let i = 0; i < links.length; i++) {
     try {
       const a = links[i];
-      const absoluteUrl = a.href;
-      const noteLink = urlToNoteLink(absoluteUrl);
+      const noteLink = urlToNoteLink(a.getAttribute('href') || a.href, baseNoteTitle);
 
       if (!noteLink) continue;
 
@@ -99,7 +101,8 @@ const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
 export const replaceBacklinks = (
   html: string,
   mappings: { oldTitle: string; newTitle: string }[],
-  targetParagraph?: string
+  targetParagraph?: string,
+  baseNoteTitle?: string
 ) => {
   const { hasMatch, processedHtml } = checkAndProcessBacklinks(
     html,
@@ -109,7 +112,7 @@ export const replaceBacklinks = (
       let newUrlTitle = noteLink.title;
       let newInnerText = a.textContent || '';
 
-      const parsedUrl = new URL(a.href);
+      const parsedUrl = new URL(a.getAttribute('href') || a.href, location.href);
 
       if (targetParagraph) {
         newUrlTitle = mapping.newTitle;
@@ -134,7 +137,8 @@ export const replaceBacklinks = (
       }
 
       a.textContent = newInnerText;
-    }
+    },
+    baseNoteTitle
   );
 
   return hasMatch ? processedHtml : html;
@@ -299,7 +303,8 @@ export const MovePageScreen: React.FC = () => {
 
     return pages.filter((p) => {
       if (!p.description) return false;
-      return checkAndProcessBacklinks(p.description, mappings, paragraph).hasMatch;
+      return checkAndProcessBacklinks(p.description, mappings, paragraph, undefined, p.title)
+        .hasMatch;
     });
   }, [pages, title, subNotes, includeSubNotes, paragraph]);
 
@@ -426,7 +431,12 @@ export const MovePageScreen: React.FC = () => {
       // 이미 이동될 목록 내의 내용들도 치환 처리
       data.forEach((item) => {
         if ('newDescription' in item && item.newDescription) {
-          item.newDescription = replaceBacklinks(item.newDescription, mappings, paragraph);
+          item.newDescription = replaceBacklinks(
+            item.newDescription,
+            mappings,
+            paragraph,
+            paragraph ? title : item.title
+          );
         }
       });
 
@@ -440,7 +450,7 @@ export const MovePageScreen: React.FC = () => {
         if (handledTitles.has(p.title)) return;
         if (!p.description) return;
 
-        const newDesc = replaceBacklinks(p.description, mappings, paragraph);
+        const newDesc = replaceBacklinks(p.description, mappings, paragraph, p.title);
         if (newDesc !== p.description) {
           data.push({
             renderType: 'diff',

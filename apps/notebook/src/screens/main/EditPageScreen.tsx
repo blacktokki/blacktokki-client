@@ -74,6 +74,25 @@ const useUnsaveEffect = (
   }, []);
 };
 
+function noteLinkToUrl(noteLink: ReturnType<typeof toNoteParams>, sourceTitle: string) {
+  const source = sourceTitle.split('/').slice(0, -1);
+  const target = noteLink.title.split('/');
+  while (
+    source.length &&
+    target.length > 1 &&
+    source[0].normalize('NFC') === target[0].normalize('NFC')
+  ) {
+    source.shift();
+    target.shift();
+  }
+  return (
+    [...source.map(() => '..'), ...target].map(encodeURIComponent).join('/') +
+    '.md' +
+    (noteLink.section ? '?section=' + encodeURIComponent(noteLink.section) : '') +
+    (noteLink.paragraph ? '#' + encodeURIComponent(noteLink.paragraph) : '')
+  );
+}
+
 export const EditPageSection = ({
   title,
   content,
@@ -109,9 +128,9 @@ export const EditPageSection = ({
         theme={colorScheme}
         pasteAutocomplete={(text) => {
           try {
-            const noteLink = urlToNoteLink(text);
+            const noteLink = urlToNoteLink(text, title);
             if (noteLink) {
-              return `<a href=${text}>${
+              return `<a href="${noteLinkToUrl(noteLink, title)}">${
                 noteLink.title + (noteLink.paragraph ? ` > ${noteLink.paragraph}` : '')
               }</a>`;
             }
@@ -136,16 +155,10 @@ export const EditPageSection = ({
                     : v.type === '_CHILDNOTE'
                     ? `(${v.title})`
                     : '';
-                const params = new URLSearchParams();
-                params.append('title', v.title);
-                let hash = '';
-                if (v.type === '_NOTELINK' && v.paragraph) {
-                  hash = `#${encodeURIComponent(v.paragraph)}`;
-                }
-                const url = `?${params.toString()}${hash}`;
+                const url = noteLinkToUrl(v, title);
                 return {
                   text: name + description,
-                  value: `<a href=${url}>${name}</a>`,
+                  value: `<a href="${url}">${name}</a>`,
                 };
               });
             },

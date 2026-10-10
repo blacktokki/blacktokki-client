@@ -84,7 +84,20 @@ export interface PrecomputedFocusPull {
 
 export interface ForceSimulationContext {
   simNodes: SimNode[];
-  pairMinDist: Float32Array;
+  collisionFlags: Uint8Array;
+  rootIndices: Int32Array;
+  collisionDistances: Float32Array;
+  hasBoardRoots: boolean;
+  repulsionCellSize: number;
+  spatialCells: Map<number, Map<number, { start: number; end: number }>>;
+  spatialOrder: Int32Array;
+  candidateCellRanges: Int32Array;
+  positionX: Float64Array;
+  positionY: Float64Array;
+  velocityX: Float64Array;
+  velocityY: Float64Array;
+  repulsionCursor: number | null;
+  pendingAlpha: number;
   precomputedEdges: PrecomputedEdge[];
   precomputedRootPulls: PrecomputedRootPull[];
   precomputedRootAnchors: PrecomputedRootAnchor[];
@@ -109,6 +122,104 @@ export interface ForceSimulationContext {
   spacingScale: number;
   nodeCount: number;
 }
+
+const COLLISION_CLASS = 1;
+const COLLISION_ROOT = 2;
+const COLLISION_FOCUSED = 4;
+const SPATIAL_INDEX_THRESHOLD = 128;
+
+/** Compute the existing class/root collision rules only for nearby pairs. */
+const getPairMinDistance = (context: ForceSimulationContext, i: number, j: number): number => {
+  const { collisionFlags, collisionDistances, rootIndices, hasBoardRoots } = context;
+  const left = collisionFlags[i];
+  const right = collisionFlags[j];
+  if (hasBoardRoots && (left | right) & COLLISION_ROOT && !((left | right) & COLLISION_FOCUSED)) {
+    if (left & right & COLLISION_ROOT) return collisionDistances[3];
+    if (
+      (left & COLLISION_ROOT && rootIndices[j] >= 0 && rootIndices[j] !== i) ||
+      (right & COLLISION_ROOT && rootIndices[i] >= 0 && rootIndices[i] !== j)
+    ) {
+      return collisionDistances[2];
+    }
+  }
+  return collisionDistances[(left | right) & COLLISION_CLASS ? 1 : 0];
+};
+
+/** Pack cell members in ascending node order into a reusable contiguous buffer. */
+const indexNearbyNodes = (context: ForceSimulationContext): void => {
+  const { simNodes, spatialCells, spatialOrder, repulsionCellSize, positionX, positionY } = context;
+  spatialCells.clear();
+  for (let i = 0; i < simNodes.length; i++) {
+    const node = simNodes[i];
+    if (node === context.noteClassNode || node === context.externalClassNode) continue;
+    const x = Math.floor(positionX[i] / repulsionCellSize);
+    const y = Math.floor(positionY[i] / repulsionCellSize);
+    let column = spatialCells.get(x);
+    if (!column) {
+      column = new Map();
+      spatialCells.set(x, column);
+    }
+    let cell = column.get(y);
+    if (!cell) {
+      cell = { start: 0, end: 0 };
+      column.set(y, cell);
+    }
+    cell.end++;
+  }
+  let offset = 0;
+  for (const column of spatialCells.values()) {
+    for (const cell of column.values()) {
+      const count = cell.end;
+      cell.start = offset;
+      cell.end = offset;
+      offset += count;
+    }
+  }
+  for (let i = 0; i < simNodes.length; i++) {
+    const node = simNodes[i];
+    if (node === context.noteClassNode || node === context.externalClassNode) continue;
+    const x = Math.floor(positionX[i] / repulsionCellSize);
+    const y = Math.floor(positionY[i] / repulsionCellSize);
+    const cell = spatialCells.get(x)!.get(y)!;
+    spatialOrder[cell.end++] = i;
+  }
+};
+
+/** Binary-search each nearby cell so already processed pairs are never scanned again. */
+const collectNearbyIndices = (context: ForceSimulationContext, i: number): number => {
+  const {
+    positionX,
+    positionY,
+    spatialCells,
+    spatialOrder,
+    repulsionCellSize,
+    candidateCellRanges,
+  } = context;
+  let count = 0;
+  const x = Math.floor(positionX[i] / repulsionCellSize);
+  const y = Math.floor(positionY[i] / repulsionCellSize);
+  for (let dx = -1; dx <= 1; dx++) {
+    const column = spatialCells.get(x + dx);
+    if (!column) continue;
+    for (let dy = -1; dy <= 1; dy++) {
+      const cell = column.get(y + dy);
+      if (!cell) continue;
+      let start = cell.start;
+      let end = cell.end;
+      while (start < end) {
+        const middle = (start + end) >>> 1;
+        if (spatialOrder[middle] <= i) start = middle + 1;
+        else end = middle;
+      }
+      if (start < cell.end) {
+        candidateCellRanges[count * 2] = start;
+        candidateCellRanges[count * 2 + 1] = cell.end;
+        count++;
+      }
+    }
+  }
+  return count;
+};
 
 const append = <T>(map: Map<string, T[]>, key: string, value: T) => {
   const values = map.get(key) || [];
@@ -548,13 +659,36 @@ export const initForceSimulation = (
 
   const simNodes: SimNode[] = nodes.map((node) => {
     const pos = existingPosMap.get(node.id) || { x: cx, y: cy };
-    return {
-      ...node,
-      x: node.x !== 0 ? node.x : pos.x,
-      y: node.y !== 0 ? node.y : pos.y,
-      vx: 0,
-      vy: 0,
-    };
+    const result = Object.assign(
+      {
+        // Keep a stable property layout across all node kinds in simulation and rendering.
+        id: node.id,
+        name: node.name,
+        role: node.role,
+        instanceKind: node.instanceKind,
+        classKind: node.classKind,
+        classCategory: node.classCategory,
+        boardTitle: node.boardTitle,
+        noteTitle: node.noteTitle,
+        paragraph: node.paragraph,
+        paragraphOccurrences: node.paragraphOccurrences,
+        description: node.description,
+        properties: node.properties,
+        x: node.x,
+        y: node.y,
+        vx: 0,
+        vy: 0,
+        radius: node.radius,
+        color: node.color,
+        strokeColor: node.strokeColor,
+      },
+      node
+    );
+    result.x = node.x !== 0 ? node.x : pos.x;
+    result.y = node.y !== 0 ? node.y : pos.y;
+    result.vx = 0;
+    result.vy = 0;
+    return result;
   });
 
   const nodeMap = new Map<string, SimNode>();
@@ -598,44 +732,18 @@ export const initForceSimulation = (
   const maxVelocity = baseMaxVelocity * spacingScale;
   const { minDistance, edgeLength } = DEFAULT_LAYOUT_CONFIG;
 
-  const pairCount = (nodeCount * (nodeCount - 1)) / 2;
-  const pairMinDist = new Float32Array(pairCount);
-  let pairIdx = 0;
   const rootIdSet = new Set(classRootDistances.rootIds);
-  const boardRootSet = new Set(boardRootIds);
-  const noteRootSet = new Set(noteRootIds);
-  const isFocusing = (id1: string, id2: string) =>
-    focusedNodeIds ? focusedNodeIds.has(id1) || focusedNodeIds.has(id2) : false;
-
+  const nodeIndex = new Map(simNodes.map((node, index) => [node.id, index]));
+  const collisionFlags = new Uint8Array(nodeCount);
+  const rootIndices = new Int32Array(nodeCount);
   for (let i = 0; i < nodeCount; i++) {
-    const n1 = simNodes[i];
-    const n1Root = classRootDistances.rootByNodeId.get(n1.id);
-    for (let j = i + 1; j < nodeCount; j++) {
-      const n2 = simNodes[j];
-      const n2Root = classRootDistances.rootByNodeId.get(n2.id);
-
-      const isBothRoots = rootIdSet.has(n1.id) && rootIdSet.has(n2.id);
-      const isBoardRelated =
-        boardRootSet.has(n1.id) ||
-        boardRootSet.has(n2.id) ||
-        (boardRootIds.length > 0 && noteRootSet.has(n1.id) && noteRootSet.has(n2.id));
-
-      let baseMinDist: number;
-      if (isBothRoots && isBoardRelated && !isFocusing(n1.id, n2.id)) {
-        baseMinDist = 500;
-      } else if (
-        boardRootIds.length > 0 &&
-        !isFocusing(n1.id, n2.id) &&
-        ((rootIdSet.has(n1.id) && n2Root && n2Root !== n1.id) ||
-          (rootIdSet.has(n2.id) && n1Root && n1Root !== n2.id))
-      ) {
-        baseMinDist = 280;
-      } else {
-        const hasClass = n1.role === 'CLASS' || n2.role === 'CLASS';
-        baseMinDist = hasClass ? minDistance.classNode : minDistance.instanceNode;
-      }
-      pairMinDist[pairIdx++] = baseMinDist * spacingScale;
-    }
+    const node = simNodes[i];
+    collisionFlags[i] =
+      (node.role === 'CLASS' ? COLLISION_CLASS : 0) |
+      (rootIdSet.has(node.id) ? COLLISION_ROOT : 0) |
+      (focusedNodeIds?.has(node.id) ? COLLISION_FOCUSED : 0);
+    const rootId = classRootDistances.rootByNodeId.get(node.id);
+    rootIndices[i] = rootId ? nodeIndex.get(rootId) ?? -1 : -1;
   }
 
   const precomputedEdges: PrecomputedEdge[] = [];
@@ -702,7 +810,24 @@ export const initForceSimulation = (
   });
   const context: ForceSimulationContext = {
     simNodes,
-    pairMinDist,
+    collisionFlags,
+    rootIndices,
+    collisionDistances: new Float32Array(
+      [minDistance.instanceNode, minDistance.classNode, 280, 500].map(
+        (distance) => distance * spacingScale
+      )
+    ),
+    hasBoardRoots: boardRootIds.length > 0,
+    repulsionCellSize: maxRepulseDist,
+    spatialCells: new Map(),
+    spatialOrder: new Int32Array(nodeCount),
+    candidateCellRanges: new Int32Array(18),
+    positionX: new Float64Array(nodeCount),
+    positionY: new Float64Array(nodeCount),
+    velocityX: new Float64Array(nodeCount),
+    velocityY: new Float64Array(nodeCount),
+    repulsionCursor: null,
+    pendingAlpha: 1,
     precomputedEdges,
     precomputedRootPulls,
     precomputedRootAnchors,
@@ -739,6 +864,12 @@ export const setSimulationFocus = (
   focusDepth?: number,
   focusedNodeIds?: Set<string> | null
 ): void => {
+  context.repulsionCursor = null;
+  for (let i = 0; i < context.nodeCount; i++) {
+    context.collisionFlags[i] =
+      (context.collisionFlags[i] & ~COLLISION_FOCUSED) |
+      (focusedNodeIds?.has(context.simNodes[i].id) ? COLLISION_FOCUSED : 0);
+  }
   context.precomputedFocusPulls = [];
   context.focusedNodeIds = new Set();
   if (!selectedNodeId || (focusDepth !== 1 && focusDepth !== 2) || !focusedNodeIds) return;
@@ -773,15 +904,24 @@ export const setSimulationFocus = (
 };
 
 /**
- * 프레임 단위 물리 시뮬레이션 1스텝 실행
+ * 시간 예산을 기준으로 물리 계산을 나누고, 완료 시에만 노드 좌표를 반영합니다.
  * @param context 시뮬레이션 상태 컨텍스트
  * @param alpha 쿨링 계수 (1.0 -> 0.05)
- * @returns 이번 스텝에서의 최대 노드 이동 거리 (수렴 감지용)
+ * @param budgetMs 반발력 계산의 양보 기준 시간. 마지막 좌표 갱신은 한 번에 완료합니다.
+ * @returns 완료된 스텝의 최대 이동 거리 또는 다음 프레임에서 이어갈 경우 null
  */
-export const stepForceSimulation = (context: ForceSimulationContext, alpha: number): number => {
+export const advanceForceSimulation = (
+  context: ForceSimulationContext,
+  alpha: number,
+  budgetMs: number
+): number | null => {
+  const deadline = Number.isFinite(budgetMs) ? performance.now() + Math.max(0, budgetMs) : Infinity;
   const {
     simNodes,
-    pairMinDist,
+    positionX,
+    positionY,
+    velocityX,
+    velocityY,
     precomputedEdges,
     precomputedRootPulls,
     precomputedRootAnchors,
@@ -807,64 +947,87 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
 
   if (nodeCount === 0) return 0;
 
-  let pIdx = 0;
-  for (let i = 0; i < nodeCount; i++) {
+  const useSpatialIndex = nodeCount >= SPATIAL_INDEX_THRESHOLD;
+  if (context.repulsionCursor === null) {
+    context.pendingAlpha = alpha;
+    // Use contiguous numeric buffers in the hot pair loop; nodes retain their public shape.
+    for (let i = 0; i < nodeCount; i++) {
+      const node = simNodes[i];
+      positionX[i] = node.x;
+      positionY[i] = node.y;
+      velocityX[i] = node.vx;
+      velocityY[i] = node.vy;
+    }
+    if (useSpatialIndex) indexNearbyNodes(context);
+    context.repulsionCursor = 0;
+  }
+  for (let i = context.repulsionCursor; i < nodeCount; i++) {
     const n1 = simNodes[i];
-    const x1 = n1.x;
-    const y1 = n1.y;
-    let vx1 = n1.vx;
-    let vy1 = n1.vy;
+    if (n1 === externalClassNode || n1 === noteClassNode) continue;
+    const x1 = positionX[i];
+    const y1 = positionY[i];
+    let vx1 = velocityX[i];
+    let vy1 = velocityY[i];
 
-    for (let j = i + 1; j < nodeCount; j++) {
-      const curIdx = pIdx++;
-      const n2 = simNodes[j];
-      if (
-        n1 === externalClassNode ||
-        n2 === externalClassNode ||
-        n1 === noteClassNode ||
-        n2 === noteClassNode
-      ) {
-        continue;
+    const cellCount = useSpatialIndex ? collectNearbyIndices(context, i) : 1;
+    for (let cell = 0; cell < cellCount; cell++) {
+      const start = useSpatialIndex ? context.candidateCellRanges[cell * 2] : i + 1;
+      const end = useSpatialIndex ? context.candidateCellRanges[cell * 2 + 1] : nodeCount;
+      for (let index = start; index < end; index++) {
+        const j = useSpatialIndex ? context.spatialOrder[index] : index;
+        if (!useSpatialIndex) {
+          const n2 = simNodes[j];
+          if (n2 === externalClassNode || n2 === noteClassNode) continue;
+        }
+        let dx = x1 - positionX[j];
+        let dy = y1 - positionY[j];
+        let distSq = dx * dx + dy * dy;
+        if (distSq > maxRepulseDistSq) continue;
+
+        const minDist = getPairMinDistance(context, i, j);
+        if (distSq >= minDist * minDist && distSq >= 625) {
+          const forceScale = kRepulse / distSq;
+          const fx = dx * forceScale;
+          const fy = dy * forceScale;
+          vx1 += fx;
+          vy1 += fy;
+          velocityX[j] -= fx;
+          velocityY[j] -= fy;
+          continue;
+        }
+        if (distSq < 1) {
+          const pseudoAngle = ((i * 31 + j * 17) % 628) / 100;
+          dx = Math.cos(pseudoAngle) * 2;
+          dy = Math.sin(pseudoAngle) * 2;
+          distSq = dx * dx + dy * dy + 1;
+        }
+
+        const dist = Math.sqrt(distSq);
+        const invDist = 1 / dist;
+        const overlap = Math.max(0, minDist - dist);
+        const forceScale =
+          (kRepulse * (dist < 25 ? 0.04 : invDist) + overlap * (collisionForce + 0.3)) * invDist;
+        const fx = dx * forceScale;
+        const fy = dy * forceScale;
+
+        vx1 += fx;
+        vy1 += fy;
+        velocityX[j] -= fx;
+        velocityY[j] -= fy;
       }
-      let dx = x1 - n2.x;
-      let dy = y1 - n2.y;
-      let distSq = dx * dx + dy * dy;
-      if (distSq > maxRepulseDistSq) continue;
-
-      const minDist = pairMinDist[curIdx];
-      if (distSq < 1) {
-        const pseudoAngle = ((i * 31 + j * 17) % 628) / 100;
-        dx = Math.cos(pseudoAngle) * 2;
-        dy = Math.sin(pseudoAngle) * 2;
-        distSq = dx * dx + dy * dy + 1;
-      }
-
-      const dist = Math.sqrt(distSq);
-      const invDist = 1 / dist;
-      let repulsion = kRepulse * (dist < 25 ? 0.04 : invDist);
-
-      if (dist < minDist) {
-        const overlap = (minDist - dist) * collisionForce;
-        const ox = dx * invDist * overlap;
-        const oy = dy * invDist * overlap;
-        vx1 += ox;
-        vy1 += oy;
-        n2.vx -= ox;
-        n2.vy -= oy;
-        repulsion += (minDist - dist) * 0.3;
-      }
-
-      const fx = dx * invDist * repulsion;
-      const fy = dy * invDist * repulsion;
-
-      vx1 += fx;
-      vy1 += fy;
-      n2.vx -= fx;
-      n2.vy -= fy;
     }
 
-    n1.vx = vx1;
-    n1.vy = vy1;
+    velocityX[i] = vx1;
+    velocityY[i] = vy1;
+    context.repulsionCursor = i + 1;
+    if (deadline !== Infinity && i + 1 < nodeCount && i % 8 === 0 && performance.now() >= deadline)
+      return null;
+  }
+  const stepAlpha = context.pendingAlpha;
+  context.repulsionCursor = null;
+  for (let i = 0; i < nodeCount; i++) {
+    simNodes[i].vx = velocityX[i];
+    simNodes[i].vy = velocityY[i];
   }
 
   for (let eIdx = 0; eIdx < precomputedEdges.length; eIdx++) {
@@ -931,8 +1094,8 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
       node.vy = (node.vy / vel) * maxVelocity;
     }
 
-    const moveX = node.vx * alpha;
-    const moveY = node.vy * alpha;
+    const moveX = node.vx * stepAlpha;
+    const moveY = node.vy * stepAlpha;
     node.x += moveX;
     node.y += moveY;
 
@@ -954,3 +1117,7 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
 
   return maxMovement;
 };
+
+/** Run one complete step for callers that do not need to yield between frames. */
+export const stepForceSimulation = (context: ForceSimulationContext, alpha: number): number =>
+  advanceForceSimulation(context, alpha, Infinity) ?? 0;

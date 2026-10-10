@@ -45,12 +45,14 @@
 * Displays the note title, content, and structured section list.
 * The section list is auto-generated from headings (H1–H6); clicking a section jumps to its position.
 * Use top buttons to edit the note, rearrange sections, or view edit history.
+* Clicking a URL-encoded relative file link such as `[Document](../folder/Document%20Title.md)` opens the target document relative to the current note's folder.
 
 ### ✏️ Note Editing
 
 * A flexible editor that supports both markdown and WYSIWYG (visual) modes.
 * Allows free editing with automatic or manual saving.
 * Internal and external link autocompletion is supported.
+* `[` autocomplete and pasting internal links generate URL-encoded relative `.md` links from the current note, preserving paragraph and section information.
 
 ### 🗂 Recent Notes
 
@@ -64,6 +66,7 @@
 You can adjust the app's complexity and features across 3 levels according to your workflow and purpose.
 * **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
 * **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Mode Settings`. If no notebook mode has been created, selecting Notebook Mode will automatically open the modal to create a new notebook.
+* Refreshing in local mode restores the last selected usage mode and notebook. Deleted notebooks and locked private notebooks return to Note Mode.
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
@@ -104,6 +107,7 @@ An environment where you can organize the app's features into distinct 'Notebook
   * Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
   * Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
   * In **Scrum Boards**, **Rows** are automatically generated based on the level immediately above the card's header (Header Level - 1). This enables a more multi-dimensional organization of cards.
+  * Scrum items in the board list and topic dashboard overview display note, named row, and card counts. Rows with the same title are counted once, and the unnamed default row is excluded.
   * Cards can be **dragged and dropped** to another column.
   * When a card is moved, its corresponding section is **physically moved** to the target note.
   * Single-clicking (tapping) a card navigates to the note view screen, while double-clicking (double-tapping) opens the editing screen.
@@ -163,7 +167,7 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 * Move entire notes or specific sections to a different title or location to reorganize your knowledge structure.
 * **Move sub-notes**: When moving a parent note, you can choose to seamlessly move all of its nested sub-notes together.
-* **Update backlinks**: Automatically find and update all internal links pointing to the moved note or section across all your other notes, preventing broken links.
+* **Update backlinks**: Automatically find and update all internal links pointing to the moved note or section across all your other notes, preventing broken links. Relative `.md` and `.markdown` links are also found and updated using the folder of the note containing each link.
 * **Preview changes**: Safely preview the structural changes and text diffs before confirming the move. If the target note already exists, you will be warned and can choose to overwrite.
 
 ### 💾 Storage Options and Account Sync
@@ -244,8 +248,13 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 ### 🕸️ Knowledge Graph
 
+Local notebooks read file contents on each refresh and compare checksums, reusing conversions of unchanged files to speed up repeated loading of large folders. The knowledge graph and topic dashboard share note paragraph analysis. On an active screen, notes and boards refresh every 30 seconds; external edits, additions, renames and deletions appear on the next read, including edits that preserve both the file modification time and byte size.
+
+Large graphs update their layout incrementally and animate between layout steps so you can keep panning and zooming while nodes settle. During movement, the canvas temporarily uses a lower resolution, tiny nodes appear as points, and relationship decorations are simplified. All nodes and relationships remain available; selected, hovered, and warning nodes retain their detailed indicators. The original resolution, node shapes, and relationship decorations return after movement stops. Edge highlights then start on large graphs.
+
 Visualizes relationships among notes, boards, paragraphs, cards, and external links as a knowledge graph, providing relation exploration and graph validation.
 
+* **Internal Links**: Relative `.md` and `.markdown` links are resolved from the source note's folder to display note and paragraph references. Directly referenced empty notes are also included in the graph.
 * **Knowledge Graph Access & Validation Badge**:
   * Open the feature from the **Knowledge Graph** item in the Drawer or Discovery menu.
   * A badge (`CountBadge`) on the menu button displays the number of detected graph validation issues (referential integrity and isolated entity violations).
@@ -286,9 +295,13 @@ Visualizes relationships among notes, boards, paragraphs, cards, and external li
 * **Dashboard Metrics & View Switching**:
   * Top KPI cards provide instant metrics for total topics, total cards, and Kanban/Scrum distribution.
   * **Overview**: Browse topic boards using clean board item cards identical to the board list screen, complete with note and card metrics, and jump directly to any board summary.
-  * **Connection Rules**: All connections in the relationship diagram use curves. Reverse connections, cycles, and connections that skip intermediate boards are routed above the cards.
+  * **Connection Rules**: All connections in the relationship diagram bend smoothly from start to finish. Adjacent cards connect through the facing sides, while cycles and connections that skip intermediate boards curve throughout their routes to avoid other cards. When cards are stacked above and below each other, extra space is reserved for curves to follow the gaps between cards. Columns are spaced farther apart for connections with large height differences to keep their curves gradual.
   * **Board Summary**: Displays detailed metadata, column chips, row tags, and card previews for the selected board, with quick access to open the full board view.
   * **Board View**: Visualizes cards in a 2D Kanban or Scrum matrix; dragging a card to another column or row atomically updates the underlying markdown notes.
+* **Connection Rules**: Relative `.md` and `.markdown` internal links are resolved from the source note's folder, including paragraph and section information when analyzing connections.
+  * The relationship visualization uses its actual content size while limiting its height to the available screen space. On the web, horizontal and vertical scrollbars stay at the bottom and right edges of the visible area, without scrolling to the far right or down the page.
+  * Use **− / +** to zoom between 1% and 200%, click the current percentage to restore 100%, or select **Fit** to shrink the graph to the visible area. Cards, arrows, and scroll extents scale together, while card filter selections are preserved.
+  * Independent relationships share a row when space is available to reduce empty space. Arrows between adjacent cards connect directly through the facing sides, and connections within a card make short turns beside it. Arrows crossing multiple columns use nearby routes that avoid other cards.
 * **Save as Board & Batch Move**:
   * Path-based candidates can be saved as explicit, permanent boards using the `[Save as Board]` button.
   * For top-level note topics without a common parent path, the `[Save as Board]` button opens the batch move screen (`TopicBatchMoveScreen`) to group child notes under the default board title (`Board(note titles,...)`) while simultaneously configuring board conversion (Kanban/Scrum) and creating the actual board entity.

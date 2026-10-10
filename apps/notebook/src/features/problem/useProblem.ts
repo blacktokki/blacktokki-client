@@ -73,9 +73,18 @@ const getReadabilityLevel = (() => {
 
 const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
 
-export const matchUnlinkedKeyword = (text: string, keyword: string) => {
-  const escpaedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return text.match(new RegExp(`(?:^|[\\s\\p{P}])${escpaedKeyword}(?=$|[\\s\\p{P}])`, 'iu'));
+export const matchUnlinkedKeyword = (
+  text: string,
+  keyword: string,
+  patterns?: Map<string, RegExp>
+) => {
+  let pattern = patterns?.get(keyword);
+  if (!pattern) {
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    pattern = new RegExp(`(?:^|[\\s\\p{P}])${escapedKeyword}(?=$|[\\s\\p{P}])`, 'iu');
+    patterns?.set(keyword, pattern);
+  }
+  return text.match(pattern);
 };
 
 export type ProblemItem = [string, string | undefined, string]; // title, path, subtitle
@@ -375,20 +384,127 @@ export const getData = (
   return records;
 };
 
-export default (delay?: number) => {
+/** Graph validation needs reference integrity and isolation, without the all-note keyword matrix. */
+export const getValidationData = (pages: Content[], boards: Content[]) => {
+  const pageByTitle = new Map(pages.map((page) => [page.title, page]));
+  const boardTitles = new Set(boards.map((board) => board.title));
+  const linksByTitle = new Map(
+    pages.map((page) => [
+      page.title,
+      getLinks([page], true).filter((link) => link.type === '_NOTELINK'),
+    ])
+  );
+  const referencedTitles = new Set<string>();
+  for (const page of pages) {
+    if (page.description) {
+      for (const link of linksByTitle.get(page.title) ?? []) {
+        if (link.title !== page.title) referencedTitles.add(link.title);
+      }
+    }
+  }
+  const paragraphCache = new Map<string, ReturnType<typeof parseHtmlToParagraphs>>();
+  const records: { title: string; paragraph?: string; subtitles: string[] }[] = [];
+  const recordsByTitle = new Map<string, (typeof records)[number]>();
+  const addSubtitles = (title: string, subtitles: string[]) => {
+    if (subtitles.length === 0) return;
+    let record = recordsByTitle.get(title);
+    if (!record) {
+      record = { title, subtitles: [] };
+      recordsByTitle.set(title, record);
+      records.push(record);
+    }
+    record.subtitles.push(...subtitles);
+  };
+  for (const page of pages) {
+    const subtitles: string[] = [];
+    const links = linksByTitle.get(page.title) ?? [];
+    const splitTitle = getSplitTitle(page.title);
+    const parentTitle = page.description && splitTitle.length === 2 ? splitTitle[0] : undefined;
+    const missingTargetCounts = new Map<string, number>();
+    for (const link of links) {
+      if (!pageByTitle.has(link.title) && !boardTitles.has(link.title)) {
+        missingTargetCounts.set(link.title, (missingTargetCounts.get(link.title) ?? 0) + 1);
+      }
+    }
+    if (parentTitle && !pageByTitle.has(parentTitle) && !boardTitles.has(parentTitle)) {
+      missingTargetCounts.set(parentTitle, (missingTargetCounts.get(parentTitle) ?? 0) + 1);
+    }
+    for (const link of links) {
+      if (link.title === page.title) continue;
+      const target = pageByTitle.get(link.title);
+      if (!target && boardTitles.has(link.title)) continue;
+      if (!target?.description) {
+        for (
+          let occurrence = 0;
+          occurrence < (missingTargetCounts.get(link.title) ?? 1);
+          occurrence++
+        ) {
+          subtitles.push(`Unknown note link(${titleFormat(link)})`);
+        }
+      } else if (link.paragraph !== undefined) {
+        let paragraphs = paragraphCache.get(target.title);
+        if (!paragraphs) {
+          paragraphs = parseHtmlToParagraphs(target.description);
+          paragraphCache.set(target.title, paragraphs);
+        }
+        if (
+          !paragraphs.some(
+            (paragraph) => paragraph.title === link.paragraph && paragraphByKey(paragraph, link)
+          )
+        ) {
+          subtitles.push(`Unknown paragraph link(${titleFormat(link)})`);
+        }
+      }
+    }
+    if (
+      parentTitle &&
+      !boardTitles.has(parentTitle) &&
+      !pageByTitle.get(parentTitle)?.description
+    ) {
+      const parentSubtitles: string[] = [];
+      for (
+        let occurrence = 0;
+        occurrence < (missingTargetCounts.get(parentTitle) ?? 1);
+        occurrence++
+      ) {
+        parentSubtitles.push(`Empty parent note(${parentTitle})`);
+      }
+      addSubtitles(parentTitle, parentSubtitles);
+    }
+    if (
+      !parentTitle &&
+      !referencedTitles.has(page.title) &&
+      toRaw(cleanHtml(page.description || '', true, true, false)).length > 0
+    ) {
+      subtitles.push('Isolated note');
+    }
+    addSubtitles(page.title, subtitles);
+  }
+  return records;
+};
+
+export default (delay?: number, options?: { validationOnly?: boolean }) => {
   const { auth } = useAuthContext();
   const { data: pages = [], isLoading } = useNotePages();
   const { data: boards = [], isLoading: isBoardLoading } = useBoardPages();
   const { notebook } = useUsageMode();
+  const validationOnly = options?.validationOnly === true;
   const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
   useEffect(() => {
     if (isLoading || isBoardLoading) return;
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setData(getData(auth.user?.id || 0, notebook?.id || 0, pages, boards));
+      setData(
+        validationOnly
+          ? getValidationData(pages, boards)
+          : getData(auth.user?.id || 0, notebook?.id || 0, pages, boards)
+      );
       timeoutRef.current = undefined;
     }, delay || 250);
-  }, [pages, boards, auth.user, notebook, isLoading, isBoardLoading]);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [pages, boards, auth.user, notebook, isLoading, isBoardLoading, validationOnly]);
   return { data: data || [], isLoading: isLoading || isBoardLoading || data === undefined };
 };

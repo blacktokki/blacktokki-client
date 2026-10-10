@@ -1,3 +1,4 @@
+const jsYaml = require('js-yaml');
 const assert = require('node:assert/strict');
 const { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const Module = require('node:module');
@@ -5,7 +6,6 @@ const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
 const ts = require('typescript');
-const jsYaml = require('js-yaml');
 
 const output = mkdtempSync(path.join(tmpdir(), 'knowledge-graph-frontmatter-test-'));
 const knowledgeGraphDirectory = path.join(__dirname, '..');
@@ -89,6 +89,14 @@ Module._load = function loadKnowledgeGraphTestDependency(request, parent, isMain
   }
   if (request.endsWith('/components/SearchBar')) {
     return { urlToNoteLink: (url) => state.noteLinkTargets.get(url) };
+  }
+  if (request.endsWith('/inferBoardCandidates')) {
+    const { parseHtmlToParagraphs } = Module._load(
+      '../../components/HeaderSelectBar',
+      parent,
+      isMain
+    );
+    return { getBoardCandidateParagraphs: (note) => parseHtmlToParagraphs(note.description || '') };
   }
   if (request.endsWith('/hooks/useBoardStorage')) {
     return { useBoardPages: () => ({ data: state.boardPages, isLoading: false }) };

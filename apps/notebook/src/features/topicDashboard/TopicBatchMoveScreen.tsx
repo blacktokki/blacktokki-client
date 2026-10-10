@@ -72,7 +72,7 @@ export const TopicBatchMoveScreen: React.FC = () => {
     pages.forEach((p) => {
       if (titlesSet.has(p.title)) return;
       if (!p.description) return;
-      const replaced = replaceBacklinks(p.description, mappings);
+      const replaced = replaceBacklinks(p.description, mappings, undefined, p.title);
       if (replaced !== p.description) {
         count++;
       }
@@ -155,14 +155,19 @@ export const TopicBatchMoveScreen: React.FC = () => {
     if (updateBacklinks && mappings.length > 0) {
       data.forEach((item) => {
         if ('newDescription' in item && item.newDescription) {
-          item.newDescription = replaceBacklinks(item.newDescription, mappings);
+          item.newDescription = replaceBacklinks(
+            item.newDescription,
+            mappings,
+            undefined,
+            item.title
+          );
         }
       });
       const handledTitles = new Set(data.map((d) => d.title));
       pages.forEach((p) => {
         if (handledTitles.has(p.title)) return;
         if (!p.description) return;
-        const newDesc = replaceBacklinks(p.description, mappings);
+        const newDesc = replaceBacklinks(p.description, mappings, undefined, p.title);
         if (newDesc !== p.description) {
           data.push({
             renderType: 'diff',

@@ -7,6 +7,7 @@ import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import {
   SelectionCameraAnimation,
   advanceSelectionCamera,
+  advanceGraphPresentation,
   CanvasRenderOptions,
   centeredViewportForNode,
   drawGraphTraversal,
@@ -17,6 +18,7 @@ import {
   ForceSimulationContext,
   initForceSimulation,
   setSimulationFocus,
+  advanceForceSimulation,
   stepForceSimulation,
 } from '../utils/forceLayout';
 import {
@@ -27,6 +29,11 @@ import {
 } from '../utils/graphTraversal';
 
 const TRAVERSAL_FRAME_INTERVAL_MS = 40;
+const SIMULATION_FRAME_BUDGET_MS = 6;
+const LARGE_GRAPH_NODE_COUNT = 6000;
+const LARGE_SIMULATION_FRAME_BUDGET_MS = 12;
+const MOVING_CANVAS_MAX_WIDTH = 960;
+const MOVING_CANVAS_MAX_HEIGHT = 540;
 
 export interface KnowledgeGraphCanvasViewProps {
   nodes: KnowledgeGraphNode[];
@@ -76,6 +83,11 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   const hoveredNodeIdRef = useRef<string | null>(null);
 
   const simContextRef = useRef<ForceSimulationContext | null>(null);
+  const presentationRef = useRef<{
+    nodes: KnowledgeGraphNode[];
+    lastTime: number;
+    moving: boolean;
+  } | null>(null);
   const simAlphaRef = useRef<number>(1.0);
   const isSimulatingRef = useRef<boolean>(true);
   const animFrameIdRef = useRef<number | null>(null);
@@ -88,6 +100,8 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   const animateEdgesRef = useRef(animateEdges);
   animateEdgesRef.current = animateEdges;
   const reducedMotionRef = useRef(false);
+  const viewportDirtyRef = useRef(false);
+  const traversalPausedForLayoutRef = useRef(false);
 
   const isDraggingRef = useRef<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number; panX: number; panY: number }>({
@@ -137,6 +151,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   onViewportChangeRef.current = onViewportChange;
 
   const notifyViewport = useCallback(() => {
+    viewportDirtyRef.current = true;
     onViewportChange?.({ ...viewportRef.current });
   }, [onViewportChange]);
 
@@ -146,9 +161,19 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   const drawTraversal = useCallback(
     (timestamp: number) => {
       const traversal = traversalRef.current;
+      const pausedForLayout =
+        nodes.length >= LARGE_GRAPH_NODE_COUNT &&
+        (isSimulatingRef.current || Boolean(presentationRef.current?.moving));
+      if (pausedForLayout) traversalPausedForLayoutRef.current = true;
+      else if (traversal && traversalPausedForLayoutRef.current) {
+        traversalPausedForLayoutRef.current = false;
+        traversal.animation = createGraphTraversalAnimation(traversal.animation.plan);
+        traversal.startedAt = timestamp;
+      }
       const animation = traversal?.animation;
       const enabled =
         Boolean(animation?.plan.levels.length) &&
+        !pausedForLayout &&
         animateEdgesRef.current &&
         !reducedMotionRef.current &&
         dimensions.width > 0 &&
@@ -185,7 +210,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       }
       lastTraversalDrawRef.current = timestamp;
     },
-    [dimensions, isDark]
+    [dimensions, isDark, nodes.length]
   );
   drawTraversalRef.current = drawTraversal;
 
@@ -195,12 +220,20 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const moving = Boolean(presentationRef.current?.moving);
+    const deviceDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
     const { width, height } = dimensions;
     if (width === 0 || height === 0) return;
+    const dpr = moving
+      ? Math.min(deviceDpr, 1, MOVING_CANVAS_MAX_WIDTH / width, MOVING_CANVAS_MAX_HEIGHT / height)
+      : deviceDpr;
+    const pixelWidth = Math.round(width * dpr);
+    const pixelHeight = Math.round(height * dpr);
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
     const { panX, panY, zoom } = viewportRef.current;
 
-    const currentNodes = simContextRef.current ? simContextRef.current.simNodes : nodes;
+    const currentNodes = presentationRef.current?.nodes || simContextRef.current?.simNodes || nodes;
 
     const options: CanvasRenderOptions = {
       width,
@@ -214,11 +247,15 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       focusedNodeIds: focusedSet.current,
       violatingNodeIds: violatingSet.current,
       isDark,
+      moving,
     };
 
     renderKnowledgeGraphCanvas(ctx, currentNodes, edges, nodeMapRef.current, options);
     const timestamp = performance.now();
-    if (timestamp - lastTraversalDrawRef.current >= TRAVERSAL_FRAME_INTERVAL_MS) {
+    if (
+      (traversalPausedForLayoutRef.current && !isSimulatingRef.current) ||
+      timestamp - lastTraversalDrawRef.current >= TRAVERSAL_FRAME_INTERVAL_MS
+    ) {
       drawTraversalRef.current(timestamp);
     }
   }, [dimensions, edges, isDark, nodes, selectedNodeId]);
@@ -237,17 +274,33 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     const step = (timestamp: number) => {
       let needsNextFrame = false;
       let advancedSimulation = false;
+      let advancedPresentation = false;
 
       if (isSimulatingRef.current && simContextRef.current) {
-        advancedSimulation = true;
-        const maxMove = stepForceSimulation(simContextRef.current, simAlphaRef.current);
-        simAlphaRef.current *= 0.982;
-
-        if (simAlphaRef.current < 0.005 || maxMove < 0.08) {
-          isSimulatingRef.current = false;
-        } else {
-          needsNextFrame = true;
+        const maxMove = advanceForceSimulation(
+          simContextRef.current,
+          simAlphaRef.current,
+          simContextRef.current.simNodes.length >= LARGE_GRAPH_NODE_COUNT
+            ? LARGE_SIMULATION_FRAME_BUDGET_MS
+            : SIMULATION_FRAME_BUDGET_MS
+        );
+        if (maxMove !== null) {
+          advancedSimulation = true;
+          simAlphaRef.current *= 0.982;
+          if (simAlphaRef.current < 0.005 || maxMove < 0.08) isSimulatingRef.current = false;
         }
+        needsNextFrame = isSimulatingRef.current;
+      }
+      const presentation = presentationRef.current;
+      if (presentation && simContextRef.current) {
+        const now = performance.now();
+        advancedPresentation = advanceGraphPresentation(
+          presentation.nodes,
+          simContextRef.current.simNodes,
+          now - presentation.lastTime,
+          !isSimulatingRef.current
+        );
+        presentation.lastTime = now;
       }
 
       const selectedNodeId = selectedNodeIdRef.current;
@@ -258,7 +311,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
         (selectedNodeId && nodeMapRef.current.get(selectedNodeId)) || null,
         cameraSizeRef.current,
         timestamp,
-        advancedSimulation && !userMovedViewportRef.current
+        (advancedSimulation || advancedPresentation) && !userMovedViewportRef.current
       );
       cameraAnimationRef.current = nextCamera.animation;
       const cameraChanged =
@@ -270,13 +323,27 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
         onViewportChangeRef.current?.({ ...viewportRef.current });
       }
       if (nextCamera.animation) needsNextFrame = true;
-      if (advancedSimulation || cameraChanged || wasAnimatingCamera) {
+      if (
+        advancedSimulation ||
+        advancedPresentation ||
+        cameraChanged ||
+        wasAnimatingCamera ||
+        viewportDirtyRef.current
+      ) {
+        viewportDirtyRef.current = false;
         drawFrameRef.current();
+      }
+      if (presentation?.moving && !isSimulatingRef.current) {
+        // Present the final moving coordinates first; restore detail on a stationary frame.
+        presentation.moving = false;
+        viewportDirtyRef.current = true;
+        needsNextFrame = true;
       }
       const traversal = traversalRef.current;
       const animation = traversal?.animation;
       const hasTraversal =
         Boolean(animation?.plan.levels.length) &&
+        !traversalPausedForLayoutRef.current &&
         animateEdgesRef.current &&
         !reducedMotionRef.current;
       const active =
@@ -315,7 +382,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   }, []);
 
   const applyFitToScreen = useCallback(() => {
-    const currentNodes = simContextRef.current ? simContextRef.current.simNodes : nodes;
+    const currentNodes = presentationRef.current?.nodes || simContextRef.current?.simNodes || nodes;
     if (currentNodes.length === 0 || dimensions.width === 0 || dimensions.height === 0) return;
 
     let minX = Infinity;
@@ -465,6 +532,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     if (dimensions.width === 0 || dimensions.height === 0) return;
     if (nodes.length === 0) {
       simContextRef.current = null;
+      presentationRef.current = null;
       nodeMapRef.current.clear();
       isSimulatingRef.current = false;
       cameraAnimationRef.current = null;
@@ -476,7 +544,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
 
     const previousPositions = new Map<string, { x: number; y: number }>();
     if (simContextRef.current && !isTopicBoardDisabled) {
-      for (const n of simContextRef.current.simNodes) {
+      for (const n of presentationRef.current?.nodes || simContextRef.current.simNodes) {
         if (n.x !== 0 || n.y !== 0) {
           previousPositions.set(n.id, { x: n.x, y: n.y });
         }
@@ -515,16 +583,30 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     });
     simContextRef.current = context;
 
+    presentationRef.current =
+      context.simNodes.length >= LARGE_GRAPH_NODE_COUNT
+        ? {
+            nodes: context.simNodes.map((node) => ({ ...node })),
+            lastTime: performance.now(),
+            moving: true,
+          }
+        : null;
+
     const map = new Map<string, KnowledgeGraphNode>();
-    context.simNodes.forEach((n) => map.set(n.id, n));
+    (presentationRef.current?.nodes || context.simNodes).forEach((n) => map.set(n.id, n));
     nodeMapRef.current = map;
 
+    simAlphaRef.current = previousPositions.size > 0 ? 0.4 : 1.0;
+    if (presentationRef.current) {
+      // Prepare the first exact target before presenting motion, including cold JIT work.
+      stepForceSimulation(context, simAlphaRef.current);
+      simAlphaRef.current *= 0.982;
+      presentationRef.current.lastTime = performance.now();
+    }
+    isSimulatingRef.current = true;
     if (previousPositions.size === 0 && !isTopicBoardDisabled) {
       applyFitToScreen();
     }
-
-    simAlphaRef.current = previousPositions.size > 0 ? 0.4 : 1.0;
-    isSimulatingRef.current = true;
     runAnimationLoop();
 
     return () => {
@@ -551,6 +633,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     setSimulationFocus(context, edges, layoutFocusId, layoutFocusDepth, layoutFocusedNodeIds);
     simAlphaRef.current = Math.max(simAlphaRef.current, 0.55);
     isSimulatingRef.current = true;
+    if (presentationRef.current) presentationRef.current.moving = true;
     runAnimationLoop();
   }, [edges, layoutFocusDepth, layoutFocusId, layoutFocusedNodeIds, runAnimationLoop]);
 
@@ -611,7 +694,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
 
   const findNodeAtClient = (clientX: number, clientY: number, rect: DOMRect) =>
     findNodeAtScreenCoord(
-      simContextRef.current?.simNodes || nodes,
+      presentationRef.current?.nodes || simContextRef.current?.simNodes || nodes,
       clientX - rect.left,
       clientY - rect.top,
       viewportRef.current.panX,

@@ -1,6 +1,18 @@
 import { Paragraph, parseHtmlToParagraphs } from '../../components/HeaderSelectBar';
 import type { BoardOption, Content } from '../../types';
 
+const noteParagraphCache = new WeakMap<Content, { description: string; paragraphs: Paragraph[] }>();
+
+/** Reuse unchanged note analysis across candidate inference, dashboards and graph construction. */
+export function getBoardCandidateParagraphs(note: Content): Paragraph[] {
+  const description = note.description ?? '';
+  const cached = noteParagraphCache.get(note);
+  if (cached?.description === description) return cached.paragraphs;
+  const paragraphs = parseHtmlToParagraphs(description);
+  noteParagraphCache.set(note, { description, paragraphs });
+  return paragraphs;
+}
+
 export type BoardCandidate = {
   title: string;
   noteExists: boolean;
@@ -48,15 +60,7 @@ function createBoardCandidateContext(
   const boardTitles = new Set(
     boards.filter((board) => board.type === 'BOARD').map((board) => board.title)
   );
-  const paragraphCache = new Map<string, Paragraph[]>();
-  const getParagraphs = (note: Content): Paragraph[] => {
-    let paragraphs = paragraphCache.get(note.title);
-    if (!paragraphs) {
-      paragraphs = parseHtmlToParagraphs(note.description ?? '');
-      paragraphCache.set(note.title, paragraphs);
-    }
-    return paragraphs;
-  };
+  const getParagraphs = getBoardCandidateParagraphs;
   return { rules, noteMap, boardTitles, getParagraphs };
 }
 

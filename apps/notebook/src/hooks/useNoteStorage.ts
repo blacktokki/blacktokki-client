@@ -128,7 +128,7 @@ export const useNotePage = (title: string) => {
   const query = useQuery({
     queryKey: ['pageContent', title],
     queryFn: async () => {
-      const page = contents.find((c) => c.title === title);
+      const page = contents.find((c) => c.title.normalize('NFC') === title.normalize('NFC'));
       return page || { title, description: '', id: undefined };
     },
     enabled: !isFetching,

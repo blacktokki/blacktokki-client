@@ -1,6 +1,6 @@
 import { findBoardReferencePatterns } from './findBoardReferencePatterns';
-import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { getSplitTitle } from '../../../hooks/useNoteStorage';
+import { getBoardCandidateParagraphs } from '../inferBoardCandidates';
 
 export type TopicLinkResult = ReturnType<typeof findBoardReferencePatterns>;
 export type TopicLinkPattern = TopicLinkResult['patterns'][number];
@@ -98,7 +98,7 @@ function collectSourceElements(
         a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })
       )
       .map((note) => {
-        const paragraphs = parseHtmlToParagraphs(note.description ?? '');
+        const paragraphs = getBoardCandidateParagraphs(note);
         return { note, paragraphs, rows: paragraphs.filter((p) => p.level === level - 1) };
       });
     const commonRows = new Map<string, (typeof data)[number]['rows'][number]>();
@@ -165,7 +165,7 @@ function collectSourceElements(
         title,
         noteTitle: note.title,
       });
-    parseHtmlToParagraphs(note.description ?? '').forEach((paragraph, index) =>
+    getBoardCandidateParagraphs(note).forEach((paragraph, index) =>
       noteElements.push({
         id: JSON.stringify([note.title, 'PARAGRAPH', index]),
         containerType: 'NOTE',

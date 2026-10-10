@@ -1,14 +1,11 @@
 import { cleanHtml, toRaw } from '@blacktokki/editor';
 
-import {
-  Paragraph,
-  paragraphByKey,
-  parseHtmlToParagraphs,
-} from '../../../components/HeaderSelectBar';
+import { Paragraph, paragraphByKey } from '../../../components/HeaderSelectBar';
 import { urlToNoteLink } from '../../../components/SearchBar';
 import { getSplitTitle } from '../../../hooks/useNoteStorage';
 import type { BoardOption, Content } from '../../../types';
 import { matchUnlinkedKeyword } from '../../problem/useProblem';
+import { getBoardCandidateParagraphs } from '../inferBoardCandidates';
 
 type BoardElementKind = 'ROW' | 'COLUMN' | 'CARD';
 type NoteElementKind = 'SUBNOTE' | 'PARAGRAPH';
@@ -110,6 +107,28 @@ type PotentialReferenceTarget = {
   noteTitle: string;
   paragraph?: { paragraph: string; section?: string; path: string };
 };
+
+type PotentialKeywordIndex = Map<number, Map<string, Map<string, PotentialReferenceTarget[]>>>;
+
+/** Short prefixes restrict full keyword checks to titles that can occur in the source text. */
+function indexPotentialKeywords(
+  keywords: Map<string, PotentialReferenceTarget[]>
+): PotentialKeywordIndex {
+  const index: PotentialKeywordIndex = new Map();
+  for (const [keyword, targets] of keywords) {
+    const length = Math.min(3, keyword.length);
+    let prefixes = index.get(length);
+    if (!prefixes) {
+      prefixes = new Map();
+      index.set(length, prefixes);
+    }
+    const prefix = keyword.slice(0, length);
+    const group = prefixes.get(prefix) ?? new Map();
+    group.set(keyword, targets);
+    prefixes.set(prefix, group);
+  }
+  return index;
+}
 
 type ReferenceLinkClassification = Pick<
   ReferenceLinkOccurrence,
@@ -259,12 +278,13 @@ function extractReferenceLinks(html: string, noteTitle: string) {
         // 잘못된 원본 주소도 반환하여 INVALID_LINK 판정에 남긴다.
       }
     }
-    return { url, text: anchor.textContent?.trim() ?? '' };
+    return { url, rawUrl, text: anchor.textContent?.trim() ?? '' };
   });
 }
 
 /** useProblem과 같은 cleanHtml/toRaw를 사용하며, 제외 영역과 블록의 경계를 먼저 보존한다. */
 function getUnlinkedText(html: string): string {
+  if (!html) return '';
   const document = new DOMParser().parseFromString(html, 'text/html');
   const visit = (element: Element) => {
     if (
@@ -296,7 +316,8 @@ function getUnlinkedText(html: string): string {
 function extractPotentialReferenceLinks(
   paragraph: Paragraph,
   noteTitle: string,
-  keywords: Map<string, PotentialReferenceTarget[]>
+  keywordIndex: PotentialKeywordIndex,
+  keywordPatterns: Map<string, RegExp>
 ) {
   const mentions: {
     text: string;
@@ -309,23 +330,34 @@ function extractPotentialReferenceLinks(
     const text = getUnlinkedText(
       sourcePart === 'HEADER' ? paragraph.header : paragraph.description
     );
-    for (const [keyword, targets] of keywords) {
-      const candidateTargets = targets.filter((target) => target.noteTitle !== noteTitle);
-      if (!candidateTargets.length || !text.toLowerCase().includes(keyword)) continue;
-      let offset = 0;
-      while (offset < text.length) {
-        const match = matchUnlinkedKeyword(text.slice(offset), keyword);
-        if (!match) break;
-        const textEnd = offset + (match.index ?? 0) + match[0].length;
-        const textStart = textEnd - keyword.length;
-        mentions.push({
-          text: text.slice(textStart, textEnd),
-          candidateTargets,
-          sourcePart,
-          textStart,
-          textEnd,
-        });
-        offset = textEnd;
+    const lowerText = text.toLowerCase();
+    const groups = new Set<Map<string, PotentialReferenceTarget[]>>();
+    for (const [length, prefixes] of keywordIndex) {
+      for (let offset = 0; offset <= lowerText.length - length; offset++) {
+        const group = prefixes.get(lowerText.slice(offset, offset + length));
+        if (group) groups.add(group);
+      }
+    }
+    for (const group of groups) {
+      for (const [keyword, targets] of group) {
+        if (!lowerText.includes(keyword)) continue;
+        const candidateTargets = targets.filter((target) => target.noteTitle !== noteTitle);
+        if (!candidateTargets.length) continue;
+        let offset = 0;
+        while (offset < text.length) {
+          const match = matchUnlinkedKeyword(text.slice(offset), keyword, keywordPatterns);
+          if (!match) break;
+          const textEnd = offset + (match.index ?? 0) + match[0].length;
+          const textStart = textEnd - keyword.length;
+          mentions.push({
+            text: text.slice(textStart, textEnd),
+            candidateTargets,
+            sourcePart,
+            textStart,
+            textEnd,
+          });
+          offset = textEnd;
+        }
       }
     }
   }
@@ -481,15 +513,7 @@ export function findBoardReferencePatterns(
   const noteMap = new Map(
     notes.filter((note) => note.type === 'NOTE').map((note) => [note.title, note])
   );
-  const paragraphCache = new Map<string, Paragraph[]>();
-  const getParagraphs = (note: Content): Paragraph[] => {
-    let paragraphs = paragraphCache.get(note.title);
-    if (!paragraphs) {
-      paragraphs = parseHtmlToParagraphs(note.description ?? '');
-      paragraphCache.set(note.title, paragraphs);
-    }
-    return paragraphs;
-  };
+  const getParagraphs = getBoardCandidateParagraphs;
   for (const note of noteMap.values()) {
     const [parent, title] = getSplitTitle(note.title);
     if (!parent || !title) continue;
@@ -751,6 +775,8 @@ export function findBoardReferencePatterns(
   }
 
   const groups = new Map<string, BoardReferencePatternGroup>();
+  const keywordIndex = indexPotentialKeywords(keywords);
+  const keywordPatterns = new Map<string, RegExp>();
   const linkOccurrences: ReferenceLinkOccurrence[] = [];
   const classifiedGroups = new Map<ReferenceLinkDecision, BoardReferencePatternGroup>();
   for (const document of documents) {
@@ -768,7 +794,12 @@ export function findBoardReferencePatterns(
       const html = (paragraph.header ?? '') + paragraph.description;
       const links = [
         ...extractReferenceLinks(html, document.noteTitle),
-        ...extractPotentialReferenceLinks(paragraph, document.noteTitle, keywords),
+        ...extractPotentialReferenceLinks(
+          paragraph,
+          document.noteTitle,
+          keywordIndex,
+          keywordPatterns
+        ),
       ];
       for (const link of links) {
         const referenceType = 'candidateTargets' in link ? 'POTENTIAL' : 'LINK';
@@ -811,7 +842,15 @@ export function findBoardReferencePatterns(
                 ? { title: candidate.noteTitle, ...candidate.paragraph }
                 : { title: candidate.noteTitle }
           );
-          const noteLink = potentialTargets?.[0] ?? urlToNoteLink('url' in link ? link.url : '');
+          const url = 'url' in link ? new URL(link.url, location.href).href : '';
+          const noteLink =
+            potentialTargets?.[0] ??
+            urlToNoteLink(
+              'rawUrl' in link && /^[^?#]*\.(md|markdown)(?:[?#]|$)/i.test(link.rawUrl)
+                ? link.rawUrl
+                : url,
+              document.noteTitle
+            );
           if (!noteLink) {
             exclude('NOT_INTERNAL_NOTE_LINK');
             continue;

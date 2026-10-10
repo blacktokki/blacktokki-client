@@ -1,14 +1,11 @@
-import {
-  Paragraph,
-  paragraphDescription,
-  parseHtmlToParagraphs,
-} from '../../../components/HeaderSelectBar';
+import { Paragraph, paragraphDescription } from '../../../components/HeaderSelectBar';
 import type { BoardOption, Content } from '../../../types';
 import {
   inferBoardCandidates,
   inferTopLevelBoardCandidates,
   BoardCandidate,
   TopLevelBoardCandidate,
+  getBoardCandidateParagraphs,
 } from '../inferBoardCandidates';
 import type { TopicDashboardBoard, TopicDashboardCardItem, TopicDashboardBoardRow } from '../types';
 
@@ -45,7 +42,7 @@ export function buildTopicDashboardBoard(
   }
 
   const preDataAll = columnNotes.map((page) => {
-    const paragraphs = parseHtmlToParagraphs(page.description || '');
+    const paragraphs = getBoardCandidateParagraphs(page);
     return {
       page,
       paragraphs,

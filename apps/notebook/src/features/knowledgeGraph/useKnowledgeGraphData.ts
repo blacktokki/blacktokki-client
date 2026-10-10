@@ -17,17 +17,14 @@ import {
   buildParagraphPartOfAssignments,
   findConnectedParagraphIds,
 } from './utils/paragraphClassification';
-import {
-  Paragraph,
-  paragraphDescription,
-  parseHtmlToParagraphs,
-} from '../../components/HeaderSelectBar';
+import { Paragraph, paragraphDescription } from '../../components/HeaderSelectBar';
 import { urlToNoteLink } from '../../components/SearchBar';
 import { useBoardPages } from '../../hooks/useBoardStorage';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import useProblem from '../problem/useProblem';
+import { getBoardCandidateParagraphs } from '../topicDashboard/inferBoardCandidates';
 
 /** Deterministic opaque suffix for source records that do not have their own persistent ID. */
 export const stableKnowledgeGraphId = (value: string): string => {
@@ -79,7 +76,9 @@ export const useKnowledgeGraphData = (
 } => {
   const { data: boardPages = [], isLoading: isBoardLoading } = useBoardPages();
   const { data: notePages = [], isLoading: isNoteLoading } = useNotePages();
-  const { data: problemData = [], isLoading: isProblemLoading } = useProblem(1);
+  const { data: problemData = [], isLoading: isProblemLoading } = useProblem(1, {
+    validationOnly: true,
+  });
 
   const { colorScheme } = useNotebookTheme();
   const { usageMode, notebook } = useUsageMode();
@@ -98,7 +97,7 @@ export const useKnowledgeGraphData = (
     enableTopicBoards: options?.enableTopicBoards,
   });
 
-  const graphData: KnowledgeGraphData = useMemo(() => {
+  const graphData = useMemo(() => {
     const effectiveBoardPages = resolvedTopicBoards.effectiveBoardPages;
 
     const nodes: KnowledgeGraphNode[] = [];
@@ -184,6 +183,8 @@ export const useKnowledgeGraphData = (
     const cardParagraphNodeIds = new Set<string>();
 
     const validNotePages = notePages.filter((p) => isNotEmptyContent(p.description));
+    const contentNoteTitles = new Set(validNotePages.map((page) => page.title));
+    const getParagraphs = getBoardCandidateParagraphs;
     const notePageByTitle = new Map(notePages.map((page) => [page.title, page]));
     const retainedEmptyNoteTitles = new Set<string>();
     for (const page of validNotePages) {
@@ -191,20 +192,23 @@ export const useKnowledgeGraphData = (
       if (titleParts.length > 1) {
         const parentTitle = titleParts.slice(0, -1).join('/');
         const parentPage = notePageByTitle.get(parentTitle);
-        if (parentPage && !isNotEmptyContent(parentPage.description)) {
+        if (parentPage && !contentNoteTitles.has(parentTitle)) {
           retainedEmptyNoteTitles.add(parentTitle);
         }
       }
       for (const link of extractHtmlLinks(page.description || '')) {
-        const target = urlToNoteLink(link.url);
+        const target = urlToNoteLink(
+          'rawUrl' in link && typeof link.rawUrl === 'string' ? link.rawUrl : link.url,
+          page.title
+        );
         const targetPage = target ? notePageByTitle.get(target.title) : undefined;
-        if (targetPage && !isNotEmptyContent(targetPage.description)) {
+        if (targetPage && !contentNoteTitles.has(targetPage.title)) {
           retainedEmptyNoteTitles.add(targetPage.title);
         }
       }
     }
     const knowledgeGraphNotePages = notePages.filter(
-      (page) => isNotEmptyContent(page.description) || retainedEmptyNoteTitles.has(page.title)
+      (page) => contentNoteTitles.has(page.title) || retainedEmptyNoteTitles.has(page.title)
     );
     const boardSubnotePrefixes = effectiveBoardPages.map((b) => b.title + '/');
     const explicitColumnNoteTitles = new Set(
@@ -251,7 +255,7 @@ export const useKnowledgeGraphData = (
       if (boardTitles.has(note.title)) continue;
       if (isColumnNote(note.title)) continue;
 
-      const paragraphs = parseHtmlToParagraphs(note.description || '');
+      const paragraphs = getParagraphs(note);
       const noteHeaders = paragraphs.filter((p) => p.level > 0 && p.title.trim().length > 0);
       addNoteInstance(note);
 
@@ -292,14 +296,14 @@ export const useKnowledgeGraphData = (
         if (!colRelName.trim()) continue;
 
         if (
-          (isNotEmptyContent(col.description) || retainedEmptyNoteTitles.has(col.title)) &&
+          (contentNoteTitles.has(col.title) || retainedEmptyNoteTitles.has(col.title)) &&
           !titleToNodeMap.has(col.title)
         ) {
           addNoteInstance(col, board.title, boardCardClassId);
         }
 
         if (!col.description) continue;
-        const paragraphs = parseHtmlToParagraphs(col.description);
+        const paragraphs = getParagraphs(col);
         const paragraphNodeId = (paragraph: Paragraph): string =>
           `paragraph:column:${col.id}:${stableKnowledgeGraphId(
             `${paragraph.path}:${paragraph.autoSection || ''}`
@@ -496,6 +500,20 @@ export const useKnowledgeGraphData = (
       /** Present only for an internal note link that can form a references edge. */
       target?: NonNullable<ReturnType<typeof urlToNoteLink>>;
     }
+    const nodesByTitle = new Map<string, KnowledgeGraphNode[]>();
+    for (const node of nodes) {
+      const titles = new Set([
+        node.noteTitle,
+        node.boardTitle,
+        ...(node.paragraphOccurrences ?? []).map((paragraph) => paragraph.origin),
+      ]);
+      for (const title of titles) {
+        if (!title) continue;
+        const list = nodesByTitle.get(title) ?? [];
+        list.push(node);
+        nodesByTitle.set(title, list);
+      }
+    }
     const knowledgeGraphLinkOccurrences: KnowledgeGraphLinkOccurrence[] = [];
     for (const page of validNotePages) {
       const defaultSourceNodeId =
@@ -508,14 +526,14 @@ export const useKnowledgeGraphData = (
           )
           .map((board) => titleToNodeMap.get(board.title))
           .find((nodeId): nodeId is string => Boolean(nodeId));
-      const pageParagraphs = parseHtmlToParagraphs(page.description || '');
+      const pageParagraphs = getParagraphs(page);
       const linkSources = [
         { sourceNodeId: defaultSourceNodeId, html: pageParagraphs[0]?.description || '' },
         ...pageParagraphs
           .filter((paragraph) => paragraph.level > 0)
           .map((paragraph) => ({
             sourceNodeId: findKnowledgeGraphLinkSourceNodeId(
-              nodes,
+              nodesByTitle.get(page.title) ?? [],
               page.title,
               paragraph,
               defaultSourceNodeId
@@ -530,7 +548,10 @@ export const useKnowledgeGraphData = (
         for (const link of extractHtmlLinks(linkSource.html)) {
           let target: ReturnType<typeof urlToNoteLink>;
           try {
-            target = urlToNoteLink(link.url);
+            target = urlToNoteLink(
+              'rawUrl' in link && typeof link.rawUrl === 'string' ? link.rawUrl : link.url,
+              page.title
+            );
           } catch {
             target = undefined;
           }
@@ -594,7 +615,7 @@ export const useKnowledgeGraphData = (
       // External links are connected to their own individuals above.
       if (!occurrence.target) continue;
       const targetNodeId = findKnowledgeGraphLinkTargetNodeId(
-        nodes,
+        nodesByTitle.get(occurrence.target.title) ?? [],
         titleToNodeMap,
         occurrence.target
       );
@@ -643,17 +664,13 @@ export const useKnowledgeGraphData = (
       linkNode.strokeColor = palette.connectedExternalLink.stroke;
     }
 
-    const axioms = evaluateKnowledgeGraphAxioms(nodes, edges, problemData);
-
     return {
       nodes,
       edges,
-      axioms,
     };
   }, [
     boardPages,
     notePages,
-    problemData,
     isDark,
     lang,
     palette,
@@ -661,6 +678,11 @@ export const useKnowledgeGraphData = (
     noteClassName,
     resolvedTopicBoards,
   ]);
+
+  const axioms = useMemo(
+    () => evaluateKnowledgeGraphAxioms(graphData.nodes, graphData.edges, problemData),
+    [graphData.nodes, graphData.edges, problemData]
+  );
 
   const edgeAdjacencyMap = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -711,6 +733,7 @@ export const useKnowledgeGraphData = (
 
   return {
     ...graphData,
+    axioms,
     isLoading: isBoardLoading || isNoteLoading || isProblemLoading,
     getNeighbors,
     topicBoardCandidateCount: resolvedTopicBoards.candidateCount,

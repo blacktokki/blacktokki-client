@@ -108,12 +108,13 @@ const noteLinks = loadSource(
     .map((node) => node.getText(searchFile))
     .join('\n')
 );
-const { inferBoardCandidates, inferTopLevelBoardCandidates } = loadSource(
+const candidateUtils = loadSource(
   readFileSync(path.join(sourceRoot, 'features/topicDashboard/inferBoardCandidates.ts'), 'utf8'),
   {
     '../../components/HeaderSelectBar': paragraphs,
   }
 );
+const { inferBoardCandidates, inferTopLevelBoardCandidates } = candidateUtils;
 function loadVariable(relativePath, name) {
   const source = ts.createSourceFile(
     relativePath,
@@ -144,6 +145,7 @@ const { findBoardReferencePatterns: find } = loadSource(
     '../../../components/HeaderSelectBar': paragraphs,
     '../../../components/SearchBar': noteLinks,
     '../../problem/useProblem': problem,
+    '../inferBoardCandidates': candidateUtils,
     '../../../hooks/useNoteStorage': noteStorage,
   }
 );
@@ -2045,6 +2047,53 @@ test('resolves editor-generated relative links when detached anchors expose raw 
     resolveFixtureAnchorUrls = true;
   }
 });
+test('resolves relative Markdown links in board and candidate connection rules', () => {
+  for (const sourceKind of boardKinds) {
+    for (const targetKind of boardKinds) {
+      const fragment =
+        targetKind === 'COLUMN'
+          ? ''
+          : '#' + encodeURIComponent(targetKind === 'ROW' ? '대상행' : '대상카드');
+      for (const path of [
+        '../B/대상.md',
+        '../B/%EB%8C%80%EC%83%81.md',
+        '../B/%EB%8C%80%EC%83%81.markdown',
+      ]) {
+        const link = anchor(path + fragment);
+        const pages = [
+          ...distinctElements('A', sourceKind, [link, link]),
+          note('B/대상', targetBody),
+        ];
+        for (const origin of ['BOARD', 'CANDIDATE']) {
+          const result = find(
+            pages,
+            origin === 'BOARD' ? actualBoards() : [],
+            origin === 'CANDIDATE' ? actualBoards() : []
+          );
+          const pattern = expectedPattern(result, sourceKind + '->' + targetKind, 'A', 'B');
+          assert.equal(pattern.uniqueSourceCount, 2);
+          assert.equal(pattern.sourceBoard.origin, origin);
+          assert.equal(pattern.targetBoard.origin, origin);
+          assert.ok(
+            expectedDecisions(result, pattern.pattern, 'A', 'B').every(
+              (decision) => decision.isRepeatedPattern
+            )
+          );
+        }
+      }
+    }
+  }
+});
+test('preserves section selectors in relative Markdown links', () => {
+  const url =
+    '../B/%EB%8C%80%EC%83%81.md?section=' +
+    encodeURIComponent('둘째행') +
+    '#' +
+    encodeURIComponent('대상카드');
+  const body = '<h2>첫행</h2><h3>대상카드</h3><h2>둘째행</h2><h3>대상카드</h3>';
+  const result = find(data('CARD', anchors(url), body), actualBoards(), []);
+  assert.equal(expectedDecisions(result, 'CARD->CARD', 'A', 'B')[0].target.section, '둘째행');
+});
 test('resolves fragment and paragraph-only links against the original note rather than Home', () => {
   const previousLocation = global.location;
   global.location = { origin, href: href('B/대상', '대상카드') };
@@ -3245,6 +3294,22 @@ test('separates same-note keyword cases by header path while preserving the four
   assert.deepEqual(
     result.linkClassifications.potentialLinkClassifications.map((group) => group.count),
     [2, 2]
+  );
+});
+
+test('keyword indexing preserves short Korean, case-insensitive and emoji titles and rejects partial words', () => {
+  const result = find(
+    [
+      note('A/원본', '<h3>a1</h3><p>한, ab; 🚀. abcd</p><h3>a2</h3><p>한, ab; 🚀. abcd</p>'),
+      note('B/대상', '<h3>한</h3><h3>AB</h3><h3>🚀</h3>'),
+    ],
+    recommendationBoards(),
+    []
+  );
+  const cases = potentialOccurrences(result).filter((item) => item.sourceNoteTitle === 'A/원본');
+  assert.deepEqual(
+    cases.map((item) => item.linkText).sort(),
+    ['ab', 'ab', '한', '한', '🚀', '🚀'].sort()
   );
 });
 

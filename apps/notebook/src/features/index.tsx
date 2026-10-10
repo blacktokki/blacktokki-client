@@ -4,6 +4,8 @@ import React from 'react';
 
 import ArchiveConfigSection, { ExportButton } from './archive/ArchiveConfigSection';
 import FocusHeaderIconButton from './focus/FocusHeaderIconButton';
+import InductiveTemplateButton from './inductiveTemplate/InductiveTemplateButton';
+import { InductiveTemplateScreen } from './inductiveTemplate/InductiveTemplateScreen';
 import { KnowledgeGraphScreen } from './knowledgeGraph/KnowledgeGraphScreen';
 import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
@@ -128,6 +130,22 @@ features['knowledgeGraph'] = {
       Component: <KnowledgeGraphButton key={'knowledgeGraph'} />,
     },
   ],
+};
+
+features['inductiveTemplate'] = {
+  title: 'Extracted Templates',
+  description: 'Find reusable templates in your notes and use them to write new notes.',
+  useNoteMode: true,
+  screens: {
+    InductiveTemplates: {
+      title: '',
+      component: InductiveTemplateScreen,
+      path: 'templates',
+    },
+  },
+  NoteSections: [],
+  NotePageSections: [],
+  elements: [{ type: 'button', Component: <InductiveTemplateButton key="inductiveTemplate" /> }],
 };
 
 features['problem'] = {

@@ -5,10 +5,12 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { TemplateGraphDetails } from '../inductiveTemplate/TemplateGraphDetails';
+import { isTemplateGraphNode } from '../inductiveTemplate/graph';
+import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { findInstanceClassIds } from '../utils/classMembership';
 import { getNhopDepthOptions } from '../utils/nhop';
-import { getKnowledgeGraphPalette } from '../utils/palette';
 import { getBoardParagraphSourceNotes } from '../utils/paragraphClassification';
 import { getKnowledgeGraphNodeKind, getKnowledgeGraphNodeKindLabel } from '../utils/relations';
 
@@ -70,6 +72,8 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
     boardParagraph: 'align-left',
     paragraph: 'align-left',
     card: 'id-badge',
+    template: 'file-code-o',
+    templateGroup: 'cubes',
   }[nodeKind];
 
   const propertyEntries = React.useMemo(() => {
@@ -226,6 +230,15 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
           </View>
         )}
 
+        {isTemplateGraphNode(node) && (
+          <TemplateGraphDetails
+            node={node}
+            nodes={allNodes}
+            edges={edges}
+            onSelectNode={onSelectNode}
+          />
+        )}
+
         {boardParagraphSourceNotes.length > 0 &&
           renderSections(
             lang('Source Notes'),
@@ -338,7 +351,8 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
             })}
           </View>
 
-          {node.classKind !== 'EXTERNAL_LINK' &&
+          {!isTemplateGraphNode(node) &&
+            node.classKind !== 'EXTERNAL_LINK' &&
             !(node.instanceKind === 'BOARD_PARAGRAPH' && boardParagraphSourceNotes.length > 1) && (
               <TouchableOpacity
                 style={[

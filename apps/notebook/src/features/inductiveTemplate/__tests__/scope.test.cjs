@@ -11,6 +11,7 @@ function scopedQueries({
   notebookTitle = 'Notebook',
   folderName = 'Folder',
   rootLoading = false,
+  requested = true,
 } = {}) {
   const queries = [];
   let reads = 0;
@@ -71,7 +72,7 @@ function scopedQueries({
       },
     },
   });
-  const result = hook.useInductiveTemplates();
+  const result = hook.useInductiveTemplates(requested);
   return {
     result,
     queries,
@@ -125,4 +126,12 @@ test('online sources stay disabled until an account is available', () => {
   assert.equal(result.enabled, false);
   assert.ok(queries.every((query) => query.enabled === false));
   assert.equal(scopedQueries().result.enabled, true);
+});
+
+test('inactive graph template integration disables source and notebook-root queries', () => {
+  const { result, queries, reads, storageReads } = scopedQueries({ requested: false });
+  assert.equal(result.enabled, false);
+  assert.ok(queries.every((query) => query.enabled === false));
+  assert.equal(reads(), 0);
+  assert.equal(storageReads(), 0);
 });

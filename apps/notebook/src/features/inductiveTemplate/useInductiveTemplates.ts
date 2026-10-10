@@ -11,7 +11,7 @@ import { getStorageConfig } from '../../services/storage';
 
 const emptyNotebookRoots: string[] = [];
 
-export function useInductiveTemplates() {
+export function useInductiveTemplates(requested = true) {
   const isFocused = useIsFocused();
   const { auth } = useAuthContext();
   const { notebook, usageMode } = useUsageMode();
@@ -20,6 +20,7 @@ export function useInductiveTemplates() {
   const isPrivate = !!privateConfig.enabled;
   const scope = templateScope(!!auth.isLocal, auth.user?.id, notebookId, isPrivate);
   const enabled =
+    requested &&
     auth.isLocal !== undefined &&
     auth.user !== undefined &&
     (auth.isLocal || auth.user?.id !== undefined) &&

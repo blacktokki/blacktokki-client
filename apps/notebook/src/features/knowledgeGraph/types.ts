@@ -1,4 +1,5 @@
 import { Paragraph } from '../../components/HeaderSelectBar';
+import type { TemplateCandidate } from '../inductiveTemplate/types';
 
 // 1. Graph entity roles
 export type KnowledgeGraphEntityRole = 'CLASS' | 'INSTANCE';
@@ -9,9 +10,10 @@ export type KnowledgeGraphInstanceKind =
   | 'BOARD_PARAGRAPH'
   | 'CONNECTED_PARAGRAPH'
   | 'EXTERNAL_LINK'
-  | 'CONNECTED_EXTERNAL_LINK';
-export type KnowledgeGraphClassKind = 'NOTE' | 'BOARD_CARD' | 'EXTERNAL_LINK';
-export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD';
+  | 'CONNECTED_EXTERNAL_LINK'
+  | 'TEMPLATE';
+export type KnowledgeGraphClassKind = 'NOTE' | 'BOARD_CARD' | 'EXTERNAL_LINK' | 'TEMPLATE_GROUP';
+export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD' | 'DERIVED';
 
 // 2. Note metadata (YAML frontmatter only)
 // Enforced constraint: Only NOTE instances can have non-empty properties.
@@ -44,7 +46,8 @@ export type KnowledgeGraphRelationType =
   | 'REPRESENTED_BY_NOTE' // Class -> corresponding note annotation
   | 'REFERENCES' // Document _NOTELINK (reference/citation)
   | 'EXTERNAL_REFERENCE' // Document -> external link individual
-  | 'PART_OF'; // Parent/Child document path hierarchy
+  | 'PART_OF' // Parent/Child document path hierarchy
+  | 'DERIVED_FROM'; // Automatically inferred template -> source document
 
 // 4. Axioms (Constraints, Validation)
 export type AxiomType =
@@ -92,6 +95,8 @@ export interface KnowledgeGraphNode {
   /** Original headings represented by a board-wide shared paragraph instance. */
   paragraphOccurrences?: KnowledgeGraphParagraph[];
   description?: string;
+  /** Inferred content stays separate from original note YAML properties. */
+  template?: TemplateCandidate;
   properties: KnowledgeGraphDataProperties;
   x: number;
   y: number;

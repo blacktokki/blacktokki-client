@@ -5,13 +5,14 @@ import { Linking, StyleSheet, View } from 'react-native';
 
 import LoadingView from '../../components/LoadingView';
 import { ResponsiveSearchBar, toNoteParams } from '../../components/SearchBar';
-import { useEffectExtensionScreen } from '../../hooks/useExtension';
+import { useEffectExtensionScreen, useExtension } from '../../hooks/useExtension';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import { NavigationParamList } from '../../types';
 import { KnowledgeGraphNavToolbar } from './components/KnowledgeGraphNavToolbar';
 import { KnowledgeGraphPreviewSheet } from './components/KnowledgeGraphPreviewSheet';
 import { KnowledgeGraphView } from './components/KnowledgeGraphView';
+import { useTopicBoardToggle } from './topicDashoard';
 import { KnowledgeGraphNode } from './types';
 import { useKnowledgeGraphData } from './useKnowledgeGraphData';
 import { normalizeNhopDepth } from './utils/nhop';
@@ -21,8 +22,16 @@ export const KnowledgeGraphScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
   const { usageMode, notebook } = useUsageMode();
+  const { data: extension } = useExtension();
+  const { enableTopicBoards, toggleTopicBoards, isTopicBoardAllowed } = useTopicBoardToggle({
+    usageMode,
+    extension,
+  });
 
-  const { nodes, edges, axioms, isLoading, getNeighbors } = useKnowledgeGraphData();
+  const { nodes, edges, axioms, isLoading, getNeighbors, topicBoardCandidateCount } =
+    useKnowledgeGraphData({
+      enableTopicBoards,
+    });
   const [selectedNode, setSelectedNode] = useState<KnowledgeGraphNode | null>(null);
   const [selectionTrigger, setSelectionTrigger] = useState(0);
   const [previewSheetHeight, setPreviewSheetHeight] = useState(0);
@@ -111,6 +120,10 @@ export const KnowledgeGraphScreen: React.FC = () => {
             focusedNodeIds={focusedNodeIds}
             focusDepth={nhopDepth}
             onSelectNode={handleSelectNode}
+            enableTopicBoards={enableTopicBoards}
+            onToggleTopicBoards={isTopicBoardAllowed ? toggleTopicBoards : undefined}
+            showTopicBoardToggle={isTopicBoardAllowed}
+            topicBoardCandidateCount={topicBoardCandidateCount}
           />
           {selectedNode && (
             <KnowledgeGraphPreviewSheet

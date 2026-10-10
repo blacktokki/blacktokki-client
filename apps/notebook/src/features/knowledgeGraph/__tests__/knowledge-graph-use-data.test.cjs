@@ -32,6 +32,47 @@ for (const name of [
   writeFileSync(path.join(outputDirectory, `${name}.js`), compiled.outputText);
 }
 
+const topicDashboardDirectory = path.join(knowledgeGraphDirectory, '..', 'topicDashboard');
+const kgTopicDashoardDirectory = path.join(knowledgeGraphDirectory, 'topicDashoard');
+
+const transpileHelper = (srcPath, destPath) => {
+  const source = readFileSync(srcPath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  });
+  mkdirSync(path.dirname(destPath), { recursive: true });
+  writeFileSync(destPath, compiled.outputText);
+};
+
+transpileHelper(
+  path.join(topicDashboardDirectory, 'inferBoardCandidates.ts'),
+  path.join(output, 'topicDashboardInfer', 'inferBoardCandidates.js')
+);
+transpileHelper(
+  path.join(kgTopicDashoardDirectory, 'inferTopicBoardPages.ts'),
+  path.join(output, 'topicDashoard', 'inferTopicBoardPages.js')
+);
+transpileHelper(
+  path.join(kgTopicDashoardDirectory, 'useTopicBoardToggle.ts'),
+  path.join(output, 'topicDashoard', 'useTopicBoardToggle.js')
+);
+transpileHelper(
+  path.join(kgTopicDashoardDirectory, 'topicBoardEligibility.ts'),
+  path.join(output, 'topicDashoard', 'topicBoardEligibility.js')
+);
+transpileHelper(
+  path.join(kgTopicDashoardDirectory, 'useResolvedTopicBoards.ts'),
+  path.join(output, 'topicDashoard', 'useResolvedTopicBoards.js')
+);
+transpileHelper(
+  path.join(kgTopicDashoardDirectory, 'useTopicBoardDisabled.ts'),
+  path.join(output, 'topicDashoard', 'useTopicBoardDisabled.js')
+);
+transpileHelper(
+  path.join(kgTopicDashoardDirectory, 'index.ts'),
+  path.join(output, 'topicDashoard', 'index.js')
+);
+
 const state = {
   boardPages: [],
   notePages: [],
@@ -109,6 +150,20 @@ Module._load = function loadKnowledgeGraphTestDependency(request, parent, isMain
   if (request.endsWith('/problem/useProblem')) {
     return { __esModule: true, default: () => ({ data: state.problemData, isLoading: false }) };
   }
+  if (request.endsWith('/TopicBoardToggle')) {
+    return { TopicBoardToggle: () => null };
+  }
+  if (request.endsWith('/inferBoardCandidates')) {
+    return require(path.join(output, 'topicDashboardInfer', 'inferBoardCandidates.js'));
+  }
+  if (
+    request.endsWith('/topicDashboard') ||
+    request === './topicDashboard' ||
+    request.endsWith('/topicDashoard') ||
+    request === './topicDashoard'
+  ) {
+    return require(path.join(output, 'topicDashoard', 'index.js'));
+  }
   return originalLoad.call(this, request, parent, isMain);
 };
 
@@ -122,6 +177,7 @@ try {
 const note = (id, title, description = '<p>내용</p>') => ({
   id,
   title,
+  type: 'NOTE',
   description,
   updated: '2026-09-18T00:00:00.000Z',
   option: {},
@@ -668,3 +724,69 @@ test('shared headings do not create additional classes or subclass relations', (
   );
   assert.equal(graph.nodes.filter((node) => node.instanceKind === 'PARAGRAPH').length, 3);
 });
+
+test('toggles inferred topic board candidates into board nodes when enabled', () => {
+  state.boardPages = [];
+  state.notePages = [
+    note(91, '프로젝트/할일', '<h3>작업 1</h3><p>내용</p>'),
+    note(92, '프로젝트/진행', '<h3>작업 2</h3><p>내용</p>'),
+    note(93, '프로젝트/완료', '<h3>작업 3</h3><p>내용</p>'),
+  ];
+  state.htmlLinks = new Map();
+  state.noteLinkTargets = new Map();
+
+  // 1. 토글 비활성화(기본값) 상태
+  const defaultGraph = useKnowledgeGraphData({ enableTopicBoards: false });
+  assert.equal(
+    defaultGraph.nodes.some((node) => node.boardTitle === '프로젝트'),
+    false
+  );
+  assert.equal(
+    defaultGraph.nodes.some((node) => node.classKind === 'BOARD_CARD'),
+    false
+  );
+
+  // 2. 토글 활성화 상태: 주제 대시보드 추론 기능으로 가상 보드 '프로젝트'가 보드 노드로 전환
+  const topicBoardGraph = useKnowledgeGraphData({ enableTopicBoards: true });
+  const boardClassNode = topicBoardGraph.nodes.find(
+    (node) => node.role === 'CLASS' && node.name === '프로젝트' && node.classKind === 'BOARD_CARD'
+  );
+  assert.ok(boardClassNode, '가상 보드 클래스 노드가 생성되어야 합니다.');
+
+  const boardNoteNodes = topicBoardGraph.nodes.filter(
+    (node) => node.instanceKind === 'NOTE' && node.boardTitle === '프로젝트'
+  );
+  assert.equal(boardNoteNodes.length, 3, '컬럼 노트 3개가 boardTitle을 가져야 합니다.');
+
+  const cardNodes = topicBoardGraph.nodes.filter(
+    (node) => node.instanceKind === 'CARD' && node.boardTitle === '프로젝트'
+  );
+  assert.equal(cardNodes.length, 3, '각 컬럼의 헤딩(h3)이 카드로 전환되어야 합니다.');
+
+  // 3. 노트북 모드(NOTEBOOK)에서도 주제 보드가 정상 생성되고 허용됨
+  state.usageMode = 'NOTEBOOK';
+  state.notebook = { id: 10, title: '노트북' };
+  const notebookGraph = useKnowledgeGraphData({ enableTopicBoards: true });
+  assert.equal(
+    notebookGraph.nodes.some((node) => node.classKind === 'BOARD_CARD'),
+    true,
+    '노트북 모드에서도 주제 보드가 정상 생성되어야 합니다.'
+  );
+  assert.equal(notebookGraph.topicBoardCandidateCount, 1);
+
+  // 4. 단순 모드(SIMPLE)에서는 주제 보드가 생성되지 않음
+  state.usageMode = 'SIMPLE';
+  state.notebook = null;
+  const simpleGraph = useKnowledgeGraphData({ enableTopicBoards: true });
+  assert.equal(
+    simpleGraph.nodes.some((node) => node.classKind === 'BOARD_CARD'),
+    false,
+    '단순 모드(SIMPLE)에서는 주제 보드가 생성되지 않아야 합니다.'
+  );
+  assert.equal(simpleGraph.topicBoardCandidateCount, 0);
+
+  // 상태 복원
+  state.usageMode = 'NOTE';
+  state.notebook = null;
+});
+

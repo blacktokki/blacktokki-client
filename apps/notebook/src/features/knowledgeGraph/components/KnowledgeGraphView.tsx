@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { KnowledgeGraphCanvasView } from './KnowledgeGraphCanvasView';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { TopicBoardToggle } from '../topicDashoard';
 import { AxiomEvaluationResult, KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { shouldHideExternalLinkClass } from '../utils/externalLinkClassification';
 import { getKnowledgeGraphPalette } from '../utils/palette';
@@ -34,6 +35,10 @@ interface KnowledgeGraphViewProps {
   focusedNodeIds: Set<string> | null;
   focusDepth: number;
   onSelectNode: (node: KnowledgeGraphNode | null) => void;
+  enableTopicBoards?: boolean;
+  onToggleTopicBoards?: () => void;
+  showTopicBoardToggle?: boolean;
+  topicBoardCandidateCount?: number;
 }
 
 const relationLegendColor = (summary: KnowledgeGraphRelationSummary, isDark: boolean): string => {
@@ -172,6 +177,10 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   focusedNodeIds,
   focusDepth,
   onSelectNode,
+  enableTopicBoards,
+  onToggleTopicBoards,
+  showTopicBoardToggle,
+  topicBoardCandidateCount,
 }) => {
   const { commonStyles, colorScheme } = useNotebookTheme();
   const { lang } = useLangContext();
@@ -408,6 +417,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           zoomAction={zoomAction}
           onViewportChange={handleViewportChange}
           onNodeSelect={onSelectNode}
+          enableTopicBoards={enableTopicBoards}
           style={{ width: '100%', height: '100%' }}
         />
       </View>
@@ -454,6 +464,12 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               />
             )
         )}
+        <TopicBoardToggle
+          visible={showTopicBoardToggle}
+          enabled={Boolean(enableTopicBoards)}
+          onToggle={onToggleTopicBoards}
+          count={topicBoardCandidateCount}
+        />
       </View>
 
       <View

@@ -1,4 +1,4 @@
-﻿const assert = require('node:assert/strict');
+const assert = require('node:assert/strict');
 const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
@@ -428,6 +428,36 @@ test('keeps a lone external link and its class separately clickable', () => {
     stepForceSimulation(context, alpha);
     alpha *= 0.982;
     assertSeparated();
+  }
+});
+
+test('centers the Note class among note instances, matching External Link class behavior', () => {
+  const nodes = [
+    { id: 'class:note', role: 'CLASS', classKind: 'NOTE' },
+    { id: 'note:1', role: 'INSTANCE', instanceKind: 'NOTE', x: 200, y: 300 },
+    { id: 'note:2', role: 'INSTANCE', instanceKind: 'NOTE', x: 400, y: 500 },
+    { id: 'note:3', role: 'INSTANCE', instanceKind: 'NOTE', x: 600, y: 100 },
+  ].map((node) => ({ ...node, name: node.id, radius: 10 }));
+  const edges = [
+    { source: 'note:1', target: 'class:note', type: 'INSTANCE_OF' },
+    { source: 'note:2', target: 'class:note', type: 'INSTANCE_OF' },
+    { source: 'note:3', target: 'class:note', type: 'INSTANCE_OF' },
+  ];
+  const assertNoteClassAtCentroid = (simNodes) => {
+    const classNode = simNodes.find((node) => node.id === 'class:note');
+    const noteInstances = simNodes.filter((node) => node.role === 'INSTANCE' && node.instanceKind === 'NOTE');
+    const centroidX = noteInstances.reduce((sum, node) => sum + node.x, 0) / noteInstances.length;
+    const centroidY = noteInstances.reduce((sum, node) => sum + node.y, 0) / noteInstances.length;
+    assert.ok(Math.abs(classNode.x - centroidX) < 1e-8, `Note class x at centroid: ${classNode.x} vs ${centroidX}`);
+    assert.ok(Math.abs(classNode.y - centroidY) < 1e-8, `Note class y at centroid: ${classNode.y} vs ${centroidY}`);
+  };
+  const context = initForceSimulation(nodes, edges, { width: 1000, height: 700 });
+  assertNoteClassAtCentroid(context.simNodes);
+  let alpha = 1;
+  for (let frame = 0; frame < 180; frame++) {
+    stepForceSimulation(context, alpha);
+    alpha *= 0.982;
+    assertNoteClassAtCentroid(context.simNodes);
   }
 });
 

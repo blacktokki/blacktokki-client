@@ -105,6 +105,26 @@ Module._load = function loadKnowledgeGraphTestDependency(request, parent, isMain
   if (request.endsWith('/problem/useProblem')) {
     return { __esModule: true, default: () => ({ data: state.problemData, isLoading: false }) };
   }
+  if (
+    request.endsWith('/topicDashboard') ||
+    request === './topicDashboard' ||
+    request.endsWith('/topicDashoard') ||
+    request === './topicDashoard'
+  ) {
+    return {
+      inferTopicBoardPages: () => [],
+      resolveTopicBoardPages: ({ boardPages = [] } = {}) => ({
+        candidates: [],
+        candidateCount: 0,
+        effectiveBoardPages: boardPages,
+      }),
+      useResolvedTopicBoards: ({ boardPages = [] } = {}) => ({
+        candidates: [],
+        candidateCount: 0,
+        effectiveBoardPages: boardPages,
+      }),
+    };
+  }
   return originalLoad.call(this, request, parent, isMain);
 };
 

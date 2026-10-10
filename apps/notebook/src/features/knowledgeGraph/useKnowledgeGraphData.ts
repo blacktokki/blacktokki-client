@@ -2,6 +2,7 @@ import { useLangContext } from '@blacktokki/core';
 import { extractHtmlLinks, toRaw } from '@blacktokki/editor';
 import { useMemo, useCallback } from 'react';
 
+import { useResolvedTopicBoards } from './topicDashoard';
 import { KnowledgeGraphEdge, KnowledgeGraphData, KnowledgeGraphNode } from './types';
 import { evaluateKnowledgeGraphAxioms } from './utils/axioms';
 import { findConnectedExternalLinkIds } from './utils/externalLinkClassification';
@@ -64,10 +65,17 @@ const findNearestParentHeader = (headers: Paragraph[], card: Paragraph): Paragra
     )
     .sort((left, right) => right.path.split(',').length - left.path.split(',').length)[0];
 
+export interface UseKnowledgeGraphDataOptions {
+  enableTopicBoards?: boolean;
+}
+
 // ADR-2602: docs/decisions/2602-knowledge-graph-view-extension.md
-export const useKnowledgeGraphData = (): KnowledgeGraphData & {
+export const useKnowledgeGraphData = (
+  options?: UseKnowledgeGraphDataOptions
+): KnowledgeGraphData & {
   isLoading: boolean;
   getNeighbors: (nodeId: string, depth?: number) => Set<string>;
+  topicBoardCandidateCount: number;
 } => {
   const { data: boardPages = [], isLoading: isBoardLoading } = useBoardPages();
   const { data: notePages = [], isLoading: isNoteLoading } = useNotePages();
@@ -83,7 +91,16 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
 
   const palette = useMemo(() => getKnowledgeGraphPalette(isDark), [isDark]);
 
+  const resolvedTopicBoards = useResolvedTopicBoards({
+    notePages,
+    boardPages,
+    usageMode,
+    enableTopicBoards: options?.enableTopicBoards,
+  });
+
   const graphData: KnowledgeGraphData = useMemo(() => {
+    const effectiveBoardPages = resolvedTopicBoards.effectiveBoardPages;
+
     const nodes: KnowledgeGraphNode[] = [];
     const edges: KnowledgeGraphEdge[] = [];
     const nodeIdMap = new Map<string, KnowledgeGraphNode>();
@@ -135,10 +152,10 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       radius: 17,
     });
 
-    const boardTitles = new Set(boardPages.map((b) => b.title));
+    const boardTitles = new Set(effectiveBoardPages.map((b) => b.title));
     const boardCardClassMap = new Map<string, string>(); // boardTitle -> classNodeId
 
-    for (const board of boardPages) {
+    for (const board of effectiveBoardPages) {
       const boardCardClassId = `class:boardCard:${board.id}`;
       boardCardClassMap.set(board.title, boardCardClassId);
 
@@ -189,9 +206,13 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
     const knowledgeGraphNotePages = notePages.filter(
       (page) => isNotEmptyContent(page.description) || retainedEmptyNoteTitles.has(page.title)
     );
-    const boardSubnotePrefixes = boardPages.map((b) => b.title + '/');
+    const boardSubnotePrefixes = effectiveBoardPages.map((b) => b.title + '/');
+    const explicitColumnNoteTitles = new Set(
+      effectiveBoardPages.flatMap((b) => b.columnNoteTitles || [])
+    );
 
     const isColumnNote = (title: string): boolean => {
+      if (explicitColumnNoteTitles.has(title)) return true;
       for (const prefix of boardSubnotePrefixes) {
         if (title.startsWith(prefix)) {
           const rel = title.slice(prefix.length);
@@ -248,22 +269,26 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       }
     }
 
-    for (const board of boardPages) {
+    for (const board of effectiveBoardPages) {
       const headerLevel =
         board.option && 'BOARD_HEADER_LEVEL' in board.option ? board.option.BOARD_HEADER_LEVEL : 3;
       const boardParagraphIdByName = new Map<string, string>();
 
-      const columnPages = notePages.filter(
-        (p) =>
-          p.title !== board.title &&
-          p.title.startsWith(board.title + '/') &&
-          p.title.slice(board.title.length + 1).split('/').length === 1
-      );
+      const columnPages = board.columnNoteTitles
+        ? notePages.filter((p) => board.columnNoteTitles!.includes(p.title))
+        : notePages.filter(
+            (p) =>
+              p.title !== board.title &&
+              p.title.startsWith(board.title + '/') &&
+              p.title.slice(board.title.length + 1).split('/').length === 1
+          );
 
       const boardCardClassId = boardCardClassMap.get(board.title)!;
 
       for (const col of columnPages) {
-        const colRelName = col.title.slice(board.title.length + 1);
+        const colRelName = col.title.startsWith(board.title + '/')
+          ? col.title.slice(board.title.length + 1)
+          : col.title;
         if (!colRelName.trim()) continue;
 
         if (
@@ -475,8 +500,12 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
     for (const page of validNotePages) {
       const defaultSourceNodeId =
         titleToNodeMap.get(page.title) ||
-        boardPages
-          .filter((board) => page.title.startsWith(board.title + '/'))
+        effectiveBoardPages
+          .filter(
+            (board) =>
+              page.title.startsWith(board.title + '/') ||
+              (board.columnNoteTitles && board.columnNoteTitles.includes(page.title))
+          )
           .map((board) => titleToNodeMap.get(board.title))
           .find((nodeId): nodeId is string => Boolean(nodeId));
       const pageParagraphs = parseHtmlToParagraphs(page.description || '');
@@ -621,7 +650,17 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       edges,
       axioms,
     };
-  }, [boardPages, notePages, problemData, isDark, lang, palette, noteClassLabel, noteClassName]);
+  }, [
+    boardPages,
+    notePages,
+    problemData,
+    isDark,
+    lang,
+    palette,
+    noteClassLabel,
+    noteClassName,
+    resolvedTopicBoards,
+  ]);
 
   const edgeAdjacencyMap = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -674,5 +713,6 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
     ...graphData,
     isLoading: isBoardLoading || isNoteLoading || isProblemLoading,
     getNeighbors,
+    topicBoardCandidateCount: resolvedTopicBoards.candidateCount,
   };
 };

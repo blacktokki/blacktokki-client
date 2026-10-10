@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
+import { useTopicBoardDisabled } from '../topicDashoard';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import {
   SelectionCameraAnimation,
@@ -42,6 +43,7 @@ export interface KnowledgeGraphCanvasViewProps {
   zoomAction?: { type: 'in' | 'out' | 'fit'; trigger: number } | null;
   onViewportChange?: (viewport: { zoom: number; panX: number; panY: number }) => void;
   onNodeSelect?: (node: KnowledgeGraphNode | null) => void;
+  enableTopicBoards?: boolean;
   style?: React.CSSProperties | any;
 }
 
@@ -60,6 +62,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   zoomAction,
   onViewportChange,
   onNodeSelect,
+  enableTopicBoards,
   style,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -124,6 +127,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     : new Set();
 
   const nodeMapRef = useRef<Map<string, KnowledgeGraphNode>>(new Map());
+  const { consumeIsTopicBoardDisabled } = useTopicBoardDisabled(enableTopicBoards);
   const centerSelectedNodeRef = useRef<(schedule?: boolean) => boolean>(() => false);
   const selectedNodeIdRef = useRef(selectedNodeId);
   selectedNodeIdRef.current = selectedNodeId;
@@ -468,8 +472,10 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       return;
     }
 
+    const isTopicBoardDisabled = consumeIsTopicBoardDisabled();
+
     const previousPositions = new Map<string, { x: number; y: number }>();
-    if (simContextRef.current) {
+    if (simContextRef.current && !isTopicBoardDisabled) {
       for (const n of simContextRef.current.simNodes) {
         if (n.x !== 0 || n.y !== 0) {
           previousPositions.set(n.id, { x: n.x, y: n.y });
@@ -483,9 +489,9 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
             const prev = previousPositions.get(node.id);
             return prev && node.x === 0 && node.y === 0 ? { ...node, x: prev.x, y: prev.y } : node;
           })
-        : nodes;
+        : nodes.map((node) => (isTopicBoardDisabled ? { ...node, x: 0, y: 0 } : node));
 
-    const previousContext = simContextRef.current;
+    const previousContext = isTopicBoardDisabled ? null : simContextRef.current;
     const rootAnchorPositions = previousContext
       ? new Map(
           [
@@ -513,7 +519,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     context.simNodes.forEach((n) => map.set(n.id, n));
     nodeMapRef.current = map;
 
-    if (previousPositions.size === 0) {
+    if (previousPositions.size === 0 && !isTopicBoardDisabled) {
       applyFitToScreen();
     }
 
@@ -533,6 +539,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     dimensions.height,
     dimensions.width,
     edges.length,
+    enableTopicBoards,
     nodes,
     runAnimationLoop,
     spacingScale,

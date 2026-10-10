@@ -93,6 +93,8 @@ export interface ForceSimulationContext {
   focusedNodeIds: Set<string>;
   externalClassNode: SimNode | null;
   externalLinkNodes: SimNode[];
+  noteClassNode: SimNode | null;
+  noteInstanceNodes: SimNode[];
   cx: number;
   cy: number;
   kRepulse: number;
@@ -137,6 +139,29 @@ const centerExternalClass = (classNode: SimNode | null, linkNodes: SimNode[]): n
   if (linkNodes.length === 1) {
     const hitRadius = (node: SimNode) => Math.max(node.radius + 8, 18);
     x += hitRadius(classNode) + hitRadius(linkNodes[0]) + 8;
+  }
+  const movement = Math.hypot(x - classNode.x, y - classNode.y);
+  classNode.x = x;
+  classNode.y = y;
+  classNode.vx = 0;
+  classNode.vy = 0;
+  return movement;
+};
+
+/** Position the Note class at the centroid of its note instances, matching External Link class behavior. */
+const centerNoteClass = (classNode: SimNode | null, noteNodes: SimNode[]): number => {
+  if (!classNode || noteNodes.length === 0) return 0;
+  let x = 0;
+  let y = 0;
+  for (const node of noteNodes) {
+    x += node.x;
+    y += node.y;
+  }
+  x /= noteNodes.length;
+  y /= noteNodes.length;
+  if (noteNodes.length === 1) {
+    const hitRadius = (node: SimNode) => Math.max(node.radius + 8, 18);
+    x += hitRadius(classNode) + hitRadius(noteNodes[0]) + 8;
   }
   const movement = Math.hypot(x - classNode.x, y - classNode.y);
   classNode.x = x;
@@ -356,34 +381,48 @@ export const initForceSimulation = (
     (rootId) => inputNodeById.get(rootId)?.classKind === 'BOARD_CARD'
   );
   const noteClass = nodes.find((node) => node.role === 'CLASS' && node.classKind === 'NOTE');
-  const noteCenterX =
-    cx - (boardRootIds.length > 0 && noteRootIds.length > 0 ? fieldWidth * 0.22 : 0);
-  const boardCenterX =
-    cx + (noteRootIds.length > 0 && boardRootIds.length > 0 ? fieldWidth * 0.22 : 0);
-  if (noteClass && !existingPosMap.has(noteClass.id)) {
-    existingPosMap.set(noteClass.id, { x: noteCenterX, y: cy });
-  }
+  const allRootIds = classRootDistances.rootIds;
+  const totalRoots = allRootIds.length;
   const noteRootIndex = new Map(noteRootIds.map((rootId, index) => [rootId, index]));
   const boardRootIndex = new Map(boardRootIds.map((rootId, index) => [rootId, index]));
-  for (const rootId of classRootDistances.rootIds) {
-    if (existingPosMap.has(rootId)) continue;
-    const noteIndex = noteRootIndex.get(rootId);
-    if (noteIndex !== undefined) {
+
+  if (boardRootIds.length === 0) {
+    // 순수 노트 그래프: 기존의 컴팩트한 레이아웃 및 포커스 테스트 호환성 유지
+    for (const rootId of noteRootIds) {
+      if (existingPosMap.has(rootId)) continue;
+      const noteIndex = noteRootIndex.get(rootId) ?? 0;
       const angle = (noteIndex * 2 * Math.PI) / Math.max(1, noteRootIds.length);
       const spread = noteRootIds.length > 1 ? Math.min(280, fieldHeight * 0.15) : 190;
       existingPosMap.set(rootId, {
-        x: noteCenterX + Math.cos(angle) * spread,
+        x: cx + Math.cos(angle) * spread,
         y: cy + Math.sin(angle) * spread,
       });
-      continue;
     }
-    const boardIndex = boardRootIndex.get(rootId) || 0;
-    const angle = (boardIndex * 2 * Math.PI) / Math.max(1, boardRootIds.length);
-    const spread = boardRootIds.length > 1 ? Math.min(280, fieldHeight * 0.15) : 0;
-    existingPosMap.set(rootId, {
-      x: boardCenterX + Math.cos(angle) * spread,
-      y: cy + Math.sin(angle) * spread,
-    });
+  } else {
+    // 보드가 포함된 경우: 보드 클래스 + 최상위 노트 인스턴스 노드 간의 간격을 정확하고 충분하게 확보
+    const targetRootDistance = 520 * Math.min(1.2, Math.max(0.85, spacingScale));
+    let rootSpread = 0;
+    if (totalRoots === 2) {
+      rootSpread = targetRootDistance * 0.5;
+    } else if (totalRoots > 2) {
+      rootSpread = Math.max(
+        targetRootDistance / (2 * Math.sin(Math.PI / totalRoots)),
+        Math.min(fieldWidth * 0.35, fieldHeight * 0.32)
+      );
+    }
+
+    const sortedRoots = [...noteRootIds, ...boardRootIds];
+    const sortedRootIndex = new Map(sortedRoots.map((id, idx) => [id, idx]));
+
+    for (const rootId of allRootIds) {
+      if (existingPosMap.has(rootId)) continue;
+      const orderIdx = sortedRootIndex.get(rootId) ?? 0;
+      const angle = totalRoots > 1 ? (orderIdx * 2 * Math.PI) / totalRoots : 0;
+      existingPosMap.set(rootId, {
+        x: cx + Math.cos(angle) * rootSpread,
+        y: cy + Math.sin(angle) * rootSpread,
+      });
+    }
   }
 
   const externalClass = nodes.find(
@@ -415,10 +454,13 @@ export const initForceSimulation = (
         node.instanceKind === 'EXTERNAL_LINK'
           ? ordinaryLinkIndex.get(node.id)
           : paragraphIndex.get(node.id);
+      const rootBoardIdx = boardRootIndex.get(rootId);
+      const rootBoardPhase = rootBoardIdx !== undefined ? rootBoardIdx * goldenAngle : 0;
       if (circularIndex !== undefined && circularSiblings.length > 1) {
         const angle =
           ((circularIndex + 0.5) * 2 * Math.PI) / circularSiblings.length +
           hop * goldenAngle +
+          rootBoardPhase +
           (node.instanceKind === 'EXTERNAL_LINK' ? goldenAngle / 2 : 0);
         const radius =
           (DEFAULT_LAYOUT_CONFIG.physics.rootFirstRingRadius +
@@ -437,14 +479,14 @@ export const initForceSimulation = (
       );
       const knownNeighbor = knownNeighborId && existingPosMap.get(knownNeighborId);
       if (knownNeighbor) {
-        const angle = index * goldenAngle;
+        const angle = index * goldenAngle + rootBoardPhase;
         existingPosMap.set(node.id, {
           x: knownNeighbor.x + Math.cos(angle) * 95 * spacingScale,
           y: knownNeighbor.y + Math.sin(angle) * 95 * spacingScale,
         });
         return;
       }
-      const angle = (index * 2 * Math.PI) / ring.length + hop * goldenAngle;
+      const angle = (index * 2 * Math.PI) / ring.length + hop * goldenAngle + rootBoardPhase;
       const radius =
         (DEFAULT_LAYOUT_CONFIG.physics.rootFirstRingRadius +
           (hop - 1) * DEFAULT_LAYOUT_CONFIG.physics.rootRingStep) *
@@ -521,6 +563,24 @@ export const initForceSimulation = (
   const externalLinkNodes = simNodes.filter(isExternalLinkInstance);
   centerExternalClass(externalClassNode, externalLinkNodes);
 
+  const noteClassNode = noteClass ? nodeMap.get(noteClass.id) || null : null;
+  const noteMemberIds = new Set(
+    edges
+      .filter(
+        (edge) =>
+          edge.type === 'INSTANCE_OF' &&
+          edge.target === noteClass?.id &&
+          inputNodeById.get(edge.source)?.role === 'INSTANCE'
+      )
+      .map((edge) => edge.source)
+  );
+  const noteInstanceNodes = simNodes.filter(
+    (node) =>
+      noteMemberIds.has(node.id) ||
+      (noteMemberIds.size === 0 && node.role === 'INSTANCE' && node.instanceKind === 'NOTE')
+  );
+  centerNoteClass(noteClassNode, noteInstanceNodes);
+
   const {
     repulsion: baseRepulse,
     spring: kSpring,
@@ -541,12 +601,39 @@ export const initForceSimulation = (
   const pairCount = (nodeCount * (nodeCount - 1)) / 2;
   const pairMinDist = new Float32Array(pairCount);
   let pairIdx = 0;
+  const rootIdSet = new Set(classRootDistances.rootIds);
+  const boardRootSet = new Set(boardRootIds);
+  const noteRootSet = new Set(noteRootIds);
+  const isFocusing = (id1: string, id2: string) =>
+    focusedNodeIds ? focusedNodeIds.has(id1) || focusedNodeIds.has(id2) : false;
+
   for (let i = 0; i < nodeCount; i++) {
     const n1 = simNodes[i];
+    const n1Root = classRootDistances.rootByNodeId.get(n1.id);
     for (let j = i + 1; j < nodeCount; j++) {
       const n2 = simNodes[j];
-      const hasClass = n1.role === 'CLASS' || n2.role === 'CLASS';
-      const baseMinDist = hasClass ? minDistance.classNode : minDistance.instanceNode;
+      const n2Root = classRootDistances.rootByNodeId.get(n2.id);
+
+      const isBothRoots = rootIdSet.has(n1.id) && rootIdSet.has(n2.id);
+      const isBoardRelated =
+        boardRootSet.has(n1.id) ||
+        boardRootSet.has(n2.id) ||
+        (boardRootIds.length > 0 && noteRootSet.has(n1.id) && noteRootSet.has(n2.id));
+
+      let baseMinDist: number;
+      if (isBothRoots && isBoardRelated && !isFocusing(n1.id, n2.id)) {
+        baseMinDist = 500;
+      } else if (
+        boardRootIds.length > 0 &&
+        !isFocusing(n1.id, n2.id) &&
+        ((rootIdSet.has(n1.id) && n2Root && n2Root !== n1.id) ||
+          (rootIdSet.has(n2.id) && n1Root && n1Root !== n2.id))
+      ) {
+        baseMinDist = 280;
+      } else {
+        const hasClass = n1.role === 'CLASS' || n2.role === 'CLASS';
+        baseMinDist = hasClass ? minDistance.classNode : minDistance.instanceNode;
+      }
       pairMinDist[pairIdx++] = baseMinDist * spacingScale;
     }
   }
@@ -613,22 +700,19 @@ export const initForceSimulation = (
     const position = rootAnchorPositions?.get(rootId) || existingPosMap.get(rootId);
     return root && position ? [{ root, ...position }] : [];
   });
-  const noteClassNode = noteClass && nodeMap.get(noteClass.id);
-  const noteClassPosition =
-    noteClass && (rootAnchorPositions?.get(noteClass.id) || existingPosMap.get(noteClass.id));
-  const precomputedNoteClassAnchor =
-    noteClassNode && noteClassPosition ? { root: noteClassNode, ...noteClassPosition } : null;
   const context: ForceSimulationContext = {
     simNodes,
     pairMinDist,
     precomputedEdges,
     precomputedRootPulls,
     precomputedRootAnchors,
-    precomputedNoteClassAnchor,
+    precomputedNoteClassAnchor: null,
     precomputedFocusPulls: [],
     focusedNodeIds: new Set(),
     externalClassNode,
     externalLinkNodes,
+    noteClassNode,
+    noteInstanceNodes,
     cx,
     cy,
     kRepulse,
@@ -701,11 +785,12 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     precomputedEdges,
     precomputedRootPulls,
     precomputedRootAnchors,
-    precomputedNoteClassAnchor,
     precomputedFocusPulls,
     focusedNodeIds,
     externalClassNode,
     externalLinkNodes,
+    noteClassNode,
+    noteInstanceNodes,
     cx,
     cy,
     kRepulse,
@@ -733,7 +818,14 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     for (let j = i + 1; j < nodeCount; j++) {
       const curIdx = pIdx++;
       const n2 = simNodes[j];
-      if (n1 === externalClassNode || n2 === externalClassNode) continue;
+      if (
+        n1 === externalClassNode ||
+        n2 === externalClassNode ||
+        n1 === noteClassNode ||
+        n2 === noteClassNode
+      ) {
+        continue;
+      }
       let dx = x1 - n2.x;
       let dy = y1 - n2.y;
       let distSq = dx * dx + dy * dy;
@@ -800,7 +892,8 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     const dy = node.y - root.y;
     const distance = Math.hypot(dx, dy) || 1;
     const invDist = 1 / distance;
-    const force = (distance - targetRadius) * rootRingSpring;
+    const delta = distance - targetRadius;
+    const force = (delta > 0 ? delta : delta * 0.25) * rootRingSpring;
     const fx = dx * invDist * force;
     const fy = dy * invDist * force;
     node.vx -= fx;
@@ -823,15 +916,10 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     root.vx += (x - root.x) * rootAnchorSpring;
     root.vy += (y - root.y) * rootAnchorSpring;
   }
-  if (precomputedNoteClassAnchor && !focusedNodeIds.has(precomputedNoteClassAnchor.root.id)) {
-    const { root, x, y } = precomputedNoteClassAnchor;
-    root.vx += (x - root.x) * rootAnchorSpring;
-    root.vy += (y - root.y) * rootAnchorSpring;
-  }
   let maxMovement = 0;
   for (let i = 0; i < nodeCount; i++) {
     const node = simNodes[i];
-    if (node === externalClassNode) continue;
+    if (node === externalClassNode || node === noteClassNode) continue;
     const dx = cx - node.x;
     const dy = cy - node.y;
     node.vx += dx * kGravity;
@@ -857,35 +945,12 @@ export const stepForceSimulation = (context: ForceSimulationContext, alpha: numb
     node.vy *= 0.72;
   }
 
-  // Keep structural descendants inside their root's region. Paragraphs and ordinary
-  // external links instead use circular root pulls; clipping them creates boundary rows.
-  if (precomputedRootAnchors.length > 1) {
-    for (const { node, root } of precomputedRootPulls) {
-      if (focusedNodeIds.has(node.id) || prefersCircularRing(node)) continue;
-      const offsetX = node.x - root.x;
-      const offsetY = node.y - root.y;
-      let scale = 1;
-      for (const { root: otherRoot } of precomputedRootAnchors) {
-        if (otherRoot === root) continue;
-        const rootX = otherRoot.x - root.x;
-        const rootY = otherRoot.y - root.y;
-        const towardOtherRoot = 2 * (offsetX * rootX + offsetY * rootY);
-        if (towardOtherRoot <= 0) continue;
-        const limit = (rootX * rootX + rootY * rootY) / towardOtherRoot;
-        scale = Math.min(scale, limit * 0.96);
-      }
-      if (scale >= 1) continue;
-      const nextX = root.x + offsetX * scale;
-      const nextY = root.y + offsetY * scale;
-      maxMovement = Math.max(maxMovement, Math.hypot(nextX - node.x, nextY - node.y));
-      node.x = nextX;
-      node.y = nextY;
-      node.vx *= 0.3;
-      node.vy *= 0.3;
-    }
-  }
+  // Descendants remain organically clustered around their root via radial root pulls
+  // and inter-root collision buffers without hard-clipping along Voronoi boundaries,
+  // preventing unnatural collinear flattening at cluster interfaces.
 
   maxMovement = Math.max(maxMovement, centerExternalClass(externalClassNode, externalLinkNodes));
+  maxMovement = Math.max(maxMovement, centerNoteClass(noteClassNode, noteInstanceNodes));
 
   return maxMovement;
 };

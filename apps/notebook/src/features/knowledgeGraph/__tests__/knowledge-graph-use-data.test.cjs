@@ -102,7 +102,12 @@ Module._load = function loadKnowledgeGraphTestDependency(request, parent, isMain
     };
   }
   if (request.endsWith('/components/SearchBar')) {
-    return { urlToNoteLink: (url) => state.noteLinkTargets.get(url) };
+    return {
+      urlToNoteLink: (url, sourceTitle) =>
+        state.noteLinkParser
+          ? state.noteLinkParser(url, sourceTitle)
+          : state.noteLinkTargets.get(url),
+    };
   }
   if (request.endsWith('/hooks/useBoardStorage')) {
     return { useBoardPages: () => ({ data: state.boardPages, isLoading: false }) };
@@ -134,6 +139,7 @@ try {
 const note = (id, title, description = '<p>내용</p>') => ({
   id,
   title,
+  type: 'NOTE',
   description,
   updated: '2026-09-18T00:00:00.000Z',
   option: {},
@@ -737,5 +743,106 @@ test('keeps structured ordinary notes as notes without creating board classes', 
   } finally {
     state.usageMode = 'NOTE';
     state.notebook = null;
+  }
+});
+
+test('uses raw relative Markdown links for references and retaining empty target notes', () => {
+  const { compileFunction } = require('node:vm');
+  const domino = require('@mixmark-io/domino');
+  const sourceRoot = path.resolve(knowledgeGraphDirectory, '../..');
+  const searchSource = ts.createSourceFile(
+    'SearchBar.tsx',
+    readFileSync(path.join(sourceRoot, 'components/SearchBar.tsx'), 'utf8'),
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TSX
+  );
+  const functions = searchSource.statements.filter(
+    (node) =>
+      ts.isFunctionDeclaration(node) && ['toNoteParams', 'urlToNoteLink'].includes(node.name?.text)
+  );
+  const compile = (source) => {
+    const exports = {};
+    const js = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    compileFunction(js, ['exports'])(exports);
+    return exports;
+  };
+  const { urlToNoteLink } = compile(functions.map((node) => node.getText(searchSource)).join('\n'));
+  const { extractHtmlLinks } = compile(
+    readFileSync(
+      path.resolve(sourceRoot, '../../../packages/blacktokki-editor/src/lib/dom.ts'),
+      'utf8'
+    )
+  );
+  const previousLocation = global.location;
+  const previousDOMParser = global.DOMParser;
+  global.location = {
+    origin: 'https://notebook.test',
+    href: 'https://notebook.test/Home?title=unrelated',
+  };
+  global.DOMParser = class {
+    parseFromString(html) {
+      return domino.createWindow(html, global.location.href).document;
+    }
+  };
+  const relative =
+    '../%EB%8C%80%EC%83%81%20%5B1%5D.md?section=' +
+    encodeURIComponent('둘째') +
+    '#' +
+    encodeURIComponent('중복 문단');
+  const sourceHtml =
+    '<a href="' +
+    relative +
+    '">문단 연결</a><a href="%EB%B9%88%20%EB%85%B8%ED%8A%B8.markdown">빈 노트</a><a href="https://external.test/docs.md">외부 문서</a><a href="https://notebook.test/NotePage?title=legacy">기존 링크</a>';
+  state.boardPages = [];
+  state.notePages = [
+    note(991, '폴더/원본', sourceHtml),
+    note(
+      992,
+      '대상 [1]',
+      '<h2 data-section="첫째">중복 문단</h2><h2 data-section="둘째">중복 문단</h2>'
+    ),
+    note(993, '폴더/빈 노트', ''),
+    note(994, 'legacy'),
+  ];
+  state.problemData = [];
+  state.noteLinkTargets = new Map();
+  state.noteLinkParser = urlToNoteLink;
+  state.htmlLinks = new Map([[sourceHtml, extractHtmlLinks(sourceHtml)]]);
+  try {
+    const [link] = state.htmlLinks.get(sourceHtml);
+    assert.notEqual(link.url, link.rawUrl);
+    const graph = useKnowledgeGraphData();
+    const paragraph = graph.nodes.find((node) => node.paragraph?.autoSection === '둘째');
+    assert.ok(paragraph);
+    assert.ok(graph.nodes.some((node) => node.id === 'note:content:993'));
+    assert.ok(
+      graph.edges.some(
+        (edge) =>
+          edge.type === 'REFERENCES' &&
+          edge.source === 'note:content:991' &&
+          edge.target === paragraph.id &&
+          edge.targetSection === '둘째'
+      )
+    );
+    assert.ok(
+      graph.edges.some((edge) => edge.type === 'REFERENCES' && edge.target === 'note:content:993')
+    );
+    assert.ok(
+      graph.edges.some((edge) => edge.type === 'REFERENCES' && edge.target === 'note:content:994')
+    );
+    const externalLinks = graph.nodes.filter((node) => node.instanceKind === 'EXTERNAL_LINK');
+    assert.deepEqual(
+      externalLinks.map((node) => node.description),
+      ['https://external.test/docs.md']
+    );
+  } finally {
+    global.location = previousLocation;
+    global.DOMParser = previousDOMParser;
+    state.noteLinkParser = undefined;
+    state.htmlLinks = new Map();
+    state.noteLinkTargets = new Map();
   }
 });

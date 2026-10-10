@@ -34,8 +34,27 @@ export function toNoteParams(
   return paragraph ? (section ? { title, paragraph, section } : { title, paragraph }) : { title };
 }
 
-export function urlToNoteLink(url: string) {
-  const newLocation = new URL(url);
+export function urlToNoteLink(url: string, baseNoteTitle?: string) {
+  if (
+    baseNoteTitle &&
+    !/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(url) &&
+    /\.(md|markdown)(?:[?#]|$)/i.test(url)
+  ) {
+    const base =
+      location.origin + '/' + baseNoteTitle.split('/').map(encodeURIComponent).join('/') + '.md';
+    const target = new URL(url, base);
+    return toNoteParams(
+      decodeURIComponent(target.pathname.slice(1)).replace(/\.(md|markdown)$/i, ''),
+      target.hash ? decodeURIComponent(target.hash.slice(1)) : undefined,
+      target.searchParams.get('section') || undefined
+    );
+  }
+  let newLocation: URL;
+  try {
+    newLocation = new URL(url, location.href);
+  } catch {
+    return undefined;
+  }
   if (location.origin === newLocation.origin) {
     const params = new URLSearchParams(newLocation.search);
     const title = params.get('title');
@@ -51,7 +70,9 @@ export function urlToNoteLink(url: string) {
 }
 
 export function onLink(url: string, navigation: StackNavigationProp<NavigationParamList>) {
-  const noteLink = urlToNoteLink(url);
+  const { routes, index } = navigation.getState();
+  const params = routes[index].params;
+  const noteLink = urlToNoteLink(url, params && 'title' in params ? params.title : undefined);
   if (noteLink) {
     navigation.push('NotePage', noteLink);
   } else {

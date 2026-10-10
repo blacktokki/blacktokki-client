@@ -45,12 +45,14 @@
 * Displays the note title, content, and structured section list.
 * The section list is auto-generated from headings (H1–H6); clicking a section jumps to its position.
 * Use top buttons to edit the note, rearrange sections, or view edit history.
+* Clicking a URL-encoded relative file link such as `[Document](../folder/Document%20Title.md)` opens the target document relative to the current note's folder.
 
 ### ✏️ Note Editing
 
 * A flexible editor that supports both markdown and WYSIWYG (visual) modes.
 * Allows free editing with automatic or manual saving.
 * Internal and external link autocompletion is supported.
+* `[` autocomplete and pasting internal links generate URL-encoded relative `.md` links from the current note, preserving paragraph and section information.
 
 ### 🗂 Recent Notes
 
@@ -104,6 +106,7 @@ An environment where you can organize the app's features into distinct 'Notebook
   * Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
   * Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
   * In **Scrum Boards**, **Rows** are automatically generated based on the level immediately above the card's header (Header Level - 1). This enables a more multi-dimensional organization of cards.
+  * Scrum items in the board list display note, named row, and card counts. Rows with the same title are counted once, and the unnamed default row is excluded.
   * Cards can be **dragged and dropped** to another column.
   * When a card is moved, its corresponding section is **physically moved** to the target note.
   * Single-clicking (tapping) a card navigates to the note view screen, while double-clicking (double-tapping) opens the editing screen.
@@ -163,7 +166,7 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 * Move entire notes or specific sections to a different title or location to reorganize your knowledge structure.
 * **Move sub-notes**: When moving a parent note, you can choose to seamlessly move all of its nested sub-notes together.
-* **Update backlinks**: Automatically find and update all internal links pointing to the moved note or section across all your other notes, preventing broken links.
+* **Update backlinks**: Automatically find and update all internal links pointing to the moved note or section across all your other notes, preventing broken links. Relative `.md` and `.markdown` links are also found and updated using the folder of the note containing each link.
 * **Preview changes**: Safely preview the structural changes and text diffs before confirming the move. If the target note already exists, you will be warned and can choose to overwrite.
 
 ### 💾 Storage Options and Account Sync
@@ -248,6 +251,7 @@ Large graphs update their layout incrementally and animate between layout steps 
 
 Visualizes relationships among notes, boards, paragraphs, cards, and external links as a knowledge graph, providing relation exploration and graph validation.
 
+* **Internal Links**: Relative `.md` and `.markdown` links are resolved from the source note's folder to display note and paragraph references. Directly referenced empty notes are also included in the graph.
 * **Knowledge Graph Access & Validation Badge**:
   * Open the feature from the **Knowledge Graph** item in the Drawer or Discovery menu.
   * A badge (`CountBadge`) on the menu button displays the number of detected graph validation issues (referential integrity and isolated entity violations).

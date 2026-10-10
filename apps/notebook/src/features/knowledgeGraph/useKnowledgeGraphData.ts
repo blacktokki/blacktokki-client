@@ -196,7 +196,10 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
         }
       }
       for (const link of extractHtmlLinks(page.description || '')) {
-        const target = urlToNoteLink(link.url);
+        const target = urlToNoteLink(
+          'rawUrl' in link && typeof link.rawUrl === 'string' ? link.rawUrl : link.url,
+          page.title
+        );
         const targetPage = target ? notePageByTitle.get(target.title) : undefined;
         if (targetPage && !contentNoteTitles.has(targetPage.title)) {
           retainedEmptyNoteTitles.add(targetPage.title);
@@ -534,7 +537,10 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
         for (const link of extractHtmlLinks(linkSource.html)) {
           let target: ReturnType<typeof urlToNoteLink>;
           try {
-            target = urlToNoteLink(link.url);
+            target = urlToNoteLink(
+              'rawUrl' in link && typeof link.rawUrl === 'string' ? link.rawUrl : link.url,
+              page.title
+            );
           } catch {
             target = undefined;
           }

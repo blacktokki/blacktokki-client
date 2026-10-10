@@ -8,6 +8,7 @@ export function extractHtmlLinks(text: string) {
   const matches = Array.from(links).map((a) => ({
     text: a.textContent?.trim() || a.href,
     url: a.href,
+    rawUrl: a.getAttribute('href') || a.href,
   }));
 
   return matches;
@@ -128,4 +129,3 @@ export const toRaw = (text: string) => {
     .replaceAll(/<br\s*[/]?>/gi, '\r\n')
     .replaceAll(/<\/?[^>]*>/gi, '');
 };
-

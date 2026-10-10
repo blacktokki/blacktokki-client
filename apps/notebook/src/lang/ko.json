@@ -74,6 +74,7 @@
   "There are no notes.": "노트가 없습니다.",
   "There are no boards.": "보드가 없습니다.",
   "There are no columns.": "컬럼이 없습니다.",
+  "There are no cards.": "카드가 없습니다.",
   "There are no subnotes for this note.": "해당 노트의 하위 노트가 없습니다.",
   "This note has no content yet. Press the ‘Edit’ button to add content.": "아직 내용이 없는 노트입니다. '편집' 버튼을 눌러 내용을 추가해보세요.",
   "There is no direct content in this paragraph.": "이 문단에는 직접 작성된 내용이 없습니다.",
@@ -271,5 +272,6 @@
   "Collapse Legend": "범례 접기",
   "Source Notes": "출처 노트",
   "External Link Class": "외부 링크",
-  "Maps notes, boards, and references into a knowledge graph with scoped validation.": "노트, 보드, 참조 링크를 지식 그래프로 구성하고 범위 기반 유효성 검증을 제공합니다."
+  "Maps notes, boards, and references into a knowledge graph with scoped validation.": "노트, 보드, 참조 링크를 지식 그래프로 구성하고 범위 기반 유효성 검증을 제공합니다.",
+  "Rows": "분류"
 }

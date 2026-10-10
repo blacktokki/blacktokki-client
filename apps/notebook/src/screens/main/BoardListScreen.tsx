@@ -21,11 +21,13 @@ export const BoardListItem: React.FC<{
       updated?: string;
       noteCount: number;
       cardCount: number;
+      rowCount?: number;
     };
   };
   onPress: () => void;
 }> = ({ item, onPress }) => {
   const { commonStyles } = useNotebookTheme();
+  const { lang } = useLangContext();
 
   return (
     <TouchableOpacity style={commonStyles.card} onPress={onPress}>
@@ -42,7 +44,19 @@ export const BoardListItem: React.FC<{
             {item.stats.noteCount}
           </Text>
         </View>
-        <View style={[localStyles.statItem, { marginLeft: 16 }]}>
+        {item.stats.rowCount !== undefined && (
+          <View
+            style={localStyles.statItem}
+            accessible
+            accessibilityLabel={`${lang('Rows')}: ${item.stats.rowCount}`}
+          >
+            <MciIcon name="view-agenda" size={14} color={commonStyles.smallText.color} />
+            <Text style={[commonStyles.smallText, localStyles.statValue]}>
+              {item.stats.rowCount}
+            </Text>
+          </View>
+        )}
+        <View style={localStyles.statItem}>
           <MciIcon name="view-grid" size={14} color={commonStyles.smallText.color} />
           <Text style={[commonStyles.smallText, localStyles.statValue]}>
             {item.stats.cardCount}
@@ -90,6 +104,7 @@ const localStyles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 6,
     alignItems: 'center',
+    gap: 16,
   },
   statItem: {
     flexDirection: 'row',

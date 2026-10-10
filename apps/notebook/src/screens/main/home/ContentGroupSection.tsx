@@ -74,6 +74,7 @@ export const getBoardStatsList = (boards: Content[], allPages: Content[]) => {
     .map((board) => {
       const option = board.option;
       const headerLevel = option && 'BOARD_HEADER_LEVEL' in option ? option.BOARD_HEADER_LEVEL : 3;
+      const isScrum = option && 'BOARD_TYPE' in option && option.BOARD_TYPE === 'SCRUM';
 
       const noteColumns = allPages.filter(
         (p) =>
@@ -84,12 +85,20 @@ export const getBoardStatsList = (boards: Content[], allPages: Content[]) => {
       );
 
       let totalCardCount = 0;
+      const rowTitles = new Set<string>();
       let updated = board.updated;
 
       noteColumns.forEach((page) => {
         const paragraphs = parseHtmlToParagraphs(page.description || '');
         const cards = paragraphs.filter((p) => p.level === headerLevel);
         totalCardCount += cards.length;
+        if (isScrum) {
+          paragraphs.forEach((paragraph) => {
+            if (paragraph.level === headerLevel - 1 && paragraph.title !== '') {
+              rowTitles.add(paragraph.title);
+            }
+          });
+        }
 
         if (new Date(page.updated) > new Date(updated)) {
           updated = page.updated;
@@ -101,6 +110,7 @@ export const getBoardStatsList = (boards: Content[], allPages: Content[]) => {
         stats: {
           noteCount: noteColumns.length,
           cardCount: totalCardCount,
+          rowCount: isScrum ? rowTitles.size : undefined,
           updated,
         },
       };

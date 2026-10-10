@@ -7,10 +7,11 @@ import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { TopicBoardSection } from './TopicBoardSection';
 import { TopicBoardSummarySection, useTopicBoardSummary } from './TopicBoardSummarySection';
 import { TopicOverviewSection } from './TopicOverviewSection';
+import { TopicLinksSection, TopicLinksTabButton } from './links/TopicLinksSection';
+import { useTopicConnections } from './links/useTopicConnections';
 import type { TopicDashboardNavigationProp } from './types';
 import { useTopicDashboard } from './useTopicDashboard';
 import { ResponsiveSearchBar } from '../../components/SearchBar';
-import StatusCard from '../../components/StatusCard';
 import { useEffectExtensionScreen } from '../../hooks/useExtension';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 
@@ -22,8 +23,10 @@ export const TopicDashboardScreen: React.FC = () => {
   const { commonStyles } = useNotebookTheme();
   const { topicDashboards, currentBoard, selectBoard, metrics, totalBoardCount } =
     useTopicDashboard();
+  const connections = useTopicConnections();
   const summary = useTopicBoardSummary(currentBoard);
-  const [viewMode, setViewMode] = useState<'OVERVIEW' | 'SUMMARY' | 'BOARD'>('OVERVIEW');
+  const [viewMode, setViewMode] = useState<'OVERVIEW' | 'SUMMARY' | 'BOARD' | 'LINKS'>('OVERVIEW');
+  const isOverview = viewMode !== 'LINKS' && (viewMode === 'OVERVIEW' || !currentBoard);
 
   return (
     <View style={[commonStyles.container, { paddingHorizontal: 0, paddingVertical: 0, flex: 1 }]}>
@@ -33,117 +36,112 @@ export const TopicDashboardScreen: React.FC = () => {
       <View
         style={[localStyles.tabSwitcherBar, { borderBottomColor: commonStyles.card.borderColor }]}
       >
-        {totalBoardCount > 0 ? (
-          <View style={localStyles.tabButtonsGroup}>
-            <TouchableOpacity
-              onPress={() => setViewMode('OVERVIEW')}
+        <View style={localStyles.tabButtonsGroup}>
+          <TouchableOpacity
+            onPress={() => setViewMode('OVERVIEW')}
+            style={[
+              localStyles.tabButton,
+              isOverview && [
+                localStyles.activeTabButton,
+                { borderBottomColor: commonStyles.activeTab.color },
+              ],
+            ]}
+          >
+            <MciIcon
+              name="view-compact-outline"
+              size={16}
+              color={isOverview ? commonStyles.activeTab.color : commonStyles.smallText.color}
+            />
+            <Text
               style={[
-                localStyles.tabButton,
-                (viewMode === 'OVERVIEW' || !currentBoard) && [
-                  localStyles.activeTabButton,
-                  { borderBottomColor: commonStyles.activeTab.color },
-                ],
+                localStyles.tabButtonText,
+                {
+                  color: isOverview ? commonStyles.activeTab.color : commonStyles.smallText.color,
+                },
               ]}
             >
-              <MciIcon
-                name="view-compact-outline"
-                size={16}
-                color={
-                  viewMode === 'OVERVIEW' || !currentBoard
-                    ? commonStyles.activeTab.color
-                    : commonStyles.smallText.color
-                }
-              />
-              <Text
+              {lang('Overview')}
+            </Text>
+          </TouchableOpacity>
+
+          <TopicLinksTabButton
+            active={viewMode === 'LINKS'}
+            onPress={() => setViewMode('LINKS')}
+            connections={connections}
+          />
+
+          {currentBoard && (
+            <>
+              <TouchableOpacity
+                onPress={() => setViewMode('SUMMARY')}
                 style={[
-                  localStyles.tabButtonText,
-                  {
-                    color:
-                      viewMode === 'OVERVIEW' || !currentBoard
-                        ? commonStyles.activeTab.color
-                        : commonStyles.smallText.color,
-                  },
+                  localStyles.tabButton,
+                  viewMode === 'SUMMARY' && [
+                    localStyles.activeTabButton,
+                    { borderBottomColor: commonStyles.activeTab.color },
+                  ],
                 ]}
               >
-                {lang('Overview')}
-              </Text>
-            </TouchableOpacity>
-
-            {currentBoard && (
-              <>
-                <TouchableOpacity
-                  onPress={() => setViewMode('SUMMARY')}
+                <MciIcon
+                  name="clipboard-text-outline"
+                  size={16}
+                  color={
+                    viewMode === 'SUMMARY'
+                      ? commonStyles.activeTab.color
+                      : commonStyles.smallText.color
+                  }
+                />
+                <Text
                   style={[
-                    localStyles.tabButton,
-                    viewMode === 'SUMMARY' && [
-                      localStyles.activeTabButton,
-                      { borderBottomColor: commonStyles.activeTab.color },
-                    ],
+                    localStyles.tabButtonText,
+                    {
+                      color:
+                        viewMode === 'SUMMARY'
+                          ? commonStyles.activeTab.color
+                          : commonStyles.smallText.color,
+                    },
                   ]}
                 >
-                  <MciIcon
-                    name="clipboard-text-outline"
-                    size={16}
-                    color={
-                      viewMode === 'SUMMARY'
-                        ? commonStyles.activeTab.color
-                        : commonStyles.smallText.color
-                    }
-                  />
-                  <Text
-                    style={[
-                      localStyles.tabButtonText,
-                      {
-                        color:
-                          viewMode === 'SUMMARY'
-                            ? commonStyles.activeTab.color
-                            : commonStyles.smallText.color,
-                      },
-                    ]}
-                  >
-                    {lang('Board Summary')}
-                  </Text>
-                </TouchableOpacity>
+                  {lang('Board Summary')}
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={() => setViewMode('BOARD')}
+              <TouchableOpacity
+                onPress={() => setViewMode('BOARD')}
+                style={[
+                  localStyles.tabButton,
+                  viewMode === 'BOARD' && [
+                    localStyles.activeTabButton,
+                    { borderBottomColor: commonStyles.activeTab.color },
+                  ],
+                ]}
+              >
+                <MciIcon
+                  name="view-column-outline"
+                  size={16}
+                  color={
+                    viewMode === 'BOARD'
+                      ? commonStyles.activeTab.color
+                      : commonStyles.smallText.color
+                  }
+                />
+                <Text
                   style={[
-                    localStyles.tabButton,
-                    viewMode === 'BOARD' && [
-                      localStyles.activeTabButton,
-                      { borderBottomColor: commonStyles.activeTab.color },
-                    ],
+                    localStyles.tabButtonText,
+                    {
+                      color:
+                        viewMode === 'BOARD'
+                          ? commonStyles.activeTab.color
+                          : commonStyles.smallText.color,
+                    },
                   ]}
                 >
-                  <MciIcon
-                    name="view-column-outline"
-                    size={16}
-                    color={
-                      viewMode === 'BOARD'
-                        ? commonStyles.activeTab.color
-                        : commonStyles.smallText.color
-                    }
-                  />
-                  <Text
-                    style={[
-                      localStyles.tabButtonText,
-                      {
-                        color:
-                          viewMode === 'BOARD'
-                            ? commonStyles.activeTab.color
-                            : commonStyles.smallText.color,
-                      },
-                    ]}
-                  >
-                    {lang('Board View')}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        ) : (
-          <View style={{ flex: 1 }} />
-        )}
+                  {lang('Board View')}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
 
         {/* 같은 축에 배치된 사용 방법 버튼 */}
         <TouchableOpacity
@@ -162,36 +160,27 @@ export const TopicDashboardScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {totalBoardCount === 0 ? (
-        <View style={{ padding: 16 }}>
-          <StatusCard message={lang('There are no topic board candidates.')} />
+      {isOverview && (
+        <TopicOverviewSection
+          topicDashboards={topicDashboards}
+          metrics={metrics}
+          totalBoardCount={totalBoardCount}
+          connections={connections}
+          onSelectBoard={(title) => {
+            selectBoard(title);
+            setViewMode('SUMMARY');
+          }}
+          onShowConnections={() => setViewMode('LINKS')}
+        />
+      )}
+      {viewMode === 'LINKS' && <TopicLinksSection connections={connections} />}
+      {viewMode === 'SUMMARY' && currentBoard && (
+        <TopicBoardSummarySection board={currentBoard} summary={summary} />
+      )}
+      {viewMode === 'BOARD' && currentBoard && (
+        <View style={{ flex: 1 }}>
+          <TopicBoardSection topicBoard={currentBoard} />
         </View>
-      ) : (
-        <>
-          {/* 1. 대시보드 종합 개요 뷰 (OVERVIEW): BoardListScreen과 동일한 BoardListItem 컴포넌트 사용 */}
-          {(viewMode === 'OVERVIEW' || !currentBoard) && (
-            <TopicOverviewSection
-              topicDashboards={topicDashboards}
-              metrics={metrics}
-              onSelectBoard={(title) => {
-                selectBoard(title);
-                setViewMode('SUMMARY');
-              }}
-            />
-          )}
-
-          {/* 2. 보드 상세 요약 뷰 (SUMMARY): 선택한 보드의 상세 요약 표시 */}
-          {viewMode === 'SUMMARY' && currentBoard && (
-            <TopicBoardSummarySection board={currentBoard} summary={summary} />
-          )}
-
-          {/* 3. 보드 상세 뷰 (BOARD) */}
-          {viewMode === 'BOARD' && currentBoard && (
-            <View style={{ flex: 1 }}>
-              <TopicBoardSection topicBoard={currentBoard} />
-            </View>
-          )}
-        </>
       )}
     </View>
   );
@@ -200,6 +189,7 @@ export const TopicDashboardScreen: React.FC = () => {
 const localStyles = StyleSheet.create({
   tabSwitcherBar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
@@ -207,6 +197,7 @@ const localStyles = StyleSheet.create({
   },
   tabButtonsGroup: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
   },
   usageButton: {

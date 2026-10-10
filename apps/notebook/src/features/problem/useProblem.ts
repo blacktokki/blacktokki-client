@@ -73,7 +73,7 @@ const getReadabilityLevel = (() => {
 
 const trim = (text: string) => text.replaceAll('\n', '').replaceAll('&nbsp;', '').trim();
 
-const matchUnlinkedKeyword = (text: string, keyword: string) => {
+export const matchUnlinkedKeyword = (text: string, keyword: string) => {
   const escpaedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return text.match(new RegExp(`(?:^|[\\s\\p{P}])${escpaedKeyword}(?=$|[\\s\\p{P}])`, 'iu'));
 };

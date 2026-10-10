@@ -323,6 +323,19 @@ function dashboardHarness(
     ...dependencies,
     './TopicOverviewSection': loadSource(load('TopicOverviewSection.tsx'), dependencies),
     './TopicBoardSummarySection': loadSource(load('TopicBoardSummarySection.tsx'), dependencies),
+    './links/TopicLinksSection': {
+      TopicLinksTabButton: ({ onPress }) =>
+        React.createElement(TouchableOpacity, { onPress }, '연결 규칙'),
+      TopicLinksSection: () => React.createElement('span', null, '연결 규칙 목록'),
+    },
+    './links/useTopicConnections': {
+      useTopicConnections: () => ({
+        details: [],
+        proposalCount: 0,
+        isLoading: false,
+        isError: false,
+      }),
+    },
     './TopicBoardSection': {
       TopicBoardSection: ({ topicBoard }) =>
         React.createElement('span', null, `보드 뷰: ${topicBoard.title}`),
@@ -386,6 +399,16 @@ test('section tabs retain combined filters and clear them when selecting another
   assert.ok(!html.includes('third card'));
   button('Overview').onPress();
   render();
+  button('연결 규칙').onPress();
+  html = render();
+  assert.ok(html.includes('연결 규칙 목록'));
+  assert.ok(!html.includes('Total Topics'));
+  button('Board Summary').onPress();
+  html = render();
+  assert.ok(html.includes('first card'));
+  assert.ok(!html.includes('third card'));
+  button('Overview').onPress();
+  render();
   button('주제 보드: B').onPress();
   html = render();
   assert.ok(html.includes('other first'));
@@ -436,5 +459,7 @@ test('top-level summary delegates board saving to batch move and empty dashboard
   assert.deepEqual(mutationCalls, []);
   const empty = dashboardHarness([]);
   assert.ok(empty.render().includes('There are no topic board candidates.'));
-  assert.equal(empty.button('Overview'), undefined);
+  assert.ok(empty.button('Overview'));
+  empty.button('연결 규칙').onPress();
+  assert.ok(empty.render().includes('연결 규칙 목록'));
 });

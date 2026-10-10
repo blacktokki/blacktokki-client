@@ -286,6 +286,7 @@ Visualizes relationships among notes, boards, paragraphs, cards, and external li
 * **Dashboard Metrics & View Switching**:
   * Top KPI cards provide instant metrics for total topics, total cards, and Kanban/Scrum distribution.
   * **Overview**: Browse topic boards using clean board item cards identical to the board list screen, complete with note and card metrics, and jump directly to any board summary.
+  * **Connection Rules**: All connections in the relationship diagram use curves. Reverse connections, cycles, and connections that skip intermediate boards are routed above the cards.
   * **Board Summary**: Displays detailed metadata, column chips, row tags, and card previews for the selected board, with quick access to open the full board view.
   * **Board View**: Visualizes cards in a 2D Kanban or Scrum matrix; dragging a card to another column or row atomically updates the underlying markdown notes.
 * **Save as Board & Batch Move**:

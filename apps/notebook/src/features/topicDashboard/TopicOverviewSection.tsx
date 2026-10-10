@@ -1,21 +1,29 @@
 import { useLangContext, Text } from '@blacktokki/core';
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import FaIcon from 'react-native-vector-icons/FontAwesome';
 import MciIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import type { useTopicConnections } from './links/useTopicConnections';
 import type { TopicDashboardBoard, TopicDashboardMetrics } from './types';
+import StatusCard from '../../components/StatusCard';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { BoardListItem } from '../../screens/main/BoardListScreen';
 
 export function TopicOverviewSection({
   topicDashboards,
   metrics,
+  totalBoardCount,
+  connections,
   onSelectBoard,
+  onShowConnections,
 }: {
   topicDashboards: TopicDashboardBoard[];
   metrics: TopicDashboardMetrics;
+  totalBoardCount: number;
+  connections: ReturnType<typeof useTopicConnections>;
   onSelectBoard: (title: string) => void;
+  onShowConnections: () => void;
 }) {
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
@@ -34,6 +42,10 @@ export function TopicOverviewSection({
         stats: {
           noteCount: b.stats.columnCount,
           cardCount: b.stats.cardCount,
+          rowCount:
+            b.option.BOARD_TYPE === 'SCRUM'
+              ? b.rows.filter((row) => row.name !== '').length
+              : undefined,
           updated: latestUpdated || undefined,
         },
       };
@@ -91,8 +103,23 @@ export function TopicOverviewSection({
             {lang('Total Cards')}
           </Text>
         </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="연결 규칙 보기"
+          onPress={onShowConnections}
+          style={[commonStyles.card, localStyles.metricCard]}
+        >
+          <FaIcon name="link" size={16} color={commonStyles.activeTab.color} />
+          <Text style={[localStyles.metricValue, { color: commonStyles.text.color }]}>
+            {connections.isLoading || connections.isError ? '—' : connections.details.length}
+          </Text>
+          <Text style={[commonStyles.smallText, localStyles.metricLabel]}>연결 규칙</Text>
+        </TouchableOpacity>
       </View>
 
+      {totalBoardCount === 0 && (
+        <StatusCard message={lang('There are no topic board candidates.')} />
+      )}
       {/* 보드 목록 (BoardListScreen과 동일한 BoardListItem 컴포넌트 렌더링) */}
       <View style={{ gap: 8 }}>
         {boardListItems.map((item) => (
@@ -106,11 +133,13 @@ export function TopicOverviewSection({
 const localStyles = StyleSheet.create({
   metricsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: 4,
     gap: 8,
   },
   metricCard: {
     flex: 1,
+    minWidth: 70,
     paddingVertical: 8,
     paddingHorizontal: 6,
     alignItems: 'center',

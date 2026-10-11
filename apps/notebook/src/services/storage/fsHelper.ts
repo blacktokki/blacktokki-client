@@ -97,39 +97,132 @@ export async function writeFileText(fileHandle: any, text: string): Promise<void
   await writable.close();
 }
 
-async function readFsDataFromDir(rootHandle: any): Promise<FsData> {
-  const entries = await scanDirectoryRecursive(rootHandle);
+/** Conversion cache validated against freshly read content and file metadata. */
+type CachedDirectoryFile = {
+  lastModified: number;
+  size: number;
+  checksum: string;
+  content?: FsData['contents'][number] & { updated: string };
+  json?: FsData['jsons'][number];
+};
+
+/** Computes SHA-256 with a lossless text fallback when Web Crypto is unavailable. */
+async function checksumFileText(text: string): Promise<string> {
+  if (globalThis.crypto?.subtle) {
+    try {
+      const digest = await globalThis.crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(text)
+      );
+      return `sha256:${Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, '0')
+      ).join('')}`;
+    } catch {
+      // Retain exact source equality when the runtime cannot calculate a digest.
+    }
+  }
+  return `text:${text}`;
+}
+
+const directoryFileCache = new WeakMap<object, Map<string, CachedDirectoryFile>>();
+const pendingDirectoryScans = new WeakMap<object, ReturnType<typeof scanDirectoryRecursive>>();
+const recentDirectoryHandles = new Map<number, any>();
+
+/** IndexedDB returns cloned handles; retain a bounded set of equivalent directory identities. */
+async function reuseDirectoryHandle(rootHandle: any, parentId: number): Promise<any> {
+  const previous = recentDirectoryHandles.get(parentId);
+  const sameEntry =
+    previous &&
+    (previous === rootHandle ||
+      (rootHandle.isSameEntry && (await rootHandle.isSameEntry(previous))));
+  const handle = sameEntry ? previous : rootHandle;
+  recentDirectoryHandles.delete(parentId);
+  recentDirectoryHandles.set(parentId, handle);
+  if (recentDirectoryHandles.size > 4) {
+    recentDirectoryHandles.delete(recentDirectoryHandles.keys().next().value!);
+  }
+  return handle;
+}
+
+async function readFsDataFromDir(rootHandle: any, storeName: 'NOTE' | 'BOARD'): Promise<FsData> {
+  let scan = pendingDirectoryScans.get(rootHandle);
+  if (!scan) {
+    scan = scanDirectoryRecursive(rootHandle);
+    pendingDirectoryScans.set(rootHandle, scan);
+    scan.finally(() => pendingDirectoryScans.delete(rootHandle));
+  }
+  const entries = await scan;
+  let cache = directoryFileCache.get(rootHandle);
+  if (!cache) {
+    cache = new Map();
+    directoryFileCache.set(rootHandle, cache);
+  }
+  const paths = new Set(entries.filter((entry) => entry.isFile).map((entry) => entry.path));
+  for (const path of cache.keys()) {
+    if (!paths.has(path)) cache.delete(path);
+  }
   const contents: { title: string; description?: string; updated?: string }[] = [];
   const jsons: { title: string; data: any }[] = [];
+  const files = entries.filter(
+    (entry) =>
+      entry.isFile &&
+      (storeName === 'NOTE'
+        ? /\.(md|markdown)$/i.test(entry.name)
+        : entry.name.endsWith('.json') && entry.name !== 'notebooks.json')
+  );
 
-  for (const entry of entries) {
-    if (!entry.isFile) continue;
-    if (/\.(md|markdown)$/i.test(entry.name)) {
-      try {
-        const { text, lastModified } = await readFileText(entry.handle);
-        const title = entry.path.replace(/\.(md|markdown)$/i, '');
-        const htmlDescription = toHtml(text || '');
-        contents.push({
-          title,
-          description: htmlDescription,
-          updated: new Date(lastModified).toISOString(),
-        });
-      } catch (e) {
-        console.error('Error reading note file:', entry.path, e);
-      }
-    } else if (entry.name.endsWith('.json') && entry.name !== 'notebooks.json') {
-      try {
-        const { text } = await readFileText(entry.handle);
-        const parsed = JSON.parse(text);
-        if (parsed && typeof parsed === 'object') {
-          jsons.push({
-            title: (parsed as any).title || entry.name.replace(/\.json$/i, ''),
-            data: parsed,
-          });
+  // Bound concurrent file reads while retaining the directory's result order.
+  for (let offset = 0; offset < files.length; offset += 8) {
+    const batch = await Promise.all(
+      files.slice(offset, offset + 8).map(async (entry) => {
+        try {
+          const file = await entry.handle.getFile();
+          const text = await file.text();
+          const checksum = await checksumFileText(text);
+          const cached = cache.get(entry.path);
+          if (
+            cached &&
+            cached.lastModified === file.lastModified &&
+            cached.size === file.size &&
+            cached.checksum === checksum
+          ) {
+            return cached;
+          }
+          const result: CachedDirectoryFile = {
+            lastModified: file.lastModified,
+            size: file.size,
+            checksum,
+          };
+          if (storeName === 'NOTE') {
+            result.content = {
+              title: entry.path.replace(/\.(md|markdown)$/i, ''),
+              description: toHtml(text || ''),
+              updated: new Date(file.lastModified).toISOString(),
+            };
+          } else {
+            const parsed = JSON.parse(text);
+            if (parsed && typeof parsed === 'object') {
+              if (!Array.isArray(parsed) && !parsed.updated) {
+                parsed.updated = new Date(file.lastModified).toISOString();
+              }
+              result.json = {
+                title: parsed.title || entry.name.replace(/\.json$/i, ''),
+                data: parsed,
+              };
+            }
+          }
+          cache.set(entry.path, result);
+          return result;
+        } catch (e) {
+          cache.delete(entry.path);
+          console.error('Error reading notebook file:', entry.path, e);
+          return undefined;
         }
-      } catch (e) {
-        console.error('Error reading board file:', entry.path, e);
-      }
+      })
+    );
+    for (const result of batch) {
+      if (result?.content) contents.push(result.content);
+      if (result?.json) jsons.push(result.json);
     }
   }
 
@@ -167,7 +260,8 @@ export async function readContentsFromDir(
   }
 
   if (storeName === 'NOTE' || storeName === 'BOARD') {
-    const fsData = await readFsDataFromDir(rootHandle);
+    rootHandle = await reuseDirectoryHandle(rootHandle, parentId);
+    const fsData = await readFsDataFromDir(rootHandle, storeName);
     const results: Content[] = [];
 
     if (storeName === 'NOTE') {
@@ -232,6 +326,7 @@ export async function readContentsFromDir(
 export function generateVirtualFolderNotes(results: Content[], parentId: number): void {
   const existingTitles = new Set(results.map((r) => r.title).filter(Boolean));
   const virtualPrefixes = new Set<string>();
+  const latestDescendantUpdates = new Map<string, string>();
 
   for (const item of results) {
     if (!item.title) continue;
@@ -239,6 +334,13 @@ export function generateVirtualFolderNotes(results: Content[], parentId: number)
     if (parts.length > 1) {
       for (let i = 1; i < parts.length; i++) {
         const prefix = parts.slice(0, i).join('/');
+        if (
+          item.updated &&
+          new Date(item.updated).getTime() >
+            new Date(latestDescendantUpdates.get(prefix) || 0).getTime()
+        ) {
+          latestDescendantUpdates.set(prefix, item.updated);
+        }
         if (!existingTitles.has(prefix)) {
           virtualPrefixes.add(prefix);
         }
@@ -257,7 +359,7 @@ export function generateVirtualFolderNotes(results: Content[], parentId: number)
       title: prefix,
       description: '',
       order: 0,
-      updated: new Date().toISOString(),
+      updated: latestDescendantUpdates.get(prefix) || new Date(0).toISOString(),
       option: {},
       userId: 0,
       input: prefix,
@@ -274,29 +376,19 @@ export function generateVirtualFolderNotes(results: Content[], parentId: number)
     virtualNotesMap.set(note.title, note);
   }
 
+  const childrenByTitle = new Map<string, Content[]>();
+  for (const note of results) {
+    const slash = note.title.lastIndexOf('/');
+    if (slash < 0) continue;
+    const parent = note.title.slice(0, slash);
+    const children = childrenByTitle.get(parent) ?? [];
+    children.push(note);
+    childrenByTitle.set(parent, children);
+  }
   for (const [prefix, targetNote] of virtualNotesMap) {
-    const allDescendants = results.filter(
-      (r) => r.title !== prefix && r.title.startsWith(prefix + '/')
+    const directChildren = (childrenByTitle.get(prefix) ?? []).sort((a, b) =>
+      (a.title || '').localeCompare(b.title || '')
     );
-
-    if (allDescendants.length === 0) continue;
-
-    // 가상 노트인 경우에만 updated를 자식 중 최신값으로 갱신
-    if (virtualPrefixes.has(prefix)) {
-      let maxUpdated = new Date(0).toISOString();
-      for (const desc of allDescendants) {
-        if (desc.updated && new Date(desc.updated) > new Date(maxUpdated)) {
-          maxUpdated = desc.updated;
-        }
-      }
-      if (maxUpdated !== new Date(0).toISOString()) {
-        targetNote.updated = maxUpdated;
-      }
-    }
-
-    const directChildren = allDescendants
-      .filter((r) => r.title.slice(prefix.length + 1).split('/').length === 1)
-      .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     if (directChildren.length > 0) {
       targetNote.description = directChildren
@@ -315,6 +407,8 @@ export async function saveContentsToDir(
   contents: (Content | PostContent)[],
   deleteIdOrTitle?: number | string
 ): Promise<void> {
+  rootHandle = await reuseDirectoryHandle(rootHandle, parentId);
+  directoryFileCache.delete(rootHandle);
   if (contents.length > 0) {
     if (storeName === 'NOTEBOOK') {
       const currentNotebooks = await readContentsFromDir(rootHandle, 'NOTEBOOK', parentId);

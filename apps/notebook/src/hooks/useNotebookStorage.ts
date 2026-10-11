@@ -67,14 +67,12 @@ export const useNotebooks = () => {
   return useQuery({
     queryKey: ['notebookContents', auth.user, !auth.isLocal],
     queryFn: async () => {
-      if (auth.user === undefined) {
-        return [];
-      }
       const contents = await getNotebookContents(!auth.isLocal);
       return contents.sort(
         (a, b) => new Date(b.updated || 0).getTime() - new Date(a.updated || 0).getTime()
       );
     },
+    enabled: auth.user !== undefined && auth.isLocal !== undefined,
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,

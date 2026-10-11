@@ -32,10 +32,12 @@ export const getCurrentNotebookId = async (subkey: string): Promise<number | nul
 export const useUsageMode = () => {
   const { auth } = useAuthContext();
   const subkey = auth.isLocal ? '' : `${auth.user?.id}`;
+  const isAuthReady = auth.user !== undefined && auth.isLocal !== undefined;
 
   const { data: usageMode, isLoading: isModeLoading } = useQuery({
     queryKey: ['usageMode', subkey],
     queryFn: () => getUsageMode(subkey),
+    enabled: isAuthReady,
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,
@@ -45,6 +47,7 @@ export const useUsageMode = () => {
   const { data: currentNotebookId, isLoading: isIdLoading } = useQuery({
     queryKey: ['currentNotebookId', subkey],
     queryFn: () => getCurrentNotebookId(subkey),
+    enabled: isAuthReady,
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,
@@ -54,6 +57,7 @@ export const useUsageMode = () => {
   const { data: privateConfig, isLoading: isPrivateLoading } = useQuery({
     queryKey: ['privateMode', subkey],
     queryFn: () => getPrivateConfig(subkey),
+    enabled: isAuthReady,
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,
@@ -61,7 +65,8 @@ export const useUsageMode = () => {
   });
 
   const { data: notebook, isLoading: isNotebookLoading } = useNotebook(currentNotebookId || 0);
-  const isLoading = isModeLoading || isIdLoading || isNotebookLoading || isPrivateLoading;
+  const isLoading =
+    !isAuthReady || isModeLoading || isIdLoading || isNotebookLoading || isPrivateLoading;
   const setUsageMode = useSetUsageMode();
 
   const isPrivateNotebook = !!notebook?.option?.NOTEBOOK_TYPE?.includes('PRIVATE');

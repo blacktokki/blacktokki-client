@@ -66,6 +66,7 @@
 You can adjust the app's complexity and features across 3 levels according to your workflow and purpose.
 * **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
 * **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Mode Settings`. If no notebook mode has been created, selecting Notebook Mode will automatically open the modal to create a new notebook.
+* Refreshing in local mode restores the last selected usage mode and notebook. Deleted notebooks and locked private notebooks return to Note Mode.
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
@@ -246,6 +247,8 @@ An environment where you can organize the app's features into distinct 'Notebook
   * `+1 day`, `+1 month`, `Extend`, or `Delete`.
 
 ### 🕸️ Knowledge Graph
+
+Local notebooks read file contents on each refresh and compare checksums, reusing conversions of unchanged files to speed up repeated loading of large folders. The knowledge graph reuses note paragraph analysis. On an active screen, notes and boards refresh every 30 seconds; external edits, additions, renames and deletions appear on the next read, including edits that preserve both the file modification time and byte size.
 
 Large graphs update their layout incrementally and animate between layout steps so you can keep panning and zooming while nodes settle. During movement, the canvas temporarily uses a lower resolution, tiny nodes appear as points, and relationship decorations are simplified. All nodes and relationships remain available; selected, hovered, and warning nodes retain their detailed indicators. The original resolution, node shapes, and relationship decorations return after movement stops. Edge highlights then start on large graphs.
 

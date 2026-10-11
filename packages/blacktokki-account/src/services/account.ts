@@ -71,7 +71,11 @@ export async function logout(resetOtp?: boolean) {
     }
   }
   await setToken(null);
-  await account.get('/logout');
+  try {
+    await account.get('/logout');
+  } catch (error: any) {
+    if (error.response?.status !== 403) throw error;
+  }
   return true;
 }
 

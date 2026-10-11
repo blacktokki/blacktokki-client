@@ -72,7 +72,7 @@ export const useNotebooks = () => {
         (a, b) => new Date(b.updated || 0).getTime() - new Date(a.updated || 0).getTime()
       );
     },
-    enabled: auth.user !== undefined && auth.isLocal !== undefined,
+    enabled: auth.isLogin === true && !auth.isLoading,
     staleTime: Infinity,
     cacheTime: Infinity,
     refetchOnMount: false,

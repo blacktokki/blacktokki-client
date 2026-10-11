@@ -10,7 +10,8 @@ const needRefresh = (response: AxiosResponse<any, any>) => {
   return (
     (response.config.url === '/api/v1/user/?self=true' &&
       response.request.responseURL.endsWith('account/login')) ||
-    response.status === 401
+    response.status === 401 ||
+    response.status === 403
   );
 };
 
@@ -34,7 +35,7 @@ export const axiosCreate = (service: string) => {
       return response;
     },
     async (error: any) => {
-      if (needRefresh(error.response) || error.response.status === 403) {
+      if (needRefresh(error.response)) {
         await refreshToken();
       }
       return Promise.reject(error);
@@ -68,10 +69,11 @@ export const refreshToken = async (resetRoles?: boolean) => {
 
 export const setToken = async (token: string | null) => {
   allAxios.forEach((_axios) => {
-    _axios.defaults.headers['Authorization'] = `JWT ${token}`;
+    if (token) _axios.defaults.headers['Authorization'] = `JWT ${token}`;
+    else delete _axios.defaults.headers['Authorization'];
   });
   if (token) await AsyncStorage.setItem('Authorization', token);
-  else AsyncStorage.removeItem('Authorization');
+  else await AsyncStorage.removeItem('Authorization');
 };
 
 export const getToken = async () => {

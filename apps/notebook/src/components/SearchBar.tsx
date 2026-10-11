@@ -35,44 +35,50 @@ export function toNoteParams(
 }
 
 export function urlToNoteLink(url: string, baseNoteTitle?: string) {
-  if (
-    baseNoteTitle &&
-    !/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(url) &&
-    /\.(md|markdown)(?:[?#]|$)/i.test(url)
-  ) {
-    const base =
-      location.origin + '/' + baseNoteTitle.split('/').map(encodeURIComponent).join('/') + '.md';
-    const target = new URL(url, base);
-    return toNoteParams(
-      decodeURIComponent(target.pathname.slice(1)).replace(/\.(md|markdown)$/i, ''),
-      target.hash ? decodeURIComponent(target.hash.slice(1)) : undefined,
-      target.searchParams.get('section') || undefined
-    );
-  }
-  let newLocation: URL;
   try {
-    newLocation = new URL(url, location.href);
+    if (
+      baseNoteTitle &&
+      !/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(url) &&
+      (/\.(md|markdown)(?:[?#]|$)/i.test(url) || url.startsWith('#'))
+    ) {
+      const base =
+        location.origin + '/' + baseNoteTitle.split('/').map(encodeURIComponent).join('/') + '.md';
+      const target = new URL(url, base);
+      return toNoteParams(
+        decodeURIComponent(target.pathname.slice(1)).replace(/\.(md|markdown)$/i, ''),
+        target.hash ? decodeURIComponent(target.hash.slice(1)) : undefined,
+        target.searchParams.get('section') || undefined
+      );
+    }
+    const newLocation = new URL(url, location.href);
+    if (location.origin === newLocation.origin) {
+      const params = new URLSearchParams(newLocation.search);
+      const title = params.get('title');
+      const paragraph =
+        (newLocation.hash ? decodeURIComponent(newLocation.hash.substring(1)) : undefined) ||
+        params.get('paragraph') ||
+        undefined;
+      const section = params.get('section') || undefined;
+      if (title) {
+        return toNoteParams(title, paragraph, section);
+      }
+    }
   } catch {
     return undefined;
   }
-  if (location.origin === newLocation.origin) {
-    const params = new URLSearchParams(newLocation.search);
-    const title = params.get('title');
-    const paragraph =
-      (newLocation.hash ? decodeURIComponent(newLocation.hash.substring(1)) : undefined) ||
-      params.get('paragraph') ||
-      undefined;
-    const section = params.get('section') || undefined;
-    if (title) {
-      return toNoteParams(title, paragraph, section);
-    }
-  }
 }
 
-export function onLink(url: string, navigation: StackNavigationProp<NavigationParamList>) {
-  const { routes, index } = navigation.getState();
-  const params = routes[index].params;
-  const noteLink = urlToNoteLink(url, params && 'title' in params ? params.title : undefined);
+export function onLink(
+  url: string,
+  navigation: StackNavigationProp<NavigationParamList>,
+  baseNoteTitle?: string
+) {
+  if (baseNoteTitle === undefined) {
+    const { routes, index } = navigation.getState();
+    const params = routes[index].params;
+    baseNoteTitle = params && 'title' in params ? params.title : undefined;
+  }
+  const noteLink = urlToNoteLink(url, baseNoteTitle);
   if (noteLink) {
     navigation.push('NotePage', noteLink);
   } else {
@@ -84,7 +90,7 @@ export function getLinks(pages: Content[], sameTitle?: boolean) {
   return pages
     .flatMap((v) =>
       extractHtmlLinks(v.description || '').map((v2) => {
-        const noteLink = urlToNoteLink(v2.url);
+        const noteLink = urlToNoteLink(v2.rawUrl || v2.url, v.title);
         if (noteLink) {
           if (sameTitle || v2.text !== noteLink.title) {
             return {
@@ -150,8 +156,8 @@ const useOnPressKeyword = ({
       } else if (item.type === '_LINK') {
         window.open(item.url, '_blank');
         addKeyword && addKeywordMutate(item);
-      } else if (item.type === '_NOTELINK' && item.paragraph) {
-        navigation.push('NotePage', { title: item.title, paragraph: item.paragraph });
+      } else if (item.type === '_NOTELINK') {
+        navigation.push('NotePage', toNoteParams(item.title, item.paragraph, item.section));
         addKeyword && addKeywordMutate(item);
       } else if (item.type === '_QUERY') {
         const search = searchFeature?.(item);

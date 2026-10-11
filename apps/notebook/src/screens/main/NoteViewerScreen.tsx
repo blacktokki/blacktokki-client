@@ -85,7 +85,7 @@ export const NoteViewerScreen: React.FC = () => {
             </View>
           </View>
           <View style={commonStyles.flex}>
-            <NotePageSection active={!toc} description={description} />
+            <NotePageSection active={!toc} title={key} description={description} />
             <NoteBottomSection
               toc={toc}
               fullParagraph={fullParagraph}

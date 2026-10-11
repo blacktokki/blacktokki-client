@@ -46,6 +46,7 @@
 * The section list is auto-generated from headings (H1–H6); clicking a section jumps to its position.
 * Use top buttons to edit the note, rearrange sections, or view edit history.
 * Clicking a URL-encoded relative file link such as `[Document](../folder/Document%20Title.md)` opens the target document relative to the current note's folder.
+* The note viewer, focus view, and search resolve relative links from the source note's folder. Editing and saving preserve `../` and `../../` paths, paragraph fragments, and section information. A `#paragraph` link opens that paragraph in the current note.
 
 ### ✏️ Note Editing
 

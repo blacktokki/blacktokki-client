@@ -143,10 +143,12 @@ export const HeaderIconButton: React.FC<{
 
 export const NotePageSection = ({
   active,
+  title,
   description,
   children,
 }: {
   active: boolean;
+  title?: string;
   description?: string;
   children?: React.ReactNode;
 }) => {
@@ -169,7 +171,7 @@ export const NotePageSection = ({
         active
         value={description || ''}
         theme={colorScheme}
-        onLink={(url) => onLink(url, navigation)}
+        onLink={(url) => onLink(url, navigation, title)}
         autoResize
       />
       {children}

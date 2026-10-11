@@ -263,7 +263,7 @@ export const FocusPageSection = ({
                   active
                   value={description || ''}
                   theme={colorScheme}
-                  onLink={(url) => onLink(url, navigation)}
+                  onLink={(url) => onLink(url, navigation, title)}
                   autoResize
                 />
               </View>

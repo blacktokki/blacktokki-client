@@ -216,7 +216,7 @@ export const NotePageScreen: React.FC = () => {
                 </View>
               )
             ) : (
-              <NotePageSection active={!toc} description={description} />
+              <NotePageSection active={!toc} title={title} description={description} />
             )}
             {isFetching || description === undefined ? (
               <LoadingView />

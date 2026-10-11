@@ -48,6 +48,8 @@ export default (
     .toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
     .replace(/\s/g, ' ');
   const composingRef = React.useRef(false);
+  const pressRef = React.useRef({ onPress: props.onPress, onLink: props.onLink });
+  pressRef.current = { onPress: props.onPress, onLink: props.onLink };
   const completeRef = React.useRef<{
     complete: () => void;
     timeout: ReturnType<typeof setTimeout>;
@@ -82,6 +84,8 @@ export default (
       readonly={props.readonly}
       disabled={props.readonly}
       init={{
+        // Preserve file-relative paths instead of resolving them against the app URL on save.
+        convert_urls: false,
         disable_nodechange: props.readonly,
         setup: (editor) => {
           editor.ui.registry.addIcon(
@@ -147,19 +151,16 @@ export default (
         init_instance_callback: (editor) => {
           editor.mode.set(props.readonly ? 'readonly' : 'design');
           if (props.onPress) {
-            const onPress = props.onPress;
             const onClick = (e: Event) => {
               const anchor = (e.target as HTMLElement).closest('a');
-              if (anchor && props.onLink) {
-                if (props.onLink) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  props.onLink(anchor.getAttribute('href') || anchor.href);
-                }
+              if (anchor && pressRef.current.onLink) {
+                e.preventDefault();
+                e.stopPropagation();
+                pressRef.current.onLink(anchor.getAttribute('href') || anchor.href);
               } else {
                 e.preventDefault();
                 e.stopPropagation();
-                onPress();
+                pressRef.current.onPress?.();
               }
             };
             editor.getWin().addEventListener('click', onClick, { capture: true });

@@ -229,9 +229,20 @@ async function readFsDataFromDir(rootHandle: any, storeName: 'NOTE' | 'BOARD'): 
   return { contents, jsons };
 }
 
-async function saveFsDataToDir(rootHandle: any, data: FsData): Promise<void> {
+async function saveFsDataToDir(rootHandle: any, data: FsData, createOnly = false): Promise<void> {
   for (const item of data.contents) {
     const title = item.title || 'Untitled';
+    if (createOnly) {
+      for (const extension of ['md', 'markdown']) {
+        let existing;
+        try {
+          existing = await getNestedFileHandle(rootHandle, `${title}.${extension}`, false);
+        } catch (error) {
+          if ((error as { name?: string }).name !== 'NotFoundError') throw error;
+        }
+        if (existing) throw new Error('Page with new title already exists');
+      }
+    }
     const mdText = toMarkdown(item.description || '');
     const fileHandle = await getNestedFileHandle(rootHandle, `${title}.md`, true);
     await writeFileText(fileHandle, mdText);
@@ -405,7 +416,8 @@ export async function saveContentsToDir(
   storeName: string,
   parentId: number,
   contents: (Content | PostContent)[],
-  deleteIdOrTitle?: number | string
+  deleteIdOrTitle?: number | string,
+  createOnly = false
 ): Promise<void> {
   rootHandle = await reuseDirectoryHandle(rootHandle, parentId);
   directoryFileCache.delete(rootHandle);
@@ -456,7 +468,7 @@ export async function saveContentsToDir(
               })
             : [],
       };
-      await saveFsDataToDir(rootHandle, fsData);
+      await saveFsDataToDir(rootHandle, fsData, createOnly);
     }
   } else if (deleteIdOrTitle !== undefined) {
     if (storeName === 'NOTEBOOK') {

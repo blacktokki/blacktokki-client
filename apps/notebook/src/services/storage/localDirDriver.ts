@@ -29,7 +29,8 @@ export async function localDirSaveItems(
   parentId: number,
   handle: any,
   contents: (Content | PostContent)[],
-  deleteIdOrTitle?: number | string
+  deleteIdOrTitle?: number | string,
+  createOnly = false
 ): Promise<void> {
   if (!handle) {
     throw new Error('로컬 디렉토리 핸들이 존재하지 않습니다. 설정을 다시 확인해주세요.');
@@ -38,5 +39,5 @@ export async function localDirSaveItems(
   if (!permitted) {
     throw new Error('해당 디렉토리에 대한 쓰기 권한이 없습니다.');
   }
-  await saveContentsToDir(handle, storeName, parentId, contents, deleteIdOrTitle);
+  await saveContentsToDir(handle, storeName, parentId, contents, deleteIdOrTitle, createOnly);
 }

@@ -22,7 +22,8 @@ export async function saveStoreItems(
   storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
   contents: (Content | PostContent)[],
   deleteIdOrTitle?: number | string,
-  parentId?: number
+  parentId?: number,
+  createOnly = false
 ): Promise<void> {
   if (contents.length === 0 && deleteIdOrTitle !== undefined && parentId === undefined) {
     const allConfigs = await getAllStorageConfigs();
@@ -51,8 +52,22 @@ export async function saveStoreItems(
 
   const config = await getStorageConfig(targetParentId);
   if (targetParentId > 0 || config.type === 'local') {
-    await localDirSaveItems(storeName, targetParentId, config.handle, contents, deleteIdOrTitle);
+    await localDirSaveItems(
+      storeName,
+      targetParentId,
+      config.handle,
+      contents,
+      deleteIdOrTitle,
+      createOnly
+    );
   } else {
-    await opfsSaveItems(storeName, targetParentId, config.pathName, contents, deleteIdOrTitle);
+    await opfsSaveItems(
+      storeName,
+      targetParentId,
+      config.pathName,
+      contents,
+      deleteIdOrTitle,
+      createOnly
+    );
   }
 }

@@ -26,8 +26,9 @@ export async function opfsSaveItems(
   parentId: number,
   pathName: string,
   contents: (Content | PostContent)[],
-  deleteIdOrTitle?: number | string
+  deleteIdOrTitle?: number | string,
+  createOnly = false
 ): Promise<void> {
   const dirHandle = await getOpfsDirHandle(pathName);
-  await saveContentsToDir(dirHandle, storeName, parentId, contents, deleteIdOrTitle);
+  await saveContentsToDir(dirHandle, storeName, parentId, contents, deleteIdOrTitle, createOnly);
 }

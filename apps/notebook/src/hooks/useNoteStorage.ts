@@ -29,6 +29,7 @@ export const getContents = async (data: {
   types: Content['type'][];
   page?: number;
   parentId?: number;
+  throwOnError?: boolean;
 }): Promise<Content[]> => {
   if (data.isOnline) {
     return await getContentList(data.parentId, data.types, data.page);
@@ -43,6 +44,7 @@ export const getContents = async (data: {
     }
     return allResults;
   } catch (e) {
+    if (data.throwOnError) throw e;
     console.error('Error loading contents from File System:', e);
     return [];
   }
@@ -53,7 +55,8 @@ export const saveContents = async (
   type: 'NOTE' | 'BOARD',
   contents: (Content | PostContent)[],
   deleteId?: number | string,
-  parentId?: number
+  parentId?: number,
+  createOnly = false
 ): Promise<void> => {
   const content = contents.length === 1 ? contents[0] : undefined;
   if (isOnline) {
@@ -75,8 +78,9 @@ export const saveContents = async (
     return;
   }
   try {
-    await saveStoreItems(type, contents, deleteId, parentId);
+    await saveStoreItems(type, contents, deleteId, parentId, createOnly);
   } catch (e) {
+    if (createOnly) throw e;
     console.error('Error saving contents to File System:', e);
   }
 };
@@ -175,11 +179,13 @@ export const useCreateOrUpdatePage = () => {
       description,
       isLast = true,
       newParentId,
+      createOnly = false,
     }: {
       title: string;
       description: string;
       isLast?: boolean;
       newParentId?: number;
+      createOnly?: boolean;
     }) => {
       const parentId =
         newParentId !== undefined
@@ -191,7 +197,17 @@ export const useCreateOrUpdatePage = () => {
         isOnline: !auth.isLocal,
         types: ['NOTE'],
         parentId,
+        throwOnError: createOnly,
       });
+      if (
+        createOnly &&
+        contents.some(
+          (content) =>
+            content.title.normalize('NFC').toLowerCase() === title.normalize('NFC').toLowerCase()
+        )
+      ) {
+        throw new Error('Page with new title already exists');
+      }
       const page = contents.find((c) => c.title === title);
       if (page?.description === description) {
         return { title, description, skip: true };
@@ -222,7 +238,8 @@ export const useCreateOrUpdatePage = () => {
         'NOTE',
         [updatedContent],
         page?.id,
-        updatedContent.parentId
+        updatedContent.parentId,
+        createOnly
       );
       return { title, description, skip: !isLast };
     },

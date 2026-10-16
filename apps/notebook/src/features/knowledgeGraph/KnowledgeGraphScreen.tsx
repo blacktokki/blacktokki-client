@@ -12,6 +12,9 @@ import { NavigationParamList } from '../../types';
 import { KnowledgeGraphNavToolbar } from './components/KnowledgeGraphNavToolbar';
 import { KnowledgeGraphPreviewSheet } from './components/KnowledgeGraphPreviewSheet';
 import { KnowledgeGraphView } from './components/KnowledgeGraphView';
+import { TemplateGraphToggle } from './inductiveTemplate/TemplateGraphToggle';
+import { isTemplateGraphNode } from './inductiveTemplate/graph';
+import { useTemplateGraph } from './inductiveTemplate/useTemplateGraph';
 import { KnowledgeGraphNode } from './types';
 import { useKnowledgeGraphData } from './useKnowledgeGraphData';
 import { normalizeNhopDepth } from './utils/nhop';
@@ -21,7 +24,10 @@ export const KnowledgeGraphScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
   const { usageMode, notebook } = useUsageMode();
-  const { nodes, edges, axioms, isLoading, getNeighbors } = useKnowledgeGraphData();
+  const graph = useKnowledgeGraphData();
+  const templates = useTemplateGraph(graph);
+  const { nodes, edges, getNeighbors } = templates;
+  const { axioms, isLoading } = graph;
   const [selectedNode, setSelectedNode] = useState<KnowledgeGraphNode | null>(null);
   const [selectionTrigger, setSelectionTrigger] = useState(0);
   const [previewSheetHeight, setPreviewSheetHeight] = useState(0);
@@ -31,6 +37,11 @@ export const KnowledgeGraphScreen: React.FC = () => {
     setSelectedNode(null);
     setNhopDepth(1);
   }, [graphScope]);
+  useEffect(() => {
+    setSelectedNode((current) =>
+      current ? nodes.find((node) => node.id === current.id) || null : null
+    );
+  }, [nodes]);
   const handleSelectNode = useCallback(
     (node: KnowledgeGraphNode | null) => {
       setSelectedNode(node);
@@ -53,6 +64,7 @@ export const KnowledgeGraphScreen: React.FC = () => {
   // Navigate to target note or paragraph/section
   const handleOpenNode = useCallback(
     (node: KnowledgeGraphNode, targetSection?: string) => {
+      if (isTemplateGraphNode(node)) return;
       if (
         node.instanceKind === 'EXTERNAL_LINK' ||
         node.instanceKind === 'CONNECTED_EXTERNAL_LINK'
@@ -110,6 +122,17 @@ export const KnowledgeGraphScreen: React.FC = () => {
             focusedNodeIds={focusedNodeIds}
             focusDepth={nhopDepth}
             onSelectNode={handleSelectNode}
+            extraToolbar={
+              templates.available && (
+                <TemplateGraphToggle
+                  mode={templates.mode}
+                  count={templates.count}
+                  working={templates.working}
+                  error={templates.error}
+                  onToggle={templates.toggle}
+                />
+              )
+            }
           />
           {selectedNode && (
             <KnowledgeGraphPreviewSheet

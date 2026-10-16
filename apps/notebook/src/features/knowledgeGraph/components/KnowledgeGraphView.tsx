@@ -12,9 +12,9 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { KnowledgeGraphCanvasView } from './KnowledgeGraphCanvasView';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
 import { AxiomEvaluationResult, KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { shouldHideExternalLinkClass } from '../utils/externalLinkClassification';
-import { getKnowledgeGraphPalette } from '../utils/palette';
 import {
   getKnowledgeGraphRelationDisplayLabel,
   getKnowledgeGraphNodeKind,
@@ -34,6 +34,7 @@ interface KnowledgeGraphViewProps {
   focusedNodeIds: Set<string> | null;
   focusDepth: number;
   onSelectNode: (node: KnowledgeGraphNode | null) => void;
+  extraToolbar?: React.ReactNode;
 }
 
 const relationLegendColor = (summary: KnowledgeGraphRelationSummary, isDark: boolean): string => {
@@ -50,6 +51,8 @@ const relationLegendColor = (summary: KnowledgeGraphRelationSummary, isDark: boo
       return isDark ? '#AACCFF' : '#5588CC';
     case 'REPRESENTED_BY_NOTE':
       return isDark ? '#85929E' : '#5D6D7E';
+    case 'DERIVED_FROM':
+      return getKnowledgeGraphPalette(isDark).template.stroke;
     default:
       return isDark ? '#7F8C8D' : '#64748B';
   }
@@ -172,6 +175,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   focusedNodeIds,
   focusDepth,
   onSelectNode,
+  extraToolbar,
 }) => {
   const { commonStyles, colorScheme } = useNotebookTheme();
   const { lang } = useLangContext();
@@ -454,6 +458,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               />
             )
         )}
+        {extraToolbar}
       </View>
 
       <View

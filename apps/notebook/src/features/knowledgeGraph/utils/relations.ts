@@ -1,4 +1,4 @@
-import type { getKnowledgeGraphPalette } from './palette';
+import type { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
 import { KnowledgeGraphEdge, KnowledgeGraphNode, KnowledgeGraphRelationType } from '../types';
 
 export type KnowledgeGraphNodeKindLabel = keyof ReturnType<typeof getKnowledgeGraphPalette>;
@@ -12,6 +12,7 @@ const INSTANCE_NODE_KINDS: Partial<
   CONNECTED_PARAGRAPH: 'connectedParagraph',
   EXTERNAL_LINK: 'externalLink',
   CONNECTED_EXTERNAL_LINK: 'connectedExternalLink',
+  TEMPLATE: 'template',
 };
 
 /** Use one classification for the legend, detail badge, and palette. */
@@ -19,6 +20,7 @@ export const getKnowledgeGraphNodeKind = (
   node: KnowledgeGraphNode
 ): KnowledgeGraphNodeKindLabel => {
   if (node.role === 'CLASS') {
+    if (node.classKind === 'TEMPLATE_GROUP') return 'templateGroup';
     return node.classCategory === 'BOARD' ? 'boardClass' : 'builtInClass';
   }
   if (node.instanceKind === 'NOTE') return node.boardTitle ? 'boardNote' : 'note';
@@ -41,6 +43,8 @@ export const getKnowledgeGraphNodeKindLabel = (
     connectedParagraph: 'Connected paragraph',
     externalLink: 'External link',
     connectedExternalLink: 'Connected external link',
+    template: 'Template',
+    templateGroup: 'Template group',
   };
   return translate(labels[kind]);
 };
@@ -51,7 +55,10 @@ export const getKnowledgeGraphRelationDisplayLabel = (
 ): string => {
   switch (edge.type) {
     case 'INSTANCE_OF':
+      if (edge.propertyLabel === 'templateGroup') return translate('Template group');
       return translate('Category');
+    case 'DERIVED_FROM':
+      return translate('Template source');
     case 'SUBCLASS_OF':
       return translate('Subcategory');
     case 'REPRESENTED_BY_NOTE':
@@ -93,6 +100,7 @@ const DEFAULT_RELATION_LABELS: Partial<Record<KnowledgeGraphRelationType, string
   REFERENCES: 'references',
   EXTERNAL_REFERENCE: 'externalReference',
   PART_OF: 'partOf',
+  DERIVED_FROM: 'templateSource',
 };
 
 const RELATION_ORDER: KnowledgeGraphRelationType[] = [
@@ -102,6 +110,7 @@ const RELATION_ORDER: KnowledgeGraphRelationType[] = [
   'REFERENCES',
   'EXTERNAL_REFERENCE',
   'PART_OF',
+  'DERIVED_FROM',
 ];
 
 /** Count visible relations without collapsing predicates that have distinct displayed meanings. */

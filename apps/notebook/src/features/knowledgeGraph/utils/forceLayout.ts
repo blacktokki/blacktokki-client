@@ -95,6 +95,11 @@ export interface PrecomputedFocusPull {
   targetRadius: number;
 }
 
+export interface CentroidConstraint {
+  node: SimNode;
+  members: SimNode[];
+}
+
 export interface ForceSimulationContext {
   simNodes: SimNode[];
   collisionFlags: Uint8Array;
@@ -122,6 +127,8 @@ export interface ForceSimulationContext {
   externalLinkNodes: SimNode[];
   noteClassNode: SimNode | null;
   noteInstanceNodes: SimNode[];
+  templateCentroids: CentroidConstraint[];
+  templateCentroidFlags: Uint8Array;
   cx: number;
   cy: number;
   kRepulse: number;
@@ -299,7 +306,12 @@ const indexNearbyNodes = (context: ForceSimulationContext): void => {
   spatialCells.clear();
   for (let i = 0; i < simNodes.length; i++) {
     const node = simNodes[i];
-    if (node === context.noteClassNode || node === context.externalClassNode) continue;
+    if (
+      node === context.noteClassNode ||
+      node === context.externalClassNode ||
+      context.templateCentroidFlags[i]
+    )
+      continue;
     const x = Math.floor(positionX[i] / repulsionCellSize);
     const y = Math.floor(positionY[i] / repulsionCellSize);
     let column = spatialCells.get(x);
@@ -325,7 +337,12 @@ const indexNearbyNodes = (context: ForceSimulationContext): void => {
   }
   for (let i = 0; i < simNodes.length; i++) {
     const node = simNodes[i];
-    if (node === context.noteClassNode || node === context.externalClassNode) continue;
+    if (
+      node === context.noteClassNode ||
+      node === context.externalClassNode ||
+      context.templateCentroidFlags[i]
+    )
+      continue;
     const x = Math.floor(positionX[i] / repulsionCellSize);
     const y = Math.floor(positionY[i] / repulsionCellSize);
     const cell = spatialCells.get(x)!.get(y)!;
@@ -428,6 +445,21 @@ const centerNoteClass = (classNode: SimNode | null, noteNodes: SimNode[]): numbe
   classNode.vx = 0;
   classNode.vy = 0;
   return movement;
+};
+
+/** Apply template centroids before group centroids, using only distinct connected nodes. */
+const centerTemplateNodes = (constraints: CentroidConstraint[]): number => {
+  let maxMovement = 0;
+  for (const { node, members } of constraints) {
+    const x = members.reduce((sum, member) => sum + member.x, 0) / members.length;
+    const y = members.reduce((sum, member) => sum + member.y, 0) / members.length;
+    maxMovement = Math.max(maxMovement, Math.hypot(x - node.x, y - node.y));
+    node.x = x;
+    node.y = y;
+    node.vx = 0;
+    node.vy = 0;
+  }
+  return maxMovement;
 };
 
 /** ADR-2602: Place note branches by their top-level note and board branches by their Board class. */
@@ -882,6 +914,30 @@ export const initForceSimulation = (
 
   const rootIdSet = new Set(classRootDistances.rootIds);
   const nodeIndex = new Map(simNodes.map((node, index) => [node.id, index]));
+  const templateMembers = new Map<SimNode, Set<SimNode>>();
+  const groupMembers = new Map<SimNode, Set<SimNode>>();
+  for (const edge of edges) {
+    const source = nodeMap.get(edge.source);
+    const target = nodeMap.get(edge.target);
+    if (!source || !target || source.instanceKind !== 'TEMPLATE') continue;
+    const members =
+      edge.type === 'DERIVED_FROM'
+        ? templateMembers
+        : edge.type === 'INSTANCE_OF' && target.classKind === 'TEMPLATE_GROUP'
+        ? groupMembers
+        : undefined;
+    if (!members) continue;
+    const node = members === templateMembers ? source : target;
+    const member = members === templateMembers ? target : source;
+    if (!members.has(node)) members.set(node, new Set());
+    members.get(node)!.add(member);
+  }
+  const templateCentroids = [...templateMembers, ...groupMembers].map(([node, members]) => ({
+    node,
+    members: [...members],
+  }));
+  const templateCentroidFlags = new Uint8Array(nodeCount);
+  for (const { node } of templateCentroids) templateCentroidFlags[nodeIndex.get(node.id)!] = 1;
   const collisionFlags = new Uint8Array(nodeCount);
   const rootIndices = new Int32Array(nodeCount);
   for (let i = 0; i < nodeCount; i++) {
@@ -914,6 +970,12 @@ export const initForceSimulation = (
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;
+    // Derived centroids follow their members without pulling source nodes toward them.
+    if (
+      templateCentroidFlags[nodeIndex.get(source.id)!] ||
+      templateCentroidFlags[nodeIndex.get(target.id)!]
+    )
+      continue;
 
     let baseTargetLen = edgeLength.defaultEdge;
     if (edge.type === 'INSTANCE_OF') {
@@ -942,6 +1004,7 @@ export const initForceSimulation = (
     const node = nodeMap.get(nodeId);
     const root = nodeMap.get(classRootDistances.rootByNodeId.get(nodeId)!);
     if (!node || !root) continue;
+    if (templateCentroidFlags[nodeIndex.get(node.id)!]) continue;
     precomputedRootPulls.push({
       node,
       root,
@@ -987,6 +1050,8 @@ export const initForceSimulation = (
     externalLinkNodes,
     noteClassNode,
     noteInstanceNodes,
+    templateCentroids,
+    templateCentroidFlags,
     cx,
     cy,
     kRepulse,
@@ -1004,6 +1069,7 @@ export const initForceSimulation = (
   applyHierarchyConstraints(context.hierarchyConstraints, simNodes);
   centerExternalClass(externalClassNode, externalLinkNodes);
   centerNoteClass(noteClassNode, noteInstanceNodes);
+  centerTemplateNodes(templateCentroids);
   setSimulationFocus(context, edges, selectedNodeId, focusDepth, focusedNodeIds);
   return context;
 };
@@ -1083,6 +1149,8 @@ export const advanceForceSimulation = (
     externalLinkNodes,
     noteClassNode,
     noteInstanceNodes,
+    templateCentroids,
+    templateCentroidFlags,
     cx,
     cy,
     kRepulse,
@@ -1115,7 +1183,7 @@ export const advanceForceSimulation = (
   }
   for (let i = context.repulsionCursor; i < nodeCount; i++) {
     const n1 = simNodes[i];
-    if (n1 === externalClassNode || n1 === noteClassNode) continue;
+    if (n1 === externalClassNode || n1 === noteClassNode || templateCentroidFlags[i]) continue;
     const x1 = positionX[i];
     const y1 = positionY[i];
     let vx1 = velocityX[i];
@@ -1129,7 +1197,8 @@ export const advanceForceSimulation = (
         const j = useSpatialIndex ? context.spatialOrder[index] : index;
         if (!useSpatialIndex) {
           const n2 = simNodes[j];
-          if (n2 === externalClassNode || n2 === noteClassNode) continue;
+          if (n2 === externalClassNode || n2 === noteClassNode || templateCentroidFlags[j])
+            continue;
         }
         let dx = x1 - positionX[j];
         let dy = y1 - positionY[j];
@@ -1233,7 +1302,7 @@ export const advanceForceSimulation = (
   }
   for (let i = 0; i < nodeCount; i++) {
     const node = simNodes[i];
-    if (node === externalClassNode || node === noteClassNode) continue;
+    if (node === externalClassNode || node === noteClassNode || templateCentroidFlags[i]) continue;
     const dx = cx - node.x;
     const dy = cy - node.y;
     node.vx += dx * kGravity;
@@ -1259,7 +1328,12 @@ export const advanceForceSimulation = (
   // keep a stationary constrained layout running indefinitely.
   let maxMovement = 0;
   for (let i = 0; i < nodeCount; i++) {
-    if (simNodes[i] === externalClassNode || simNodes[i] === noteClassNode) continue;
+    if (
+      simNodes[i] === externalClassNode ||
+      simNodes[i] === noteClassNode ||
+      templateCentroidFlags[i]
+    )
+      continue;
     maxMovement = Math.max(
       maxMovement,
       Math.hypot(simNodes[i].x - positionX[i], simNodes[i].y - positionY[i])
@@ -1268,6 +1342,7 @@ export const advanceForceSimulation = (
 
   maxMovement = Math.max(maxMovement, centerExternalClass(externalClassNode, externalLinkNodes));
   maxMovement = Math.max(maxMovement, centerNoteClass(noteClassNode, noteInstanceNodes));
+  maxMovement = Math.max(maxMovement, centerTemplateNodes(templateCentroids));
 
   return maxMovement;
 };

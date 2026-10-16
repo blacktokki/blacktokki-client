@@ -1,4 +1,3 @@
-import { useAuthContext } from '@blacktokki/account';
 import { useLangContext, Text, useResizeContext } from '@blacktokki/core';
 import { extractHtmlLinks } from '@blacktokki/editor';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -15,7 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { useBoardPages } from '../hooks/useBoardStorage';
-import { SearchFeature, useExtension } from '../hooks/useExtension';
+import { useExtension } from '../hooks/useExtension';
 import { KeywordContent, useAddKeyowrd, useKeywords } from '../hooks/useKeywordStorage';
 import { useNotePages } from '../hooks/useNoteStorage';
 import { useNotebookTheme } from '../hooks/useNotebookTheme';
@@ -110,9 +109,8 @@ export function getLinks(pages: Content[], sameTitle?: boolean) {
 
 const normalize = (text: string) => text.toLowerCase().replace(/ /g, '').normalize('NFKD');
 
-export const getFilteredPages = (pages: Content[], searchText: string) => {
+export const getFilteredPages = (pages: Content[], searchText: string, links = getLinks(pages)) => {
   const lowerCaseSearch = normalize(searchText);
-  const links = getLinks(pages);
   return [
     ...pages.filter((page) => normalize(page.title).startsWith(lowerCaseSearch)),
     ...pages.filter((page) => {
@@ -136,9 +134,9 @@ const useOnPressKeyword = ({
   onPress,
   addKeyword,
   afterPress,
-  searchFeature,
+  canSearch,
 }: PressKeywordOption & {
-  searchFeature?: SearchFeature;
+  canSearch?: boolean;
   afterPress?: () => void;
 }) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
@@ -160,9 +158,8 @@ const useOnPressKeyword = ({
         navigation.push('NotePage', toNoteParams(item.title, item.paragraph, item.section));
         addKeyword && addKeywordMutate(item);
       } else if (item.type === '_QUERY') {
-        const search = searchFeature?.(item);
-        if (search) {
-          navigation.push(search.screen as keyof NavigationParamList, search.params);
+        if (canSearch) {
+          navigation.push('SearchPage', { query: item.query });
           addKeyword && addKeywordMutate(item);
         }
       } else if (item.type === 'BOARD' || item.type === '_BOARD') {
@@ -174,7 +171,7 @@ const useOnPressKeyword = ({
       }
       afterPress?.();
     },
-    [onPress, searchFeature]
+    [onPress, canSearch]
   );
 };
 
@@ -293,7 +290,6 @@ export const SearchBar: React.FC<
   const [showResults, setShowResults] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const { lang } = useLangContext();
-  const { auth } = useAuthContext();
   const { commonStyles } = useNotebookTheme();
   const inputRef = useRef<TextInput>(null);
   const { data: keywords = [] } = useKeywords();
@@ -301,11 +297,12 @@ export const SearchBar: React.FC<
   const { data: boards = [] } = useBoardPages();
   const { usageMode } = useUsageMode();
   const { data: extension } = useExtension();
-  const useTextSearchExact = useTextSearch && !!extension.feature.search;
+  const useTextSearchExact = useTextSearch && Object.keys(extension.feature.search).length > 0;
+  const searchLinks = useMemo(() => getLinks([...boards, ...pages]), [boards, pages]);
 
   const filteredPages: SearchContent[] = (
     searchText.length > 0
-      ? getFilteredPages([...boards, ...pages], searchText)
+      ? getFilteredPages([...boards, ...pages], searchText, searchLinks)
       : keywords.filter((v) => v.type !== '_QUERY' || useTextSearchExact)
   )
     .filter(
@@ -317,7 +314,7 @@ export const SearchBar: React.FC<
   const handleKeywordPress = useOnPressKeyword({
     onPress,
     addKeyword,
-    searchFeature: extension.feature.search,
+    canSearch: useTextSearchExact,
     afterPress: () => setSearchText(''),
   });
 
@@ -340,7 +337,7 @@ export const SearchBar: React.FC<
       PanResponder.create({
         onPanResponderStart: handleSearch,
       }).panHandlers,
-    [searchText]
+    [searchText, handleKeywordPress]
   );
 
   const textSearchHandlers = useMemo(
@@ -348,7 +345,7 @@ export const SearchBar: React.FC<
       PanResponder.create({
         onPanResponderStart: handleTextSearch,
       }).panHandlers,
-    [searchText]
+    [searchText, handleKeywordPress]
   );
 
   useEffect(() => {

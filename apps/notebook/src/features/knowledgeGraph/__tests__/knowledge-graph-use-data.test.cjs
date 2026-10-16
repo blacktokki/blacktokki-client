@@ -176,7 +176,7 @@ const board = (id, title) => ({
 
 test.after(() => rmSync(output, { recursive: true, force: true }));
 
-test('names the Note class after the current notebook only in notebook mode', () => {
+test('names the root for note mode or the current notebook', () => {
   state.boardPages = [];
   state.notePages = [note(901, '기록')];
   try {
@@ -184,7 +184,7 @@ test('names the Note class after the current notebook only in notebook mode', ()
     state.notebook = { id: 7, title: '연구실' };
     const notebookGraph = useKnowledgeGraphData();
     const notebookClass = notebookGraph.nodes.find((node) => node.id === 'class:note');
-    assert.equal(notebookClass?.name, '노트: 연구실');
+    assert.equal(notebookClass?.name, '노트북: 연구실');
     assert.ok(
       notebookGraph.edges.some(
         (edge) =>
@@ -197,20 +197,20 @@ test('names the Note class after the current notebook only in notebook mode', ()
     state.usageMode = 'NOTE';
     assert.equal(
       useKnowledgeGraphData().nodes.find((node) => node.id === 'class:note')?.name,
-      '노트'
+      '노트 모드'
     );
 
     state.usageMode = 'SIMPLE';
     assert.equal(
       useKnowledgeGraphData().nodes.find((node) => node.id === 'class:note')?.name,
-      '노트'
+      '노트 모드'
     );
 
     state.usageMode = 'NOTEBOOK';
     state.notebook = null;
     assert.equal(
       useKnowledgeGraphData().nodes.find((node) => node.id === 'class:note')?.name,
-      '노트'
+      '노트북'
     );
   } finally {
     state.usageMode = 'NOTE';
@@ -218,7 +218,7 @@ test('names the Note class after the current notebook only in notebook mode', ()
   }
 });
 
-test('creates named external-link instances, their class and source references', () => {
+test('creates named external-link instances and source references without an external-link class', () => {
   const firstHtml = '<p>첫 링크</p>';
   const secondHtml = '<p>둘째 링크</p>';
   const thirdHtml = '<p>셋째 링크</p>';
@@ -239,18 +239,18 @@ test('creates named external-link instances, their class and source references',
     const graph = useKnowledgeGraphData();
     const externalClass = graph.nodes.find((node) => node.classKind === 'EXTERNAL_LINK');
     const externalLinks = graph.nodes.filter((node) => node.instanceKind === 'EXTERNAL_LINK');
-    assert.ok(externalClass);
+    assert.equal(externalClass, undefined);
     assert.equal(externalLinks.length, 1);
     assert.equal(externalLinks[0].name, 'React 문서');
     assert.equal(externalLinks[0].description, 'https://example.com/docs');
-    assert.ok(
+    assert.equal(
       graph.edges.some(
-        (edge) =>
-          edge.type === 'INSTANCE_OF' &&
-          edge.source === externalLinks[0].id &&
-          edge.target === externalClass.id
-      )
+        (edge) => edge.type === 'INSTANCE_OF' && edge.source === externalLinks[0].id
+      ),
+      false
     );
+    const ids = new Set(graph.nodes.map((node) => node.id));
+    assert.ok(graph.edges.every((edge) => ids.has(edge.source) && ids.has(edge.target)));
     assert.equal(
       graph.edges.filter(
         (edge) => edge.type === 'EXTERNAL_REFERENCE' && edge.target === externalLinks[0].id
@@ -844,5 +844,59 @@ test('uses raw relative Markdown links for references and retaining empty target
     state.noteLinkParser = undefined;
     state.htmlLinks = new Map();
     state.noteLinkTargets = new Map();
+  }
+});
+
+test('only topmost represented notes connect to the mode root while descendants follow their closest note ancestor', () => {
+  const pages = [
+    note(1001, 'Root'),
+    note(1002, 'Root/Child'),
+    note(1003, 'Root/Child/Leaf'),
+    note(1004, 'Root/Gap/Leaf'),
+    note(1005, 'Missing/Top'),
+    note(1006, 'EmptyRoot', ''),
+    note(1007, 'EmptyRoot/Child'),
+    note(1008, 'Work'),
+    note(1009, 'Work/Board/Doing', '<h3>Card</h3>'),
+  ];
+  state.boardPages = [board(1000, 'Work/Board')];
+  state.htmlLinks = new Map();
+  state.noteLinkTargets = new Map();
+  try {
+    for (const mode of ['NOTE', 'NOTEBOOK']) {
+      state.usageMode = mode;
+      state.notebook = mode === 'NOTEBOOK' ? { id: 7, title: 'Notebook' } : null;
+      for (const notes of [pages, [...pages].reverse()]) {
+        state.notePages = notes;
+        const graph = useKnowledgeGraphData();
+        assert.deepEqual(
+          new Set(
+            graph.edges.filter((edge) => edge.target === 'class:note').map((edge) => edge.source)
+          ),
+          new Set([1001, 1005, 1006, 1008].map((id) => `note:content:${id}`))
+        );
+        const parent = (id) =>
+          graph.edges.find(
+            (edge) => edge.source === `note:content:${id}` && edge.propertyLabel === 'notePartOf'
+          )?.target;
+        assert.equal(parent(1002), 'note:content:1001');
+        assert.equal(parent(1003), 'note:content:1002');
+        assert.equal(parent(1004), 'note:content:1001');
+        assert.equal(parent(1007), 'note:content:1006');
+        assert.equal(
+          parent(1009),
+          undefined,
+          'board columns do not escape their board and attach to an outer note'
+        );
+        assert.ok(
+          graph.edges.some(
+            (edge) => edge.source === 'note:content:1009' && edge.target === 'class:boardCard:1000'
+          )
+        );
+      }
+    }
+  } finally {
+    state.usageMode = 'NOTE';
+    state.notebook = null;
   }
 });

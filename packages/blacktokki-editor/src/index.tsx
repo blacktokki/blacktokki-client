@@ -2,7 +2,7 @@ import { exportMarkdowns, importMarkdowns } from './lib/markdown';
 
 export { default as Editor } from './components/Editor';
 export { default as EditorViewer } from './components/EditorViewer';
-export { renderer as toHtml, parser as toMarkdown } from './lib/markdown';
+export { renderer as toHtml, parser as toMarkdown, toToken } from './lib/markdown';
 export * from './lib/dom';
 
 export type FsData = {

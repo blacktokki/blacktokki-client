@@ -8,12 +8,14 @@ import { MovePageScreen } from './main/MovePageScreen';
 import { NotePageScreen } from './main/NotePageScreen';
 import { NoteViewerScreen } from './main/NoteViewerScreen';
 import { RecentPagesScreen } from './main/RecentPageScreen';
+import { SearchScreen } from './main/SearchScreens';
 import HomeScreen from './main/home/HomeScreen';
 
 const title = (auth: Auth) =>
   !auth.isLocal ? 'Blacktokki Notebook' : 'Blacktokki Notebook - Local';
 export const screenTitle = title;
 export const main = {
+  SearchPage: { title, component: SearchScreen, path: 'search' },
   Home: {
     title,
     component: HomeScreen,

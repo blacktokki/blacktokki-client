@@ -1,6 +1,6 @@
 import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { addTemplateGraph, templateGraphNeighbors } from './graph';
 import { getKnowledgeGraphPalette } from './palette';
@@ -15,7 +15,7 @@ import {
 import { useInductiveTemplates } from '../../inductiveTemplate/useInductiveTemplates';
 import { KnowledgeGraphData } from '../types';
 
-export function useTemplateGraph(graph: KnowledgeGraphData) {
+export function useTemplateGraph(graph: KnowledgeGraphData, requestedNodeId?: string) {
   const { data: extension } = useExtension();
   const available = !!extension.info.find(
     (item) => item.key === 'inductiveTemplate' && item.active
@@ -42,6 +42,19 @@ export function useTemplateGraph(graph: KnowledgeGraphData) {
     setSelection({ scope: data.scope, mode: 'off' });
     setResult(undefined);
   }, [available, data.scope]);
+  const openedRequest = useRef('');
+  useEffect(() => {
+    const key = JSON.stringify([data.scope, requestedNodeId]);
+    if (
+      available &&
+      requestedNodeId &&
+      /^(?:template:|class:templateGroup:)/.test(requestedNodeId) &&
+      openedRequest.current !== key
+    ) {
+      openedRequest.current = key;
+      setSelection({ scope: data.scope, mode: 'on' });
+    }
+  }, [available, data.scope, requestedNodeId]);
   useEffect(() => {
     if (mode === 'off' || !data.enabled || !data.examples.data || data.examples.isError) return;
     const examples = data.examples.data;

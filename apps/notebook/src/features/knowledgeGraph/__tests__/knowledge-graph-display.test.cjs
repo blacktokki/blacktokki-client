@@ -10,6 +10,7 @@ let getKnowledgeGraphPalette;
 let getKnowledgeGraphNodeKindLabel;
 let getKnowledgeGraphRelationDisplayLabel;
 let summarizeKnowledgeGraphRelations;
+let visibleKnowledgeGraphEdges;
 try {
   for (const name of ['palette', 'relations']) {
     const source = readFileSync(path.join(__dirname, '../utils', `${name}.ts`), 'utf8');
@@ -23,6 +24,7 @@ try {
     getKnowledgeGraphNodeKindLabel,
     getKnowledgeGraphRelationDisplayLabel,
     summarizeKnowledgeGraphRelations,
+    visibleKnowledgeGraphEdges,
   } = require(path.join(output, 'relations.js')));
 } finally {
   rmSync(output, { recursive: true, force: true });
@@ -64,11 +66,15 @@ test('graph labels use readable category and relation names', () => {
   const translate = (key) =>
     ({
       'Board paragraph': '보드 문단',
+      'Note Mode': '노트 모드',
+      Notebook: '노트북',
       'Card containment': '카드 소속',
       'Paragraph containment': '문단 소속',
-      'Connected paragraph note containment': '연결 문단 노트 소속',
+      'Paragraph note containment': '문단 노트 소속',
     }[key] || key);
   assert.equal(getKnowledgeGraphNodeKindLabel('boardParagraph', translate), '보드 문단');
+  assert.equal(getKnowledgeGraphNodeKindLabel('builtInClass', translate, 'NOTE'), '노트 모드');
+  assert.equal(getKnowledgeGraphNodeKindLabel('builtInClass', translate, 'NOTEBOOK'), '노트북');
 
   const edges = [
     {
@@ -96,7 +102,7 @@ test('graph labels use readable category and relation names', () => {
   ];
   assert.equal(getKnowledgeGraphRelationDisplayLabel(edges[0], translate), '카드 소속');
   assert.equal(getKnowledgeGraphRelationDisplayLabel(edges[1], translate), '문단 소속');
-  assert.equal(getKnowledgeGraphRelationDisplayLabel(edges[2], translate), '연결 문단 노트 소속');
+  assert.equal(getKnowledgeGraphRelationDisplayLabel(edges[2], translate), '문단 노트 소속');
   assert.doesNotMatch(
     getKnowledgeGraphRelationDisplayLabel(edges[3], translate),
     /class|instance/i
@@ -104,4 +110,76 @@ test('graph labels use readable category and relation names', () => {
   const summaries = summarizeKnowledgeGraphRelations(edges);
   assert.equal(summaries.filter((summary) => summary.type === 'PART_OF').length, 3);
   assert.equal(edges[0].propertyLabel, 'cardPartOf');
+});
+
+test('paragraph visibility swaps direct note containment for hierarchy without losing sources or other relations', () => {
+  const nodes = [
+    { id: 'note', instanceKind: 'NOTE', noteTitle: 'Document' },
+    { id: 'other-note', instanceKind: 'NOTE', noteTitle: 'Other' },
+    { id: 'parent', instanceKind: 'PARAGRAPH', noteTitle: 'Document' },
+    { id: 'nested', instanceKind: 'CONNECTED_PARAGRAPH', noteTitle: 'Document' },
+    { id: 'top', instanceKind: 'CONNECTED_PARAGRAPH', noteTitle: 'Document' },
+    { id: 'keyword-source', instanceKind: 'CONNECTED_PARAGRAPH', noteTitle: 'Document' },
+    {
+      id: 'shared',
+      instanceKind: 'BOARD_PARAGRAPH',
+      noteTitle: 'Document',
+      paragraphOccurrences: [{ origin: 'Document' }, { origin: 'Other' }],
+    },
+    { id: 'card', instanceKind: 'CARD', noteTitle: 'Document' },
+  ];
+  const part = (id, source, target, propertyLabel = 'paragraphPartOf') => ({
+    id,
+    source,
+    target,
+    type: 'PART_OF',
+    propertyLabel,
+    color: '#B7950B',
+  });
+  const edges = [
+    part('parent-hierarchy', 'parent', 'note'),
+    part('nested-hierarchy', 'nested', 'parent'),
+    part('nested-note', 'nested', 'note', 'connectedPartOf'),
+    part('top-hierarchy', 'top', 'note'),
+    part('keyword-hierarchy', 'keyword-source', 'parent'),
+    part('shared-first', 'shared', 'note'),
+    part('shared-other', 'shared', 'other-note'),
+    part('card-parent', 'card', 'shared', 'cardPartOf'),
+    { id: 'reference', source: 'note', target: 'nested', type: 'REFERENCES' },
+  ];
+  const before = structuredClone({ nodes, edges });
+  const collapsed = visibleKnowledgeGraphEdges(
+    nodes.filter((node) => node.id !== 'parent'),
+    edges,
+    false
+  );
+  assert.ok(collapsed.every((edge) => edge.source !== 'parent' && edge.target !== 'parent'));
+  assert.ok(!collapsed.some((edge) => edge.propertyLabel === 'paragraphPartOf'));
+  const direct = collapsed.filter((edge) => edge.propertyLabel === 'connectedPartOf');
+  assert.deepEqual(
+    new Set(direct.map((edge) => `${edge.source}:${edge.target}`)),
+    new Set(['nested:note', 'top:note', 'keyword-source:note', 'shared:note', 'shared:other-note'])
+  );
+  assert.equal(direct.length, 5, 'an existing direct edge must not be duplicated');
+  assert.ok(direct.every((edge) => edge.color === '#B7950B'));
+  const expanded = visibleKnowledgeGraphEdges(nodes, edges, true);
+  assert.ok(!expanded.some((edge) => edge.propertyLabel === 'connectedPartOf'));
+  assert.equal(expanded.filter((edge) => edge.propertyLabel === 'paragraphPartOf').length, 6);
+  assert.deepEqual(
+    summarizeKnowledgeGraphRelations(collapsed)
+      .filter((summary) => ['connectedPartOf', 'paragraphPartOf'].includes(summary.label))
+      .map((summary) => summary.label),
+    ['connectedPartOf']
+  );
+  assert.deepEqual(
+    summarizeKnowledgeGraphRelations(expanded)
+      .filter((summary) => ['connectedPartOf', 'paragraphPartOf'].includes(summary.label))
+      .map((summary) => summary.label),
+    ['paragraphPartOf']
+  );
+  for (const result of [collapsed, expanded]) {
+    assert.ok(result.some((edge) => edge.id === 'card-parent'));
+    assert.ok(result.some((edge) => edge.id === 'reference'));
+  }
+  assert.deepEqual({ nodes, edges }, before);
 });

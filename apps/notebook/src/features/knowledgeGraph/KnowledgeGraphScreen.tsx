@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -15,6 +15,8 @@ import { KnowledgeGraphView } from './components/KnowledgeGraphView';
 import { TemplateGraphToggle } from './inductiveTemplate/TemplateGraphToggle';
 import { isTemplateGraphNode } from './inductiveTemplate/graph';
 import { useTemplateGraph } from './inductiveTemplate/useTemplateGraph';
+import { KeywordGraphToggle } from './keywordRelation/components/KeywordGraphToggle';
+import { useKeywordRelationGraph } from './keywordRelation/useKeywordRelationGraph';
 import { KnowledgeGraphNode } from './types';
 import { useKnowledgeGraphData } from './useKnowledgeGraphData';
 import { normalizeNhopDepth } from './utils/nhop';
@@ -22,11 +24,13 @@ import { normalizeNhopDepth } from './utils/nhop';
 export const KnowledgeGraphScreen: React.FC = () => {
   useEffectExtensionScreen('knowledgeGraph');
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
+  const { params } = useRoute<RouteProp<NavigationParamList, 'KnowledgeGraph'>>();
   const { commonStyles } = useNotebookTheme();
   const { usageMode, notebook } = useUsageMode();
   const graph = useKnowledgeGraphData();
-  const templates = useTemplateGraph(graph);
-  const { nodes, edges, getNeighbors } = templates;
+  const templates = useTemplateGraph(graph, params?.nodeId);
+  const keywords = useKeywordRelationGraph(templates, params?.nodeId);
+  const { nodes, edges, getNeighbors } = keywords;
   const { axioms, isLoading } = graph;
   const [selectedNode, setSelectedNode] = useState<KnowledgeGraphNode | null>(null);
   const [selectionTrigger, setSelectionTrigger] = useState(0);
@@ -64,7 +68,7 @@ export const KnowledgeGraphScreen: React.FC = () => {
   // Navigate to target note or paragraph/section
   const handleOpenNode = useCallback(
     (node: KnowledgeGraphNode, targetSection?: string) => {
-      if (isTemplateGraphNode(node)) return;
+      if (isTemplateGraphNode(node) || node.instanceKind === 'KEYWORD') return;
       if (
         node.instanceKind === 'EXTERNAL_LINK' ||
         node.instanceKind === 'CONNECTED_EXTERNAL_LINK'
@@ -117,21 +121,33 @@ export const KnowledgeGraphScreen: React.FC = () => {
             edges={edges}
             axioms={axioms}
             selectedNode={selectedNode}
+            requestedNodeId={params?.nodeId}
             selectionTrigger={selectionTrigger}
             reservedBottomHeight={selectedNode ? Math.max(200, previewSheetHeight + 28) : 0}
             focusedNodeIds={focusedNodeIds}
             focusDepth={nhopDepth}
             onSelectNode={handleSelectNode}
             extraToolbar={
-              templates.available && (
-                <TemplateGraphToggle
-                  mode={templates.mode}
-                  count={templates.count}
-                  working={templates.working}
-                  error={templates.error}
-                  onToggle={templates.toggle}
+              <>
+                <KeywordGraphToggle
+                  enabled={keywords.enabled}
+                  count={keywords.count}
+                  working={keywords.working}
+                  disabled={keywords.disabled}
+                  progress={keywords.progress}
+                  statusLabel={keywords.statusLabel}
+                  onToggle={keywords.toggle}
                 />
-              )
+                {templates.available && (
+                  <TemplateGraphToggle
+                    mode={templates.mode}
+                    count={templates.count}
+                    working={templates.working}
+                    error={templates.error}
+                    onToggle={templates.toggle}
+                  />
+                )}
+              </>
             }
           />
           {selectedNode && (

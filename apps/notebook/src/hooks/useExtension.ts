@@ -8,12 +8,10 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { UsageMode, useUsageMode } from './useUsageMode';
 import { Paragraph } from '../components/HeaderSelectBar';
 
-export type SearchFeature = (item: any) =>
-  | {
-      screen: string;
-      params: any;
-    }
-  | undefined;
+export type SearchRequest = { type: '_QUERY'; query: string };
+export type SearchSectionProps = Pick<SearchRequest, 'query'>;
+/** Each search extension contributes a section to the shared search screen. */
+export type SearchFeature = { Section: React.ComponentType<SearchSectionProps> };
 
 export type NoteSectionProps = {
   title: string;
@@ -41,7 +39,7 @@ type FeatureInfo = {
   screens: NavigationConfig['main'];
 };
 
-type ElementType = 'button' | 'extraSearchButton' | 'config';
+type ElementType = 'button' | 'extraSearchButton' | 'config' | 'background';
 
 type Feature = {
   search?: SearchFeature;
@@ -67,11 +65,12 @@ const getExtension = (config: string[], usageMode?: UsageMode | string) => {
     return true;
   });
 
-  const feature = activeKeys.reduce(
+  const feature = activeKeys.reduce<
+    Omit<Feature, 'search'> & { search: Record<string, SearchFeature> }
+  >(
     (prev, curr) => {
       const feat = features[curr as keyof typeof features];
-      const _search = prev.search;
-      prev.search = 'search' in feat ? (item) => _search?.(item) || feat.search?.(item) : _search;
+      if (feat.search) prev.search[curr] = feat.search;
       prev.elements = [...prev.elements, ...feat.elements];
       prev.NoteSections = [...prev.NoteSections, ...feat.NoteSections];
       prev.NotePageSections = [...(prev.NotePageSections || []), ...feat.NotePageSections];
@@ -96,8 +95,7 @@ const getExtension = (config: string[], usageMode?: UsageMode | string) => {
       HeaderIconButtons: [],
       extraArchiveButtons: [],
       createCommonStylesList: [],
-    } as Feature & {
-      HeaderIconButtons: ((props: NoteSectionProps) => React.JSX.Element)[];
+      search: {},
     }
   );
   return {

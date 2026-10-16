@@ -19,6 +19,11 @@ const emptyNotebookRoots: string[] = [];
  */
 export function useInductiveTemplates(requested = true) {
   const isFocused = useIsFocused();
+  return useInductiveTemplatesData(requested, isFocused);
+}
+
+/** Background consumers share template queries without requiring a navigation context. */
+export function useInductiveTemplatesData(requested = true, isFocused = false) {
   const { auth } = useAuthContext();
   const { notebook, usageMode } = useUsageMode();
   const { data: privateConfig, isLoading: privacyLoading } = usePrivate();

@@ -79,14 +79,17 @@ export default () => {
   return (
     <PaperProvider theme={theme}>
       {isReady && (
-        <Navigation
-          config={{
-            ...config,
-            headerStyle: commonStyles.appHeader,
-            headerTitleStyle: commonStyles.appHeaderTitle,
-            headerLeftContainerStyle: commonStyles.appHeaderLeftContainer,
-          }}
-        />
+        <>
+          {extension.feature.elements('background')}
+          <Navigation
+            config={{
+              ...config,
+              headerStyle: commonStyles.appHeader,
+              headerTitleStyle: commonStyles.appHeaderTitle,
+              headerLeftContainerStyle: commonStyles.appHeaderLeftContainer,
+            }}
+          />
+        </>
       )}
     </PaperProvider>
   );

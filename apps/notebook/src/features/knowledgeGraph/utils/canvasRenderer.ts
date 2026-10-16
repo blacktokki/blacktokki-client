@@ -288,6 +288,7 @@ export const drawEdges = (
     labelId?: string;
     labelOffsetY?: number;
     opacity: number;
+    drawArrow: boolean;
   }
   const decorations: EdgeDecoration[] = [];
 
@@ -393,7 +394,9 @@ export const drawEdges = (
     }
 
     const shouldRenderArrow =
-      !options.moving && (isConnectedToActive || (sourceIn && targetIn && !isZoomedOut));
+      edge.directed !== false &&
+      !options.moving &&
+      (isConnectedToActive || (sourceIn && targetIn && !isZoomedOut));
     const propLabel = edge.propertyLabel || edge.label;
     const shouldRenderLabel = !options.moving && Boolean(propLabel) && isConnectedToActive;
 
@@ -414,6 +417,7 @@ export const drawEdges = (
           : undefined,
         labelId: shouldRenderLabel ? edge.id : undefined,
         opacity,
+        drawArrow: shouldRenderArrow,
       });
     }
   }
@@ -443,7 +447,16 @@ export const drawEdges = (
     for (let dIdx = 0; dIdx < decorations.length; dIdx++) {
       const d = decorations[dIdx];
       ctx.globalAlpha = d.opacity;
-      drawArrowHead(ctx, d.sourceX, d.sourceY, d.targetX, d.targetY, d.targetRadius, d.strokeColor);
+      if (d.drawArrow)
+        drawArrowHead(
+          ctx,
+          d.sourceX,
+          d.sourceY,
+          d.targetX,
+          d.targetY,
+          d.targetRadius,
+          d.strokeColor
+        );
 
       if (d.propLabel) {
         const midX = (d.sourceX + d.targetX) / 2;

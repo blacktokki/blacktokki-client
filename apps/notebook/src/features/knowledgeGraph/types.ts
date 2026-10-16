@@ -1,5 +1,9 @@
 import { Paragraph } from '../../components/HeaderSelectBar';
 import type { TemplateCandidate } from '../inductiveTemplate/types';
+import type {
+  RelationKeywordSource,
+  RelationValidation,
+} from './keywordRelation/relationDiscovery';
 
 // 1. Graph entity roles
 export type KnowledgeGraphEntityRole = 'CLASS' | 'INSTANCE';
@@ -11,7 +15,8 @@ export type KnowledgeGraphInstanceKind =
   | 'CONNECTED_PARAGRAPH'
   | 'EXTERNAL_LINK'
   | 'CONNECTED_EXTERNAL_LINK'
-  | 'TEMPLATE';
+  | 'TEMPLATE'
+  | 'KEYWORD';
 export type KnowledgeGraphClassKind = 'NOTE' | 'BOARD_CARD' | 'EXTERNAL_LINK' | 'TEMPLATE_GROUP';
 export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD' | 'DERIVED';
 
@@ -47,7 +52,9 @@ export type KnowledgeGraphRelationType =
   | 'REFERENCES' // Document _NOTELINK (reference/citation)
   | 'EXTERNAL_REFERENCE' // Document -> external link individual
   | 'PART_OF' // Parent/Child document path hierarchy
-  | 'DERIVED_FROM'; // Automatically inferred template -> source document
+  | 'DERIVED_FROM' // Automatically inferred template -> source document
+  | 'KEYWORD_SOURCE'
+  | 'KEYWORD_RELATION';
 
 // 4. Axioms (Constraints, Validation)
 export type AxiomType =
@@ -97,6 +104,12 @@ export interface KnowledgeGraphNode {
   description?: string;
   /** Inferred content stays separate from original note YAML properties. */
   template?: TemplateCandidate;
+  keyword?: {
+    key: string;
+    type: string | null;
+    sources: (Pick<RelationKeywordSource, 'noteTitle' | 'section' | 'sectionPath'> &
+      Partial<Pick<RelationKeywordSource, 'kind' | 'href' | 'keyword'>>)[];
+  };
   properties: KnowledgeGraphDataProperties;
   x: number;
   y: number;
@@ -117,6 +130,13 @@ export interface KnowledgeGraphEdge {
   color?: string;
   targetSection?: string;
   propertyLabel?: string;
+  /** False preserves source-order pairs without claiming a semantic arrow direction. */
+  directed?: boolean;
+  keywordRelation?: {
+    candidateId: string;
+    verdict: RelationValidation['verdict'];
+    observations: number;
+  };
 }
 
 export interface KnowledgeGraphLinkEvidence {

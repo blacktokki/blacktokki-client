@@ -50,6 +50,11 @@ function fixture() {
           },
         ];
       },
+      useRef: (initial) => {
+        const index = stateIndex++;
+        if (!(index in state.slots)) state.slots[index] = { current: initial };
+        return state.slots[index];
+      },
       useMemo: (factory) => factory(),
       useEffect: (effect, deps) => {
         const index = effectIndex++;
@@ -102,11 +107,11 @@ function fixture() {
     edges: [],
     axioms: { violations: [] },
   };
-  function render() {
+  function render(requestedNodeId) {
     stateIndex = 0;
     effectIndex = 0;
     pending = [];
-    const result = hook.useTemplateGraph(base);
+    const result = hook.useTemplateGraph(base, requestedNodeId);
     for (const effect of pending) effect();
     return result;
   }
@@ -194,6 +199,22 @@ test('base source updates refresh template data without generating any template 
     result = render();
     assert.equal(state.refetches, previous + 1);
     assert.equal(result.count, 1);
+  } finally {
+    close();
+  }
+});
+
+test('opening a template search result enables its overlay once and preserves manual changes', async () => {
+  const { render, tick, close } = fixture();
+  try {
+    render('template:target');
+    await tick();
+    let result = render('template:target');
+    assert.equal(result.mode, 'on');
+    result.toggle();
+    result = render('template:target');
+    assert.equal(result.mode, 'off');
+    assert.equal(render('template:target').mode, 'off');
   } finally {
     close();
   }

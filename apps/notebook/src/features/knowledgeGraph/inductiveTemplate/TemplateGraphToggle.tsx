@@ -1,10 +1,10 @@
 import { useLangContext } from '@blacktokki/core';
 import React from 'react';
 
-import { TemplateGraphBadge } from './TemplateGraphBadge';
 import { getKnowledgeGraphPalette } from './palette';
 import { TemplateGraphMode } from './types';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { KnowledgeGraphToggle } from '../components/KnowledgeGraphToggle';
 
 export const TemplateGraphToggle = ({
   mode,
@@ -26,11 +26,10 @@ export const TemplateGraphToggle = ({
   const active = mode !== 'off';
   const caption = lang('Discovered templates');
   return (
-    <TemplateGraphBadge
+    <KnowledgeGraphToggle
       active={active}
       label={caption + (active ? ` (${error ? '!' : working ? '…' : count})` : '')}
       icon="file-code-o"
-      isDark={isDark}
       activeBackgroundColor={palette.template.fill}
       activeBorderColor={palette.template.stroke}
       activeTextColor={

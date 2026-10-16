@@ -12,6 +12,7 @@ function scopedQueries({
   folderName = 'Folder',
   rootLoading = false,
   requested = true,
+  background = false,
 } = {}) {
   const queries = [];
   let reads = 0;
@@ -20,7 +21,12 @@ function scopedQueries({
     '@blacktokki/account': {
       useAuthContext: () => ({ auth: { isLocal, user: userId ? { id: userId } : null } }),
     },
-    '@react-navigation/native': { useIsFocused: () => true },
+    '@react-navigation/native': {
+      useIsFocused: () => {
+        if (background) throw new Error('Navigation is unavailable in the background');
+        return true;
+      },
+    },
     react: { useEffect: () => {} },
     'react-query': {
       useQuery: (value) => {
@@ -72,7 +78,9 @@ function scopedQueries({
       },
     },
   });
-  const result = hook.useInductiveTemplates(requested);
+  const result = background
+    ? hook.useInductiveTemplatesData(requested)
+    : hook.useInductiveTemplates(requested);
   return {
     result,
     queries,
@@ -82,6 +90,12 @@ function scopedQueries({
     storageReads: () => storageReads,
   };
 }
+
+test('background template queries work without a navigation object', () => {
+  const { result, examples } = scopedQueries({ background: true });
+  assert.equal(result.enabled, true);
+  assert.equal(examples.enabled, true);
+});
 
 test('normal-mode example queries exclude hidden paths before suggestions or inference can see them', async () => {
   const { examples } = scopedQueries();

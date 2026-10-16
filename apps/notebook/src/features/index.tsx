@@ -10,6 +10,9 @@ import { TemplateListScreen } from './inductiveTemplate/screens/TemplateListScre
 import TemplateTagSection from './inductiveTemplate/screens/TemplateTagSection';
 import { KnowledgeGraphScreen } from './knowledgeGraph/KnowledgeGraphScreen';
 import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
+import { RelationAnalysisBackground } from './knowledgeGraph/keywordRelation/components/RelationAnalysisBackground';
+import { RelationAnalysisScreen } from './knowledgeGraph/keywordRelation/screens/RelationAnalysisScreens';
+import { GraphSearchSection } from './knowledgeGraph/keywordRelation/search/GraphSearchSection';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
@@ -18,7 +21,7 @@ import { ProblemsScreen } from './problem/ProblemScreen';
 import QuickMemoButton from './quickMemo/QuickMemoButton';
 import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
 import RandomButton from './random/RandomButton';
-import { SearchPageScreen } from './search/SearchPageScreen';
+import { SearchPageSection } from './search/SearchPageSection';
 import { SyncButton } from './sync/SyncButton';
 import { SyncNotebookScreen } from './sync/SyncNotebookScreen';
 import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';
@@ -75,17 +78,8 @@ features['agent'] = {
   title: 'Search',
   description: 'Provides advanced search, including note titles, body content, and external links.',
   useNoteMode: true,
-  screens: {
-    SearchPage: {
-      title: '',
-      component: SearchPageScreen,
-      path: 'search',
-    },
-  },
-  search: (item: any) => ({
-    screen: 'SearchPage',
-    params: { query: item.query },
-  }),
+  screens: {},
+  search: { Section: SearchPageSection },
   NoteSections: [],
   NotePageSections: [],
   elements: [],
@@ -123,13 +117,19 @@ features['knowledgeGraph'] = {
       component: KnowledgeGraphScreen,
       path: 'graph',
     },
+    RelationAnalysis: { title: '', component: RelationAnalysisScreen, path: 'relation-analysis' },
   },
+  search: { Section: GraphSearchSection },
   NoteSections: [],
   NotePageSections: [],
   elements: [
     {
       type: 'button',
       Component: <KnowledgeGraphButton key={'knowledgeGraph'} />,
+    },
+    {
+      type: 'background',
+      Component: <RelationAnalysisBackground key="keywordRelationBackground" />,
     },
   ],
 };

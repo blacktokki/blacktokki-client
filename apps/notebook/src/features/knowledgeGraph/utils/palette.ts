@@ -3,6 +3,12 @@ export interface KnowledgeGraphNodeColor {
   stroke: string;
 }
 
+/** Cool support and warm contradiction colors remain distinct from purple keyword sources. */
+export const getKeywordRelationColors = (isDark: boolean) => ({
+  supported: isDark ? '#5EEAD4' : '#0F766E',
+  contradicted: isDark ? '#FB923C' : '#C2410C',
+});
+
 /** Galaxy centers are brighter than their nearby nodes; categories stay distinct in both themes. */
 export const getKnowledgeGraphPalette = (
   isDark: boolean
@@ -16,7 +22,8 @@ export const getKnowledgeGraphPalette = (
   | 'boardParagraph'
   | 'connectedParagraph'
   | 'externalLink'
-  | 'connectedExternalLink',
+  | 'connectedExternalLink'
+  | 'keyword',
   KnowledgeGraphNodeColor
 > => ({
   builtInClass: { fill: isDark ? '#587B9A' : '#B7C8D5', stroke: isDark ? '#83A1BB' : '#486F8E' },
@@ -35,4 +42,5 @@ export const getKnowledgeGraphPalette = (
     fill: isDark ? '#955860' : '#C69EA5',
     stroke: isDark ? '#B7898F' : '#854C58',
   },
+  keyword: { fill: isDark ? '#B39DDB' : '#B8A0D8', stroke: isDark ? '#D1C4E9' : '#70528F' },
 });

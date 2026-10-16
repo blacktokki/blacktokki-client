@@ -80,4 +80,7 @@ export type NavigationParamList = {
   MovePage: { title: string } & ParagraphKey;
   Archive: { title?: string };
   Extension: undefined;
+  KnowledgeGraph: { nodeId?: string } | undefined;
+  RelationAnalysis: undefined;
+  SearchPage: { query: string } | undefined;
 };

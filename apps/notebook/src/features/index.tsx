@@ -8,11 +8,13 @@ import InductiveTemplateButton from './inductiveTemplate/components/InductiveTem
 import { TemplateItemScreen } from './inductiveTemplate/screens/TemplateItemScreen';
 import { TemplateListScreen } from './inductiveTemplate/screens/TemplateListScreen';
 import TemplateTagSection from './inductiveTemplate/screens/TemplateTagSection';
-import { KnowledgeGraphScreen } from './knowledgeGraph/KnowledgeGraphScreen';
-import KnowledgeGraphButton from './knowledgeGraph/components/KnowledgeGraphButton';
-import { RelationAnalysisBackground } from './knowledgeGraph/keywordRelation/components/RelationAnalysisBackground';
-import { RelationAnalysisScreen } from './knowledgeGraph/keywordRelation/screens/RelationAnalysisScreens';
-import { GraphSearchSection } from './knowledgeGraph/keywordRelation/search/GraphSearchSection';
+import {
+  GraphSearchSection,
+  KnowledgeGraphButton,
+  KnowledgeGraphScreen,
+  RelationAnalysisBackground,
+  RelationAnalysisScreen,
+} from './knowledgeGraph/LazyKnowledgeGraph';
 import PdfExportDefaultSection from './pdf/PdfExportDefaultSection';
 import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
@@ -21,7 +23,7 @@ import { ProblemsScreen } from './problem/ProblemScreen';
 import QuickMemoButton from './quickMemo/QuickMemoButton';
 import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
 import RandomButton from './random/RandomButton';
-import { SearchPageSection } from './search/SearchPageSection';
+import { SearchPageSection } from './search';
 import { SyncButton } from './sync/SyncButton';
 import { SyncNotebookScreen } from './sync/SyncNotebookScreen';
 import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';
@@ -74,7 +76,7 @@ features['quickMemo'] = {
   ],
 };
 
-features['agent'] = {
+features['search'] = {
   title: 'Search',
   description: 'Provides advanced search, including note titles, body content, and external links.',
   useNoteMode: true,

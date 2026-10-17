@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQueryClient } from 'react-query';
 
-import { setFocusMode } from './useFocusStore';
+import { setFocusModeState } from './focusState';
 import { Paragraph } from '../../components/HeaderSelectBar';
 import { onLink, toNoteParams } from '../../components/SearchBar';
 import { NotePageSectionProps } from '../../hooks/useExtension';
@@ -132,13 +132,13 @@ export const FocusPageSection = ({
   useEffect(() => {
     if (prevTitleRef.current !== title) {
       prevTitleRef.current = title;
-      setFocusMode(false, queryClient);
+      setFocusModeState(false, queryClient);
     }
   }, [title, queryClient]);
 
   useEffect(() => {
     return () => {
-      setFocusMode(false, queryClient);
+      setFocusModeState(false, queryClient);
     };
   }, [queryClient]);
 
@@ -167,7 +167,7 @@ export const FocusPageSection = ({
       }
 
       if (e.key === 'Escape') {
-        setFocusMode(false, queryClient);
+        setFocusModeState(false, queryClient);
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
         if (nextParagraph) {
           handlePress(nextParagraph);
@@ -307,7 +307,10 @@ export const FocusPageSection = ({
           color={isScrollable ? '#FFFFFF' : commonStyles.icon.color}
           onPress={() => setIsScrollable(!isScrollable)}
         />
-        <HeaderIconButton name="window-restore" onPress={() => setFocusMode(false, queryClient)} />
+        <HeaderIconButton
+          name="window-restore"
+          onPress={() => setFocusModeState(false, queryClient)}
+        />
       </View>
     </>
   );

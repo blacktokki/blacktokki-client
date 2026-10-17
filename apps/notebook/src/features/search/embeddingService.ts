@@ -73,23 +73,73 @@ export const initEmbeddingPipeline = async () => {
   return await pipelinePromise;
 };
 
-// Main function to get embedding vector for a given text
-export const getEmbeddingVector = async (text: string): Promise<number[]> => {
-  if (!text || text.trim().length === 0) {
-    return new Array(VECTOR_DIMENSION).fill(0);
-  }
+let embeddingQueue: Promise<unknown> = Promise.resolve();
 
-  try {
-    const extractor = await initEmbeddingPipeline();
-    if (extractor) {
-      const output = await extractor(text, { pooling: 'mean', normalize: true });
-      if (output && output.data) {
-        return Array.from(output.data).slice(0, VECTOR_DIMENSION) as number[];
+/** Cancel a consumer's wait without starting another inference while the current one is running. */
+export const waitForEmbeddingWork = <T>(work: Promise<T>, signal?: AbortSignal): Promise<T> => {
+  if (!signal) return work;
+  const cancelled = () =>
+    Object.assign(new Error('Embedding preparation cancelled'), { name: 'AbortError' });
+  if (signal.aborted) return Promise.reject(cancelled());
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(cancelled());
+    signal.addEventListener('abort', abort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+};
+
+/** Bound inference batches and serialize model calls to avoid competing inference sessions. */
+export const getEmbeddingVectors = (texts: string[], signal?: AbortSignal): Promise<number[][]> => {
+  if (!texts.length) return Promise.resolve([]);
+  const task = embeddingQueue.then(async () => {
+    signal?.throwIfAborted();
+    const extractor = await waitForEmbeddingWork(initEmbeddingPipeline(), signal);
+    const vectors: number[][] = [];
+    for (let offset = 0; offset < texts.length; offset += 8) {
+      if (offset) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      signal?.throwIfAborted();
+      const batch = texts.slice(offset, offset + 8);
+      try {
+        if (extractor) {
+          const output = await extractor(batch, { pooling: 'mean', normalize: true });
+          signal?.throwIfAborted();
+          if (output?.data?.length !== batch.length * VECTOR_DIMENSION) {
+            throw new Error('Unexpected embedding dimensions');
+          }
+          for (let row = 0; row < batch.length; row++) {
+            vectors.push(
+              Array.from(output.data.slice(row * VECTOR_DIMENSION, (row + 1) * VECTOR_DIMENSION))
+            );
+          }
+          continue;
+        }
+      } catch (e) {
+        if (signal?.aborted) throw e;
+        console.warn('Fallback to lightweight vectorizer for embedding batch:', e);
+        if (extractor && batch.length > 1) {
+          for (const text of batch) {
+            signal?.throwIfAborted();
+            try {
+              const output = await extractor([text], { pooling: 'mean', normalize: true });
+              if (output?.data?.length !== VECTOR_DIMENSION)
+                throw new Error('Unexpected embedding dimensions');
+              vectors.push(Array.from(output.data));
+            } catch {
+              vectors.push(generateLightweightVector(text, VECTOR_DIMENSION));
+            }
+          }
+          continue;
+        }
       }
+      vectors.push(...batch.map((text) => generateLightweightVector(text, VECTOR_DIMENSION)));
     }
-  } catch (e) {
-    console.warn('Fallback to lightweight vectorizer for text:', text.substring(0, 30), e);
-  }
+    return vectors;
+  });
+  embeddingQueue = task.catch(() => undefined);
+  return waitForEmbeddingWork(task, signal);
+};
 
-  return generateLightweightVector(text, VECTOR_DIMENSION);
+export const getEmbeddingVector = async (text: string, signal?: AbortSignal): Promise<number[]> => {
+  if (!text || text.trim().length === 0) return new Array(VECTOR_DIMENSION).fill(0);
+  return (await getEmbeddingVectors([text], signal))[0];
 };

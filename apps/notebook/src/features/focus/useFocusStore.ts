@@ -2,38 +2,17 @@ import { useCallback } from 'react';
 import { QueryClient, useQueryClient } from 'react-query';
 
 import FocusPageSection from './FocusPageSection';
-import { features } from '../../hooks/useExtension';
+import { getIsFocus, setFocusModeState, setGlobalQueryClient } from './focusState';
 
-let globalQueryClient: QueryClient | null = null;
-let isFocus = false;
-
-export const setGlobalQueryClient = (qc: QueryClient) => {
-  globalQueryClient = qc;
-};
-
-export const getIsFocus = () => isFocus;
+export { getIsFocus, setGlobalQueryClient } from './focusState';
 
 export const setFocusMode = (val: boolean, queryClient?: QueryClient) => {
-  const qc = queryClient || globalQueryClient;
-  if (isFocus !== val) {
-    isFocus = val;
-    if (features['focus']) {
-      features['focus'].NotePageSections = val ? [FocusPageSection] : [];
-    }
-    if (qc) {
-      qc.setQueriesData(['extension'], (old: any) => {
-        const arr = Array.isArray(old)
-          ? old.filter((x: string) => !x.startsWith('__f_'))
-          : ['focus'];
-        return [...arr, '__f_' + Date.now()];
-      });
-    }
-  }
+  setFocusModeState(val, queryClient, FocusPageSection);
 };
 
 export const useFocusMode = () => {
   const queryClient = useQueryClient();
-  globalQueryClient = queryClient;
+  setGlobalQueryClient(queryClient);
 
   const handleSetFocusMode = useCallback(
     (val: boolean) => {
@@ -43,7 +22,7 @@ export const useFocusMode = () => {
   );
 
   return {
-    isFocus,
+    isFocus: getIsFocus(),
     setFocusMode: handleSetFocusMode,
   };
 };

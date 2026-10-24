@@ -1,14 +1,18 @@
 import { useAuthContext } from '@blacktokki/account';
 import { toHtml, toMarkdown } from '@blacktokki/editor';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { deleteSyncAnchorFromDB, getSyncAnchorFromDB, saveSyncAnchorToDB } from './db';
+import {
+  getSyncAnchor,
+  getSyncAnchorKey,
+  getSyncOptions,
+  saveSyncAnchor,
+  setSyncOptions,
+} from './syncStorage';
 import {
   DEFAULT_SYNC_OPTIONS,
   SyncActionType,
-  SyncAnchor,
   SyncDiffItem,
   SyncDiffStatus,
   SyncOptions,
@@ -18,9 +22,6 @@ import { useUsageMode } from '../../hooks/useUsageMode';
 import { getContentList, patchContent, postContent } from '../../services/notebook';
 import { getStorageConfig, getStoreItems, saveStoreItems } from '../../services/storage';
 import { Content, PostContent } from '../../types';
-
-const SYNC_OPTIONS_KEY = '@blacktokki:notebook:sync_options:';
-const SYNC_ANCHOR_KEY = '@blacktokki:notebook:sync_anchor:';
 
 export const hashContent = (text: string): string => {
   let hash = 5381;
@@ -32,54 +33,15 @@ export const hashContent = (text: string): string => {
   return hash.toString(36);
 };
 
-export const getSyncAnchorKey = (userId: number | string, notebookTitle: string): string => {
-  return `${SYNC_ANCHOR_KEY}${userId}:${notebookTitle.trim().toLowerCase()}`;
-};
-
-export const getSyncAnchor = async (anchorKey: string): Promise<SyncAnchor> => {
-  return await getSyncAnchorFromDB<SyncAnchor>(anchorKey);
-};
-
-export const saveSyncAnchor = async (anchorKey: string, anchor: SyncAnchor): Promise<void> => {
-  await saveSyncAnchorToDB(anchorKey, anchor);
-};
-
-export const deleteSyncAnchor = async (
-  userId: number | string,
-  notebookTitle: string
-): Promise<void> => {
-  const anchorKey = getSyncAnchorKey(userId, notebookTitle);
-  await deleteSyncAnchorFromDB(anchorKey);
-};
-
-export const getSyncOptions = async (subkey: string): Promise<SyncOptions> => {
-  try {
-    const value = await AsyncStorage.getItem(SYNC_OPTIONS_KEY + subkey);
-    if (!value) return DEFAULT_SYNC_OPTIONS;
-    return { ...DEFAULT_SYNC_OPTIONS, ...JSON.parse(value) };
-  } catch (e) {
-    return DEFAULT_SYNC_OPTIONS;
-  }
-};
-
-export const setSyncOptions = async (subkey: string, options: SyncOptions): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(SYNC_OPTIONS_KEY + subkey, JSON.stringify(options));
-  } catch (e) {
-    console.error('Failed to save sync options', e);
-  }
-};
-
-export const deleteSyncOptions = async (
-  userId: number | string,
-  notebookId: number | string
-): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(`${SYNC_OPTIONS_KEY}${userId}:${notebookId}`);
-  } catch (e) {
-    console.error('Failed to delete sync options', e);
-  }
-};
+export {
+  deleteSyncAnchor,
+  deleteSyncOptions,
+  getSyncAnchor,
+  getSyncAnchorKey,
+  getSyncOptions,
+  saveSyncAnchor,
+  setSyncOptions,
+} from './syncStorage';
 
 export const useSyncOptions = () => {
   const { auth } = useAuthContext();

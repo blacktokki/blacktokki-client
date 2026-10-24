@@ -2,7 +2,7 @@ import { useAuthContext } from '@blacktokki/account';
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-import { deleteSyncAnchor, deleteSyncOptions } from '../features/sync/useNotebookSync';
+import { deleteSyncAnchor, deleteSyncOptions } from '../features/sync/syncStorage';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
 import {
   deleteStorageConfig,

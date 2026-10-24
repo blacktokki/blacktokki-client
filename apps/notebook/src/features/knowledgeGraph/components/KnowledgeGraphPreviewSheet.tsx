@@ -5,9 +5,11 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { useUsageMode } from '../../../hooks/useUsageMode';
 import { TemplateGraphDetails } from '../inductiveTemplate/TemplateGraphDetails';
 import { isTemplateGraphNode } from '../inductiveTemplate/graph';
 import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
+import { KeywordGraphDetails } from '../keywordRelation/components/KeywordGraphControls';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { findInstanceClassIds } from '../utils/classMembership';
 import { getNhopDepthOptions } from '../utils/nhop';
@@ -28,12 +30,24 @@ interface KnowledgeGraphPreviewSheetProps {
 
 const PreviewChip: React.FC<{
   label: string;
+  accessibilityLabel?: string;
   backgroundColor: string;
   textColor: string | undefined;
+  compact?: boolean;
   onPress: () => void;
-}> = ({ label, backgroundColor, textColor, onPress }) => (
-  <TouchableOpacity style={[styles.sectionChip, { backgroundColor }]} onPress={onPress}>
-    <Text style={[styles.sectionChipText, { color: textColor }]}>{label}</Text>
+}> = ({ label, accessibilityLabel = label, backgroundColor, textColor, compact, onPress }) => (
+  <TouchableOpacity
+    style={[styles.sectionChip, compact && styles.compactSectionChip, { backgroundColor }]}
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityLabel={accessibilityLabel}
+  >
+    <Text
+      style={[styles.sectionChipText, { color: textColor }]}
+      numberOfLines={compact ? 1 : undefined}
+    >
+      {label}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -50,6 +64,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
 }) => {
   const { lang } = useLangContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
+  const { usageMode } = useUsageMode();
   const isDark = colorScheme === 'dark';
   const palette = getKnowledgeGraphPalette(isDark);
 
@@ -59,7 +74,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
 
   const nodeKind = getKnowledgeGraphNodeKind(node);
   const badgeColor = palette[nodeKind].stroke;
-  const typeLabel = getKnowledgeGraphNodeKindLabel(nodeKind, lang);
+  const typeLabel = getKnowledgeGraphNodeKindLabel(nodeKind, lang, usageMode);
 
   const typeIcon = {
     builtInClass: 'sitemap',
@@ -107,8 +122,15 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
 
   const renderSections = (
     label: string,
-    items: { key: string | number; label: string; onPress: () => void }[],
-    icon?: string
+    items: {
+      key: string | number;
+      label: string;
+      accessibilityLabel?: string;
+      color?: string;
+      onPress: () => void;
+    }[],
+    icon?: string,
+    compact = false
   ) => (
     <View style={styles.sectionsContainer}>
       {icon ? (
@@ -138,8 +160,10 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
             <PreviewChip
               key={item.key}
               label={item.label}
+              accessibilityLabel={item.accessibilityLabel}
+              compact={compact}
               backgroundColor={isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'}
-              textColor={commonStyles.text?.color}
+              textColor={item.color || commonStyles.text?.color}
               onPress={item.onPress}
             />
           ))}
@@ -199,7 +223,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
           </Text>
         )}
 
-        {node.role === 'INSTANCE' && (
+        {node.role === 'INSTANCE' && node.instanceKind !== 'KEYWORD' && (
           <View style={styles.classesContainer}>
             <View style={styles.sectionsHeader}>
               <Icon
@@ -238,6 +262,15 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
             nodes={allNodes}
             edges={edges}
             onSelectNode={onSelectNode}
+          />
+        )}
+        {(node.instanceKind === 'KEYWORD' || node.classKind === 'KEYWORD_TYPE') && (
+          <KeywordGraphDetails
+            node={node}
+            nodes={allNodes}
+            edges={edges}
+            onSelectNode={onSelectNode}
+            renderSection={(label, items) => renderSections(label, items, undefined, true)}
           />
         )}
 
@@ -303,18 +336,20 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
           )}
 
         <View style={styles.bottomRow}>
-          <View style={styles.relationCounts}>
-            <View
-              style={[
-                styles.chip,
-                { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
-              ]}
-            >
-              <Text style={[styles.relationText, { color: commonStyles.smallText?.color }]}>
-                {lang('Relation')} ↑{incomingEdges.length} · ↓{outgoingEdges.length}
-              </Text>
+          {node.instanceKind !== 'KEYWORD' && (
+            <View style={styles.relationCounts}>
+              <View
+                style={[
+                  styles.chip,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                ]}
+              >
+                <Text style={[styles.relationText, { color: commonStyles.smallText?.color }]}>
+                  {lang('Relation')} {`↑${incomingEdges.length} · ↓${outgoingEdges.length}`}
+                </Text>
+              </View>
             </View>
-          </View>
+          )}
 
           <View style={styles.nhopGroup}>
             <Text style={[styles.nhopLabel, { color: commonStyles.smallText?.color }]}>
@@ -354,6 +389,8 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
           </View>
 
           {!isTemplateGraphNode(node) &&
+            node.instanceKind !== 'KEYWORD' &&
+            node.classKind !== 'KEYWORD_TYPE' &&
             node.classKind !== 'EXTERNAL_LINK' &&
             !(node.instanceKind === 'BOARD_PARAGRAPH' && boardParagraphSourceNotes.length > 1) && (
               <TouchableOpacity
@@ -476,6 +513,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3.5,
     borderRadius: 6,
   },
+  compactSectionChip: { maxWidth: 280 },
   sectionChipText: {
     fontSize: 10.5,
   },

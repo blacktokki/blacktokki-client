@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { ParagraphKey } from '../types';
+import type { SearchRequest } from './useExtension';
 import { useUsageMode } from './useUsageMode';
 
 const KEYWORDS_KEY = '@blacktokki:notebook:keywords:';
@@ -24,10 +25,7 @@ export type KeywordContent =
       type: '_KEYWORD' | '_BOARD';
       title: string;
     }
-  | {
-      type: '_QUERY';
-      query: string;
-    };
+  | SearchRequest;
 
 const getKeywords = async (subkey: string | undefined): Promise<KeywordContent[]> => {
   try {

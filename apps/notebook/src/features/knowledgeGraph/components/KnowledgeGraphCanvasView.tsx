@@ -284,7 +284,13 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
         if (maxMove !== null) {
           advancedSimulation = true;
           simAlphaRef.current *= 0.982;
-          if (simAlphaRef.current < 0.005 || maxMove < 0.08) isSimulatingRef.current = false;
+          if (simContextRef.current.spaceReservationPending)
+            simAlphaRef.current = Math.max(0.15, simAlphaRef.current);
+          if (
+            !simContextRef.current.spaceReservationPending &&
+            (simAlphaRef.current < 0.005 || maxMove < 0.08)
+          )
+            isSimulatingRef.current = false;
         }
         needsNextFrame = isSimulatingRef.current;
       }
@@ -299,7 +305,8 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
         );
         advancedPresentation =
           applyHierarchyConstraints(
-            simContextRef.current.hierarchyConstraints,
+            simContextRef.current.focusHierarchyConstraints ||
+              simContextRef.current.hierarchyConstraints,
             presentation.nodes
           ) || advancedPresentation;
         presentation.lastTime = now;
@@ -561,14 +568,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
 
     const previousContext = simContextRef.current;
     const rootAnchorPositions = previousContext
-      ? new Map(
-          [
-            ...previousContext.precomputedRootAnchors,
-            ...(previousContext.precomputedNoteClassAnchor
-              ? [previousContext.precomputedNoteClassAnchor]
-              : []),
-          ].map(({ root, x, y }) => [root.id, { x, y }] as const)
-        )
+      ? new Map(previousContext.precomputedRootAnchors.map(({ root, x, y }) => [root.id, { x, y }]))
       : undefined;
 
     const context = initForceSimulation(seededNodes, edges, {
@@ -580,6 +580,8 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
       focusDepth: layoutFocusRef.current.depth,
       focusedNodeIds: layoutFocusRef.current.nodeIds,
       rootAnchorPositions,
+      previousContext,
+      balanceRootAreas: true,
     });
     simContextRef.current = context;
 
@@ -596,7 +598,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     (presentationRef.current?.nodes || context.simNodes).forEach((n) => map.set(n.id, n));
     nodeMapRef.current = map;
 
-    simAlphaRef.current = previousPositions.size > 0 ? 0.4 : 1.0;
+    simAlphaRef.current = context.restartAlpha;
     if (presentationRef.current) {
       // Prepare the first exact target before presenting motion, including cold JIT work.
       stepForceSimulation(context, simAlphaRef.current);
@@ -620,7 +622,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     applyFitToScreen,
     dimensions.height,
     dimensions.width,
-    edges.length,
+    edges,
     nodes,
     runAnimationLoop,
     spacingScale,

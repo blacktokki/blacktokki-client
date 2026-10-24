@@ -24,19 +24,3 @@ export const findConnectedExternalLinkIds = (
 
   return [...connectedIds].sort();
 };
-
-/**
- * External link class node is hidden when:
- * 1. There are no connected external link nodes, AND
- * 2. Showing ordinary link nodes is turned off OR there are no ordinary link nodes.
- */
-export const shouldHideExternalLinkClass = (
-  nodes: KnowledgeGraphNode[],
-  showOrdinaryExternalLinks: boolean
-): boolean => {
-  const hasConnectedExternalLinks = nodes.some(
-    (node) => node.instanceKind === 'CONNECTED_EXTERNAL_LINK'
-  );
-  const hasOrdinaryExternalLinks = nodes.some((node) => node.instanceKind === 'EXTERNAL_LINK');
-  return !hasConnectedExternalLinks && (!showOrdinaryExternalLinks || !hasOrdinaryExternalLinks);
-};

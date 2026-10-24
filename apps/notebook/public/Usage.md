@@ -4,14 +4,14 @@
 
 ## Key Features
 
-* ✅ Freely write notes using a markdown editor
-* 📁 Organize content hierarchically using folders and sub-notes
-* 🧭 Automatically generated tree view for quick navigation based on headings
-* 🔍 Advanced search across titles, sections, links, and keywords
-* 🔁 Move specific sections to other notes
-* 📆 Automatically detect dates and visualize them as timer bars
-* 🧠 Use autocomplete to quickly insert links and child notes
-* 🧳 Export and import notes and boards in Markdown/JSON ZIP archives
+- ✅ Freely write notes using a markdown editor
+- 📁 Organize content hierarchically using folders and sub-notes
+- 🧭 Automatically generated tree view for quick navigation based on headings
+- 🔍 Advanced search across titles, sections, links, and keywords
+- 🔁 Move specific sections to other notes
+- 📆 Automatically detect dates and visualize them as timer bars
+- 🧠 Use autocomplete to quickly insert links and child notes
+- 🧳 Export and import notes and boards in Markdown/JSON ZIP archives
 
 ---
 
@@ -19,16 +19,16 @@
 
 ### 🔍 Searching and Creating Notes
 
-* Use the top search bar to find existing notes or create new ones.
-* Enter a new title and press `Enter` to automatically create and open the note.
+- Use the top search bar to find existing notes or create new ones.
+- Enter a new title and press `Enter` to automatically create and open the note.
 
 ### ✏️ Editing Notes
 
-* Use the markdown-based editor to write and format content.
-* Supports both **auto-save and manual save** options.
-* Autocomplete triggers:
-  * `[title` → internal note paragraph titles **within the current note**, and **New sub note creation** (e.g., `CurrentNote/Keyword`).
-  * `http` → external link previews
+- Use the markdown-based editor to write and format content.
+- Supports both **auto-save and manual save** options.
+- Autocomplete triggers:
+  - `[title` → internal note paragraph titles **within the current note**, and **New sub note creation** (e.g., `CurrentNote/Keyword`).
+  - `http` → external link previews
 
 ---
 
@@ -36,95 +36,102 @@
 
 ### 🏠 Home
 
-* The main screen that appears upon launch.
-* Provides quick access to recently viewed notes, edit suggestions, and the timeline.
-* On mobile, access main menus via the **bottom tab**; on web, use the **left-side drawer** for navigation.
+- The main screen that appears upon launch.
+- Provides quick access to recently viewed notes, edit suggestions, and the timeline.
+- On mobile, access main menus via the **bottom tab**; on web, use the **left-side drawer** for navigation.
 
 ### 📄 Note Page
 
-* Displays the note title, content, and structured section list.
-* The section list is auto-generated from headings (H1–H6); clicking a section jumps to its position.
-* Use top buttons to edit the note, rearrange sections, or view edit history.
-* Clicking a URL-encoded relative file link such as `[Document](../folder/Document%20Title.md)` opens the target document relative to the current note's folder.
-* The note viewer, focus view, and search resolve relative links from the source note's folder. Editing and saving preserve `../` and `../../` paths, paragraph fragments, and section information. A `#paragraph` link opens that paragraph in the current note.
+- Displays the note title, content, and structured section list.
+- The section list is auto-generated from headings (H1–H6); clicking a section jumps to its position.
+- Use top buttons to edit the note, rearrange sections, or view edit history.
+- Use relative links such as `[Document](../folder/Document%20Title.md)` to open notes in other folders. A `#paragraph` link opens that paragraph in the current note.
 
 ### ✏️ Note Editing
 
-* A flexible editor that supports both markdown and WYSIWYG (visual) modes.
-* Allows free editing with automatic or manual saving.
-* Internal and external link autocompletion is supported.
-* `[` autocomplete and pasting internal links generate URL-encoded relative `.md` links from the current note, preserving paragraph and section information.
+- A flexible editor that supports both markdown and WYSIWYG (visual) modes.
+- Allows free editing with automatic or manual saving.
+- Internal and external link autocompletion is supported.
+- Use `[` autocomplete to select a note or paragraph, or paste an internal link.
 
 ### 🗂 Recent Notes
 
-* Lists recently viewed or created notes as cards and grids.
-* Use the header icon buttons on the top right to intuitively switch between Sub-note List view, Kanban Board, and Scrum Board (fixed to Sub-note List view in Simple Mode).
-* Click to revisit a note, or remove it from the list if no longer needed.
+- Lists recently viewed or created notes as cards and grids.
+- Use the header icon buttons on the top right to intuitively switch between Sub-note List view, Kanban Board, and Scrum Board (fixed to Sub-note List view in Simple Mode).
+- Click to revisit a note, or remove it from the list if no longer needed.
 
 ---
 
 ## Usage Mode
+
 You can adjust the app's complexity and features across 3 levels according to your workflow and purpose.
-* **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
-* **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Mode Settings`. If no notebook mode has been created, selecting Notebook Mode will automatically open the modal to create a new notebook.
-* Refreshing in local mode restores the last selected usage mode and notebook. Deleted notebooks and locked private notebooks return to Note Mode.
+
+- **Quick switcher:** Select the app or notebook name at the top to switch or add notebooks. You can also return to Note Mode or open notebook settings.
+- **Config Menu:** Change modes in `Config > Note Settings > Mode Settings`. If no notebook exists, the new-notebook screen opens.
+- Refreshing in local mode restores the last selected usage mode and notebook. Deleted notebooks and locked private notebooks return to Note Mode.
 
 ### 🌱 Simple Mode
+
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).
 
 ### 📝 Note Mode
+
 Provides pure document writing and knowledge management features without board or private functionalities. Suitable for users who need structured information and extension features.
 
-* **🗃 Archive**
-  * Shows previous versions (snapshots) of notes.
-  * Compare historical content over time, sorted by save date.
-  * Useful for version control and restoring past content.
+- **🗃 Archive**
+  - Shows previous versions (snapshots) of notes.
+  - Compare historical content over time, sorted by save date.
+  - Useful for version control and restoring past content.
 
 ### 📓 Notebook Mode
+
 An environment where you can organize the app's features into distinct 'Notebooks'. When creating a notebook, you can designate its sub-mode such as general workspace, private workspace, or private note to work in isolated workspaces.
 
-* **Notebook Management via Header Dropdown:**
-  * Click the active notebook title in the top header to view the list of registered notebooks and switch between workspaces instantly.
-  * Click the three-dot menu (⋮) on any notebook item to edit its title, description, sub-mode, or delete it. Deleting the currently active notebook mode automatically returns to standard Note Mode.
-  * Use the `+ Add Notebook Mode` button to quickly create a new notebook, or use `〈 Switch to Note Mode` to instantly return to standard Note Mode.
+- **Notebook Management via Header Dropdown:**
 
-* **🗂 Workspace**
-  * A notebook type that includes features to visualize and manage note sections as Kanban/Scrum boards.
-  * Recommended when managing projects and schedules alongside memos and document management.
+  - Click the active notebook title in the top header to view the list of registered notebooks and switch between workspaces instantly.
+  - Click the three-dot menu (⋮) on any notebook item to edit its title, description, sub-mode, or delete it. Deleting the currently active notebook mode automatically returns to standard Note Mode.
+  - Use the `+ Add Notebook Mode` button to quickly create a new notebook, or use `〈 Switch to Note Mode` to instantly return to standard Note Mode.
 
-* **🔐 Private Note & Workspace**
-  * Notebook types that allow you to hide sensitive information when viewing notes in public spaces or sharing your screen.
-  * **Unified Private Mode Toggle:** Once Notebook Mode is selected, you can lock/unlock all private notebooks at once using the Private Mode (On/Off) toggle.
-  * **Enhanced Security (OTP):** By enabling 'Require OTP for Private Mode', the system will prompt for an OTP via a secure modal whenever you enter the mode or attempt to disable this security setting.
-  * **Auto-unlock Timer:** If the 'Auto-unlock (10 mins)' option is enabled, Private Mode will automatically turn off after 10 minutes of inactivity to ensure your data remains secure.
-  * If you attempt to access a hidden notebook directly (e.g., via URL) while the mode is **Off**, a warning message will appear, and the content will remain hidden.
+- **🗂 Workspace**
+
+  - A notebook type that includes features to visualize and manage note sections as Kanban/Scrum boards.
+  - Recommended when managing projects and schedules alongside memos and document management.
+
+- **🔐 Private Note & Workspace**
+  - Notebook types that allow you to hide sensitive information when viewing notes in public spaces or sharing your screen.
+  - **Unified Private Mode Toggle:** Once Notebook Mode is selected, you can lock/unlock all private notebooks at once using the Private Mode (On/Off) toggle.
+  - **OTP verification:** Enable 'Require OTP for Private Mode' to require a code when entering the mode or disabling this setting. This option is available for online accounts with OTP enabled.
+  - **Auto-unlock Timer:** If the 'Auto-unlock (10 mins)' option is enabled, Private Mode will automatically turn off after 10 minutes of inactivity to ensure your data remains secure.
+  - If you attempt to access a hidden notebook directly (e.g., via URL) while the mode is **Off**, a warning message will appear, and the content will remain hidden.
 
 #### 🗂 Board
+
 > Workspace types only feature
 
-  * Visualize and manage note sections as a Kanban/Scrum board.
-  * **Icon-based View Switcher:** Use the intuitive header icon buttons on the upper right of the Recent Pages screen to switch between or automatically create Sub-note List View, Kanban Board, Scrum Board, and Board Settings. The icon on the left of note titles lets you easily jump back to the parent board.
-  * **Alphabetical Column Sorting:** In Kanban and Scrum boards, columns (direct sub-notes) are stably sorted **alphabetically by title (with numeric prefix support)** rather than by modification date, ensuring that column order never jumps around when cards are edited or moved.
-  * Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
-  * Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
-  * In **Scrum Boards**, **Rows** are automatically generated based on the level immediately above the card's header (Header Level - 1). This enables a more multi-dimensional organization of cards.
-  * Scrum items in the board list display note, named row, and card counts. Rows with the same title are counted once, and the unnamed default row is excluded.
-  * Cards can be **dragged and dropped** to another column.
-  * When a card is moved, its corresponding section is **physically moved** to the target note.
-  * Single-clicking (tapping) a card navigates to the note view screen, while double-clicking (double-tapping) opens the editing screen.
-  * **Enhanced Empty State UI:** When notes or cards have no description, an icon with the note title is displayed instead of a blank card. Accessing an empty note provides quick buttons to edit content or create a board (disabled in Simple Mode).
+- Visualize and manage note sections as a Kanban/Scrum board.
+- Use the icons at the top right of Recent Notes to switch between the sub-note list, Kanban, Scrum, and board settings. The board icon beside a note title returns to its parent board.
+- Columns follow note-title order. Add numbers at the start of titles to set their order.
+- Each **column** corresponds to a specific note (e.g., "To Do", "In Progress").
+- Each **card** is automatically generated from sections (e.g., H2, H3) within that note.
+- **Scrum board** rows use the heading level above the cards. For example, when H3 sections are cards, H2 headings provide row names.
+
+- Cards can be **dragged and dropped** to another column.
+- Moving a card also moves its section to the target note.
+- Single-clicking (tapping) a card navigates to the note view screen, while double-clicking (double-tapping) opens the editing screen.
+- In an empty note, use the edit or create-board buttons to get started (except in Simple Mode).
 
 ### 📊 Usage Mode Feature Comparison
 
-| Feature | 🌱 Simple Mode | 📝 Note Mode | 📓 Notebook Mode |
-| :--- | :---: | :---: | :---: |
-| **Basic Note Writing/Editing** | ✅ Supported | ✅ Supported | ✅ Supported |
-| **Recent Notes (List View)** | ✅ Supported | ✅ Supported | ✅ Supported |
-| **TOC & Sub-notes** | ✅ Supported | ✅ Supported | ✅ Supported |
-| **Extensions** | ❌ Unsupported | ✅ Supported | ✅ Supported |
-| **Changelog (Archive)** | ❌ Unsupported | ✅ Supported | ✅ Supported |
-| **Private Features** | ❌ Unsupported | ❌ Unsupported | ✅ Private Notebooks |
-| **Board (Kanban)** | ❌ Unsupported | ❌ Unsupported | ✅ Workspace Notebooks |
+| Feature                        | 🌱 Simple Mode |  📝 Note Mode  |    📓 Notebook Mode    |
+| :----------------------------- | :------------: | :------------: | :--------------------: |
+| **Basic Note Writing/Editing** |  ✅ Supported  |  ✅ Supported  |      ✅ Supported      |
+| **Recent Notes (List View)**   |  ✅ Supported  |  ✅ Supported  |      ✅ Supported      |
+| **TOC & Sub-notes**            |  ✅ Supported  |  ✅ Supported  |      ✅ Supported      |
+| **Extensions**                 | ❌ Unsupported |  ✅ Supported  |      ✅ Supported      |
+| **Changelog (Archive)**        | ❌ Unsupported |  ✅ Supported  |      ✅ Supported      |
+| **Private Features**           | ❌ Unsupported | ❌ Unsupported |  ✅ Private Notebooks  |
+| **Board (Kanban)**             | ❌ Unsupported | ❌ Unsupported | ✅ Workspace Notebooks |
 
 ---
 
@@ -132,67 +139,65 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 ### 📝 Dual Editor Support
 
-* The note editing screen can be freely converted to both WYSIWYG and Markdown methods with the `M↓` button.
-* Changes in one mode are reflected in real-time in the other.
-* Ideal for users who prefer visual editing or are familiar with markdown syntax.
+- The note editing screen can be freely converted to both WYSIWYG and Markdown methods with the `M↓` button.
+- Changes in one mode are reflected in real-time in the other.
+- Ideal for users who prefer visual editing or are familiar with markdown syntax.
 
 ### 🏷️ YAML Frontmatter Preservation and Metadata Support
 
-* Automatically recognizes and protects **YAML Frontmatter (`--- ... ---`)** metadata blocks at the top of markdown documents.
-* During visual (WYSIWYG) editing, the frontmatter block is safely hidden to prevent accidental modification, and is preserved verbatim (100% untouched) upon markdown mode switching, note saving, and archive export.
-* Fully compatible with markdown files created in external tools like Obsidian or Jekyll that contain document metadata.
+- Metadata between `--- ... ---` at the start of a document is retained when saving or exporting the note.
+- Metadata is hidden in visual editing mode. Switch to Markdown mode to view or edit it.
 
 ### 📑 Automatic Section Detection
 
-* Headings within notes are automatically structured into a navigable tree view.
-* Quickly jump between sections and visualize the overall structure.
+- Headings within notes are automatically structured into a navigable tree view.
+- Quickly jump between sections and visualize the overall structure.
 
 ### ⌞⌝ Section Content Toggle
 
-  * When focusing on a specific section, you can toggle between:
-    * Viewing only that section’s content, or
-    * Viewing its content **plus all nested sub-sections.**
-  * This helps when you want to read or edit an entire section hierarchy as a single note.
+- When focusing on a specific section, you can toggle between:
+  - Viewing only that section’s content, or
+  - Viewing its content **plus all nested sub-sections.**
+- This helps when you want to read or edit an entire section hierarchy as a single note.
 
 ### 🔗 Link Recognition and Navigation
 
-* Links within notes are automatically detected and categorized.
-* Internal note links are also suggested during search and autocomplete.
+- Links within notes are automatically detected and categorized.
+- Internal note links are also suggested during search and autocomplete.
 
 ### 🔍 Search History and Autocomplete
 
-* Previously searched keywords are stored for faster reuse.
-* Suggestions appear in the search bar to reduce repeat typing.
+- Previously searched keywords are stored for faster reuse.
+- Suggestions appear in the search bar to reduce repeat typing.
 
 ### 🔄 Note and Section Relocation
 
-* Move entire notes or specific sections to a different title or location to reorganize your knowledge structure.
-* **Move sub-notes**: When moving a parent note, you can choose to seamlessly move all of its nested sub-notes together.
-* **Update backlinks**: Automatically find and update all internal links pointing to the moved note or section across all your other notes, preventing broken links. Relative `.md` and `.markdown` links are also found and updated using the folder of the note containing each link.
-* **Preview changes**: Safely preview the structural changes and text diffs before confirming the move. If the target note already exists, you will be warned and can choose to overwrite.
+- Move entire notes or specific sections to a different title or location to reorganize your knowledge structure.
+- **Move sub-notes**: When moving a parent note, you can choose to seamlessly move all of its nested sub-notes together.
+- **Update backlinks**: Update links in other notes that point to the moved note or section.
+- **Preview changes**: Safely preview the structural changes and text diffs before confirming the move. If the target note already exists, you will be warned and can choose to overwrite.
 
 ### 💾 Storage Options and Account Sync
 
-* Choose between local or cloud-based accounts for saving notes.
-* Online sync keeps notes up-to-date automatically.
-* For local accounts, Note and Simple modes automatically save data to internal browser storage (OPFS) without extra setup.
-* For local accounts, Notebook mode links directly to a chosen folder on your computer, with permissions preserved in browser storage (IndexedDB).
+- Choose a local or online account for storage. Notes in an online account can be synchronized.
+- With a local account, Note and Simple modes save in your browser without a folder setup.
+- With a local account in Notebook mode, choose a folder on your computer to connect.
 
 ### 📌 Pin Tabs
 
-* Double-click or long-press the current tab or recently changed note to pin it to the tab list.
-* You can unpin it by pressing the X button.
+- Double-click or long-press the current tab or recently changed note to pin it to the tab list.
+- You can unpin it by pressing the X button.
 
 ### ⇄ Reorder Tabs
 
-* You can freely rearrange the order of items in the Tab List, by simply dragging them up or down.
-* The new order is applied immediately and saved automatically. Position frequently used notes at the top to enhance your workflow efficiency.
+- You can freely rearrange the order of items in the Tab List, by simply dragging them up or down.
+- The new order is applied immediately and saved automatically. Position frequently used notes at the top to enhance your workflow efficiency.
 
 ### 🔐 Personal Access Token (PAT) Management
 
-* You can directly generate and manage Personal Access Tokens (PATs) required for integrating with external services and applications.
-* New tokens can be issued in a dedicated section within the Account Edit modal; for security reasons, the token value is displayed only once immediately after issuance, so it must be copied and stored in a safe place right away.
-* You can view the list of currently active tokens and their expiration dates, and maintain security by deleting tokens that are no longer in use at any time.
+- You can directly generate and manage Personal Access Tokens (PATs) required for integrating with external services and applications.
+- New tokens can be issued in a dedicated section within the Account Edit modal; for security reasons, the token value is displayed only once immediately after issuance, so it must be copied and stored in a safe place right away.
+- You can view the list of currently active tokens and their expiration dates, and maintain security by deleting tokens that are no longer in use at any time.
 
 ---
 
@@ -200,160 +205,188 @@ An environment where you can organize the app's features into distinct 'Notebook
 
 ### 🧩 Extracted Templates
 
-Use recurring headings and table layouts from similar notes in the current notebook to create a new note. This is useful for meeting minutes, work logs, and other notes that follow a common format.
+Use the shared format of similar notes to write new meeting minutes, work logs, or other recurring documents.
 
 1. Enable **Extracted Templates** in **Extension Settings**, then open it from the home menu or sidebar.
-2. Choose a format under **Discovered templates** to open its own screen. Names show common headings, and similar formats appear together. Templates are shown by source-note count in descending order; each group is ranked by its largest member source-note count. While the catalog is being calculated, the count shows `…`. The empty-list message appears only after calculation finishes with no templates. **Usage** appears at the top right of both the list and template screens.
-3. The template preview appears first. Scroll the screen to read the full body, just as in a regular note. Choose the header's list icon (**Similar notes**) to open the separate source list. The list and pencil icons remain at the top right in both views; choose the list icon again to return to the original preview. Expand a folder and select a note to open its actual note screen immediately. Go back to return to the similar-note list, or return to the template using the first list item.
-4. Choose the pencil icon (**New note**) in either the preview or similar-note list header. If you entered through a template tag on a note that has not been created yet, **Enter title directly** is selected and that note's full path and title are prefilled. You can edit the title if needed. Otherwise, if **Title template** choices are available, select one and fill in its dates or keywords. Choose **Enter title directly** to enter a title yourself. Enter a title directly when there are no title templates. The screen has **Title template** above a shared body area. Choose **Content template / Content preview** below to switch between the form and filled body. Switching preserves your field values and table rows and columns. The preview stays loaded when the content is unchanged and reflects your latest edits when it changes.
-5. Review **Content preview**, then choose **save** below it. The save button is also available in **Content template**. If a note with the same title already exists, use a different title. The document icon beside the template name returns to the template preview while preserving your entered fields. Choose **‹ Template list** at the top left to return to the template list and choose a different template. It mirrors the **Usage ›** button at the top right.
+2. Select a format under **Discovered templates** to preview it. To compare originals, select the list icon (**Similar notes**) and choose a note. Select the list icon again to return to the preview.
+3. Select the pencil icon (**New note**). Choose a **Title template** and fill in dates or keywords, or choose **Enter title directly**.
+4. Fill in **Content template**, then check **Content preview**. Switching between these views preserves your entries.
+5. Select **save**. If saving is unavailable, complete the fields shown in the message. Change the title if a note with that title already exists.
 
-**Placeholders and extraction criteria**
+**Filling fields and checking sources**
 
-- In the body tabs, the form icon opens **Content template** and the eye icon opens **Content preview**. An underline marks the selected tab. With a keyboard, press `Tab` to focus the tabs, then use `←` / `→` to switch.
-- When saving is unavailable, the reason and missing fields appear in place of **save**. Correct those fields to replace the explanation with the **save** button.
-- If the previously opened template information is unavailable, you return to the template list. Select the template again from the list.
-- `{{ Date }}` and `{{ Keyword }}` are placeholders to fill in for the new note. Complete fields marked with `*` in the upper **Title template** card, then write the body in the lower **Content template** card. Empty body fields remain as placeholders. After saving, you can open and edit the note as usual.
-- For tables with repeating rows or columns, use **＋ Table row / ＋ Table column** in **Content template** to add items, and **×** beside an item to remove it. You can also edit repeating column names in their fields. New numbered rows continue sequences such as `REQ-000`. Fixed instructions and labels stay in place. The preview and saved note both reflect your table layout and entered values.
-- The folder path in a title template is where the new note will be saved. For example, filling the date in `Team meetings/{{ Date }} Weekly meeting` creates the note in that folder. Placeholders with the same name share your entered value across the title and body.
-- The note name and body title are separate. If the common source format has no body title, the new note's body does not get an automatically added title.
-- When the extension is enabled, notes associated with a discovered whole-note template show a **template name tag** at the top, with the same appearance as the timeline's timer tags. The tag omits the folder prefix and shows up to 10 characters of the remaining template name; open the template to see its full name including the folder. New notes written in the same format are associated automatically. A note that has not been created yet also shows template tags when its parent path matches a similar-note group. For example, `Meetings/New note` shows templates associated with notes directly under `Meetings`. Select a tag to open that template's **Similar notes** list directly, then select a note to open its actual note screen. Go back to return to the previous screen. Tags show whole-note template associations even when viewing a paragraph, and are not saved in the note body.
-- Whole-note discovery also finds recurring documents in the same folder whose titles differ by dates, numbers or keywords, such as monthly reports. Their shared headings, fields and tables become a template even when optional sections differ. It also finds shared outlines in research notes and guides with different titles or folders when they share several key sections. Similar titles alone do not produce a template.
-- Section numbers and Korean spacing differences do not split otherwise matching forms. Fullwidth/halfwidth characters and emoji differences remain distinct. Standalone year and month labels, such as `2026년` or `2026-04`, become date placeholders instead of fixed historical values.
-- Template similarity recognizes shared table columns when columns are added or reordered. The common layout matters more than row-label differences, while headings and section relationships still distinguish formats. Templates are grouped only when every pair meets the two-thirds similarity threshold.
-- Fields separated by line breaks in the same paragraph or list item become separate placeholders. For example, `Owner: ...` and `State: ...` each get their own input; source values and diagram examples are excluded.
-- Templates are discovered from the common structure of whole notes, with tables included as part of each note format.
+- `{{ Date }}` and `{{ Keyword }}` are fields to fill in. Title fields marked with `*` are required. Empty body fields remain as placeholders. Fields with the same name share the value you enter.
+- For repeating table rows or columns, use **＋ Table row / ＋ Table column** to add items and **×** to remove them. Repeating column names can also be edited.
+- The folder path in the title is where the new note will be saved. Starting from a template tag on a note that has not been created yet prefills that note's title.
+- Select a **template name tag** at the top of a note to open **Similar notes**. If the tag's name is shortened, open the template screen to see the full name.
+- Use `Tab` to focus the body tabs and `←` / `→` to switch. The document icon beside the template name returns to its preview; **‹ Template list** lets you choose another template.
 
-If no templates appear, check that at least two notes have similar heading structures or table layouts. Individual source contents are not copied into the template, so review the new note before saving.
+If no templates appear, check that at least two notes have similar heading structures or table layouts. Review the new note in the preview before saving.
 
 ### ⚡ Quick Memo
-* A feature that allows you to immediately add sub-paragraphs by selecting a specific note and a parent paragraph.
-* Information about the most recently used note and paragraph is automatically saved, allowing for quick recording in the same location next time.
-* You can easily change the target (note and paragraph) by clicking the exchange icon at the top.
+
+- A feature that allows you to immediately add sub-paragraphs by selecting a specific note and a parent paragraph.
+- Information about the most recently used note and paragraph is automatically saved, allowing for quick recording in the same location next time.
+- You can easily change the target (note and paragraph) by clicking the exchange icon at the top.
 
 ### 🔍 Full-text Search
 
-* Enter a keyword in the search bar and click the 🔍 button or press Enter to navigate to the full-text search results page, which searches through both note titles and their entire content.
+- Enter a keyword and click 🔍 or press Enter to open the search screen. Use the **Search** tab to search note titles and contents.
+- Opening the search page without a keyword shows a prompt to enter one in the search bar.
+- Scroll to the end of the result list to load more results.
 
 ### 🧾 Edit Suggestions
 
-* Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content.
-* Problem types include:
+- Displays notes with automatically detected problems such as empty sections, broken links, or duplicated content.
+- Problem types include:
 
-| Problem Type                              | Description                                                      |
-| --------------------------------------- | ---------------------------------------------------------------- |
-| Empty paragraph                         | A section heading exists but its content is empty                |
-| Empty list                              | A list is present in a section, but it has no items              |
-| Duplicate paragraphs (...)              | The same section title appears more than once                    |
-| Duplicate contents (...)                | Identical contents are repeated in a section                     |
-| Too high readability score: X > 3.0     | The reading difficulty score exceeds the recommended threshold   |
-| Unknown note link (...)                 | A link points to a non-existent note                             |
-| Empty parent note (...)                 | The parent note exists but contains no content                   |
-| Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked  |
-| Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note |
-| Isolated note | The note has content but lacks incoming paths (no parent note, no backlinks, and not assigned to any board) |
+| Problem Type                            | Description                                                                                                 |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Empty paragraph                         | A section heading exists but its content is empty                                                           |
+| Empty list                              | A list is present in a section, but it has no items                                                         |
+| Duplicate paragraphs (...)              | The same section title appears more than once                                                               |
+| Duplicate contents (...)                | Identical contents are repeated in a section                                                                |
+| Too high readability score: X > 3.0     | The reading difficulty score exceeds the recommended threshold                                              |
+| Unknown note link (...)                 | A link points to a non-existent note                                                                        |
+| Empty parent note (...)                 | The parent note exists but contains no content                                                              |
+| Unlinked note keyword: ...              | A keyword that could be linked to another note is left unlinked                                             |
+| Unlinked note keyword: ... => ... (...) | A keyword is unlinked even though it is linked from another note                                            |
+| Isolated note                           | The note has content but lacks incoming paths (no parent note, no backlinks, and not assigned to any board) |
 
-* Click a problem to jump directly to the problematic section for quick editing.
+- Click a problem to jump directly to the problematic section for quick editing.
 
 ### 📆 Timeline
 
-* View your schedule at a glance based on dates written in your notes.
-* You can use the specified date formats via the 🕒 button while editing a note.
-* Supported date formats:
-  * `YYYY-MM`
-  * `YYYY-MM-DD`
-  * `YYYY-MM-DD/YYYY-MM-DD`
-  * `MM/DD`
-  * `MM/DD ~ MM/DD`
-  * `YYYY/MM/DD`
-  * `YYYY/MM/DD ~ YYYY/MM/DD`
-  * `YYYY. M. D.`
-  * `YYYY. M. D.~YYYY. M. D.`
-* Use the date selector or calendar to browse notes by day.
-* View and edit dated sections directly from this screen.
-* Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.
-* Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
-  * `+1 day`, `+1 month`, `Extend`, or `Delete`.
+- View your schedule at a glance based on dates written in your notes.
+- You can use the specified date formats via the 🕒 button while editing a note.
+- Supported date formats:
+  - `YYYY-MM`
+  - `YYYY-MM-DD`
+  - `YYYY-MM-DD/YYYY-MM-DD`
+  - `MM/DD`
+  - `MM/DD ~ MM/DD`
+  - `YYYY/MM/DD`
+  - `YYYY/MM/DD ~ YYYY/MM/DD`
+  - `YYYY. M. D.`
+  - `YYYY. M. D.~YYYY. M. D.`
+- Use the date selector or calendar to browse notes by day.
+- View and edit dated sections directly from this screen.
+- Each note's current schedule is visually represented as a timer bar, making it easy to see its current state.
+- Clicking a **timer tag** (e.g., `YYYY-MM-DD`) in a note opens a quick menu to adjust the schedule:
+  - `+1 day`, `+1 month`, `Extend`, or `Delete`.
 
 ### 🕸️ Knowledge Graph
 
-Local notebooks read file contents on each refresh and compare checksums, reusing conversions of unchanged files to speed up repeated loading of large folders. The knowledge graph reuses note paragraph analysis. On an active screen, notes and boards refresh every 30 seconds; external edits, additions, renames and deletions appear on the next read, including edits that preserve both the file modification time and byte size.
+Explore connections among notes, boards, paragraphs, cards, and external links, and open their sources. Enable **Settings → Extensions → Knowledge Graph**, then open **Knowledge Graph** from the menu.
 
-Large graphs update their layout incrementally and animate between layout steps so you can keep panning and zooming while nodes settle. During movement, the canvas temporarily uses a lower resolution, tiny nodes appear as points, and relationship decorations are simplified. All nodes and relationships remain available; selected, hovered, and warning nodes retain their detailed indicators. The original resolution, node shapes, and relationship decorations return after movement stops. Edge highlights then start on large graphs.
+- **Navigate and find items**: Drag to pan and use the mouse wheel, pinch, or zoom buttons to zoom. **Search** finds names among currently displayed items. Select a result to see its location and details. Adjust **Spacing** to change the distance between items.
+- **Select an item**: View its connections and sources. Choose **1** or **2** to focus on nearby connections, or **All** for the full range. Open originals from the connection and source lists.
+- **View options**: Use **Base**, **Paragraphs**, and **Ordinary External Links** to choose what appears. Keywords and templates have their own toggles. **Graph controls** shows or hides the tools.
+- **Keywords and Relationships**: Open analysis with the top button. After analysis, enable the matching graph toggle to display keywords, types, and relationships. Relationship lines appear for groups meeting **Evidence satisfied**; inspect all results and evidence on the analysis screen.
+- **Discovered templates**: When **Extracted Templates** is enabled, show templates and their source connections. Select a template or group to explore related documents.
+- **Legend and validation**: The bottom legend shows item and relationship types with counts. Select **Validation Passed**, **Validation Warning**, or **Validation Error** to inspect issues, then select an item to locate it.
 
-Visualizes relationships among notes, boards, paragraphs, cards, and external links as a knowledge graph, providing relation exploration and graph validation.
+Empty notes appear when needed for another note's reference or hierarchy. Local file changes appear on the next automatic refresh.
 
-* **Internal Links**: Relative `.md` and `.markdown` links are resolved from the source note's folder to display note and paragraph references. Directly referenced empty notes are also included in the graph.
-* **Knowledge Graph Access & Validation Badge**:
-  * Open the feature from the **Knowledge Graph** item in the Drawer or Discovery menu.
-  * A badge (`CountBadge`) on the menu button displays the number of detected graph validation issues (referential integrity and isolated entity violations).
-* **Navigation Toolbar**:
-  * Select `[Usage >]` in the top toolbar to navigate to this guide.
-* **Graph Exploration & Viewport Controls**:
-  * Pan by dragging the canvas; zoom using the mouse wheel, trackpad pinch, or the top-right Zoom HUD (`+`, current percentage `%`, `-`, `Fit to screen`).
-  * Adjust node spacing density from 0.4x to 2.5x using the `Spacing` HUD (`-`, current density `x`, `+`); clicking the middle density button resets it to 1.0x.
-  * Members and descendants are placed outward from their Note or Board class through membership and containment. External links spread around the Note or Board class of the citing content, including when ordinary external links are shown. The External Link class stays near the Note class, or between the Note class and citing Board classes when board links are present. It is not a layout hub.
-  * All `Note containment` edges keep the same length, and all `Paragraph containment` edges keep the same length within their category. This also applies during selection and paragraph/external-link visibility changes; adjusting `Spacing` scales these lengths together.
-* **Node Preview Sheet & N-hop Range**:
-  * Selecting a node moves it to the center of the visible area above the bottom preview sheet without changing zoom. Dragging or zooming stops the automatic movement; the sheet lets you inspect details and set the related-node scope (N-hop).
-  * The N-hop range offers `1`, `2`, and `All`.
-  * When a node is selected, direct 1-hop edges are highlighted with bold lines (2.2px), arrows, and relation label boxes, N-hop edges are highlighted with lines (1.8px) and arrows, and non-focused nodes and edges are dimmed.
-  * Instance previews show clickable category (`Category`) chips for quick navigation.
-  * Shared board paragraphs originating from multiple notes display `Source Notes` chips to navigate to each source document, cards show `Sub-sections` chips, and note instances display YAML frontmatter property chips (`schedule`, `updated`, etc.).
-  * Nodes display a `[Move]` button to navigate to the note viewer or open the external browser. (Multi-origin board paragraphs navigate via their individual `Source Notes` chips instead.)
-* **View Options**:
-  * The top toolbar toggles display their active state and item counts:
-    * `Paragraphs (n)`: Shows or hides ordinary paragraph nodes. (Hidden by default; appears when ordinary paragraphs exist.)
-    * `Ordinary External Links (n)`: Shows or hides external links without other relations. (Hidden by default; appears when external links exist.)
-    * When **Extracted Templates** is enabled for this notebook, the **Discovered templates** toggle with a document icon shows or hides templates discovered from whole-note formats. It starts off; while enabled, the caption shows the template count, or `…` while calculating. Turning it off removes the added template nodes and relations. Ordinary paragraph and external-link options still work independently, and switching notebooks, accounts, privacy scopes, or disabling the extension resets template display.
-    * Each candidate becomes a **Template** node with the same color as reference arrows in the current theme, sized like a built-in category and connected to its represented source documents by **Template source** relations. Multiple templates in the same flat similarity group share a light neutral **Template group** node of the same size; single templates have no group node. Each template stays at the average position of its connected source nodes, and each template group stays at the average position of its connected template nodes, including while those nodes move. Group membership uses the catalog's exact `2 / 3` threshold. Select a group to choose its templates, or a template to choose its source nodes in the detail sheet. Templates and groups have no document **move** action. Source files, YAML metadata and validation results remain unchanged.
-* **Legend & Validation Modal**:
-  * The bottom legend displays currently shown node types (first row) and relation types (second row) with counts and can be expanded or collapsed.
-  * On the canvas, the selected node is highlighted with an orange solid ring, hovered nodes with a blue solid ring, and violating nodes with a red dashed ring.
-  * Select the top validation badge (`Validation Passed`, `Validation Warning (n)`, or `Validation Error (n)`) to open the validation modal.
-  * Inspect referential integrity (unknown note/paragraph links, empty parent notes) and isolated entity issues (unconnected standalone notes), and select an affected node chip to jump directly to that node on the graph.
-* **Entity Model & Empty Note Handling Rules**:
-  * Notes with no content are normally omitted from the graph.
-  * An existing empty note is retained as a structural skeletal Note instance only when directly referenced or used as an immediate parent by a non-empty note.
-  * Board paragraphs sharing the same name within a board are unified into a single `BOARD_PARAGRAPH` instance across multiple column origins, and card headings are modeled solely as `CARD` instances without duplicating paragraph nodes.
+#### 🔎 Graph Search
+
+1. Enter a query in the top search bar, then select the **Knowledge Graph** tab.
+2. If preparation is required, select **Start analysis**. Search continues automatically with your query when preparation finishes.
+3. Adjust **N-hop Range** to choose how far to explore connections. To find connections between items, include their names in the query.
+4. Choose a **Context size** of 16k, 32k, 64k, 128k, or 256k for the amount of result content. Here, 1k means 1,000 Markdown source characters. **Context usage** shows the amount used and the limit.
+5. Read **Traversal paths**, **Nearby paths**, **Related items**, and **Source quotations**. Use citation numbers and source links to read evidence or open its original note or paragraph. Select an external link's name to open it.
+
+The selected range and size may leave out some content or evidence; omissions are indicated in the result. If an expected connection or passage is missing, increase the range or context size. Search also includes items hidden on the canvas.
+
+Use reference links beside quotations to read the linked sources. While searching, you can choose another context size or cancel the search.
+
+**Traversal paths** shows connections between query items, while **Nearby paths** shows connections to nearby items. Paths use nested lists grouped by starting item, with shared sections shown once. Multiple relationships from the same parent to the same item appear side by side with their directions and citation numbers. Each item shows its classification in parentheses; paragraphs also identify their source notes, such as `(Paragraph[Note name])`.
+
+If paths are not found or are omitted due to the size limit, check the notices and affected item pairs. The Traversal paths heading shows `(normal paths/total)`, counting only normal paths and affected pairs actually listed. Without missing or omission notices, it shows only the path count `(n)`. Increasing the range may reveal connections not found in the selected range.
+
+#### 🏷️ Keywords and Relationships
+
+Find recurring keywords and relationships in the current notebook. Check automatically detected results against their original sources.
+
+1. Open **Keywords and Relationships** at the top of the knowledge graph.
+2. For **Cache reusable**, view the saved results. For **Cache creation required**, select **Start analysis**; for **Cache update required**, select **Update cache**. Errors appear in **Analysis notices**.
+3. Search names in **Keywords**, or expand **Keyword filters** to narrow the list. Select a name to open **Entity**.
+4. In **Entity**, inspect general relationships, source notes, and associations. Use **Associations** to inspect relationships and evidence for entity pairs. Select a card's heading or arrow to expand it.
+5. Select a source note or paragraph title to open the original. After editing notes, use **Refresh notes** and follow the **Update cache** prompt. **Run analysis again** is available after analysis finishes.
+
+Analysis continues when you visit another screen. The progress bar shows overall progress and the current stage's status. **Refresh notes** is unavailable during analysis and search preparation. Stopping analysis or changing the notebook, account, or privacy mode cancels the work. A cancelled or failed update preserves the previous saved results.
+
+For slow search preparation, check `검색 준비: 처리 시간` in the developer console. Each run records one summary on completion, failure, or cancellation, with total time, whether it exceeded five seconds, relationship cache timing, and detailed timings from storage reads through model readiness.
+
+Search preparation overlaps relationship analysis and reuses saved search data. Once ready, changing the query or connection range reuses the same prepared data.
+
+The performance summary separates source preparation, index construction, model file loading, and first inference. A negative `시작ms` means that work started before the search preparation indicator appeared.
+
+Opening search also reuses completed template discovery for the same sources, notebook scope, root names, and language. Incomplete analysis does not replace the completed search index. Large contexts, including 256k, check evidence and attribute changes by recalculating only the affected lines and paths; quotation ranges and the Markdown size limit remain exact.
+
+Analysis and search cache keys follow the other storage settings: `prefix:accountId:notebookId:privacy`. Local accounts leave the account ID empty, and ordinary notes use notebook ID `0`. Usage mode is omitted, and only the new key format is read and written. Localized type labels are compared by hash.
+
+The collection cache stores pattern hashes, occurrence structure and references into the current notes instead of duplicating note titles, bodies or quotations. It restores these in memory once from the loaded notes without extracting keywords or collecting relationships again. The vector cache stores model information, hashed identities and numeric embeddings; search text remains in memory. Source or rule changes invalidate collection references. On the first use of this format, older source-bearing collection caches are removed and need one analysis run to rebuild; existing embedding vectors are retained.
+
+Keywords are names recurring in at least **three distinct notes**. Shared parts of names also appear as constituent keywords: for example, `서울역`, `서울시청`, and `서울버스` can produce `서울`.
+
+In **Keyword filters**, **OR** accepts at least one selected option and **AND** requires all. **All** removes that filter's restriction. Collapsing the filters keeps your selections active.
+
+- **Keyword source**: note, section, reference, bold text, property, or property value.
+- **Keyword composition**: compound, contained, synthetic, constituent, or **None**. A compound name contains another keyword; that inner name is contained. A constituent is the shared part of names, and an original name containing it is synthetic. One keyword can have several roles.
+- **Entity pattern**: numeric pattern, common-prefix pattern, or **None**.
+- **Entity type**: items repeatedly found together in lists, headings, or tables. Selecting a parent type includes its subtypes. **None** shows keywords without a type.
+
+In **Entity → General relationships**, inspect type and pattern memberships and compound–contained or synthetic–constituent relationships. Pairs already linked through these general relationships are not repeated as associations. **Source notes** lets you narrow results by source and open the original text.
+
+Entity associations and **Associations** provide these filters:
+
+- **Association type**: shared sentence, list item, table row, table cell, property value, or a connection through a property.
+- **Aggregation basis**: **Property**, **Table column combination**, or **Evidence group**.
+- **Grouping type**: groups based on entity types, patterns, or keywords. Add **Evidence satisfied** to narrow results using repeated evidence and association scores.
+
+Different filters apply together. For association type and aggregation basis, **AND** requires all selected conditions within the same pair. Expand cards to follow **Connection type → Aggregation basis → Source evidence**. Types and patterns appear as `{{Editor}}`; keywords keep their original names. Use **Previous** and **Next** for more pages.
+
+The **association score** measures connection strength, not probability. The **generalization score** shows recurrence across different pairs and notes. Check the source for specific meanings and direction. Unevaluated results show **Not evaluated**.
 
 ### 📦 Archive (Backup and Restore)
 
-* Export all notes and boards in a ZIP archive for comprehensive backup.
-  * **Notes** are saved as Markdown (`.md`) files.
-  * **Boards** (Kanban/Scrum options and settings) are saved as structured JSON (`.json`) files (e.g., `{Board Title}.json`).
-* Restore notes and boards seamlessly by importing ZIP archives, Markdown (`.md`) files, or board JSON (`.json`) files.
+- Export all notes and boards in a ZIP archive for comprehensive backup.
+  - **Notes** are saved as Markdown (`.md`) files.
+  - **Boards** (Kanban/Scrum options and settings) are saved as structured JSON (`.json`) files (e.g., `{Board Title}.json`).
+- Restore notes and boards seamlessly by importing ZIP archives, Markdown (`.md`) files, or board JSON (`.json`) files.
 
 ### 🎯 Random Note Access
 
-* Open a randomly selected note to discover content from a new perspective.
+- Open a randomly selected note to discover content from a new perspective.
 
 ### 📄 PDF Export (Default Style)
 
-* Export or print the current note (or selected sub-paragraph) as a PDF document with default clean styling optimized for printing.
-* Forces a clean white background and black text, optimized for printing and standard document sharing.
-* Click the print icon button at the top of the note viewing screen to export.
+- Export or print the current note (or selected sub-paragraph) as a PDF document with default clean styling optimized for printing.
+- Forces a clean white background and black text, optimized for printing and standard document sharing.
+- Click the print icon button at the top of the note viewing screen to export.
 
 ### 📄 PDF Export (Theme Style)
 
-* Export the current note (or selected sub-paragraph) as a PDF document retaining your active theme colors (dark mode, skins, etc.).
-* Click the PDF icon button at the top of the note viewing screen to export.
+- Export the current note (or selected sub-paragraph) as a PDF document retaining your active theme colors (dark mode, skins, etc.).
+- Click the PDF icon button at the top of the note viewing screen to export.
 
 ### 🔲 Focus View (Note Page Section Only)
 
-* Can be enabled in Extension Settings.
-* In note screens, click the 'Maximize' icon in the header to hide navigation bars, search bars, and bottom navigation/TOC sections, focusing entirely on the note body.
-* You can return to the standard view at any time by clicking the 'Restore' icon in the top right or by pressing the `Escape` key.
+- Can be enabled in Extension Settings.
+- In note screens, click the 'Maximize' icon in the header to hide navigation bars, search bars, and bottom navigation/TOC sections, focusing entirely on the note body.
+- You can return to the standard view at any time by clicking the 'Restore' icon in the top right or by pressing the `Escape` key.
 
 ### 🔄 Notebook Sync (Local Account - My Account Synchronization)
 
-* Synchronizes notes (`.md`) and boards (`.json`) between your local account and your account.
-* **Automatic Pairing & Badge**: When logged in and working in Notebook mode, the Sync button in the Drawer and Discovery tab displays a badge indicating the number of modified, added, or differing files.
-* **Local Notebook Creation & Folder Connection**: If a matching notebook does not exist locally, the standard notebook creation modal opens with pre-filled account notebook details, prompting you to pick a local PC directory before proceeding with synchronization.
-* **Visual Diff & Smart Sync**: Inspect visual text differences before applying changes with smart conflict resolution (latest modified wins).
-* **Conflict Detection & Choice**: When a note has been modified concurrently on both local and account sides, it is marked as a conflict, allowing you to choose between [Reflect Local Account] and [Reflect My Account] directly on the card.
-* **Auto-sync(non-conflicting notes)**: When enabled, non-conflicted items (new notes, one-way modified notes, and boards) are automatically synchronized in the background while leaving conflicts for manual resolution.
-* **Sync Triggers**: Configure auto-checks on app focus and save directly from the sync screen.
+Synchronize notes and boards between your local account and your online account.
+
+- While signed in and using Notebook mode, the Sync button in the sidebar and Discovery tab shows the number of changed files.
+- If there is no matching local notebook, follow the prompt to choose a folder.
+- Compare changes on the sync screen before applying them. Smart sync gives priority to the latest revision.
+- If the same note was edited on both sides, choose **Reflect Local Account** or **Reflect My Account**.
+- Enable **Auto-sync** to apply items without conflicts automatically. Resolve conflicting items manually.
+- Choose whether to check for changes when opening the screen or saving a note. Use manual refresh to check at any time.
 
 ---
 
@@ -361,5 +394,5 @@ Visualizes relationships among notes, boards, paragraphs, cards, and external li
 
 If you have feature suggestions, bug reports, or questions, feel free to reach out:
 
-* Email: [ydh051541@naver.com](mailto:ydh051541@naver.com)
-* GitHub Issues: [https://github.com/blacktokki/blacktokki-notebook/issues](https://github.com/blacktokki/blacktokki-notebook/issues)
+- Email: [ydh051541@naver.com](mailto:ydh051541@naver.com)
+- GitHub Issues: [https://github.com/blacktokki/blacktokki-notebook/issues](https://github.com/blacktokki/blacktokki-notebook/issues)

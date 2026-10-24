@@ -1,4 +1,4 @@
-import type { KnowledgeGraphEdge, KnowledgeGraphNode, KnowledgeGraphParagraph } from '../types';
+import type { KnowledgeGraphEdge, KnowledgeGraphNode, KnowledgeGraphParagraph } from '../../types';
 
 export interface ParagraphHierarchyCandidate {
   nodeId: string;

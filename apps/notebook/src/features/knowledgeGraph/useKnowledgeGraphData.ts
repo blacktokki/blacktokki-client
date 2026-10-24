@@ -5,17 +5,17 @@ import { useMemo, useCallback } from 'react';
 import { KnowledgeGraphEdge, KnowledgeGraphData, KnowledgeGraphNode } from './types';
 import { evaluateKnowledgeGraphAxioms } from './utils/axioms';
 import { findConnectedExternalLinkIds } from './utils/externalLinkClassification';
-import { extractYamlFrontmatter } from './utils/frontmatter';
 import {
   findKnowledgeGraphLinkSourceNodeId,
   findKnowledgeGraphLinkTargetNodeId,
 } from './utils/links';
 import { getKnowledgeGraphPalette } from './utils/palette';
+import { extractYamlFrontmatter } from './utils/source/frontmatter';
 import {
   buildConnectedParagraphNotePartOfAssignments,
   buildParagraphPartOfAssignments,
   findConnectedParagraphIds,
-} from './utils/paragraphClassification';
+} from './utils/source/paragraphClassification';
 import {
   Paragraph,
   paragraphDescription,

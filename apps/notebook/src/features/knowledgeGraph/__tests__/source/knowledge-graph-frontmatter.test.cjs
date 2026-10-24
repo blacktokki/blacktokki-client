@@ -2,8 +2,8 @@ const assert = require('node:assert/strict');
 const { describe, test } = require('node:test');
 
 describe('Frontmatter graph structure', () => {
-  const load = require('../keywordRelation/__tests__/loadTs.cjs');
-  const { extractYamlFrontmatter } = load('../utils/frontmatter.ts');
+  const load = require('../../keywordRelation/__tests__/loadTs.cjs');
+  const { extractYamlFrontmatter } = load('../utils/source/frontmatter.ts');
 
   test('extractYamlFrontmatter parses markdown frontmatter blocks', () => {
     const md = `---
@@ -63,7 +63,7 @@ describe('Paragraph classification', () => {
   let getBoardParagraphSourceNotes;
   try {
     const source = readFileSync(
-      path.join(__dirname, '../utils/paragraphClassification.ts'),
+      path.join(__dirname, '../../utils/source/paragraphClassification.ts'),
       'utf8'
     );
     const compiled = ts.transpileModule(source, {
@@ -177,7 +177,7 @@ describe('Instance class membership', () => {
   const output = mkdtempSync(path.join(tmpdir(), 'knowledge-graph-class-membership-'));
   let findInstanceClassIds;
   try {
-    const source = readFileSync(path.join(__dirname, '../utils/classMembership.ts'), 'utf8');
+    const source = readFileSync(path.join(__dirname, '../../utils/classMembership.ts'), 'utf8');
     const compiled = ts.transpileModule(source, {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
     });

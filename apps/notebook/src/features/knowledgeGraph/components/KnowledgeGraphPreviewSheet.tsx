@@ -13,8 +13,8 @@ import { KeywordGraphDetails } from '../keywordRelation/components/KeywordGraphC
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { findInstanceClassIds } from '../utils/classMembership';
 import { getNhopDepthOptions } from '../utils/nhop';
-import { getBoardParagraphSourceNotes } from '../utils/paragraphClassification';
 import { getKnowledgeGraphNodeKind, getKnowledgeGraphNodeKindLabel } from '../utils/relations';
+import { getBoardParagraphSourceNotes } from '../utils/source/paragraphClassification';
 
 interface KnowledgeGraphPreviewSheetProps {
   node: KnowledgeGraphNode;

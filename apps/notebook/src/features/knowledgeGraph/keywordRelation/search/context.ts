@@ -7,6 +7,7 @@ import {
   graphTextBlocks,
   graphSourceRanges,
 } from './evidence';
+import { isQueryConnection, queryTargetGroups } from './retrieval/query';
 import { checkRelationCancelled, yieldRelationWork } from '../keyword/keywordUtils';
 import type {
   GraphContextCitation,
@@ -14,6 +15,7 @@ import type {
   GraphSearchResult,
   SearchNode,
   SearchEdge,
+  GraphSource,
 } from '../types';
 
 /** Keep retrieved text literal in Markdown headings, links, attributes and quotations. */
@@ -56,7 +58,15 @@ type CoreTrace = {
   searchedCapacity: number;
   complete: boolean;
 };
-const coreTraces = new WeakMap<GraphSearchResult, CoreTrace>();
+type AdmissionHint = { body: number; counts?: number[]; blocked?: boolean };
+type HigherPriority = {
+  nodes: SearchNode[];
+  lines: Set<string>;
+  floor: number;
+  publication: number;
+  missing: number;
+};
+const coreTraces = new WeakMap<object, CoreTrace>();
 type ContextPreparation = {
   identity: string;
   texts: (string | undefined)[];
@@ -71,7 +81,24 @@ type ContextPreparation = {
   quotations: Map<string, string>;
   wording: Map<string, string>;
 };
-const contextPreparations = new WeakMap<GraphSearchResult, ContextPreparation>();
+const contextPreparations = new WeakMap<object, ContextPreparation>();
+const sourcePreparations = new WeakMap<
+  GraphSource,
+  {
+    text: string;
+    search?: ReturnType<typeof createEvidenceText>;
+    whitespace?: number[];
+  }
+>();
+/** Source objects belong to the prepared index and remain shared across queries and hop ranges. */
+const prepareSource = (source: GraphSource) => {
+  let prepared = sourcePreparations.get(source);
+  if (!prepared || prepared.text !== source.text) {
+    prepared = { text: source.text };
+    sourcePreparations.set(source, prepared);
+  }
+  return prepared;
+};
 
 /** Assemble complete connections, attributes and range-specific evidence within one Markdown budget. */
 export function buildGraphSearchContext(
@@ -122,12 +149,13 @@ function* createContextSteps(
     result.query,
     result.plan,
     result.limited,
+    result.pathSearchComplete,
     result.nodes.map(({ node, score }) => ({ node: { ...node, body: undefined }, score })),
     result.edges,
     result.paths,
     result.sources.map((source) => ({ ...source, text: undefined })),
   ]);
-  let prepared = contextPreparations.get(result);
+  let prepared = contextPreparations.get(result.nodes);
   if (
     !prepared ||
     prepared.identity !== identity ||
@@ -151,7 +179,7 @@ function* createContextSteps(
       quotations: new Map(),
       wording: new Map(),
     };
-    contextPreparations.set(result, prepared);
+    contextPreparations.set(result.nodes, prepared);
   }
   const cached = prepared.contexts.get(budget);
   if (cached) return cached;
@@ -369,7 +397,9 @@ function* createContextSteps(
 
   const unitKey = (entry: ContextUnit['entry']) =>
     entry.kind === 'path' ? 'path:' + entry.index : entry.kind + ':' + entry.id;
-  const targets = new Set(result.plan.targetIds);
+  const targetGroups = queryTargetGroups(result.plan);
+  const targets = new Set(targetGroups.map((group) => group[0]));
+  const targetOwners = new Map(targetGroups.flatMap((group) => group.map((id) => [id, group[0]])));
   let pathNotices = '';
   let missingPaths = '';
   let missingPathDescription = '';
@@ -377,14 +407,7 @@ function* createContextSteps(
   let missingPathCount = 0;
   let omittedPathCount = 0;
   const isTargetPath = (index: number) => {
-    const path = result.paths[index];
-    if (result.plan.intent !== 'connection') return true;
-    if (!result.plan.targetIds) return path.kind !== 'surrounding';
-    return (
-      targets.has(path.nodes[0]) &&
-      targets.has(path.nodes.at(-1)!) &&
-      path.nodes[0] !== path.nodes.at(-1)
-    );
+    return isQueryConnection(result.plan, result.paths[index]);
   };
   const needsPathSection =
     (result.plan.intent === 'connection' && targets.size >= 2) ||
@@ -399,7 +422,9 @@ function* createContextSteps(
   const targetConnections = (indices: number[]) => {
     const peers = new Map([...targets].map((id) => [id, new Set<string>()]));
     for (const index of indices) {
-      const named = result.paths[index].nodes.filter((id) => targets.has(id));
+      const named = [
+        ...new Set(result.paths[index].nodes.flatMap((id) => targetOwners.get(id) || [])),
+      ];
       for (const id of named) for (const peer of named) if (peer !== id) peers.get(id)!.add(peer);
     }
     return peers;
@@ -410,7 +435,12 @@ function* createContextSteps(
     targets.size >= 2 &&
     [...foundConnections.values()].some((peers) => peers.size < targets.size - 1)
   )
-    missingPathDescription = description('No path found within the selected search range.');
+    missingPathDescription = description(
+      result.pathSearchComplete === false ||
+        (result.pathSearchComplete === undefined && result.limited)
+        ? 'Path search was not completed.'
+        : 'No path found within the selected search range.'
+    );
   const citationHrefs = new Map<string, string>();
   const citationHref = (citation: GraphContextCitation) => {
     let href = citationHrefs.get(citation.id);
@@ -690,13 +720,26 @@ function* createContextSteps(
     const cached = edgeUnits.get(id);
     if (cached) return cached;
     const edge = edges.get(id)!;
+    const target = nodes.get(edge.target)!;
+    const targetTitles = new Set(target.sourceIds.map((sourceId) => sources.get(sourceId)?.title));
+    const scoped = edge.sourceIds.filter((sourceId) =>
+      targetTitles.has(sources.get(sourceId)?.title)
+    );
+    const sourceIds =
+      (edge.type === 'KEYWORD_SOURCE' || edge.type === 'REPRESENTED_BY_NOTE') &&
+      target.sourceIds.length
+        ? target.sourceIds
+        : edge.type === 'PART_OF' && scoped.length
+        ? scoped
+        : edge.sourceIds;
     const unit: ContextUnit = {
       line:
         `- ${itemName(edge.source)} — ${contentInline(edge.label)} ${
           edge.directed ? '→' : '—'
         } ${itemName(edge.target)}` + associationScore(id),
       entry: { kind: 'edge', id },
-      sourceIds: edge.sourceIds,
+      // Provenance points to this particular source item, not every other occurrence of its keyword.
+      sourceIds,
       pair: [
         nodes.get(edge.source)!.name.toLowerCase(),
         nodes.get(edge.target)!.name.toLowerCase(),
@@ -754,6 +797,7 @@ function* createContextSteps(
     bundle?: GraphContextCitation[];
     bundleIdentity?: object;
     unresolved: boolean;
+    minimumCharacters?: number;
     relevance: number;
     complete: boolean;
   };
@@ -761,7 +805,13 @@ function* createContextSteps(
   const clipped = new Map<string, GraphContextCitation>();
   const getSourceText = (id: string) => {
     let search = sourceText.get(id);
-    if (!search) sourceText.set(id, (search = createEvidenceText(sources.get(id)!.text)));
+    if (!search) {
+      const source = sources.get(id)!;
+      const shared = prepareSource(source);
+      shared.search ||= createEvidenceText(source.text);
+      search = shared.search;
+      sourceText.set(id, search);
+    }
     return search;
   };
   const evidenceByUnit = new Map<string, RankedCitation[]>();
@@ -845,7 +895,7 @@ function* createContextSteps(
           }
           ranked.set(citationId, {
             citation,
-            ...evidenceContext(citation),
+            ...evidenceContext(citation, budget),
             relevance,
             complete: range.complete,
           });
@@ -884,7 +934,11 @@ function* createContextSteps(
         }
         for (const range of locations.length ? locations : original.origin.ranges)
           resolve(parentId, range, visited);
-        resolve(parentId, undefined, visited);
+        if (
+          unit.entry.kind === 'edge' &&
+          ['KEYWORD_RELATION', 'KEYWORD_TYPE_RELATION'].includes(edges.get(unit.entry.id)!.type)
+        )
+          resolve(parentId, undefined, visited);
         if (!original.origin.ranges.length)
           add(id, evidence || { start: 0, end: original.text.length }, false);
       } else {
@@ -919,7 +973,10 @@ function* createContextSteps(
     evidenceByUnit.set(unitKey(unit.entry), ordered);
     return ordered;
   };
-  const synchronizePaths = (allEntries: GraphContextEntry[]): GraphContextEntry[] => {
+  const synchronizePaths = (
+    allEntries: GraphContextEntry[],
+    previous?: Map<string, GraphContextEntry>
+  ): GraphContextEntry[] => {
     const byEdge = new Map(
       allEntries.flatMap((entry) =>
         entry.kind === 'edge' ? [[entry.id, entry.citationIds] as const] : []
@@ -930,7 +987,11 @@ function* createContextSteps(
         ? {
             ...entry,
             citationIds: [
-              ...new Set(result.paths[entry.index].edges.flatMap((id) => byEdge.get(id) || [])),
+              ...new Set(
+                result.paths[entry.index].edges.flatMap(
+                  (id) => byEdge.get(id) || previous?.get('edge:' + id)?.citationIds || []
+                )
+              ),
             ],
           }
         : entry
@@ -1083,20 +1144,27 @@ function* createContextSteps(
     explained: Set<string>;
     quoteCharacters: number;
     rawCharacters: number;
+    entries: Map<string, GraphContextEntry>;
+    references: References;
+    supported: Set<string>;
   };
   let coreProjection: CoreProjection | undefined;
-  const currentCore = () =>
+  const currentCore = (): CoreProjection =>
     (coreProjection ||= {
       measureLines: createContextLineMeasure([], prepared),
       measureBareLines: createContextLineMeasure([], prepared),
       explained: new Set<string>(),
       quoteCharacters: 0,
       rawCharacters: 0,
+      entries: new Map(),
+      references: referencesFor([]),
+      supported: new Set(),
     });
   /** Existing citations and lines stay fixed during admission; only new paths can hide old edge lines. */
+  let trialCounts: number[] = [];
   const createCoreMeasure = () => {
-    const byEntry = new Map(entries.map((entry) => [unitKey(entry), entry]));
-    const references = referencesFor(citations);
+    const byEntry = currentCore().entries;
+    const references = currentCore().references;
     const { explained, measureLines, measureBareLines, quoteCharacters, rawCharacters } =
       currentCore();
     /** Removing citation labels retains a lower bound with the same path and duplicate rules. */
@@ -1174,24 +1242,152 @@ function* createContextSteps(
               total + quotation(citation, citations.length + index).length,
             0
           );
-        return characters <= limit ? characters : undefined;
+        if (characters > limit) return;
+        trialCounts = [
+          measured.related,
+          measured.path,
+          measured.nearby,
+          citations.length + quoted.size,
+        ];
+        return characters;
       };
-      return { measure, minimumCharacters: Math.max(minimumCharacters, fixedMinimum) };
+      return {
+        measure,
+        minimumCharacters: Math.max(minimumCharacters, fixedMinimum),
+        counts: [minimum.related, minimum.path, minimum.nearby, citations.length],
+      };
     };
   };
   let corePhase = true;
   let coreMeasure: ReturnType<typeof createCoreMeasure> | undefined;
   const coreCitations = new Set<string>();
+  const publishedLines = new Set<string>();
+  let publication = 0;
+  type SourceLocation = { sourceId: string; start: number; end: number };
+  const sourceLocations = new Map<string, SourceLocation[]>();
+  const nonWhitespaceLength = (sourceId: string, start: number, end: number) => {
+    if (end <= start) return 0;
+    const source = sources.get(sourceId)!;
+    const shared = prepareSource(source);
+    shared.whitespace ||= [...source.text.matchAll(/\s/gu)].map((match) => match.index!);
+    const offsets = shared.whitespace;
+    const before = (position: number) => {
+      let low = 0,
+        high = offsets!.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (offsets![middle] < position) low = middle + 1;
+        else high = middle;
+      }
+      return low;
+    };
+    return end - start - before(end) + before(start);
+  };
+  const sourceFloors = new Map<string, { value: number }>();
+  const sourceFloorDependencies = new Map<string, Set<string>>();
+  const edgeFloorDependencies = new Map<string, Set<string>>();
+  let quotedRevision = -1;
+  const quotedRanges = new Map<string, GraphContextCitation[]>();
+  const sourceFloorFor = (id: string, broad: boolean) => {
+    const key = id + ':' + broad;
+    const cached = sourceFloors.get(key);
+    if (cached) return cached.value;
+    if (quotedRevision !== citations.length) {
+      quotedRanges.clear();
+      for (const citation of citations) {
+        const ranges = quotedRanges.get(citation.sourceId) || [];
+        ranges.push(citation);
+        quotedRanges.set(citation.sourceId, ranges);
+      }
+      for (const ranges of quotedRanges.values()) ranges.sort((a, b) => a.start - b.start);
+      quotedRevision = citations.length;
+    }
+    let locations = sourceLocations.get(key);
+    if (!locations) {
+      const source = sources.get(id),
+        parent = source?.origin && sources.get(source.origin.sourceId);
+      if (!broad && parent && !parent.origin && source!.origin!.ranges.length) {
+        locations = source!.origin!.ranges.map((range) => ({ ...range, sourceId: parent.id }));
+      } else {
+        locations = [];
+        const family = new Set([id]);
+        for (const sourceId of family) {
+          const original = sources.get(sourceId);
+          if (original?.origin) family.add(original.origin.sourceId);
+          for (const range of original?.scopes || [{ start: 0, end: 0 }])
+            locations.push({ ...range, sourceId });
+        }
+      }
+      sourceLocations.set(key, locations);
+      for (const { sourceId } of locations) {
+        let dependents = sourceFloorDependencies.get(sourceId);
+        if (!dependents) sourceFloorDependencies.set(sourceId, (dependents = new Set()));
+        dependents.add(key);
+      }
+    }
+    let value = Infinity;
+    for (const location of locations) {
+      const original = sources.get(location.sourceId);
+      if (!original) {
+        value = 0;
+        break;
+      }
+      let cursor = location.start,
+        characters = 0;
+      for (const range of quotedRanges.get(location.sourceId) || []) {
+        if (range.end <= cursor || range.start >= location.end) continue;
+        if (range.start > cursor)
+          characters += nonWhitespaceLength(
+            location.sourceId,
+            cursor,
+            Math.min(range.start, location.end)
+          );
+        cursor = Math.max(cursor, Math.min(location.end, range.end));
+      }
+      if (cursor < location.end)
+        characters += nonWhitespaceLength(location.sourceId, cursor, location.end);
+      value = Math.min(value, characters);
+      if (!value) break;
+    }
+    value = Number.isFinite(value) ? value : 0;
+    sourceFloors.set(key, { value });
+    return value;
+  };
   let planMinimum = 0;
+  const edgeSourceFloors = new Map<string, { characters: number }>();
+  const edgeSourceFloor = (id: string) => {
+    if (includedEdges.has(id)) return 0;
+    let cached = edgeSourceFloors.get(id);
+    if (!cached) {
+      const unit = edgeUnit(id);
+      const broad = ['KEYWORD_RELATION', 'KEYWORD_TYPE_RELATION'].includes(edges.get(id)!.type);
+      let characters = unit.sourceIds.length ? Infinity : 0;
+      for (const sourceId of unit.sourceIds) {
+        characters = Math.min(characters, sourceFloorFor(sourceId, broad));
+        if (!characters) break;
+      }
+      edgeSourceFloors.set(id, (cached = { characters }));
+      for (const sourceId of unit.sourceIds) {
+        const key = sourceId + ':' + broad;
+        let dependents = edgeFloorDependencies.get(key);
+        if (!dependents) edgeFloorDependencies.set(key, (dependents = new Set()));
+        dependents.add(id);
+      }
+    }
+    return cached.characters;
+  };
+  let planHeadings: { minimum: number[]; maximum: number[] } | undefined;
   /** Plan a whole explanation against its final Markdown cost, backtracking when a later edge needs room. */
   const plan = (units: ContextUnit[], limit = budget - reserve) => {
     planMinimum = 0;
+    planHeadings = undefined;
     type State = {
       quoted: Map<string, GraphContextCitation>;
       entries: GraphContextEntry[];
       characters: number;
       quoteCharacters: number;
       referenceCharacters: number;
+      counts: number[];
     };
     const allUnits = corePhase ? [] : [...renderedUnits, ...units];
     const existingCitations = corePhase
@@ -1203,6 +1399,30 @@ function* createContextSteps(
     const coreTrial = corePhase ? (coreMeasure ||= createCoreMeasure())(units) : undefined;
     planMinimum = coreTrial?.minimumCharacters || 0;
     if (coreTrial && coreTrial.minimumCharacters > limit) return;
+    let sourceFloor = 0;
+    for (const unit of units) {
+      if (unit.entry.kind === 'edge')
+        sourceFloor = Math.max(sourceFloor, edgeSourceFloor(unit.entry.id));
+    }
+    if (coreTrial && coreTrial.minimumCharacters + sourceFloor > limit) {
+      planMinimum = coreTrial.minimumCharacters + sourceFloor;
+      const hidden = new Set(
+        units.flatMap(({ entry }) => (entry.kind === 'path' ? result.paths[entry.index].edges : []))
+      );
+      if (
+        units.every(
+          ({ entry }) =>
+            entry.kind !== 'edge' || hidden.has(entry.id) || currentCore().explained.has(entry.id)
+        )
+      )
+        planHeadings = {
+          minimum: coreTrial.counts,
+          maximum: coreTrial.counts.map(
+            (count, index) => count + (index === 3 ? budget : units.length)
+          ),
+        };
+      return;
+    }
     const measureCore = coreTrial?.measure;
     const fixedQuoteCharacters =
       coreTrial?.minimumCharacters ??
@@ -1226,20 +1446,28 @@ function* createContextSteps(
     const baseCharacters = measureCore
       ? measureCore(baseQuoted, [], Infinity)
       : measure(baseQuoted, bareEntries());
+    const bareCounts = [...trialCounts];
     const hiddenEdges = new Set(
       units.flatMap(({ entry }) => (entry.kind === 'path' ? result.paths[entry.index].edges : []))
     );
-    if (
+    const completePath =
       baseCharacters !== undefined &&
       units.every(
         ({ entry }) =>
           entry.kind !== 'edge' ||
           hiddenEdges.has(entry.id) ||
           currentCore().explained.has(entry.id)
-      )
-    )
+      );
+    if (completePath) {
       planMinimum = Math.max(planMinimum, baseCharacters);
+      planHeadings = {
+        minimum: bareCounts,
+        maximum: [...bareCounts.slice(0, 3), citations.length + budget],
+      };
+    }
     if (baseCharacters === undefined || baseCharacters > limit) return;
+    planMinimum = Math.max(planMinimum, baseCharacters + sourceFloor);
+    if (planMinimum > limit) return;
     const alternatives = new Map(
       units.map((unit) => [
         unitKey(unit.entry),
@@ -1256,6 +1484,7 @@ function* createContextSteps(
           characters: baseCharacters,
           quoteCharacters: 0,
           referenceCharacters: 0,
+          counts: [...trialCounts],
         },
       };
     const options = new Map<string, RankedCitation[]>();
@@ -1273,7 +1502,7 @@ function* createContextSteps(
       for (const option of (ranked.some((option) => option.complete && !option.unresolved)
         ? ranked.filter((option) => option.complete)
         : ranked
-      ).filter((option) => !option.unresolved)) {
+      ).filter((option) => !option.unresolved && (option.minimumCharacters || 0) <= budget)) {
         if (seenBundles.has(option.bundle!)) continue;
         seenBundles.add(option.bundle!);
         const signature = JSON.stringify(option.bundle!.map((citation) => citation.id));
@@ -1287,6 +1516,14 @@ function* createContextSteps(
       );
       options.set(key, values);
     }
+    if (planHeadings)
+      planHeadings.maximum[3] =
+        citations.length +
+        new Set(
+          units
+            .flatMap((unit) => [...(possibleCitationsByUnit.get(unitKey(unit.entry)) || [])])
+            .filter((id) => !existingCitations.has(id))
+        ).size;
     const apply = (
       state: State,
       key: string,
@@ -1332,7 +1569,14 @@ function* createContextSteps(
       );
       const characters = measure(quoted, nextEntries);
       if (characters === undefined) return;
-      return { quoted, entries: nextEntries, characters, quoteCharacters, referenceCharacters };
+      return {
+        quoted,
+        entries: nextEntries,
+        characters,
+        quoteCharacters,
+        referenceCharacters,
+        counts: [...trialCounts],
+      };
     };
     const required = units.filter(
       (unit) => unit.entry.kind === 'edge' && alternatives.get(unitKey(unit.entry))!.length
@@ -1348,6 +1592,7 @@ function* createContextSteps(
     ) {
       let quoteFloor = 0;
       let referenceFloor = 0;
+      const independent: { ids: Set<string>; minimum: number }[] = [];
       for (const unit of required) {
         let minimumQuotes = Infinity;
         let minimumReferences = Infinity;
@@ -1372,9 +1617,23 @@ function* createContextSteps(
           minimumQuotes = Math.min(minimumQuotes, quotes);
           minimumReferences = Math.min(minimumReferences, references);
         }
-        quoteFloor = Math.max(quoteFloor, minimumQuotes);
-        referenceFloor = Math.max(referenceFloor, minimumReferences);
+        const ids = new Set(
+          [...possibleCitationsByUnit.get(unitKey(unit.entry))!].filter(
+            (id) => !existingCitations.has(id)
+          )
+        );
+        let minimum = minimumQuotes;
+        for (let index = independent.length - 1; index >= 0; index--) {
+          const group = independent[index];
+          if (![...ids].some((id) => group.ids.has(id))) continue;
+          minimum = Math.max(minimum, group.minimum);
+          for (const id of group.ids) ids.add(id);
+          independent.splice(index, 1);
+        }
+        independent.push({ ids, minimum });
+        referenceFloor += minimumReferences;
       }
+      quoteFloor = independent.reduce((total, group) => total + group.minimum, 0);
       planMinimum = Math.max(planMinimum, baseCharacters + quoteFloor + referenceFloor);
       if (planMinimum > limit) return;
     }
@@ -1421,6 +1680,7 @@ function* createContextSteps(
       characters: baseCharacters,
       quoteCharacters: 0,
       referenceCharacters: 0,
+      counts: [...trialCounts],
     });
     if (!state) return;
     const selectedEntries = new Map(state.entries.map((entry) => [unitKey(entry), entry]));
@@ -1436,12 +1696,27 @@ function* createContextSteps(
   const publish = ({ units, alternatives, state }: NonNullable<ReturnType<typeof plan>>) => {
     // Optional item provenance is needed only after a trial has actually been selected.
     // Path citations are synchronized from the selected relationships below.
+    const base = corePhase ? currentCore() : undefined;
+    const supported = base?.supported || new Set<string>();
+    for (const entry of base ? state.entries : [...entries, ...state.entries]) {
+      if (entry.kind !== 'edge' || !entry.citationIds.length) continue;
+      const edge = edges.get(entry.id)!;
+      supported.add(edge.source);
+      supported.add(edge.target);
+    }
     for (const unit of units)
-      if (unit.entry.kind === 'node') alternatives.set(unitKey(unit.entry), rankEvidence(unit));
-    const allEntries = synchronizePaths([...entries, ...state.entries]);
+      if (unit.entry.kind === 'node')
+        alternatives.set(
+          unitKey(unit.entry),
+          supported.has(unit.entry.id) ? [] : rankEvidence(unit)
+        );
+    // Core evidence stays fixed after admission. Only new paths need their
+    // references synchronized; later optional evidence still updates every path.
+    const allEntries = base
+      ? synchronizePaths(state.entries, base.entries)
+      : synchronizePaths([...entries, ...state.entries]);
     const allCitations = [...citations, ...state.quoted.values()];
-    if (corePhase) {
-      const base = currentCore();
+    if (base) {
       const removed = new Set<string>();
       for (const { entry } of units) {
         if (entry.kind !== 'path') continue;
@@ -1453,8 +1728,10 @@ function* createContextSteps(
       const visible = units.filter(
         ({ entry }) => entry.kind !== 'edge' || !base.explained.has(entry.id)
       );
-      const byEntry = new Map(allEntries.map((entry) => [unitKey(entry), entry]));
+      for (const entry of allEntries) base.entries.set(unitKey(entry), entry);
+      const byEntry = base.entries;
       const references = referencesFor(allCitations);
+      base.references = references;
       base.measureLines.accept!(
         visible.map((unit) => renderLine(unit, byEntry, references)),
         removed
@@ -1468,10 +1745,30 @@ function* createContextSteps(
     fitBase = undefined;
     coreMeasure = undefined;
     citations.push(...state.quoted.values());
+    for (const citation of state.quoted.values())
+      for (const key of sourceFloorDependencies.get(citation.sourceId) || []) {
+        if (
+          !sourceLocations
+            .get(key)!
+            .some(
+              (location) =>
+                location.sourceId === citation.sourceId &&
+                location.start < citation.end &&
+                location.end > citation.start
+            )
+        )
+          continue;
+        sourceFloors.delete(key);
+        for (const id of edgeFloorDependencies.get(key) || []) edgeSourceFloors.delete(id);
+      }
     if (state.quoted.size) optionQuoteFloors = new WeakMap();
     for (const citation of state.quoted.values()) coreCitations.add(citation.id);
-    entries.splice(0, entries.length, ...allEntries);
+    if (base) entries.push(...allEntries);
+    else entries.splice(0, entries.length, ...allEntries);
     renderedUnits.push(...units);
+    for (const unit of units)
+      if (unit.entry.kind !== 'path') publishedLines.add(bareLine(unit).text);
+    publication++;
     for (const [key, ranked] of alternatives) remainingEvidence.set(key, ranked);
     for (const { entry } of units) {
       if (entry.kind === 'path') includedPaths.add(entry.index);
@@ -1485,7 +1782,15 @@ function* createContextSteps(
     return next ? publish(next) : false;
   };
   const addNode = (id: string) => {
-    return includedNodes.has(id) || commit([nodeUnit(id)]);
+    if (includedNodes.has(id)) return true;
+    const unit = nodeUnit(id);
+    if (
+      !corePhase &&
+      text.length + unit.line.trimEnd().length + 2 > budget - reserve &&
+      !renderedUnits.some((previous) => previous.line === unit.line)
+    )
+      return false;
+    return commit([unit]);
   };
   /** Use endpoint relevance and hop-decayed relationship relevance; explicit connection queries prioritize complete routes. */
   const pathScore = (path: GraphSearchResult['paths'][number]) => {
@@ -1499,12 +1804,7 @@ function* createContextSteps(
     return (
       endpoints +
       relationships / (path.edges.length + 1) +
-      (result.plan.intent === 'connection' &&
-      (result.plan.targetIds
-        ? targets.has(path.nodes[0]) && targets.has(path.nodes.at(-1)!)
-        : path.kind !== 'surrounding')
-        ? 100
-        : 0)
+      (result.plan.intent === 'connection' && isQueryConnection(result.plan, path) ? 100 : 0)
     );
   };
   const seenPaths = new Set<string>();
@@ -1516,10 +1816,10 @@ function* createContextSteps(
     seenPaths.add(key);
     return [{ path, index }];
   });
-  const candidates: (
+  const candidates: ((
     | { kind: 'node' | 'edge'; id: string; score: number }
     | { kind: 'path'; index: number; score: number }
-  )[] = [
+  ) & { key?: string; hint?: AdmissionHint; priority?: HigherPriority })[] = [
     ...distinctPaths.map(({ path, index }) => ({
       kind: 'path' as const,
       index,
@@ -1537,6 +1837,12 @@ function* createContextSteps(
     })),
   ];
   candidates.sort((a, b) => b.score - a.score);
+  for (const candidate of candidates) {
+    candidate.key =
+      candidate.kind === 'path' ? 'path:' + candidate.index : candidate.kind + ':' + candidate.id;
+    candidate.hint = undefined;
+    candidate.priority = undefined;
+  }
   const presentation = new Map<string, number>();
   const remember = (entry: ContextUnit['entry']) => {
     const key = unitKey(entry);
@@ -1556,16 +1862,49 @@ function* createContextSteps(
       }
     }
   }
-  const order = (a: { entry: ContextUnit['entry'] }, b: { entry: ContextUnit['entry'] }) =>
-    presentation.get(unitKey(a.entry))! - presentation.get(unitKey(b.entry))!;
+  const presentationPositions = new WeakMap<ContextUnit, number>();
+  const presentationPosition = (unit: ContextUnit) => {
+    let position = presentationPositions.get(unit);
+    if (position === undefined)
+      presentationPositions.set(unit, (position = presentation.get(unitKey(unit.entry))!));
+    return position;
+  };
+  const order = (a: ContextUnit, b: ContextUnit) =>
+    presentationPosition(a) - presentationPosition(b);
   const pending = new Set(candidates.filter((candidate) => candidate.kind !== 'node'));
-  const candidateKey = (candidate: (typeof candidates)[number]) =>
-    candidate.kind === 'path' ? 'path:' + candidate.index : candidate.kind + ':' + candidate.id;
+  const candidateKey = (candidate: (typeof candidates)[number]) => candidate.key!;
   const preparedUnits = new Map<string, ContextUnit[]>();
+  const candidateUnits = new Map<string, ContextUnit[]>();
+  const prioritizedNodes = [...result.nodes].sort((a, b) => b.score - a.score);
+  const higherPriorities = new Map<number, HigherPriority>();
+  const getHigherPriority = (value: number) => {
+    let higher = higherPriorities.get(value);
+    if (!higher) {
+      const nodes: SearchNode[] = [];
+      const lines = new Set<string>();
+      for (const { node, score } of prioritizedNodes) {
+        if (score <= value) break;
+        nodes.push(node);
+        lines.add(bareLine(nodeUnit(node.id)).text);
+      }
+      higher = {
+        nodes,
+        lines,
+        floor: [...lines].reduce((total, line) => total + line.length, 0),
+        publication: -1,
+        missing: 0,
+      };
+      higherPriorities.set(value, higher);
+    }
+    return higher;
+  };
   const prepare = (candidate: (typeof candidates)[number]) => {
     const key = candidateKey(candidate);
     let needed = preparedUnits.get(key);
     if (!needed) {
+      candidate.priority ||= getHigherPriority(candidate.score);
+      const higher = candidate.priority;
+      if (higher.floor > budget - reserve) return;
       needed = [];
       if (candidate.kind === 'path') {
         const path = result.paths[candidate.index];
@@ -1582,8 +1921,9 @@ function* createContextSteps(
       const neededNodes = new Set(
         needed.flatMap((unit) => (unit.entry.kind === 'node' ? [unit.entry.id] : []))
       );
-      for (const { node, score } of result.nodes) {
-        if (score <= candidate.score || neededNodes.has(node.id)) continue;
+      candidateUnits.set(key, [...needed]);
+      for (const node of higher.nodes) {
+        if (neededNodes.has(node.id)) continue;
         needed.push(nodeUnit(node.id));
         neededNodes.add(node.id);
       }
@@ -1621,7 +1961,12 @@ function* createContextSteps(
     renderedUnits.length = 0;
     entries.length = 0;
     citations.length = 0;
+    sourceFloors.clear();
+    edgeSourceFloors.clear();
+    quotedRevision = -1;
     coreCitations.clear();
+    publishedLines.clear();
+    publication++;
     includedNodes.clear();
     includedEdges.clear();
     includedPaths.clear();
@@ -1652,35 +1997,40 @@ function* createContextSteps(
       translate('Association score'),
       translate('Reference'),
     ]);
-    const previousTrace = coreTraces.get(result);
+    const previousTrace = coreTraces.get(result.nodes);
     const trace: CoreTrace =
       previousTrace?.identity === identity &&
       previousTrace.texts.length === texts.length &&
       previousTrace.texts.every((value, index) => value === texts[index])
         ? previousTrace
         : { identity, texts, steps: [], searchedCapacity: -1, complete: false };
-    coreTraces.set(result, trace);
+    coreTraces.set(result.nodes, trace);
     const byCandidate = new Map(
       [...pending].map((candidate) => [candidateKey(candidate), candidate])
     );
-    const admissionHints = new Map<string, number>();
+    const admissionHints = new Map<string, AdmissionHint>();
+    const forgetHint = (key: string) => {
+      admissionHints.delete(key);
+      byCandidate.get(key)!.hint = undefined;
+    };
+    const setHint = (key: string, hint: AdmissionHint) => {
+      admissionHints.set(key, hint);
+      byCandidate.get(key)!.hint = hint;
+    };
+    const pathsByEdge = new Map<string, number[]>();
+    for (const candidate of pending)
+      if (candidate.kind === 'path') {
+        for (const id of new Set(result.paths[candidate.index].edges)) {
+          const indices = pathsByEdge.get(id) || [];
+          indices.push(candidate.index);
+          pathsByEdge.set(id, indices);
+        }
+      }
     const dependents = new Map<string, Set<string>>();
     const registered = new Set<string>();
+    const registeredEvidence = new Map<string, Map<string, number>>();
+    const candidateEdges = new Map<string, ContextUnit[]>();
     const publishedResources = new Set<string>();
-    const sourcesFor = new Map<string, Set<string>>();
-    const sourceClosure = (id: string) => {
-      let found = sourcesFor.get(id);
-      if (found) return found;
-      found = new Set([id]);
-      for (const sourceId of found) {
-        const source = sources.get(sourceId);
-        if (source?.origin) found.add(source.origin.sourceId);
-        for (const reference of source?.references || [])
-          for (const target of reference.targets || []) found.add(target.sourceId);
-      }
-      sourcesFor.set(id, found);
-      return found;
-    };
     const pathResources = (index: number) => {
       const path = result.paths[index];
       return path.nodes.flatMap((_, depth) => {
@@ -1693,24 +2043,42 @@ function* createContextSteps(
     };
     const register = (candidate: (typeof candidates)[number]) => {
       const key = candidateKey(candidate);
-      if (registered.has(key)) return;
-      registered.add(key);
       const resources = new Set<string>();
-      for (const unit of preparedUnits.get(key) || []) {
-        const { entry } = unit;
-        resources.add('unit:' + unitKey(entry));
-        if (entry.kind === 'path') {
-          for (const resource of pathResources(entry.index)) resources.add(resource);
-          for (const id of result.paths[entry.index].edges) resources.add('explained:' + id);
-        } else {
-          resources.add('line:' + bareLine(unit).text);
-          if (entry.kind === 'edge') {
-            const possible = possibleCitationsByUnit.get(unitKey(entry));
-            if (possible) for (const id of possible) resources.add('quote:' + id);
-            else
-              for (const id of unit.sourceIds)
-                for (const sourceId of sourceClosure(id)) resources.add('source:' + sourceId);
-          }
+      if (!registered.has(key)) {
+        registered.add(key);
+        const units = candidateUnits.get(key) || [];
+        candidateEdges.set(
+          key,
+          units.filter((unit) => unit.entry.kind === 'edge')
+        );
+        registeredEvidence.set(key, new Map());
+        for (const unit of units) {
+          const { entry } = unit;
+          resources.add('unit:' + unitKey(entry));
+          if (entry.kind === 'path') {
+            for (const resource of pathResources(entry.index)) resources.add(resource);
+            for (const id of result.paths[entry.index].edges) resources.add('explained:' + id);
+          } else resources.add('line:' + bareLine(unit).text);
+        }
+      }
+      for (const unit of candidateEdges.get(key)!) {
+        const edgeKey = unitKey(unit.entry);
+        if (registeredEvidence.get(key)!.get(edgeKey) === 2) continue;
+        const possible = possibleCitationsByUnit.get(edgeKey);
+        const broad = ['KEYWORD_RELATION', 'KEYWORD_TYPE_RELATION'].includes(
+          edges.get((unit.entry as { id: string }).id)!.type
+        );
+        const locations = unit.sourceIds.flatMap(
+          (id) => sourceLocations.get(id + ':' + broad) || []
+        );
+        const stage = possible ? 2 : locations.length ? 1 : 0;
+        if (stage <= (registeredEvidence.get(key)!.get(edgeKey) || 0)) continue;
+        registeredEvidence.get(key)!.set(edgeKey, stage);
+        if (possible) for (const id of possible) resources.add('quote:' + id);
+        else {
+          // A trial rejected by a source-size lower bound depends only on those
+          // source ranges. Resolve linked evidence only if that trial can fit.
+          for (const { sourceId } of locations) resources.add('source:' + sourceId);
         }
       }
       for (const resource of resources) {
@@ -1721,7 +2089,29 @@ function* createContextSteps(
     };
     const invalidate = (selected: NonNullable<ReturnType<typeof plan>>) => {
       const changed = new Set<string>();
+      const nodeSavings = new Map<string, { characters: number; count: number }>();
       for (const unit of selected.units) {
+        if (unit.entry.kind !== 'node') {
+          const candidate = byCandidate.get(unitKey(unit.entry));
+          if (candidate) pending.delete(candidate);
+        }
+        if (unit.entry.kind === 'node') {
+          const line = bareLine(unit).text;
+          const affected = new Set([
+            ...(dependents.get('unit:' + unitKey(unit.entry)) || []),
+            ...(dependents.get('line:' + line) || []),
+          ]);
+          const relevance = nodeScores.get(unit.entry.id)!;
+          for (const key of admissionHints.keys())
+            if (byCandidate.get(key)!.score < relevance) affected.add(key);
+          for (const key of affected) {
+            const saving = nodeSavings.get(key) || { characters: 0, count: 0 };
+            saving.characters += line.length;
+            saving.count++;
+            nodeSavings.set(key, saving);
+          }
+          continue;
+        }
         changed.add('unit:' + unitKey(unit.entry));
         if (unit.entry.kind === 'path') {
           for (const resource of pathResources(unit.entry.index)) changed.add(resource);
@@ -1731,16 +2121,42 @@ function* createContextSteps(
       for (const resource of changed) {
         if (publishedResources.has(resource)) continue;
         publishedResources.add(resource);
-        for (const key of dependents.get(resource) || []) admissionHints.delete(key);
+        for (const key of dependents.get(resource) || []) forgetHint(key);
+      }
+      for (const [key, saving] of nodeSavings) {
+        const hint = admissionHints.get(key);
+        if (!hint) continue;
+        hint.body -= saving.characters;
+        if (hint.counts) hint.counts[0] -= saving.count;
+        hint.blocked = false;
       }
       for (const citation of selected.state.quoted.values()) {
-        for (const key of dependents.get('source:' + citation.sourceId) || [])
-          admissionHints.delete(key);
-        for (const key of dependents.get('quote:' + citation.id) || []) admissionHints.delete(key);
+        const affected = new Set([
+          ...(dependents.get('source:' + citation.sourceId) || []),
+          ...(dependents.get('quote:' + citation.id) || []),
+        ]);
+        const saving =
+          quotation(citation, budget).length + (result.plan.maxHops + 1) * String(budget).length;
+        for (const key of affected) {
+          const hint = admissionHints.get(key);
+          if (!hint) continue;
+          hint.body -= saving;
+          if (hint.counts) hint.counts[3] = Math.max(0, hint.counts[3] - 1);
+          hint.blocked = false;
+        }
       }
     };
-    // Unchanged resources retain their previous minimum incremental body cost.
-    // Discard all possible heading savings; shared units, prefixes and sources invalidate the hint.
+    const headingParts = [
+      (count: number) => (count ? headings.related(count).length : 0),
+      (count: number) => (needsPathSection || count ? pathHeading(count).length : 0),
+      (count: number) => (count ? headings.nearby(count).length : 0),
+      (count: number) => (count ? headings.evidence(count).length : 0),
+    ];
+    const headingCharacters = (counts: number[]) =>
+      counts.reduce((total, count, index) => total + headingParts[index](count), 0);
+    const headingAllowance = 2 * headingCharacters([budget, budget, budget, budget]);
+    // Keep the body cost independent of section counts; unrelated publications only
+    // require recomputing heading digits, not testing every unchanged explanation again.
     const publishedCharacters = () => {
       const base = currentCore();
       const measured = base.measureLines([], new Set());
@@ -1754,19 +2170,13 @@ function* createContextSteps(
         omittedPathDescription.length +
         (measured.nearby ? headings.nearby(measured.nearby).length : 0) +
         (citations.length ? headings.evidence(citations.length).length : 0);
-      const headingAllowance = [
-        [measured.related, headings.related(budget)],
-        [needsPathSection || measured.path, pathHeading(budget)],
-        [measured.nearby, headings.nearby(budget)],
-        [citations.length, headings.evidence(budget)],
-      ].reduce(
-        (total, [present, heading]) =>
-          total + (present ? 0 : String(heading).length) + 2 * String(budget).length,
-        0
-      );
-      return { characters, headingAllowance };
+      return {
+        characters,
+        counts: [measured.related, measured.path, measured.nearby, citations.length],
+      };
     };
     let replayLimited = false;
+    let admissionWork = 0;
     for (const step of trace.steps) {
       yield;
       if (step.peak > budget - reserve) {
@@ -1791,32 +2201,95 @@ function* createContextSteps(
     ) {
       let best: ReturnType<typeof plan>;
       let chosen: (typeof candidates)[number] | undefined;
-      const { characters: baseCharacters, headingAllowance } = publishedCharacters();
-      for (const candidate of pending) {
-        yield;
-        if (
-          (candidate.kind === 'path' && includedPaths.has(candidate.index)) ||
-          (candidate.kind === 'edge' && includedEdges.has(candidate.id))
-        ) {
-          pending.delete(candidate);
-          continue;
+      const { characters: baseCharacters, counts } = publishedCharacters();
+      const headingDeltas = counts.map(() => new Map<number, number>());
+      const headingChange = (deltas: number[]) => {
+        let characters = 0;
+        for (let index = 0; index < deltas.length; index++) {
+          let delta = headingDeltas[index].get(deltas[index]);
+          if (delta === undefined) {
+            delta =
+              headingParts[index](Math.max(0, counts[index] + deltas[index])) -
+              headingParts[index](counts[index]);
+            headingDeltas[index].set(deltas[index], delta);
+          }
+          characters += delta;
         }
+        return characters;
+      };
+      const referenceLookup = currentCore().references;
+      const entryLookup = currentCore().entries;
+      const hidingPaths = new Set<number>();
+      const removableCharacters =
+        headingCharacters(counts) +
+        renderedUnits.reduce((total, unit) => {
+          if (unit.entry.kind !== 'edge' || currentCore().explained.has(unit.entry.id))
+            return total;
+          for (const index of pathsByEdge.get(unit.entry.id) || []) hidingPaths.add(index);
+          return total + renderLine(unit, entryLookup, referenceLookup).text.length;
+        }, 0);
+      for (const candidate of pending) {
+        if (++admissionWork % 64 === 0) yield;
+        const key = candidateKey(candidate);
+        const hint = candidate.hint;
+        if (hint?.blocked) continue;
+        const ceiling = best ? Math.min(budget - reserve, best.state.characters) : budget - reserve;
+        candidate.priority ||= getHigherPriority(candidate.score);
+        const higher = candidate.priority;
+        // Candidates are ordered by relevance. Every later candidate requires at
+        // least these same higher-ranked item lines, so none can fit this budget.
+        if (higher.floor > budget - reserve) break;
+        if (higher.floor > ceiling) continue;
+        const hidesEdge = candidate.kind === 'path' && hidingPaths.has(candidate.index);
+        if (higher.publication !== publication) {
+          let characters = 0;
+          for (const line of higher.lines) if (!publishedLines.has(line)) characters += line.length;
+          higher.publication = publication;
+          higher.missing = characters;
+        }
+        // Even replacing every standalone relationship cannot free enough space
+        // for this and all lower-ranked candidates' mandatory higher-ranked items.
+        if (baseCharacters + higher.missing - removableCharacters > ceiling) break;
+        if (!hidesEdge && baseCharacters + higher.missing > ceiling) continue;
+        const lower = hint && hint.body + (hint.counts ? headingChange(hint.counts) : 0);
+        if (
+          lower !== undefined &&
+          (baseCharacters + lower > ceiling || (best && baseCharacters + lower === ceiling))
+        )
+          continue;
+        const sourceFloor =
+          candidate.kind === 'path'
+            ? Math.max(0, ...result.paths[candidate.index].edges.map(edgeSourceFloor))
+            : edgeSourceFloor(candidate.id);
+        if (baseCharacters + higher.missing + sourceFloor - removableCharacters > ceiling) continue;
         const needed = prepare(candidate);
         if (!needed) {
           pending.delete(candidate);
           continue;
         }
-        const ceiling = best ? Math.min(budget - reserve, best.state.characters) : budget - reserve;
-        const key = candidateKey(candidate);
-        const hint = admissionHints.get(key);
-        if (hint !== undefined && baseCharacters + hint > ceiling) continue;
         const next = plan(needed, ceiling);
         register(candidate);
-        admissionHints.set(
+        setHint(
           key,
-          (next?.state.characters ?? Math.max(ceiling, planMinimum)) -
-            baseCharacters -
-            headingAllowance
+          next
+            ? {
+                body:
+                  next.state.characters -
+                  baseCharacters -
+                  headingCharacters(next.state.counts) +
+                  headingCharacters(counts),
+                counts: next.state.counts.map((count, index) => count - counts[index]),
+              }
+            : {
+                body:
+                  Math.max(ceiling, planMinimum) -
+                  baseCharacters -
+                  (planHeadings
+                    ? headingCharacters(planHeadings.maximum) - headingCharacters(counts)
+                    : headingAllowance),
+                counts: planHeadings?.minimum.map((count, index) => count - counts[index]),
+                blocked: ceiling === budget - reserve,
+              }
         );
         if (next && (!best || next.state.characters < best.state.characters)) {
           best = next;
@@ -1826,6 +2299,8 @@ function* createContextSteps(
       if (!best || !chosen) break;
       publish(best);
       invalidate(best);
+      if (publishedCharacters().counts.some((count, index) => count < counts[index]))
+        for (const [key, hint] of admissionHints) if (hint.blocked) forgetHint(key);
       pending.delete(chosen);
       trace.steps.push({
         key: candidateKey(chosen),
@@ -1885,7 +2360,10 @@ function* createContextSteps(
     const exclusionDescription = (missing: boolean) =>
       description(
         missing
-          ? 'No path found within the selected search range.'
+          ? result.pathSearchComplete === false ||
+            (result.pathSearchComplete === undefined && result.limited)
+            ? 'Path search was not completed.'
+            : 'No path found within the selected search range.'
           : 'Path omitted due to context size.'
       );
     for (const missing of [true, false]) {
@@ -2010,7 +2488,7 @@ function* createContextSteps(
       | { kind: 'attribute'; id: string; attribute: Attribute; score: number; novel: boolean };
     const enhancements: Enhancement[] = [
       ...extras
-        .filter((option) => !option.unresolved)
+        .filter((option) => !option.unresolved && (option.minimumCharacters || 0) <= budget)
         .map(({ key, citation, context, relevance, novel }) => ({
           kind: 'evidence' as const,
           key,
@@ -2086,11 +2564,70 @@ function* createContextSteps(
     for (const [key] of fresh) enhanced.add(key);
   }
   yield* enhance();
+  // Only optional item provenance may be abbreviated, after complete context bundles have been tried.
+  function* clipItemProvenance(nodeId?: string): Generator<void, void, void> {
+    for (const [key, ranked] of remainingEvidence) {
+      if (nodeId !== undefined && key !== 'node:' + nodeId) continue;
+      yield;
+      const entry = entries.find((entry) => unitKey(entry) === key)!;
+      if (entry.kind !== 'node' || entry.citationIds.length) continue;
+      for (const { citation, unresolved } of ranked) {
+        if (unresolved) continue;
+        const original = sources.get(citation.sourceId)!;
+        const structured = (range: { start: number; end: number }) =>
+          range.start > 0 || range.end < original.text.length;
+        if (
+          original.scopes?.some(structured) ||
+          original.blocks?.some(structured) ||
+          original.references?.length
+        )
+          continue;
+        const queryLengths = terms
+          .filter((term) => getSourceText(original.id).text.includes(term))
+          .map((term) => term.length);
+        const size = Math.max(
+          1,
+          ...queryLengths,
+          queryLengths.length ? 0 : original.text.match(/\S+/u)?.[0].length || 0
+        );
+        const range = graphEvidenceExcerpt(original.text, getSourceText(original.id), size, {
+          terms,
+        });
+        const clip = {
+          ...original,
+          ...range,
+          sourceId: original.id,
+          id: original.id + '@' + range.start + ':' + range.end,
+          text: original.text.slice(range.start, range.end),
+        };
+        const quoted = [
+          ...new Map([...citations, clip].map((value) => [value.id, value])).values(),
+        ];
+        const nextEntries = entries.map((value) =>
+          value === entry ? { ...value, citationIds: [clip.id] } : value
+        );
+        const next = fits(renderedUnits, quoted, nextEntries, budget - reserve, {
+          entries: new Map([[key, nextEntries[entries.indexOf(entry)]]]),
+        });
+        if (next === undefined) continue;
+        text = next;
+        citations.splice(0, citations.length, ...quoted);
+        entries.splice(0, entries.length, ...nextEntries);
+        clipped.set(clip.id, clip);
+        fitBase = undefined;
+        break;
+      }
+    }
+  }
+
   // These additions cannot evict any relationship or path in the stable explanation prefix.
   for (const { node } of [...result.nodes].sort((a, b) => b.score - a.score)) {
     yield;
     if (includedNodes.has(node.id)) continue;
-    if (addNode(node.id)) yield* enhance();
+    if (addNode(node.id)) {
+      yield* enhance();
+      yield* clipItemProvenance(node.id);
+    }
   }
   // Keep the relationship-specific passage first even when a cheaper context bundle was selected.
   for (const [key, ranked] of remainingEvidence) {
@@ -2102,48 +2639,7 @@ function* createContextSteps(
   }
   entries.splice(0, entries.length, ...synchronizePaths(entries));
   text = fits(renderedUnits, citations, entries) ?? text;
-  // Only optional item provenance may be abbreviated, after complete context bundles have been tried.
-  for (const [key, ranked] of remainingEvidence) {
-    yield;
-    const entry = entries.find((entry) => unitKey(entry) === key)!;
-    if (entry.kind !== 'node' || entry.citationIds.length) continue;
-    for (const { citation, unresolved } of ranked) {
-      if (unresolved) continue;
-      const original = sources.get(citation.sourceId)!;
-      const queryLengths = terms
-        .filter((term) => getSourceText(original.id).text.includes(term))
-        .map((term) => term.length);
-      const size = Math.max(
-        1,
-        ...queryLengths,
-        queryLengths.length ? 0 : original.text.match(/\S+/u)?.[0].length || 0
-      );
-      const range = graphEvidenceExcerpt(original.text, getSourceText(original.id), size, {
-        terms,
-      });
-      const clip = {
-        ...original,
-        ...range,
-        sourceId: original.id,
-        id: original.id + '@' + range.start + ':' + range.end,
-        text: original.text.slice(range.start, range.end),
-      };
-      const quoted = [...new Map([...citations, clip].map((value) => [value.id, value])).values()];
-      const nextEntries = entries.map((value) =>
-        value === entry ? { ...value, citationIds: [clip.id] } : value
-      );
-      const next = fits(renderedUnits, quoted, nextEntries, budget - reserve, {
-        entries: new Map([[key, nextEntries[entries.indexOf(entry)]]]),
-      });
-      if (next === undefined) continue;
-      text = next;
-      citations.splice(0, citations.length, ...quoted);
-      entries.splice(0, entries.length, ...nextEntries);
-      clipped.set(clip.id, clip);
-      fitBase = undefined;
-      break;
-    }
-  }
+  yield* clipItemProvenance();
   // Unstructured provenance may be abbreviated; complete relationship statements are never cut to fit.
   for (const [id, originalClip] of clipped) {
     yield;
@@ -2223,8 +2719,10 @@ function* createContextSteps(
     ) ||
     [...remainingEvidence.values()].some((ranked) =>
       ranked.some(
-        ({ citation, context, unresolved }) =>
-          unresolved || [citation, ...context].some((range) => !coveredRange(range))
+        ({ citation, context, unresolved, minimumCharacters }) =>
+          unresolved ||
+          (minimumCharacters || 0) > budget ||
+          [citation, ...context].some((range) => !coveredRange(range))
       )
     );
   truncated ||=

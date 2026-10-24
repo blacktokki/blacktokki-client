@@ -1,5 +1,4 @@
 const assert = require('node:assert/strict');
-const { createHash } = require('node:crypto');
 const { test } = require('node:test');
 
 const load = require('../../__tests__/loadTs.cjs');
@@ -73,11 +72,14 @@ test('a 256k context with many evidence alternatives retains paths and exact quo
 test('context sizes share source preparation and repeated sizes reuse completed Markdown with input and translation invalidation', () => {
   const evidence = load('search/evidence.ts');
   let excerpts = 0;
+  const sourcePreparations = new Set();
+  const originalText = 'Alpha uses Beta under the original condition.';
   const { buildGraphSearchContext } = load('search/context.ts', {
     './evidence': {
       ...evidence,
       graphEvidenceExcerpts: (...args) => {
         excerpts++;
+        if (args[0] === originalText) sourcePreparations.add(args[1]);
         return evidence.graphEvidenceExcerpts(...args);
       },
     },
@@ -114,7 +116,7 @@ test('context sizes share source preparation and repeated sizes reuse completed 
       },
     ],
     paths: [{ nodes: ['Alpha', 'Beta'], edges: ['uses'] }],
-    sources: [{ id: 's', title: 'Note', text: 'Alpha uses Beta under the original condition.' }],
+    sources: [{ id: 's', title: 'Note', text: originalText }],
     limited: false,
   };
   let label = 'Related items';
@@ -127,6 +129,27 @@ test('context sizes share source preparation and repeated sizes reuse completed 
   assert.strictEqual(buildGraphSearchContext(result, 16000, translate), first);
   assert.strictEqual(buildGraphSearchContext(result, 32000, translate), larger);
   assert.equal(excerpts, prepared, 'completed sizes do no evidence work');
+  const acrossRanges = {
+    ...result,
+    nodes: [...result.nodes],
+    plan: { ...result.plan, maxHops: 3 },
+  };
+  buildGraphSearchContext(acrossRanges, 16000, translate);
+  buildGraphSearchContext(
+    {
+      ...acrossRanges,
+      query: 'Beta',
+      nodes: [...result.nodes],
+      plan: { ...acrossRanges.plan, terms: ['beta'] },
+    },
+    16000,
+    translate
+  );
+  assert.equal(
+    sourcePreparations.size,
+    1,
+    'queries and ranges reuse the prepared index source text'
+  );
   result.sources[0].text = 'Alpha uses Beta under a changed condition.';
   const changed = buildGraphSearchContext(result, 16000, translate);
   assert.notStrictEqual(changed, first);
@@ -392,6 +415,7 @@ test('dense partial-budget searches retain complete trees without scanning all p
     sourceIds: ['s' + (index + 1)],
   }));
   let pathReads = 0;
+  let edgeReads = 0;
   const paths = edges
     .flatMap((edge, index) => [
       { nodes: [edge.source, edge.target], edges: [edge.id] },
@@ -405,7 +429,10 @@ test('dense partial-budget searches retain complete trees without scanning all p
         pathReads++;
         return path.nodes;
       },
-      edges: path.edges,
+      get edges() {
+        edgeReads++;
+        return path.edges;
+      },
     }));
   const sources = nodes.map((_, index) => ({
     id: 's' + index,
@@ -430,12 +457,23 @@ test('dense partial-budget searches retain complete trees without scanning all p
   const started = performance.now();
   const context = buildGraphSearchContext(result, 16000);
   t.diagnostic(`${paths.length} candidate paths: ${Math.round(performance.now() - started)} ms`);
-  // Includes nested typed paths, entries, citations and omissions within the Markdown budget.
-  assert.equal(
-    createHash('sha256').update(JSON.stringify(context)).digest('hex'),
-    '581ec56b88fe31e144bee981e06e21f8793fd4bab7a340c880fc7469e2d6c02f'
-  );
+  assert.ok(context.entries.some((entry) => entry.kind === 'path'));
+  for (const entry of context.entries.filter((entry) => entry.kind === 'path'))
+    for (const id of paths[entry.index].edges)
+      assert.ok(
+        context.entries.some(
+          (entry) => entry.kind === 'edge' && entry.id === id && entry.citationIds.length
+        )
+      );
+  for (const citation of context.citations) {
+    const source = sources.find((source) => source.id === citation.sourceId);
+    assert.equal(citation.text, source.text.slice(citation.start, citation.end));
+  }
   assert.ok(pathReads < 60000, `published paths were repeatedly scanned (${pathReads} reads)`);
+  assert.ok(
+    edgeReads < 60000,
+    `candidate relationships were repeatedly scanned (${edgeReads} reads)`
+  );
   assert.equal(context.usage.characters, context.text.length);
   assert.ok(context.text.length <= context.usage.limit);
 });

@@ -907,12 +907,10 @@ test('exception notices retain classifications of targets excluded from retrieva
   assert.deepEqual(found.plan.targetNotes.Beta, ['Origin Note']);
   assert.match(
     found.context.text,
-    /> No path found[^\n]*\n\n[\s\S]*Beta.*\(Paragraph\[Origin Note\]\)/
+    /> Path search was not completed[^\n]*\n\n[\s\S]*Beta.*\(Paragraph\[Origin Note\]\)/
   );
   assert.doesNotMatch(found.context.text, /Query item connections|Unclassified/);
-  const missing = found.context.text
-    .split('> No path found within the selected search range')[1]
-    .split('\n## ')[0];
+  const missing = found.context.text.split('> Path search was not completed')[1].split('\n## ')[0];
   assert.match(found.context.text, /^## Traversal paths \(0\/3\)$/m);
   assert.doesNotMatch(missing, /^\\\. \(\d/);
   assert.equal((missing.match(/^- /gm) || []).length, 2, 'missing pairs share their start');

@@ -500,6 +500,8 @@ export type GraphQueryPlan = {
   maxHops: number;
   /** Explicitly named question subjects, before retrieval seed limits are applied. */
   targetIds?: string[];
+  /** Alternatives matched at the same query mention; distinct mentions define distinct subjects. */
+  targetGroups?: string[][];
   /** Names remain available even when retrieval limits exclude a named target. */
   targetNames?: Record<string, string>;
   /** Retain classifications for query targets outside the retrieved result. */
@@ -543,6 +545,8 @@ export type GraphSearchResult = {
     usage: { characters: number; limit: number };
   };
   limited: boolean;
+  /** False when an explicit retrieval limit interrupted the requested path search. */
+  pathSearchComplete?: boolean;
 };
 
 export type GraphSearchProgress = {

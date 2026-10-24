@@ -61,6 +61,71 @@ const validRanges = (context, sources) => {
   }
 };
 
+test('source relationships quote their own occurrence and file hierarchy retains its available evidence', () => {
+  const sources = [
+    { id: 'one', title: 'First', text: 'Topic occurs in this first note.' },
+    { id: 'two', title: 'Second', text: 'An independent occurrence in another note.' },
+  ];
+  const items = [node('Topic', ['one', 'two']), { ...node('First', ['one']), noteTitle: 'First' }];
+  const relationship = {
+    ...edge('source', 'Topic', 'First', ['one', 'two']),
+    type: 'KEYWORD_SOURCE',
+  };
+  const context = buildGraphSearchContext(result(items, [relationship], sources), 16000);
+  assert.deepEqual(
+    new Set(citedBy(context, 'source').map((citation) => citation.sourceId)),
+    new Set(['one'])
+  );
+  const hierarchy = { ...edge('parent', 'First', 'Folder', ['one']), type: 'PART_OF' };
+  const parent = { ...node('Folder', []), noteTitle: 'Folder' };
+  const nested = buildGraphSearchContext(result([items[1], parent], [hierarchy], sources), 16000);
+  assert.deepEqual(
+    new Set(citedBy(nested, 'parent').map((citation) => citation.sourceId)),
+    new Set(['one'])
+  );
+  validRanges(context, sources);
+  validRanges(nested, sources);
+});
+
+test('optional item provenance cannot bypass an oversized linked condition by quoting only its primary passage', () => {
+  const text = 'Alpha is available under the linked requirement.';
+  const condition = 'An independently linked requirement must remain intact. '.repeat(100);
+  const sources = [
+    {
+      id: 'main',
+      title: 'Main',
+      text,
+      blocks: [{ start: 0, end: text.length }],
+      scopes: [{ start: 0, end: text.length }],
+      references: [
+        {
+          start: 0,
+          end: text.length,
+          name: 'requirement',
+          href: '?title=Requirements',
+          internal: true,
+          targets: [{ sourceId: 'condition', start: 0, end: condition.length }],
+        },
+      ],
+    },
+    { id: 'condition', title: 'Requirements', text: condition },
+  ];
+  const found = {
+    ...result([node('Alpha', ['main'])], [], sources),
+    query: 'Alpha',
+    plan: { terms: ['alpha'], intent: 'related', maxHops: 2 },
+  };
+  const small = buildGraphSearchContext(found, 1600);
+  assert.equal(small.citations.length, 0);
+  assert.equal(small.truncated, true);
+  const large = buildGraphSearchContext(found, 16000);
+  assert.deepEqual(
+    new Set(large.citations.map((citation) => citation.sourceId)),
+    new Set(['main', 'condition'])
+  );
+  validRanges(large, sources);
+});
+
 test('shared evidence scopes preserve traversal order through cyclic and multi-block references', () => {
   const { createEvidenceContext } = load('search/evidence.ts');
   const sources = ['s', 't'].map((id) => {
@@ -262,13 +327,13 @@ test('reaching an exact node or relationship capacity is not a limit unless some
   assert.equal(found.limited, false);
 });
 
-test('actual seed, item and relationship exclusions still report their retrieval limits', async () => {
+test('default retrieval has no fixed seed cap and explicit caller limits still report exclusions', async () => {
   const sources = [{ id: 's', title: 'Note', text: 'UniqueNeedle appears here.' }];
   const items = Array.from({ length: 13 }, (_, index) => node('Item' + index));
   const disconnected = await createGraphSearchIndex(snapshot(items, [], sources));
   const seeded = await searchKnowledgeGraph(disconnected, 'UniqueNeedle');
-  assert.equal(seeded.nodes.length, 12);
-  assert.equal(seeded.limited, true);
+  assert.equal(seeded.nodes.length, 13);
+  assert.equal(seeded.limited, false);
   const connected = await createGraphSearchIndex(
     snapshot(
       items,

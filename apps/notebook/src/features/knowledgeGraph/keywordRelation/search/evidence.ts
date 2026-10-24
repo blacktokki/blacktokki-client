@@ -489,7 +489,12 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
   const structures = new Map<string, { blocks: EvidenceRange[]; scopes: EvidenceRange[] }>();
   const cache = new Map<
     string,
-    { context: GraphContextCitation[]; unresolved: boolean; bundleIdentity?: object }
+    {
+      context: GraphContextCitation[];
+      unresolved: boolean;
+      bundleIdentity?: object;
+      minimumCharacters?: number;
+    }
   >();
   const blockIdentities = new Map<string, Set<string>>();
   const scopeBundles = new Map<
@@ -511,20 +516,25 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
     }
     return structure;
   };
-  return (primary: GraphContextCitation) => {
+  const scopeMinimums = new Map<string, { minimumCharacters: number; unresolved: boolean }>();
+  return (primary: GraphContextCitation, maxCharacters = Infinity) => {
     const cached = cache.get(primary.id);
     if (cached) return cached;
     const original = sources.get(primary.sourceId);
     let bundleKey: string | undefined;
+    let minimumKey: string | undefined;
     let primaryScope: EvidenceRange | undefined;
     if (original) {
       const { scopes } = structureFor(original);
+      const parents = scopes
+        .filter((scope) => scope.start <= primary.start && scope.end >= primary.end)
+        .sort((a, b) => a.end - a.start - (b.end - b.start));
+      primaryScope = parents[0] || { start: 0, end: original.text.length };
+      minimumKey = JSON.stringify([original.id, primaryScope, parents]);
+      const minimum = scopeMinimums.get(minimumKey);
+      if (minimum && minimum.minimumCharacters > maxCharacters) return { ...minimum, context: [] };
       if (blockIdentities.get(original.id)!.has(primary.start + ':' + primary.end)) {
-        const parents = scopes
-          .filter((scope) => scope.start <= primary.start && scope.end >= primary.end)
-          .sort((a, b) => a.end - a.start - (b.end - b.start));
-        primaryScope = parents[0] || { start: 0, end: original.text.length };
-        bundleKey = JSON.stringify([original.id, primaryScope, parents]);
+        bundleKey = minimumKey;
         const bundle = scopeBundles.get(bundleKey);
         if (bundle && !(original.references || []).some((reference) => reference.internal)) {
           const result = {
@@ -541,6 +551,7 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
     const visited = new Set<string>();
     const queue = [{ sourceId: primary.sourceId, start: primary.start, end: primary.end }];
     let unresolved = false;
+    const jobs: { source: GraphSource; item: EvidenceRange; regions: EvidenceRange[] }[] = [];
     for (let index = 0; index < queue.length; index++) {
       const item = queue[index];
       const source = sources.get(item.sourceId);
@@ -549,7 +560,7 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
         continue;
       }
       const structure = structureFor(source);
-      const { blocks, scopes } = structure;
+      const { scopes } = structure;
       const parents = scopes
         .filter((scope) => scope.start <= item.start && scope.end >= item.end)
         .sort((a, b) => a.end - a.start - (b.end - b.start));
@@ -574,6 +585,41 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
           ),
         })),
       ];
+      jobs.push({ source, item, regions });
+      for (const reference of source.references || []) {
+        if (
+          !reference.internal ||
+          !regions.some((region) => region.start < reference.end && region.end > reference.start)
+        )
+          continue;
+        if (reference.unresolved || !reference.targets?.length) unresolved = true;
+        for (const target of reference.targets || []) queue.push(target);
+      }
+    }
+    let minimumCharacters = 0;
+    const covered = new Map<string, EvidenceRange[]>();
+    for (const job of jobs) {
+      const ranges = covered.get(job.source.id) || [];
+      ranges.push(...job.regions);
+      covered.set(job.source.id, ranges);
+    }
+    for (const [sourceId, ranges] of covered) {
+      const text = sources.get(sourceId)!.text;
+      const ordered = ranges
+        .filter((range) => range.end > range.start)
+        .sort((a, b) => a.start - b.start);
+      let end = 0;
+      for (const range of ordered) {
+        const start = Math.max(end, range.start);
+        if (range.end > start)
+          minimumCharacters += text.slice(start, range.end).replace(/\s/gu, '').length;
+        end = Math.max(end, range.end);
+      }
+    }
+    if (minimumKey) scopeMinimums.set(minimumKey, { minimumCharacters, unresolved });
+    if (minimumCharacters > maxCharacters) return { context: [], unresolved, minimumCharacters };
+    for (const [index, { source, item, regions }] of jobs.entries()) {
+      const { blocks } = structureFor(source);
       const add = ({ start, end }: EvidenceRange) => {
         if (end <= start) return;
         if (
@@ -610,23 +656,16 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
         if (cursor < region.end && source.text.slice(cursor, region.end).trim())
           add({ start: cursor, end: region.end });
       }
-      for (const reference of source.references || []) {
-        if (
-          !reference.internal ||
-          !regions.some((region) => region.start < reference.end && region.end > reference.start)
-        )
-          continue;
-        if (reference.unresolved || !reference.targets?.length) unresolved = true;
-        for (const target of reference.targets || []) queue.push(target);
-      }
     }
     const result: {
       context: GraphContextCitation[];
       unresolved: boolean;
       bundleIdentity?: object;
+      minimumCharacters?: number;
     } = {
       context: [...citations.values()].filter((citation) => citation.id !== primary.id),
       unresolved,
+      minimumCharacters,
     };
     if (bundleKey && primaryScope) {
       let index = 0;

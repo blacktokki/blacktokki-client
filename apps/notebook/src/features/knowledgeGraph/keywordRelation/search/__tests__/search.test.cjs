@@ -149,7 +149,7 @@ test('search keeps literal words and detects connections by named items rather t
     connected.paths.some((path) => path.nodes.includes('Alpha') && path.nodes.includes('Beta'))
   );
   const particles = await searchKnowledgeGraph(index, 'Alpha와 Beta의');
-  assert.deepEqual(particles.plan.terms, ['alpha', 'beta']);
+  assert.deepEqual(particles.plan.terms, ['alpha와', 'beta의', 'alpha', 'beta']);
 });
 
 test('embedding documents use only the model prefix while lexical search covers metadata and full shared sources', async () => {
@@ -227,7 +227,7 @@ test('natural query anchors graph vocabulary; bounded paths preserve direction a
   );
 });
 
-test('nearby paths stay separate when matched keywords and paragraphs have the same name', async () => {
+test('homonymous keywords and paragraphs remain alternatives of one query subject', async () => {
   for (const [keyword, paragraph, query] of [
     ['Topic', 'TOPIC', 'Topic incident'],
     ['표본', '표본', '표본 연결'],
@@ -247,19 +247,16 @@ test('nearby paths stay separate when matched keywords and paragraphs have the s
       contextChars: 16000,
     });
     assert.equal(found.plan.targetIds.length, 2);
-    assert.equal(found.plan.intent, 'connection', query);
+    assert.equal(found.plan.intent, 'related', query);
+    assert.equal(found.plan.targetGroups.length, 1);
     assert.ok(found.paths.length);
-    assert.ok(found.paths.every((path) => path.kind === 'surrounding'));
+    assert.ok(found.paths.every((path) => path.kind === 'connection'));
     const traversal = found.context.text.split('## Traversal paths')[1]?.split('\n## ')[0];
     assert.ok(traversal, query);
-    assert.match(found.context.text, /^## Traversal paths \(0\/1\)$/m);
+    assert.match(found.context.text, /^## Traversal paths \(1\)$/m);
     assert.doesNotMatch(traversal, /^>[^\n]* \(\d+(?:\/\d+)?\)$/m);
-    assert.doesNotMatch(traversal, /Helper/);
-    const nearby = found.context.text.split('## Nearby paths ')[1]?.split('\n## ')[0];
-    assert.ok(nearby, query);
-    assert.match(nearby, /^\(1\)/);
-    assert.match(nearby, /Helper/);
-    assert.equal((nearby.match(/^- /gm) || []).length, 1);
+    assert.match(traversal, /Helper/);
+    assert.doesNotMatch(found.context.text, /No path found|Path search was not completed/);
   }
 });
 

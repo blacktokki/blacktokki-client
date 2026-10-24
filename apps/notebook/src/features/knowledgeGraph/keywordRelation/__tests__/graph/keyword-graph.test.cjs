@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { describe, test } = require('node:test');
 
 describe('Keyword graph nodes and relationships', () => {
-  const load = require('./loadTs.cjs');
+  const load = require('../loadTs.cjs');
 
   const { addKeywordRelationGraph } = load('graph.ts');
   const { getKnowledgeGraphPalette, getKeywordRelationColors } = load('../utils/palette.ts');
@@ -327,7 +327,7 @@ describe('Keyword graph nodes and relationships', () => {
 });
 
 describe('Keyword graph placement', () => {
-  const load = require('./loadTs.cjs');
+  const load = require('../loadTs.cjs');
   const { initForceSimulation, stepForceSimulation, advanceForceSimulation, setSimulationFocus } =
     load('../utils/forceLayout.ts');
 

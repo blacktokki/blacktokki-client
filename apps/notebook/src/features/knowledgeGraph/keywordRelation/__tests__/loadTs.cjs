@@ -6,7 +6,7 @@ const ts = require('typescript');
 function loadTs(relativePath, dependencies = {}, internals = [], modules) {
   const filename = path.resolve(__dirname, '..', relativePath);
   if (modules?.has(filename)) return modules.get(filename);
-  const loaded = new Module(filename, module);
+  const loaded = new Module(filename);
   loaded.filename = filename;
   loaded.paths = Module._nodeModulePaths(path.dirname(filename));
   const originalRequire = loaded.require.bind(loaded);

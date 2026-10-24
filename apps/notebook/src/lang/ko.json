@@ -403,6 +403,7 @@
   "Nearby paths": "연관 경로",
   "Paths from the query items to nearby items.": "질문 대상에서 주변 항목으로 이어지는 연결 경로입니다.",
   "No path found within the selected search range.": "선택한 탐색 범위에서 경로를 찾지 못했습니다.",
+  "Path search was not completed.": "탐색이 제한되어 경로를 확인하지 못했습니다.",
   "Path omitted due to context size.": "컨텍스트 크기 때문에 경로를 생략했습니다.",
   "Unclassified": "미분류",
   "Search limits reached": "탐색 한도 도달",

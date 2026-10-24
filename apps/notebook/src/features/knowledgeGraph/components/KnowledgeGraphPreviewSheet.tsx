@@ -74,6 +74,8 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
     card: 'id-badge',
     template: 'file-code-o',
     templateGroup: 'cubes',
+    keyword: 'tags',
+    keywordType: 'sitemap',
   }[nodeKind];
 
   const propertyEntries = React.useMemo(() => {

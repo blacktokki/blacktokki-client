@@ -3,6 +3,13 @@ import { KnowledgeGraphEdge, KnowledgeGraphNode, KnowledgeGraphRelationType } fr
 
 export type KnowledgeGraphNodeKindLabel = keyof ReturnType<typeof getKnowledgeGraphPalette>;
 
+/** Content nodes belong to the base graph; keyword and template overlays are independent. */
+export const isBaseKnowledgeGraphNode = (node: KnowledgeGraphNode): boolean =>
+  node.instanceKind !== 'KEYWORD' &&
+  node.instanceKind !== 'TEMPLATE' &&
+  node.classKind !== 'KEYWORD_TYPE' &&
+  node.classKind !== 'TEMPLATE_GROUP';
+
 const INSTANCE_NODE_KINDS: Partial<
   Record<NonNullable<KnowledgeGraphNode['instanceKind']>, KnowledgeGraphNodeKindLabel>
 > = {
@@ -13,6 +20,7 @@ const INSTANCE_NODE_KINDS: Partial<
   EXTERNAL_LINK: 'externalLink',
   CONNECTED_EXTERNAL_LINK: 'connectedExternalLink',
   TEMPLATE: 'template',
+  KEYWORD: 'keyword',
 };
 
 /** Use one classification for the legend, detail badge, and palette. */
@@ -20,6 +28,7 @@ export const getKnowledgeGraphNodeKind = (
   node: KnowledgeGraphNode
 ): KnowledgeGraphNodeKindLabel => {
   if (node.role === 'CLASS') {
+    if (node.classKind === 'KEYWORD_TYPE') return 'keywordType';
     if (node.classKind === 'TEMPLATE_GROUP') return 'templateGroup';
     return node.classCategory === 'BOARD' ? 'boardClass' : 'builtInClass';
   }
@@ -30,10 +39,11 @@ export const getKnowledgeGraphNodeKind = (
 /** Human-facing category names for the legend and node detail badge. */
 export const getKnowledgeGraphNodeKindLabel = (
   kind: KnowledgeGraphNodeKindLabel,
-  translate: (key: string) => string
+  translate: (key: string) => string,
+  usageMode: string | undefined = 'NOTE'
 ): string => {
   const labels: Record<KnowledgeGraphNodeKindLabel, string> = {
-    builtInClass: 'Built-in category',
+    builtInClass: usageMode === 'NOTEBOOK' ? 'Notebook' : 'Note Mode',
     boardClass: 'Board category',
     note: 'Note',
     boardNote: 'Board note',
@@ -45,6 +55,8 @@ export const getKnowledgeGraphNodeKindLabel = (
     connectedExternalLink: 'Connected external link',
     template: 'Template',
     templateGroup: 'Template group',
+    keyword: 'Keyword',
+    keywordType: 'Keyword type',
   };
   return translate(labels[kind]);
 };
@@ -55,11 +67,20 @@ export const getKnowledgeGraphRelationDisplayLabel = (
 ): string => {
   switch (edge.type) {
     case 'INSTANCE_OF':
+      if (edge.propertyLabel === 'keywordType') return translate('Keyword type membership');
       if (edge.propertyLabel === 'templateGroup') return translate('Template group');
       return translate('Category');
     case 'DERIVED_FROM':
       return translate('Template source');
+    case 'KEYWORD_SOURCE':
+      return translate('Keyword source');
+    case 'KEYWORD_RELATION':
+    case 'KEYWORD_TYPE_RELATION':
+      return translate(edge.propertyLabel || edge.label || edge.type);
+    case 'KEYWORD_GENERAL':
+      return translate(edge.propertyLabel || edge.label || 'General relationships');
     case 'SUBCLASS_OF':
+      if (edge.propertyLabel === 'keywordTypeHierarchy') return translate('Keyword type hierarchy');
       return translate('Subcategory');
     case 'REPRESENTED_BY_NOTE':
       return translate('Corresponding note');
@@ -76,7 +97,7 @@ export const getKnowledgeGraphRelationDisplayLabel = (
         case 'paragraphPartOf':
           return translate('Paragraph containment');
         case 'connectedPartOf':
-          return translate('Connected paragraph note containment');
+          return translate('Paragraph note containment');
         default:
           return translate('Containment');
       }
@@ -85,12 +106,68 @@ export const getKnowledgeGraphRelationDisplayLabel = (
   }
 };
 
+/** Switch between the full paragraph hierarchy and direct note containment for visible paragraphs. */
+export const visibleKnowledgeGraphEdges = (
+  nodes: KnowledgeGraphNode[],
+  edges: KnowledgeGraphEdge[],
+  showParagraphs: boolean
+): KnowledgeGraphEdge[] => {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const visible = edges.filter((edge) => {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) return false;
+    if (edge.type !== 'PART_OF') return true;
+    if (edge.propertyLabel === 'connectedPartOf') return !showParagraphs;
+    if (edge.propertyLabel === 'paragraphPartOf') return showParagraphs;
+    return true;
+  });
+  if (showParagraphs) return visible;
+
+  const notes = new Map(
+    nodes.filter((node) => node.instanceKind === 'NOTE').map((node) => [node.noteTitle, node.id])
+  );
+  const hierarchy = new Map(
+    edges
+      .filter((edge) => edge.propertyLabel === 'paragraphPartOf')
+      .map((edge) => [edge.source, edge])
+  );
+  const direct = new Set(
+    visible
+      .filter((edge) => edge.propertyLabel === 'connectedPartOf')
+      .map((edge) => JSON.stringify([edge.source, edge.target]))
+  );
+  for (const node of nodes) {
+    if (node.instanceKind !== 'CONNECTED_PARAGRAPH' && node.instanceKind !== 'BOARD_PARAGRAPH')
+      continue;
+    const origins = node.paragraphOccurrences?.length
+      ? node.paragraphOccurrences.map((paragraph) => paragraph.origin || node.noteTitle)
+      : [node.paragraph?.origin || node.noteTitle];
+    for (const origin of new Set(origins)) {
+      const target = notes.get(origin);
+      const key = JSON.stringify([node.id, target]);
+      if (!target || direct.has(key)) continue;
+      direct.add(key);
+      visible.push({
+        id: `edge:connectedPart:${node.id}->${target}`,
+        source: node.id,
+        target,
+        type: 'PART_OF',
+        propertyLabel: 'connectedPartOf',
+        color: hierarchy.get(node.id)?.color,
+        dashed: true,
+      });
+    }
+  }
+  return visible;
+};
+
 export interface KnowledgeGraphRelationSummary {
   key: string;
   label: string;
   type: KnowledgeGraphRelationType;
   count: number;
   dashed: boolean;
+  directed: boolean;
+  color?: string;
 }
 
 const DEFAULT_RELATION_LABELS: Partial<Record<KnowledgeGraphRelationType, string>> = {
@@ -101,6 +178,7 @@ const DEFAULT_RELATION_LABELS: Partial<Record<KnowledgeGraphRelationType, string
   EXTERNAL_REFERENCE: 'externalReference',
   PART_OF: 'partOf',
   DERIVED_FROM: 'templateSource',
+  KEYWORD_SOURCE: 'keywordSource',
 };
 
 const RELATION_ORDER: KnowledgeGraphRelationType[] = [
@@ -111,9 +189,13 @@ const RELATION_ORDER: KnowledgeGraphRelationType[] = [
   'EXTERNAL_REFERENCE',
   'PART_OF',
   'DERIVED_FROM',
+  'KEYWORD_SOURCE',
+  'KEYWORD_GENERAL',
+  'KEYWORD_RELATION',
+  'KEYWORD_TYPE_RELATION',
 ];
 
-/** Count visible relations without collapsing predicates that have distinct displayed meanings. */
+/** Preserve structural labels; keyword associations share one legend entry. */
 export const summarizeKnowledgeGraphRelations = (
   edges: KnowledgeGraphEdge[]
 ): KnowledgeGraphRelationSummary[] => {
@@ -121,7 +203,12 @@ export const summarizeKnowledgeGraphRelations = (
 
   for (const edge of edges) {
     const type = edge.type;
-    const label = edge.propertyLabel || edge.label || DEFAULT_RELATION_LABELS[type] || type;
+    const label =
+      type === 'KEYWORD_RELATION'
+        ? 'Keyword relationships'
+        : type === 'KEYWORD_TYPE_RELATION'
+        ? 'Keyword type associations'
+        : edge.propertyLabel || edge.label || DEFAULT_RELATION_LABELS[type] || type;
     const key = JSON.stringify([type, label]);
     const existing = summaries.get(key);
     if (existing) {
@@ -135,6 +222,8 @@ export const summarizeKnowledgeGraphRelations = (
       type,
       count: 1,
       dashed: Boolean(edge.dashed),
+      directed: edge.directed !== false,
+      color: edge.color,
     });
   }
 

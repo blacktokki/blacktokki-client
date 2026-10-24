@@ -25,26 +25,26 @@ const note = (title, body) => ({
 
 test('infers headings, fields, lists and optional sections without copying source values', () => {
   const first = note(
-    'Meetings/June',
-    '<div class="yaml-frontmatter" data-yaml="SECRET"><h2>Private metadata</h2></div><ul><li>Date: 2026-06-01</li><li>Author: Alice</li></ul><h2>Agenda</h2><ul><li>Confidential launch</li></ul><h2>Actions</h2><ol><li>Buy equipment</li></ol>'
+    'Shapes/June',
+    '<div class="yaml-frontmatter" data-yaml="SECRET"><h2>Private metadata</h2></div><ul><li>Date: 2026-06-01</li><li>Author: Alice</li></ul><h2>Vertices</h2><ul><li>Confidential launch</li></ul><h2>Edges</h2><ol><li>Buy equipment</li></ol>'
   );
   const second = note(
-    'Meetings/July',
-    '<ul><li>Date: 2026-07-01</li><li>Author: Bob</li></ul><h2>Agenda</h2><ul><li>Salary changes</li></ul><h2>Risks</h2><p>Secret risk</p><h2>Actions</h2><ol><li>Call supplier</li></ol>'
+    'Shapes/July',
+    '<ul><li>Date: 2026-07-01</li><li>Author: Bob</li></ul><h2>Vertices</h2><ul><li>Salary changes</li></ul><h2>Symmetry</h2><p>Secret risk</p><h2>Edges</h2><ol><li>Call supplier</li></ol>'
   );
   const draft = inferTemplate([first, second]);
-  assert.equal(draft.blocks.find((block) => block.label === 'Agenda').sources.length, 2);
-  const optional = draft.blocks.find((block) => block.label === 'Risks');
+  assert.equal(draft.blocks.find((block) => block.label === 'Vertices').sources.length, 2);
+  const optional = draft.blocks.find((block) => block.label === 'Symmetry');
   assert.equal(optional.sources.length, 1);
   const ids = commonBlockIds(draft);
   assert.ok(!ids.includes(optional.id));
   let markdown = renderTemplate(draft, ids);
   assert.match(markdown, /- Date: \{\{Date\}\}/);
   assert.match(markdown, /1\. \{\{Items \(2\)\}\}/);
-  assert.doesNotMatch(markdown, /Alice|Bob|Confidential|Salary|2026-|metadata|SECRET|Risks/);
+  assert.doesNotMatch(markdown, /Alice|Bob|Confidential|Salary|2026-|metadata|SECRET|Symmetry/);
   markdown = renderTemplate(draft, toggleBlock(draft, ids, optional.id));
-  assert.ok(markdown.indexOf('## Agenda') < markdown.indexOf('## Risks'));
-  assert.ok(markdown.indexOf('## Risks') < markdown.indexOf('## Actions'));
+  assert.ok(markdown.indexOf('## Vertices') < markdown.indexOf('## Symmetry'));
+  assert.ok(markdown.indexOf('## Symmetry') < markdown.indexOf('## Edges'));
   assert.equal(new Set(templateVariables(markdown)).size, templateVariables(markdown).length);
 });
 
@@ -88,13 +88,13 @@ test('keeps heading ancestry, disambiguates repeated labels and removes descenda
 test('section numbering and Korean spacing variants share structure', () => {
   const sources = [
     {
-      title: 'Docs/서비스 설치',
+      title: 'Docs/도형 조합',
       description:
-        '<h1>서비스 설치</h1><h2>1.기능 정의</h2><p>작성일: Secret date</p><h2>2. 변경 내용</h2><p>상태: private result</p>',
+        '<h1>도형 조합</h1><h2>1.모양 정의</h2><p>표본일: Secret date</p><h2>2. 색상 구성</h2><p>상태: private result</p>',
     },
     note(
       'Docs/다른 문서',
-      '<h2>기능정의</h2><p>작성일: another date</p><h2>변경내용</h2><p>상태: other result</p>'
+      '<h2>모양정의</h2><p>표본일: another date</p><h2>색상구성</h2><p>상태: other result</p>'
     ),
   ];
   const draft = inferTemplate(sources);
@@ -106,8 +106,8 @@ test('section numbering and Korean spacing variants share structure', () => {
   );
   const markdown = renderTemplate(draft, commonBlockIds(draft));
   assert.match(markdown, /^# \{\{title\}\}/);
-  assert.match(markdown, /1\.기능 정의/);
-  assert.doesNotMatch(markdown, /서비스 설치|Secret|private|another date|other result/);
+  assert.match(markdown, /1\.모양 정의/);
+  assert.doesNotMatch(markdown, /도형 조합|Secret|private|another date|other result/);
 });
 
 test('fullwidth characters and emoji differences keep distinct structures', () => {
@@ -119,12 +119,12 @@ test('fullwidth characters and emoji differences keep distinct structures', () =
   assert.equal(headings.length, 6);
   assert.ok(headings.every((block) => block.sources.length === 1));
   const fullwidth = extractStructure({
-    title: 'Docs/서비스／설치',
-    description: '<h1>서비스/설치</h1><h2>２０２６년</h2>',
+    title: 'Docs/도형／조합',
+    description: '<h1>도형/조합</h1><h2>２０２６년</h2>',
   });
   assert.deepEqual(
     fullwidth.map((block) => block.label),
-    ['서비스/설치', '２０２６년']
+    ['도형/조합', '２０２６년']
   );
   assert.ok(fullwidth.every((block) => block.kind === 'heading'));
 });
@@ -162,7 +162,7 @@ test('year and month sections become editable dates and reject invalid calendar 
 });
 
 const tableBody = (value, extra = '') =>
-  `<table><tbody><tr><th>Category</th><th>Content</th><th>Decision</th></tr><tr><td>Weekly work</td><td>${value}</td><td>Approved</td></tr><tr><td>Deployments</td><td><table><tbody><tr><th>This week</th><th>Next week</th></tr><tr><td>private issue</td><td>private release</td></tr></tbody></table></td><td>secret feedback</td></tr>${extra}</tbody></table>`;
+  `<table><tbody><tr><th>Category</th><th>Content</th><th>Faces</th></tr><tr><td>Weekly work</td><td>${value}</td><td>Approved</td></tr><tr><td>Geometrys</td><td><table><tbody><tr><th>This week</th><th>Next week</th></tr><tr><td>private issue</td><td>private release</td></tr></tbody></table></td><td>secret feedback</td></tr>${extra}</tbody></table>`;
 
 test('infers Confluence-style tables, stable row labels and nested tables without historical cell values', () => {
   const draft = inferTemplate([
@@ -175,9 +175,9 @@ test('infers Confluence-style tables, stable row labels and nested tables withou
   const rows = draft.blocks.filter((block) => block.kind === 'row');
   assert.equal(rows.find((row) => row.label === 'Weekly work').sources.length, 2);
   const markdown = renderTemplate(draft, commonBlockIds(draft));
-  assert.match(markdown, /\| Category \| Content \| Decision \|/);
+  assert.match(markdown, /\| Category \| Content \| Faces \|/);
   assert.match(markdown, /\| Weekly work \| \{\{Weekly work · Content\}\}/);
-  assert.match(markdown, /\*\*Deployments\*\*\n\n\| This week \| Next week \|/);
+  assert.match(markdown, /\*\*Geometrys\*\*\n\n\| This week \| Next week \|/);
   assert.doesNotMatch(
     markdown,
     /secret customer|another secret|Approved|private release|secret feedback|Special topic/
@@ -283,12 +283,12 @@ test('decodes structural entities, normalizes Korean and numbered headings, igno
   const draft = inferTemplate([
     note(
       'a',
-      '<script><h2>Fake</h2></script><h2>1. 상태&nbsp;&amp;&nbsp;검토</h2><p><strong>작성자</strong>: secret</p>'
+      '<script><h2>Fake</h2></script><h2>1. 상태&nbsp;&amp;&nbsp;검토</h2><p><strong>표본명</strong>: secret</p>'
     ),
-    note('b', '<h2>2. 상태 &amp; 검토</h2><p>작성자: secret2</p>'),
+    note('b', '<h2>2. 상태 &amp; 검토</h2><p>표본명: secret2</p>'),
   ]);
   assert.equal(draft.blocks.find((block) => block.kind === 'heading').sources.length, 2);
-  assert.match(renderTemplate(draft, commonBlockIds(draft)), /작성자/);
+  assert.match(renderTemplate(draft, commonBlockIds(draft)), /표본명/);
   assert.ok(!draft.blocks.some((block) => block.label === 'Fake'));
 });
 
@@ -296,8 +296,8 @@ test('deduplicates source notes by normalized title and requires two distinct ex
   assert.throws(
     () =>
       inferTemplate([
-        note('한글', '<h2>Summary</h2>'),
-        note('한글'.normalize('NFD'), '<h2>Summary</h2>'),
+        note('한글', '<h2>Shape</h2>'),
+        note('한글'.normalize('NFD'), '<h2>Shape</h2>'),
       ]),
     /at least two/
   );
@@ -321,8 +321,8 @@ test('groups by structure across arbitrary paths and document domains, toleratin
   const notes = [
     note('Science/First', body),
     note('Archive/Second', body + '<h2>Appendix</h2>'),
-    note('Other/Work', '<h2>Agenda</h2><h2>Actions</h2>'),
-    note('Other/Work2', '<h2>Agenda</h2><h2>Actions</h2>'),
+    note('Other/Work', '<h2>Vertices</h2><h2>Edges</h2>'),
+    note('Other/Work2', '<h2>Vertices</h2><h2>Edges</h2>'),
   ];
   const groups = suggestTemplateGroups(notes);
   assert.equal(groups.length, 2);
@@ -418,7 +418,7 @@ test('heading matching requires two shared occurrences, respects ancestry and re
 test('portable templates omit provenance and bind repeated variables in one pass', () => {
   const template = {
     id: 'id',
-    name: 'Meeting',
+    name: 'Shape',
     markdown: '# {{title}}\n{{ name }} / {{name}} / {{empty}}',
     sourceTitles: ['Private/Example'],
     updatedAt: 'now',
@@ -440,7 +440,7 @@ test('portable templates omit provenance and bind repeated variables in one pass
 });
 
 test('validates portable paths and scopes local, online, notebooks and privacy independently', () => {
-  for (const title of ['Notes/Weekly meeting', '독서/책 이름', 'Meeting'])
+  for (const title of ['Notes/Shape sample', '독서/책 이름', 'Shape'])
     assert.equal(validNoteTitle(title), true, title);
   for (const title of [
     '',

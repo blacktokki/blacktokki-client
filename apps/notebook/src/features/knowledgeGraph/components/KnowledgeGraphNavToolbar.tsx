@@ -7,7 +7,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import { NavigationParamList } from '../../../types';
-export const KnowledgeGraphNavToolbar: React.FC = () => {
+export const KnowledgeGraphNavToolbar: React.FC<{ view?: 'graph' | 'relations' }> = ({
+  view = 'graph',
+}) => {
   const { lang } = useLangContext();
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles, colorScheme } = useNotebookTheme();
@@ -20,7 +22,10 @@ export const KnowledgeGraphNavToolbar: React.FC = () => {
         onPress={() =>
           navigation.push('NoteViewer', {
             key: 'Usage',
-            paragraph: '🕸️ ' + (lang('Knowledge Graph') || '지식 그래프'),
+            paragraph:
+              view === 'relations'
+                ? '🏷️ ' + lang('Keywords and Relationships')
+                : '🕸️ ' + (lang('Knowledge Graph') || '지식 그래프'),
           })
         }
         style={styles.navButton}

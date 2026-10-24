@@ -1,13 +1,14 @@
 import { useAuthContext } from '@blacktokki/account';
 import { useIsFocused } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useQuery } from 'react-query';
 
 import { templateScope } from './template';
-import { getContents } from '../../hooks/useNoteStorage';
+import { useNotePages } from '../../hooks/useNoteStorage';
 import { isHiddenTitle, usePrivate } from '../../hooks/usePrivate';
 import { useUsageMode } from '../../hooks/useUsageMode';
 import { getStorageConfig } from '../../services/storage';
+import type { Content } from '../../types';
 
 const emptyNotebookRoots: string[] = [];
 
@@ -19,6 +20,11 @@ const emptyNotebookRoots: string[] = [];
  */
 export function useInductiveTemplates(requested = true) {
   const isFocused = useIsFocused();
+  return useInductiveTemplatesData(requested, isFocused);
+}
+
+/** Background consumers share template queries without requiring a navigation context. */
+export function useInductiveTemplatesData(requested = true, isFocused = false) {
   const { auth } = useAuthContext();
   const { notebook, usageMode } = useUsageMode();
   const { data: privateConfig, isLoading: privacyLoading } = usePrivate();
@@ -48,17 +54,9 @@ export function useInductiveTemplates(requested = true) {
     enabled,
     refetchOnWindowFocus: false,
   });
-  const examples = useQuery({
-    queryKey: ['inductiveTemplateExamples', scope],
-    queryFn: async () =>
-      (
-        await getContents({
-          isOnline: !auth.isLocal,
-          types: ['NOTE'],
-          parentId: notebookId,
-          throwOnError: true,
-        })
-      )
+  const select = useCallback(
+    (sources: Content[]) =>
+      sources
         .filter(
           (note) =>
             note.type === 'NOTE' &&
@@ -66,17 +64,25 @@ export function useInductiveTemplates(requested = true) {
             (isPrivate || !isHiddenTitle(note.title))
         )
         .sort((a, b) => b.updated.localeCompare(a.updated) || a.title.localeCompare(b.title)),
+    [isPrivate]
+  );
+  const examples = useNotePages(notebookId, {
     enabled,
+    select,
+    refetchInterval: false,
     refetchOnWindowFocus: false,
   });
   const { refetch } = examples;
   const { refetch: refetchRootNames } = rootNames;
+  const previousFocus = useRef<{ scope: string; focused: boolean } | undefined>(undefined);
   useEffect(() => {
-    if (enabled && isFocused) {
+    const previous = previousFocus.current;
+    previousFocus.current = { scope, focused: isFocused };
+    if (enabled && isFocused && previous?.scope === scope && !previous.focused) {
       refetch();
       refetchRootNames();
     }
-  }, [enabled, isFocused, refetch, refetchRootNames]);
+  }, [enabled, isFocused, scope, refetch, refetchRootNames]);
   return {
     scope,
     isPrivate,

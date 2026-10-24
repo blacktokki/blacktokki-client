@@ -30,6 +30,10 @@ import { Content } from '../../types';
 import useProblem from '../problem/useProblem';
 
 const noteParagraphCache = new WeakMap<Content, { description: string; paragraphs: Paragraph[] }>();
+const searchGraphs = new WeakMap<
+  Content[],
+  { dependencies: unknown[]; graph: Pick<KnowledgeGraphData, 'nodes' | 'edges'> }
+>();
 
 /** Reuse paragraph analysis when a note's content has not changed. */
 function getNoteParagraphs(note: Content): Paragraph[] {
@@ -78,7 +82,9 @@ const findNearestParentHeader = (headers: Paragraph[], card: Paragraph): Paragra
     .sort((left, right) => right.path.split(',').length - left.path.split(',').length)[0];
 
 // ADR-2602: docs/decisions/2602-knowledge-graph-view-extension.md
-export const useKnowledgeGraphData = (): KnowledgeGraphData & {
+export const useKnowledgeGraphData = ({
+  validation = true,
+}: { validation?: boolean } = {}): KnowledgeGraphData & {
   isLoading: boolean;
   getNeighbors: (nodeId: string, depth?: number) => Set<string>;
 } => {
@@ -86,19 +92,26 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
   const { data: notePages = [], isLoading: isNoteLoading } = useNotePages();
   const { data: problemData = [], isLoading: isProblemLoading } = useProblem(1, {
     validationOnly: true,
+    enabled: validation,
   });
 
   const { colorScheme } = useNotebookTheme();
   const { usageMode, notebook } = useUsageMode();
   const { lang } = useLangContext();
   const isDark = colorScheme === 'dark';
-  const noteClassName = lang('Note') || '노트';
+  const noteClassName =
+    usageMode === 'NOTEBOOK' ? lang('Notebook') || '노트북' : lang('Note Mode') || '노트 모드';
   const notebookName = usageMode === 'NOTEBOOK' ? notebook?.title?.trim() : undefined;
   const noteClassLabel = notebookName ? `${noteClassName}: ${notebookName}` : noteClassName;
 
   const palette = useMemo(() => getKnowledgeGraphPalette(isDark), [isDark]);
 
   const graphData = useMemo(() => {
+    const cached = !validation && searchGraphs.get(notePages);
+    // Search observers read the same immutable source projection; layout uses its own nodes.
+    const sharedDependencies = [boardPages, isDark, noteClassLabel, noteClassName];
+    if (cached && cached.dependencies.every((value, index) => value === sharedDependencies[index]))
+      return cached.graph;
     const nodes: KnowledgeGraphNode[] = [];
     const edges: KnowledgeGraphEdge[] = [];
     const nodeIdMap = new Map<string, KnowledgeGraphNode>();
@@ -239,11 +252,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
         radius: 9,
       });
       titleToNodeMap.set(note.title, id);
-      addInstanceOf(
-        boardClassId ? `edge:inst:${id}->${boardClassId}` : `edge:inst:${id}->noteClass`,
-        id,
-        boardClassId || noteClassNode.id
-      );
+      if (boardClassId) addInstanceOf(`edge:inst:${id}->${boardClassId}`, id, boardClassId);
     };
 
     for (const note of knowledgeGraphNotePages) {
@@ -370,10 +379,18 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
     for (const noteNode of nodes) {
       if (noteNode.role !== 'INSTANCE' || noteNode.instanceKind !== 'NOTE') continue;
       const parts = noteNode.noteTitle.split('/');
-      if (parts.length <= 1) continue;
-      const parentTitle = parts.slice(0, -1).join('/');
-      const parentNodeId = titleToNodeMap.get(parentTitle);
-      if (!parentNodeId || parentNodeId === noteNode.id) continue;
+      let parentNodeId: string | undefined;
+      while (parts.length > 1 && !parentNodeId) {
+        parts.pop();
+        const parentTitle = parts.join('/');
+        parentNodeId = titleToNodeMap.get(parentTitle);
+        if (boardTitles.has(parentTitle)) break;
+      }
+      if (!parentNodeId) {
+        if (!noteNode.boardTitle)
+          addInstanceOf(`edge:inst:${noteNode.id}->noteClass`, noteNode.id, noteClassNode.id);
+        continue;
+      }
       addRelation(
         `edge:part:${noteNode.id}->${parentNodeId}`,
         noteNode.id,
@@ -556,22 +573,11 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       }
     }
 
-    // External links are individuals with their own class and source relations.
+    // External links connect to their sources without a separate classification node.
     const externalLinkOccurrences = knowledgeGraphLinkOccurrences.filter(
       (occurrence) =>
         !occurrence.target && /^(?:https?:\/\/|ftp:\/\/|mailto:|\/\/)/i.test(occurrence.url)
     );
-    if (externalLinkOccurrences.length > 0) {
-      addNode('builtInClass', {
-        id: 'class:externalLink',
-        name: lang('External Link Class') || '외부 링크',
-        role: 'CLASS',
-        classKind: 'EXTERNAL_LINK',
-        classCategory: 'BUILT_IN',
-        noteTitle: lang('External Link Class') || '외부 링크',
-        radius: 17,
-      });
-    }
     const externalLinkNodeIdByKey = new Map<string, string>();
     for (const occurrence of externalLinkOccurrences) {
       const linkKey = JSON.stringify([normalizeTitle(occurrence.linkName), occurrence.url]);
@@ -588,7 +594,6 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
           description: occurrence.url,
           radius: 6.5,
         });
-        addInstanceOf(`edge:externalLinkType:${linkNodeId}`, linkNodeId, 'class:externalLink');
       }
       addRelation(
         `edge:externalReference:${occurrence.sourceNodeId}->${linkNodeId}`,
@@ -633,7 +638,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
         assignment.targetNodeId,
         'PART_OF',
         'connectedPartOf',
-        isDark ? '#F2A2A8' : '#B84B56',
+        isDark ? '#7D6608' : '#B7950B',
         { dashed: true }
       );
     }
@@ -645,7 +650,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       paragraphNode.strokeColor = palette.connectedParagraph.stroke;
     }
 
-    for (const linkId of findConnectedExternalLinkIds(nodes, edges, 'class:externalLink')) {
+    for (const linkId of findConnectedExternalLinkIds(nodes, edges)) {
       const linkNode = nodeIdMap.get(linkId);
       if (!linkNode) continue;
       linkNode.instanceKind = 'CONNECTED_EXTERNAL_LINK';
@@ -653,15 +658,18 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       linkNode.strokeColor = palette.connectedExternalLink.stroke;
     }
 
-    return {
+    const graph = {
       nodes,
       edges,
     };
-  }, [boardPages, notePages, isDark, lang, palette, noteClassLabel, noteClassName]);
+    if (!validation) searchGraphs.set(notePages, { dependencies: sharedDependencies, graph });
+    return graph;
+  }, [boardPages, notePages, isDark, lang, palette, noteClassLabel, noteClassName, validation]);
 
   const axioms = useMemo(
-    () => evaluateKnowledgeGraphAxioms(graphData.nodes, graphData.edges, problemData),
-    [graphData.nodes, graphData.edges, problemData]
+    () =>
+      evaluateKnowledgeGraphAxioms(graphData.nodes, graphData.edges, validation ? problemData : []),
+    [graphData.nodes, graphData.edges, problemData, validation]
   );
 
   const edgeAdjacencyMap = useMemo(() => {
@@ -714,7 +722,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
   return {
     ...graphData,
     axioms,
-    isLoading: isBoardLoading || isNoteLoading || isProblemLoading,
+    isLoading: isBoardLoading || isNoteLoading || (validation && isProblemLoading),
     getNeighbors,
   };
 };

@@ -36,8 +36,8 @@ test('66 percent is below two thirds and stays in separate groups', () => {
 });
 
 test('similar templates form flat groups while preserving each original candidate and source set', () => {
-  const a = candidate('Plan', headings('Agenda', 'Actions', 'Decision'));
-  const b = candidate('Plan variant', headings('Agenda', 'Actions', 'Decision', 'Appendix'));
+  const a = candidate('Plan', headings('Vertices', 'Edges', 'Faces'));
+  const b = candidate('Plan variant', headings('Vertices', 'Edges', 'Faces', 'Appendix'));
   const other = candidate('Research', headings('Hypothesis', 'Method', 'Result'));
   const before = JSON.stringify([a, b, other]);
   const groups = groupSimilarTemplates([a, b, other], render);
@@ -54,21 +54,21 @@ test('similar templates form flat groups while preserving each original candidat
 });
 
 test('similarity ignores source paths, candidate names, placeholder names and section order', () => {
-  const a = candidate('One', '- Date: {{ Date }}\n\n' + headings('Agenda', 'Actions'));
+  const a = candidate('One', '- Date: {{ Date }}\n\n' + headings('Vertices', 'Edges'));
   const b = {
     name: 'Unrelated name',
     sourceTitles: ['Other/Notebook'],
     markdown:
       '# {{ title }}\n\n- Date: {{ Other }}\n\n' +
-      headings('Actions', 'Agenda').replaceAll('{{ Actions }}', '{{ Value }}'),
+      headings('Edges', 'Vertices').replaceAll('{{ Edges }}', '{{ Value }}'),
   };
   assert.equal(templateSimilarity(a, b, render), 1);
   assert.equal(templateSimilarity(b, a, render), 1);
 });
 
 test('ancestry, table columns and list types remain part of structural similarity', () => {
-  const a = candidate('Root', headings('Agenda', 'Actions'));
-  const nested = candidate('Nested', '## Agenda\n{{ Agenda }}\n\n### Actions\n{{ Actions }}');
+  const a = candidate('Root', headings('Vertices', 'Edges'));
+  const nested = candidate('Nested', '## Vertices\n{{ Vertices }}\n\n### Edges\n{{ Edges }}');
   assert.ok(templateSimilarity(a, nested, render) < TEMPLATE_SIMILARITY_THRESHOLD);
   const table = '| Topic | Result |\n| --- | --- |\n| Work | {{ Result }} |';
   assert.equal(
@@ -85,29 +85,24 @@ test('ancestry, table columns and list types remain part of structural similarit
   );
 });
 
-test('meeting formats share columns and fields even when their row labels differ', () => {
-  const meeting = (columns, rows) =>
+test('synthetic forms share columns and fields even when their row labels differ', () => {
+  const form = (columns, rows) =>
     candidate(
-      'Meeting',
-      '- 회의 일시: {{ 날짜 }}\n\n- 작성자: {{ 작성자 }}\n\n' +
+      'Synthetic form',
+      '- 표본 번호: {{ 번호 }}\n\n- 표본 이름: {{ 이름 }}\n\n' +
         '| ' +
         columns.join(' | ') +
         ' |\n| ' +
         columns.map(() => '---').join(' | ') +
         ' |\n' +
         rows
-          .map(
-            (row) => '| ' + [row, ...columns.slice(1).map(() => '{{ 내용 }}')].join(' | ') + ' |'
-          )
+          .map((row) => '| ' + [row, ...columns.slice(1).map(() => '{{ 값 }}')].join(' | ') + ' |')
           .join('\n')
     );
-  const a = meeting(
-    ['구분', '내용', '피드백/결론'],
-    ['주간 업무 공유', '배포 이슈 확인', '진행 이슈', '공유/확인 요청 사항']
-  );
-  const b = meeting(
-    ['구분', '내용', '피드백/결론', '비고'],
-    ['지난 주 진행 업무', '이번 주 진행(예정) 업무', '배포 관련', '메신저 고도화', '그 외']
+  const a = form(['분류', '값', '표식'], ['도형 가', '도형 나', '도형 다', '도형 라']);
+  const b = form(
+    ['분류', '값', '표식', '설명'],
+    ['색상 가', '색상 나', '색상 다', '색상 라', '색상 마']
   );
   assert.equal(templateSimilarity(a, b, render), 0.75);
   assert.equal(templateSimilarity(b, a, render), 0.75);
@@ -130,14 +125,14 @@ test('shared row labels add evidence across column changes without merging unrel
         [row, ...columns.slice(1).map(() => '{{ Value }}')].join(' | ') +
         ' |'
     );
-  const a = table(['Topic', 'Result', 'Decision'], 'Work');
-  const extra = table(['Topic', 'Result', 'Decision', 'Note'], 'Work');
-  const differentRows = table(['Topic', 'Result', 'Decision', 'Note'], 'Other');
+  const a = table(['Topic', 'Result', 'Faces'], 'Work');
+  const extra = table(['Topic', 'Result', 'Faces', 'Note'], 'Work');
+  const differentRows = table(['Topic', 'Result', 'Faces', 'Note'], 'Other');
   assert.ok(templateSimilarity(a, extra, render) > templateSimilarity(a, differentRows, render));
   assert.ok(
     templateSimilarity(a, table(['Name', 'Owner'], 'Work'), render) < TEMPLATE_SIMILARITY_THRESHOLD
   );
-  assert.equal(templateSimilarity(a, table(['Decision', 'Topic', 'Result'], 'Work'), render), 1);
+  assert.equal(templateSimilarity(a, table(['Faces', 'Topic', 'Result'], 'Work'), render), 1);
   assert.ok(
     templateSimilarity(table(['Name', 'Name'], 'Work'), table(['Name', 'Value'], 'Work'), render) <
       TEMPLATE_SIMILARITY_THRESHOLD
@@ -148,7 +143,7 @@ test('column matching retains section ancestry, repeated tables, fullwidth chara
   const table = '| Name | Value |\n| --- | --- |\n| Work | {{ Value }} |';
   assert.ok(
     templateSimilarity(
-      candidate('A', '## Agenda\n\n' + table),
+      candidate('A', '## Vertices\n\n' + table),
       candidate('B', '## Other\n\n' + table),
       render
     ) < TEMPLATE_SIMILARITY_THRESHOLD
@@ -258,10 +253,10 @@ test('identical bodies separated by top-level source folders remain distinct in 
     './titleGrouping': loadTs('titleGrouping.ts'),
   });
   const templates = discoverTemplates(
-    ['Teams', 'Archive'].flatMap((folder) =>
+    ['Samples', 'Archive'].flatMap((folder) =>
       [1, 2].map((index) => ({
-        title: `${folder}/Meeting ${index}`,
-        description: '<h2>Agenda</h2><h2>Actions</h2>',
+        title: `${folder}/Shape ${index}`,
+        description: '<h2>Vertices</h2><h2>Edges</h2>',
       }))
     )
   );
@@ -271,10 +266,10 @@ test('identical bodies separated by top-level source folders remain distinct in 
   assert.equal(groups[0].templates.length, 2);
   assert.deepEqual(
     new Set(groups[0].templates.map((template) => template.name)),
-    new Set(['Agenda / Actions', 'Agenda / Actions (2)'])
+    new Set(['Vertices / Edges', 'Vertices / Edges (2)'])
   );
   assert.deepEqual(
     new Set(groups[0].templates.flatMap((template) => template.sourceTitles)),
-    new Set(['Teams/Meeting 1', 'Teams/Meeting 2', 'Archive/Meeting 1', 'Archive/Meeting 2'])
+    new Set(['Samples/Shape 1', 'Samples/Shape 2', 'Archive/Shape 1', 'Archive/Shape 2'])
   );
 });

@@ -1,7 +1,8 @@
 const assert = require('node:assert/strict');
-const { test } = require('node:test');
+const { test, beforeEach } = require('node:test');
 const loadTs = require('./loadTs.cjs');
 const helpers = loadTs('template.ts');
+beforeEach((t) => t.mock.method(console, 'log', () => {}));
 const template = (id, name = id) => ({
   id,
   name,
@@ -185,4 +186,257 @@ test('filesystem creation stops on access errors instead of assuming a file is a
     saveContentsToDir(root, 'NOTE', 200, [{ title: 'New', description: 'new' }], undefined, true),
     /denied/
   );
+});
+
+function directoryFixture() {
+  const files = new Map([
+    ['First.md', '**Alpha**'],
+    ['Second.md', '**Beta**'],
+    ['Board.json', JSON.stringify({ type: 'BOARD', title: 'Board' })],
+  ]);
+  const calls = { scans: 0, files: 0, texts: 0, conversions: 0 };
+  let fail = false;
+  let pauseNext;
+  const clone = () => ({
+    identity: files,
+    isSameEntry: async (other) => other.identity === files,
+    getFileHandle: async (name, { create }) => {
+      if (!create && !files.has(name))
+        throw Object.assign(new Error('missing'), { name: 'NotFoundError' });
+      return {
+        createWritable: async () => ({
+          write: async (text) => files.set(name, text),
+          close: async () => {},
+        }),
+      };
+    },
+    async *entries() {
+      calls.scans++;
+      for (const name of files.keys())
+        yield [
+          name,
+          {
+            kind: 'file',
+            getFile: async () => {
+              calls.files++;
+              if (fail) throw new Error('temporary read error');
+              const text = files.get(name);
+              return {
+                lastModified: 1000,
+                size: text.length,
+                text: async () => {
+                  calls.texts++;
+                  const pause = pauseNext;
+                  pauseNext = undefined;
+                  await pause?.();
+                  await new Promise(setImmediate);
+                  return text;
+                },
+              };
+            },
+          },
+        ];
+    },
+  });
+  const helpers = loadTs('../../services/storage/fsHelper.ts', {
+    '@blacktokki/editor': {
+      toMarkdown: (text) => text,
+      toHtml: (text) => {
+        calls.conversions++;
+        return text;
+      },
+    },
+  });
+  return {
+    files,
+    calls,
+    clone,
+    helpers,
+    fail: (value) => (fail = value),
+    pauseRead: () => {
+      let entered;
+      let release;
+      const waiting = new Promise((resolve) => (entered = resolve));
+      const pending = new Promise((resolve) => (release = resolve));
+      pauseNext = () => {
+        entered();
+        return pending;
+      };
+      return { waiting, release };
+    },
+  };
+}
+
+test('concurrent notebook consumers share file reads across cloned directory handles', async () => {
+  const { helpers, clone, calls } = directoryFixture();
+  const [first, second, third, boards] = await Promise.all([
+    helpers.readContentsFromDir(clone(), 'NOTE', 71),
+    helpers.readContentsFromDir(clone(), 'NOTE', 71),
+    helpers.readContentsFromDir(clone(), 'NOTE', 71),
+    helpers.readContentsFromDir(clone(), 'BOARD', 71),
+  ]);
+  assert.deepEqual(second, first);
+  assert.deepEqual(third, first);
+  assert.equal(first.length, 2);
+  assert.equal(boards[0].title, 'Board');
+  assert.deepEqual(calls, { scans: 1, files: 3, texts: 3, conversions: 2 });
+  assert.notEqual(first, second, 'callers keep independently constructed content arrays');
+  assert.equal(console.log.mock.calls.length, 0, 'local source reads do not print timing logs');
+});
+
+test('local storage reads return notes without diagnostic logging', async () => {
+  const notes = [{ title: 'Source' }];
+  const { getStoreItems } = loadTs('../../services/storage/index.ts', {
+    './config': {
+      getStorageConfig: async (parentId) => {
+        assert.equal(parentId, 82);
+        return { type: 'local', handle: {} };
+      },
+    },
+    './localDirDriver': {
+      localDirGetStoreItems: async () => {
+        return notes;
+      },
+    },
+    './opfsDriver': {},
+    './types': {},
+    './fsHelper': {},
+  });
+  assert.equal(await getStoreItems('NOTE', 82), notes);
+  assert.equal(console.log.mock.calls.length, 0);
+});
+
+test('a completed read is not retained and refresh detects edits with unchanged file metadata', async () => {
+  const { helpers, clone, calls, files } = directoryFixture();
+  await helpers.readContentsFromDir(clone(), 'NOTE', 72);
+  files.set('First.md', '**Gamma**');
+  const edited = await helpers.readContentsFromDir(clone(), 'NOTE', 72);
+  assert.equal(edited.find((note) => note.title === 'First').description, '**Gamma**');
+  assert.equal(calls.files, 4);
+  assert.equal(calls.conversions, 3);
+  await helpers.readContentsFromDir(clone(), 'NOTE', 72);
+  assert.equal(calls.files, 6, 'every new refresh reads current files');
+  assert.equal(calls.conversions, 3, 'unchanged contents reuse only their conversion');
+  files.delete('Second.md');
+  files.set('Third.md', '**New**');
+  assert.deepEqual(
+    (await helpers.readContentsFromDir(clone(), 'NOTE', 72)).map((note) => note.title),
+    ['First', 'Third']
+  );
+});
+
+test('a delayed file does not stop other available reads and results retain source order', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const helpers = loadTs('../../services/storage/fsHelper.ts', {
+    '@blacktokki/editor': { toHtml: (text) => text },
+  });
+  let release;
+  const delayed = new Promise((resolve) => (release = resolve));
+  const started = [];
+  let active = 0;
+  let peak = 0;
+  const root = {
+    async *entries() {
+      for (let index = 0; index < 64; index++)
+        yield [
+          `Note ${index}.md`,
+          {
+            kind: 'file',
+            getFile: async () => {
+              started.push(index);
+              active++;
+              peak = Math.max(peak, active);
+              if (index === 0) await delayed;
+              return {
+                lastModified: 1000,
+                size: 1,
+                text: async () => {
+                  active--;
+                  return 'x';
+                },
+              };
+            },
+          },
+        ];
+    },
+  };
+  const pending = helpers.readContentsFromDir(root, 'NOTE', 81);
+  try {
+    await new Promise(setImmediate);
+    assert.equal(started.length, 64, 'one slow file must not hold back later files');
+    assert.ok(peak <= 32, 'file I/O remains bounded while slow reads are pending');
+  } finally {
+    release();
+  }
+  assert.deepEqual(
+    (await pending).map((note) => note.title),
+    Array.from({ length: 64 }, (_, index) => `Note ${index}`).sort((a, b) => a.localeCompare(b))
+  );
+});
+
+test('directory enumeration overlaps independent folders with bounded concurrency and retains traversal order', async () => {
+  const helpers = loadTs('../../services/storage/fsHelper.ts', { '@blacktokki/editor': {} });
+  let active = 0;
+  let peak = 0;
+  const directory = (index) => ({
+    kind: 'directory',
+    async *entries() {
+      active++;
+      peak = Math.max(peak, active);
+      try {
+        await new Promise(setImmediate);
+        yield [`${index}.md`, { kind: 'file' }];
+      } finally {
+        active--;
+      }
+    },
+  });
+  const root = {
+    async *entries() {
+      for (let index = 0; index < 24; index++) yield [`Folder ${index}`, directory(index)];
+      yield ['.hidden', directory('hidden')];
+    },
+  };
+  const entries = await helpers.scanDirectoryRecursive(root);
+  assert.ok(peak > 1 && peak <= 8, `independent folder enumerations were ${peak}`);
+  assert.deepEqual(
+    entries.map((entry) => entry.path),
+    Array.from({ length: 24 }, (_, index) => [
+      `Folder ${index}`,
+      `Folder ${index}/${index}.md`,
+    ]).flat()
+  );
+});
+
+test('failed reads are retried and a remapped notebook cannot reuse another directory', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  const first = directoryFixture();
+  first.fail(true);
+  assert.deepEqual(await first.helpers.readContentsFromDir(first.clone(), 'NOTE', 73), []);
+  first.fail(false);
+  assert.equal((await first.helpers.readContentsFromDir(first.clone(), 'NOTE', 73)).length, 2);
+  const other = directoryFixture();
+  other.files.clear();
+  other.files.set('Other.md', '**Separate**');
+  const separate = await first.helpers.readContentsFromDir(other.clone(), 'NOTE', 73);
+  assert.deepEqual(
+    separate.map((note) => note.title),
+    ['Other']
+  );
+});
+
+test('a refresh after saving cannot join a read of the previous file contents', async () => {
+  const { helpers, clone, pauseRead } = directoryFixture();
+  const paused = pauseRead();
+  const before = helpers.readContentsFromDir(clone(), 'NOTE', 74);
+  await paused.waiting;
+  await helpers.saveContentsToDir(clone(), 'NOTE', 74, [
+    { title: 'First', description: '**Saved**' },
+  ]);
+  const refreshed = helpers.readContentsFromDir(clone(), 'NOTE', 74);
+  await new Promise(setImmediate);
+  paused.release();
+  const [original, current] = await Promise.all([before, refreshed]);
+  assert.equal(original.find((note) => note.title === 'First').description, '**Alpha**');
+  assert.equal(current.find((note) => note.title === 'First').description, '**Saved**');
 });

@@ -12,10 +12,9 @@ export async function getStoreItems(
   parentId = 0
 ): Promise<Content[]> {
   const config = await getStorageConfig(parentId);
-  if (parentId > 0 || config.type === 'local') {
-    return await localDirGetStoreItems(storeName, parentId, config.handle);
-  }
-  return await opfsGetStoreItems(storeName, parentId, config.pathName);
+  return parentId > 0 || config.type === 'local'
+    ? await localDirGetStoreItems(storeName, parentId, config.handle)
+    : await opfsGetStoreItems(storeName, parentId, config.pathName);
 }
 
 export async function saveStoreItems(

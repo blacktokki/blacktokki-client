@@ -54,30 +54,63 @@ export async function deleteNestedEntry(root: any, pathName: string): Promise<bo
 
 const ALLOWED_EXTENSIONS = /\.(md|markdown|json)$/i;
 
+/** Keep I/O slots occupied as each item finishes, without waiting for a whole batch. */
+async function mapConcurrent<T, R>(
+  items: T[],
+  concurrency: number,
+  action: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+      while (next < items.length) {
+        const index = next++;
+        results[index] = await action(items[index]);
+      }
+    })
+  );
+  return results;
+}
+
 export async function scanDirectoryRecursive(
   dirHandle: any,
   basePath = ''
 ): Promise<{ path: string; name: string; handle: any; isFile: boolean }[]> {
-  const results: { path: string; name: string; handle: any; isFile: boolean }[] = [];
-  if (!dirHandle || !dirHandle.entries) return results;
-  try {
-    for await (const [name, handle] of dirHandle.entries()) {
-      const fullPath = basePath ? `${basePath}/${name}` : name;
-      if (handle.kind === 'file') {
-        if (ALLOWED_EXTENSIONS.test(name)) {
-          results.push({ path: fullPath, name, handle, isFile: true });
+  type Entry = { path: string; name: string; handle: any; isFile: boolean };
+  const folders = new Map<string, Entry[]>();
+  let pending = [{ handle: dirHandle, path: basePath }];
+  while (pending.length) {
+    const children = await mapConcurrent(pending, 8, async (directory) => {
+      const entries: Entry[] = [];
+      const nested: typeof pending = [];
+      folders.set(directory.path, entries);
+      if (!directory.handle?.entries) return nested;
+      try {
+        for await (const [name, handle] of directory.handle.entries()) {
+          const path = directory.path ? `${directory.path}/${name}` : name;
+          if (handle.kind === 'file' && ALLOWED_EXTENSIONS.test(name)) {
+            entries.push({ path, name, handle, isFile: true });
+          } else if (handle.kind === 'directory' && !name.startsWith('.')) {
+            entries.push({ path, name, handle, isFile: false });
+            nested.push({ handle, path });
+          }
         }
-      } else if (handle.kind === 'directory') {
-        if (!name.startsWith('.')) {
-          results.push({ path: fullPath, name, handle, isFile: false });
-          const subResults = await scanDirectoryRecursive(handle, fullPath);
-          results.push(...subResults);
-        }
+      } catch (e) {
+        console.error('Error scanning directory:', e);
       }
-    }
-  } catch (e) {
-    console.error('Error scanning directory:', e);
+      return nested;
+    });
+    pending = children.flat();
   }
+  const results: Entry[] = [];
+  const append = (path: string) => {
+    for (const entry of folders.get(path) || []) {
+      results.push(entry);
+      if (!entry.isFile) append(entry.path);
+    }
+  };
+  append(basePath);
   return results;
 }
 
@@ -97,35 +130,18 @@ export async function writeFileText(fileHandle: any, text: string): Promise<void
   await writable.close();
 }
 
-/** Conversion cache validated against freshly read content and file metadata. */
+/** Conversion cache validated against exact, freshly read source text and file metadata. */
 type CachedDirectoryFile = {
   lastModified: number;
   size: number;
-  checksum: string;
+  text: string;
   content?: FsData['contents'][number] & { updated: string };
   json?: FsData['jsons'][number];
 };
 
-/** Computes SHA-256 with a lossless text fallback when Web Crypto is unavailable. */
-async function checksumFileText(text: string): Promise<string> {
-  if (globalThis.crypto?.subtle) {
-    try {
-      const digest = await globalThis.crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(text)
-      );
-      return `sha256:${Array.from(new Uint8Array(digest), (byte) =>
-        byte.toString(16).padStart(2, '0')
-      ).join('')}`;
-    } catch {
-      // Retain exact source equality when the runtime cannot calculate a digest.
-    }
-  }
-  return `text:${text}`;
-}
-
 const directoryFileCache = new WeakMap<object, Map<string, CachedDirectoryFile>>();
 const pendingDirectoryScans = new WeakMap<object, ReturnType<typeof scanDirectoryRecursive>>();
+const pendingDirectoryReads = new WeakMap<object, Map<'NOTE' | 'BOARD', Promise<FsData>>>();
 const recentDirectoryHandles = new Map<number, any>();
 
 /** IndexedDB returns cloned handles; retain a bounded set of equivalent directory identities. */
@@ -144,12 +160,36 @@ async function reuseDirectoryHandle(rootHandle: any, parentId: number): Promise<
   return handle;
 }
 
-async function readFsDataFromDir(rootHandle: any, storeName: 'NOTE' | 'BOARD'): Promise<FsData> {
+/** Share only in-flight reads; the next refresh still checks every current file's contents. */
+function readFsDataFromDir(rootHandle: any, storeName: 'NOTE' | 'BOARD'): Promise<FsData> {
+  let pending = pendingDirectoryReads.get(rootHandle);
+  if (!pending) {
+    pending = new Map();
+    pendingDirectoryReads.set(rootHandle, pending);
+  }
+  let read = pending.get(storeName);
+  if (!read) {
+    read = readFsDataSnapshotFromDir(rootHandle, storeName).finally(() => {
+      pending.delete(storeName);
+      if (!pending.size && pendingDirectoryReads.get(rootHandle) === pending)
+        pendingDirectoryReads.delete(rootHandle);
+    });
+    pending.set(storeName, read);
+  }
+  return read;
+}
+
+async function readFsDataSnapshotFromDir(
+  rootHandle: any,
+  storeName: 'NOTE' | 'BOARD'
+): Promise<FsData> {
   let scan = pendingDirectoryScans.get(rootHandle);
   if (!scan) {
     scan = scanDirectoryRecursive(rootHandle);
     pendingDirectoryScans.set(rootHandle, scan);
-    scan.finally(() => pendingDirectoryScans.delete(rootHandle));
+    scan.finally(() => {
+      if (pendingDirectoryScans.get(rootHandle) === scan) pendingDirectoryScans.delete(rootHandle);
+    });
   }
   const entries = await scan;
   let cache = directoryFileCache.get(rootHandle);
@@ -171,61 +211,54 @@ async function readFsDataFromDir(rootHandle: any, storeName: 'NOTE' | 'BOARD'): 
         : entry.name.endsWith('.json') && entry.name !== 'notebooks.json')
   );
 
-  // Bound concurrent file reads while retaining the directory's result order.
-  for (let offset = 0; offset < files.length; offset += 8) {
-    const batch = await Promise.all(
-      files.slice(offset, offset + 8).map(async (entry) => {
-        try {
-          const file = await entry.handle.getFile();
-          const text = await file.text();
-          const checksum = await checksumFileText(text);
-          const cached = cache.get(entry.path);
-          if (
-            cached &&
-            cached.lastModified === file.lastModified &&
-            cached.size === file.size &&
-            cached.checksum === checksum
-          ) {
-            return cached;
+  const loaded = await mapConcurrent(files, 32, async (entry) => {
+    try {
+      const file = await entry.handle.getFile();
+      const text = await file.text();
+      const cached = cache.get(entry.path);
+      if (
+        cached &&
+        cached.lastModified === file.lastModified &&
+        cached.size === file.size &&
+        cached.text === text
+      ) {
+        return cached;
+      }
+      const result: CachedDirectoryFile = {
+        lastModified: file.lastModified,
+        size: file.size,
+        text,
+      };
+      if (storeName === 'NOTE') {
+        result.content = {
+          title: entry.path.replace(/\.(md|markdown)$/i, ''),
+          description: toHtml(text || ''),
+          updated: new Date(file.lastModified).toISOString(),
+        };
+      } else {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === 'object') {
+          if (!Array.isArray(parsed) && !parsed.updated) {
+            parsed.updated = new Date(file.lastModified).toISOString();
           }
-          const result: CachedDirectoryFile = {
-            lastModified: file.lastModified,
-            size: file.size,
-            checksum,
+          result.json = {
+            title: parsed.title || entry.name.replace(/\.json$/i, ''),
+            data: parsed,
           };
-          if (storeName === 'NOTE') {
-            result.content = {
-              title: entry.path.replace(/\.(md|markdown)$/i, ''),
-              description: toHtml(text || ''),
-              updated: new Date(file.lastModified).toISOString(),
-            };
-          } else {
-            const parsed = JSON.parse(text);
-            if (parsed && typeof parsed === 'object') {
-              if (!Array.isArray(parsed) && !parsed.updated) {
-                parsed.updated = new Date(file.lastModified).toISOString();
-              }
-              result.json = {
-                title: parsed.title || entry.name.replace(/\.json$/i, ''),
-                data: parsed,
-              };
-            }
-          }
-          cache.set(entry.path, result);
-          return result;
-        } catch (e) {
-          cache.delete(entry.path);
-          console.error('Error reading notebook file:', entry.path, e);
-          return undefined;
         }
-      })
-    );
-    for (const result of batch) {
-      if (result?.content) contents.push(result.content);
-      if (result?.json) jsons.push(result.json);
+      }
+      cache.set(entry.path, result);
+      return result;
+    } catch (e) {
+      cache.delete(entry.path);
+      console.error('Error reading notebook file:', entry.path, e);
+      return undefined;
     }
+  });
+  for (const result of loaded) {
+    if (result?.content) contents.push(result.content);
+    if (result?.json) jsons.push(result.json);
   }
-
   return { contents, jsons };
 }
 
@@ -421,6 +454,33 @@ export async function saveContentsToDir(
 ): Promise<void> {
   rootHandle = await reuseDirectoryHandle(rootHandle, parentId);
   directoryFileCache.delete(rootHandle);
+  pendingDirectoryReads.delete(rootHandle);
+  pendingDirectoryScans.delete(rootHandle);
+  try {
+    await saveDirectoryContents(
+      rootHandle,
+      storeName,
+      parentId,
+      contents,
+      deleteIdOrTitle,
+      createOnly
+    );
+  } finally {
+    // A refresh after a write must not join a snapshot started before or during that write.
+    pendingDirectoryReads.delete(rootHandle);
+    pendingDirectoryScans.delete(rootHandle);
+    directoryFileCache.delete(rootHandle);
+  }
+}
+
+async function saveDirectoryContents(
+  rootHandle: any,
+  storeName: string,
+  parentId: number,
+  contents: (Content | PostContent)[],
+  deleteIdOrTitle?: number | string,
+  createOnly = false
+): Promise<void> {
   if (contents.length > 0) {
     if (storeName === 'NOTEBOOK') {
       const currentNotebooks = await readContentsFromDir(rootHandle, 'NOTEBOOK', parentId);

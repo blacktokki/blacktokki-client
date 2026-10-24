@@ -17,11 +17,11 @@ const table = (headers, rows) =>
     `| ${headers.map(() => '---').join(' | ')} |`,
     ...rows.map((row) => `| ${row.join(' | ')} |`),
   ].join('\n');
-const req = (number) => `REQ-${String(number).padStart(3, '0')}`;
-const numbered = (headers = ['ID', 'Description', 'Owner', 'Status']) =>
+const req = (number) => `FIG-${String(number).padStart(3, '0')}`;
+const numbered = (headers = ['ID', 'Shape', 'Shade', 'Count']) =>
   table(headers, [
     [
-      'REQ-nnn 형태의 오름차순으로 표시합니다.',
+      'Keep this legend above the generated samples.',
       ...headers.slice(1).map((_, i) => `{{Instruction ${i}}}`),
     ],
     ...Array.from({ length: 5 }, (_, number) => [
@@ -52,40 +52,37 @@ test('REQ rows grow and shrink independently of their fixed instruction row', ()
   const rows = group(fixture, 'row');
   assert.equal(fixture.definitions[0].groups.length, 1);
   assert.equal(fixture.view().markdown, markdown);
-  const values = { 'REQ-003 · Description': 'Retain this requirement' };
+  const values = { 'FIG-003 · Shape': 'Retain this sample' };
   fixture.change(rows);
-  assert.equal(fixture.view().tables[0].rows.at(-1).label, 'REQ-005');
+  assert.equal(fixture.view().tables[0].rows.at(-1).label, 'FIG-005');
   fixture.change(rows, 2);
   assert.deepEqual(
     fixture.view().tables[0].rows.map((row) => row.label),
     [
-      'REQ-nnn 형태의 오름차순으로 표시합니다.',
-      'REQ-000',
-      'REQ-001',
-      'REQ-003',
-      'REQ-004',
-      'REQ-005',
+      'Keep this legend above the generated samples.',
+      'FIG-000',
+      'FIG-001',
+      'FIG-003',
+      'FIG-004',
+      'FIG-005',
     ]
   );
-  assert.match(
-    template.fillNoteTemplate(fixture.view().markdown, values),
-    /Retain this requirement/
-  );
-  assert.doesNotMatch(fixture.view().markdown, /REQ-002/);
+  assert.match(template.fillNoteTemplate(fixture.view().markdown, values), /Retain this sample/);
+  assert.doesNotMatch(fixture.view().markdown, /FIG-002/);
   for (const row of fixture.view().tables[0].rows.filter((row) => row.groupId))
     fixture.change(rows, row.ordinal);
   assert.equal(fixture.view().tables[0].rows.length, 1);
   fixture.change(rows);
-  assert.equal(fixture.view().tables[0].rows.at(-1).label, 'REQ-006');
+  assert.equal(fixture.view().tables[0].rows.at(-1).label, 'FIG-006');
   assert.equal(fixture.definitions[0].rows.length, 6);
 });
 
 test('tables with only repeating columns keep fixed row labels and support column removal/addition', () => {
   const markdown = table(
-    ['Metric', 'Sprint 1', 'Sprint 2'],
+    ['Axis', 'Sample 1', 'Sample 2'],
     [
-      ['Owner', '{{Owner 1}}', '{{Owner 2}}'],
-      ['Result', '{{Result 1}}', '{{Result 2}}'],
+      ['Shade', '{{Shade 1}}', '{{Shade 2}}'],
+      ['Measure', '{{Measure 1}}', '{{Measure 2}}'],
     ]
   );
   const fixture = setup(markdown);
@@ -94,22 +91,22 @@ test('tables with only repeating columns keep fixed row labels and support colum
   fixture.change(columns);
   assert.deepEqual(
     fixture.view().tables[0].columns.map((column) => column.label),
-    ['Metric', 'Sprint 1', 'Sprint 2', 'Sprint 3']
+    ['Axis', 'Sample 1', 'Sample 2', 'Sample 3']
   );
   const key = fixture.view().tables[0].rows[0].cells.at(-1).variables[0];
   fixture.change(columns, 0);
   assert.equal(fixture.view().tables[0].rows[0].cells.at(-1).variables[0], key);
   const html = render.render(
-    template.fillNoteTemplate(fixture.view().markdown, { [key]: 'Alice', 'Owner 2': 'Bob' })
+    template.fillNoteTemplate(fixture.view().markdown, { [key]: 'Alice', 'Shade 2': 'Bob' })
   );
-  assert.match(html, /<th>Metric<\/th>[\s\S]*<th>Sprint 2<\/th>[\s\S]*<th>Sprint 3<\/th>/);
-  assert.match(html, /<td>Owner<\/td>[\s\S]*<td>Bob<\/td>[\s\S]*<td>Alice<\/td>/);
-  assert.doesNotMatch(html, /Sprint 1/);
+  assert.match(html, /<th>Axis<\/th>[\s\S]*<th>Sample 2<\/th>[\s\S]*<th>Sample 3<\/th>/);
+  assert.match(html, /<td>Shade<\/td>[\s\S]*<td>Bob<\/td>[\s\S]*<td>Alice<\/td>/);
+  assert.doesNotMatch(html, /Sample 1/);
   for (const column of fixture.view().tables[0].columns.filter((column) => column.groupId))
     fixture.change(columns, column.ordinal);
   assert.equal(fixture.view().tables[0].columns.length, 1);
   fixture.change(columns);
-  assert.equal(fixture.view().tables[0].columns.at(-1).label, 'Sprint 4');
+  assert.equal(fixture.view().tables[0].columns.at(-1).label, 'Sample 4');
 });
 
 test('both axes can expand in either order and surviving intersection values keep their identity', () => {
@@ -130,18 +127,18 @@ test('both axes can expand in either order and surviving intersection values kee
     template.fillNoteTemplate(fixture.view().markdown, { [key]: 'Intersection value' })
   );
   assert.match(saved, /Intersection value/);
-  assert.doesNotMatch(saved, /REQ-001|열 1/);
+  assert.doesNotMatch(saved, /FIG-001|열 1/);
 });
 
 test('a variable-only row can be removed to zero and restored without reviving deleted values', () => {
-  const fixture = setup(table(['Name', 'Result'], [['{{Name}}', '{{Result}}']]));
+  const fixture = setup(table(['Name', 'Measure'], [['{{Name}}', '{{Measure}}']]));
   const rows = group(fixture, 'row');
   fixture.change(rows, 0);
   assert.equal(fixture.view().tables[0].rows.length, 0);
   fixture.change(rows);
   const fields = variables(fixture.view().tables[0].rows[0]);
   assert.equal(fields.length, 2);
-  assert.ok(fields.every((key) => !['Name', 'Result'].includes(key)));
+  assert.ok(fields.every((key) => !['Name', 'Measure'].includes(key)));
   const html = render.render(
     template.fillNoteTemplate(fixture.view().markdown, { Name: 'Deleted value' })
   );
@@ -153,8 +150,8 @@ test('named repeating columns resize without a numbered header pattern and can b
     table(
       ['Item', 'Alice', 'Bob'],
       [
-        ['Owner', '{{Owner Alice}}', '{{Owner Bob}}'],
-        ['Result', '{{Result Alice}}', '{{Result Bob}}'],
+        ['Shade', '{{Shade Alice}}', '{{Shade Bob}}'],
+        ['Measure', '{{Measure Alice}}', '{{Measure Bob}}'],
       ]
     )
   );
@@ -181,7 +178,7 @@ test('named repeating columns resize without a numbered header pattern and can b
 });
 
 test('renaming a numbered column never changes its cell keys when a row is subsequently added', () => {
-  const fixture = setup(numbered(['ID', 'Sprint 1', 'Sprint 2']));
+  const fixture = setup(numbered(['ID', 'Sample 1', 'Sample 2']));
   const columns = group(fixture, 'column');
   fixture.change(columns);
   fixture.change(group(fixture, 'row'));
@@ -209,15 +206,15 @@ test('fixed key/value tables, nonconsecutive identifiers and fenced examples do 
   const fixed = table(
     ['Field', 'Value'],
     [
-      ['Owner', '{{Owner}}'],
+      ['Shade', '{{Shade}}'],
       ['Date', '{{Date}}'],
     ]
   );
   const nonconsecutive = table(
     ['ID', 'Value'],
     [
-      ['REQ-000', '{{A}}'],
-      ['REQ-009', '{{B}}'],
+      ['FIG-000', '{{A}}'],
+      ['FIG-009', '{{B}}'],
     ]
   );
   const fenced = `\n\n\`\`\`markdown\n${numbered()}\n\`\`\`\n`;
@@ -270,7 +267,7 @@ test('escaped pipes, column alignment, code fences and long names remain valid a
 });
 
 test('table values containing pipes or pasted newlines cannot add rows or columns or trigger another substitution', () => {
-  const markdown = table(['ID', 'Value'], [['REQ-000', '{{Value}}']]);
+  const markdown = table(['ID', 'Value'], [['FIG-000', '{{Value}}']]);
   for (const value of ['A|B', 'A\\|B', '{{title}}\nnext row']) {
     const filled = template.fillNoteTemplate(markdown, { Value: value }, 'Note', ['Value']);
     const html = render.render(filled);

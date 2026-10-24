@@ -17,23 +17,23 @@ const names = { date: '날짜', number: '번호', keyword: '키워드' };
 const note = (title) => ({
   title,
   description:
-    '<p>Date: confidential</p><h2>Agenda</h2><p>secret</p><h2>Actions</h2><p>private</p>',
+    '<p>Date: confidential</p><h2>Vertices</h2><p>secret</p><h2>Edges</h2><p>private</p>',
 });
 
 test('one body template offers multiple title patterns from only its source notes', () => {
   const notes = [
-    note('Meetings/2026-10-01 Weekly meeting'),
-    note('Meetings/2026-10-08 Weekly meeting'),
-    note('Meetings/Reports/Weekly report 1'),
-    note('Meetings/Reports/Weekly report 2'),
+    note('Shapes/2032-01-02 Shape sample'),
+    note('Shapes/2032-01-13 Shape sample'),
+    note('Shapes/ShapeSets/Color sample 1'),
+    note('Shapes/ShapeSets/Color sample 2'),
     { title: 'Science/Experiment 1', description: '<h2>Hypothesis</h2><h2>Result</h2>' },
     { title: 'Science/Experiment 2', description: '<h2>Hypothesis</h2><h2>Result</h2>' },
   ];
-  const body = discoverTemplates(notes).find((item) => item.name === 'Meetings · Agenda / Actions');
+  const body = discoverTemplates(notes).find((item) => item.name === 'Shapes · Vertices / Edges');
   const titles = discoverTitleTemplates(templateNotes(body, notes), names);
   assert.deepEqual(
     titles.map((item) => item.pattern),
-    ['Meetings/{{ 날짜 }} Weekly meeting', 'Meetings/Reports/Weekly report {{ 번호 }}']
+    ['Shapes/{{ 날짜 }} Shape sample', 'Shapes/ShapeSets/Color sample {{ 번호 }}']
   );
   assert.deepEqual(
     titles.map((item) => item.variables),
@@ -47,20 +47,17 @@ test('one body template offers multiple title patterns from only its source note
 });
 
 test('selected title pattern provides the saved path without adding a missing body heading', () => {
-  const notes = [
-    note('Meetings/2026-10-01 Weekly meeting'),
-    note('Meetings/2026-10-08 Weekly meeting'),
-  ];
+  const notes = [note('Shapes/2032-01-02 Shape sample'), note('Shapes/2032-01-13 Shape sample')];
   const [body] = discoverTemplates(notes);
   const [titleTemplate] = discoverTitleTemplates(notes);
-  const values = { Date: '2026-10-15', Agenda: 'New agenda', Actions: 'New actions' };
+  const values = { Date: '2032-01-24', Vertices: 'New agenda', Edges: 'New actions' };
   const title = titleFromTemplate(titleTemplate, values);
-  assert.equal(title, 'Meetings/2026-10-15 Weekly meeting');
+  assert.equal(title, 'Shapes/2032-01-24 Shape sample');
   const html = new markdownIt().render(
     template.fillTemplate(body.markdown, { ...values, title: title.split('/').at(-1) })
   );
-  assert.doesNotMatch(html, /<h1>|2026-10-15 Weekly meeting/);
-  assert.match(html, /Date: 2026-10-15/);
+  assert.doesNotMatch(html, /<h1>|2032-01-24 Shape sample/);
+  assert.match(html, /Date: 2032-01-24/);
   assert.match(html, /New agenda/);
   assert.doesNotMatch(html, /secret|confidential|\{\{/);
 });
@@ -107,6 +104,6 @@ test('nonrepeating names do not produce title choices and removed sources cannot
 });
 
 test('title patterns never accept inherited values as filled fields', () => {
-  const [title] = discoverTitleTemplates([note('Report 1'), note('Report 2')]);
+  const [title] = discoverTitleTemplates([note('ShapeSet 1'), note('ShapeSet 2')]);
   assert.equal(titleFromTemplate(title, Object.create({ Number: '3' })), null);
 });

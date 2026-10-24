@@ -8,9 +8,9 @@ const titleTemplates = loadTs('titleTemplates.ts', {
   './titleGrouping': loadTs('titleGrouping.ts'),
 });
 const candidate = {
-  name: 'Meetings',
-  markdown: '## Agenda\n\n{{Agenda}}',
-  sourceTitles: ['Team/Meetings/One', 'Team/Meetings/Two'],
+  name: 'Shapes',
+  markdown: '## Vertices\n\n{{Vertices}}',
+  sourceTitles: ['Samples/Shapes/One', 'Samples/Shapes/Two'],
 };
 
 function find(node, predicate) {
@@ -81,7 +81,7 @@ function screens({
     : [];
   const notes = sourceTitles.map((title) => ({
     title,
-    description: '<h2>Agenda</h2>',
+    description: '<h2>Vertices</h2>',
   }));
   const data = {
     enabled: true,
@@ -245,32 +245,32 @@ test('preview, sources and writing retain the draft and save its exact content a
   ).props.onPress();
   let writing = find(view(), (node) => node.type === 'TemplateWriteSection');
   writing.props.form.onChooseTitle(null);
-  writing.props.form.onChangeTitle('Team/Meetings/New');
-  writing.props.form.onChangeValue('Agenda', 'Review release');
+  writing.props.form.onChangeTitle('Samples/Shapes/New');
+  writing.props.form.onChangeValue('Vertices', 'Review release');
   writing.props.onPreview();
   find(view(), (node) => node.type === 'TemplatePreviewSection').props.onWriting();
   writing = find(view(), (node) => node.type === 'TemplateWriteSection');
-  assert.equal(writing.props.form.noteTitle, 'Team/Meetings/New');
-  assert.equal(writing.props.form.values.Agenda, 'Review release');
+  assert.equal(writing.props.form.noteTitle, 'Samples/Shapes/New');
+  assert.equal(writing.props.form.values.Vertices, 'Review release');
   await writing.props.onSave();
   assert.deepEqual(fixture.saved, [
     {
-      title: 'Team/Meetings/New',
-      description: '<h2>Agenda</h2>\n<p>Review release</p>\n',
+      title: 'Samples/Shapes/New',
+      description: '<h2>Vertices</h2>\n<p>Review release</p>\n',
       createOnly: true,
     },
   ]);
   assert.deepEqual(fixture.actions.at(-1), {
     method: 'push',
     screen: 'NotePage',
-    params: { title: 'Team/Meetings/New' },
+    params: { title: 'Samples/Shapes/New' },
   });
   find(view(), (node) => node.props.accessibilityLabel === 'Back to templates').props.onPress();
   assert.equal(fixture.actions.at(-1).screen, 'TemplateList');
 });
 
 test('a missing-note tag passes its full path and opens sources before prefilling the writing form', () => {
-  const noteTitle = 'Team/Meetings/New';
+  const noteTitle = 'Samples/Shapes/New';
   const fixture = screens({ fromNote: true, noteTitle });
   const TagSection = fixture.load('screens/TemplateTagSection.tsx').default;
   find(
@@ -296,10 +296,10 @@ test('resizing both table axes survives preview transitions and saves exactly th
     selectedTemplate: {
       ...candidate,
       markdown: [
-        '| ID | Sprint 1 | Sprint 2 |',
+        '| ID | Sample 1 | Sample 2 |',
         '| --- | --- | --- |',
-        '| REQ-000 | {{REQ-000 · Sprint 1}} | {{REQ-000 · Sprint 2}} |',
-        '| REQ-001 | {{REQ-001 · Sprint 1}} | {{REQ-001 · Sprint 2}} |',
+        '| FIG-000 | {{FIG-000 · Sample 1}} | {{FIG-000 · Sample 2}} |',
+        '| FIG-001 | {{FIG-001 · Sample 1}} | {{FIG-001 · Sample 2}} |',
       ].join('\n'),
     },
   });
@@ -308,11 +308,11 @@ test('resizing both table axes survives preview transitions and saves exactly th
   find(view(), (node) => node.type === 'TemplatePreviewSection').props.onWriting();
   const writing = () => find(view(), (node) => node.type === 'TemplateWriteSection');
   writing().props.form.onChooseTitle(null);
-  writing().props.form.onChangeTitle('Team/Requirements/New');
+  writing().props.form.onChangeTitle('Samples/Figures/New');
   const groups = writing().props.form.tables[0].groups;
   const rows = groups.find((group) => group.axis === 'row');
   const columns = groups.find((group) => group.axis === 'column');
-  writing().props.form.onChangeValue('REQ-001 · Sprint 2', 'Preserved value');
+  writing().props.form.onChangeValue('FIG-001 · Sample 2', 'Preserved value');
   writing().props.form.onChangeTable(rows.id);
   writing().props.form.onChangeTable(columns.id);
   const newCell = writing().props.form.tables[0].rows.at(-1).cells.at(-1).variables[0];
@@ -321,18 +321,18 @@ test('resizing both table axes survives preview transitions and saves exactly th
   writing().props.form.onChangeTable(rows.id, 0);
   writing().props.form.onChangeTable(columns.id, 0);
   const html = writing().props.templateHtml;
-  assert.match(html, /REQ-002/);
+  assert.match(html, /FIG-002/);
   assert.match(html, /<th>Review \| Result<\/th>/);
   assert.match(html, /Preserved value/);
   assert.match(html, /New intersection \| value/);
-  assert.doesNotMatch(html, /REQ-000|Sprint 1/);
+  assert.doesNotMatch(html, /FIG-000|Sample 1/);
   assert.equal((html.match(/<td>/g) || []).length, 6);
   writing().props.onPreview();
   find(view(), (node) => node.type === 'TemplatePreviewSection').props.onWriting();
   assert.equal(writing().props.templateHtml, html);
   await writing().props.onSave();
   assert.deepEqual(fixture.saved, [
-    { title: 'Team/Requirements/New', description: html, createOnly: true },
+    { title: 'Samples/Figures/New', description: html, createOnly: true },
   ]);
 });
 
@@ -342,7 +342,7 @@ test('writing toggles the body form and content preview exclusively while keepin
       ...candidate,
       markdown:
         candidate.markdown +
-        '\n\n| ID | Value |\n| --- | --- |\n| REQ-000 | {{Value 0}} |\n| REQ-001 | {{Value 1}} |',
+        '\n\n| ID | Value |\n| --- | --- |\n| FIG-000 | {{Value 0}} |\n| FIG-001 | {{Value 1}} |',
     },
   });
   const { TemplateItemScreen } = fixture.load('screens/TemplateItemScreen.tsx');
@@ -350,7 +350,7 @@ test('writing toggles the body form and content preview exclusively while keepin
   find(view(), (node) => node.type === 'TemplatePreviewSection').props.onWriting();
   const writing = () => find(view(), (node) => node.type === 'TemplateWriteSection');
   writing().props.form.onChooseTitle(null);
-  writing().props.form.onChangeTitle('Meetings/New');
+  writing().props.form.onChangeTitle('Shapes/New');
   const { TemplateWriteSection } = fixture.load('screens/TemplateWriteSection.tsx');
   const body = () => fixture.render(TemplateWriteSection, writing().props);
   const tab = (name) =>
@@ -372,7 +372,7 @@ test('writing toggles the body form and content preview exclusively while keepin
   );
   find(
     body(),
-    (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Agenda'
+    (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Vertices'
   ).props.onChangeText('Review decisions');
   const table = find(body(), (node) => node.type === 'TemplateTableForm');
   table.props.onChangeValue('Value 1', 'Kept cell');
@@ -385,14 +385,17 @@ test('writing toggles the body form and content preview exclusively while keepin
     undefined
   );
   assert.equal(
-    find(body(), (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Agenda'),
+    find(
+      body(),
+      (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Vertices'
+    ),
     undefined
   );
-  assert.equal(titleInput().props.value, 'Meetings/New');
+  assert.equal(titleInput().props.value, 'Shapes/New');
   let preview = find(body(), (node) => node.type === 'EditorViewer');
   assert.match(preview.props.value, /Review decisions/);
   assert.match(preview.props.value, /Kept cell/);
-  assert.match(preview.props.value, /REQ-002/);
+  assert.match(preview.props.value, /FIG-002/);
   assert.equal(preview.props.autoResize, true);
   const viewer = preview;
   tab('Content template').props.onPress();
@@ -406,8 +409,10 @@ test('writing toggles the body form and content preview exclusively while keepin
   );
   assert.equal(hidden.props.accessibilityElementsHidden, true);
   assert.equal(
-    find(body(), (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Agenda')
-      .props.value,
+    find(
+      body(),
+      (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Vertices'
+    ).props.value,
     'Review decisions'
   );
   assert.equal(
@@ -424,7 +429,7 @@ test('writing toggles the body form and content preview exclusively while keepin
   tab('Content template').props.onPress();
   find(
     body(),
-    (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Agenda'
+    (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Vertices'
   ).props.onChangeText('Updated decisions');
   tab('Content preview').props.onPress();
   preview = find(body(), (node) => node.type === 'EditorViewer');
@@ -452,7 +457,7 @@ test('writing toggles the body form and content preview exclusively while keepin
   );
   await find(body(), (node) => node.type === 'CommonButton').props.onPress();
   assert.deepEqual(fixture.saved, [
-    { title: 'Meetings/New', description: preview.props.value, createOnly: true },
+    { title: 'Shapes/New', description: preview.props.value, createOnly: true },
   ]);
 });
 
@@ -488,10 +493,10 @@ test('a localized reason replaces the save button until every saving requirement
     body(),
     (node) => node.type === 'TextInput' && node.props.accessibilityLabel === ko['New note title']
   );
-  input.props.onChangeText('Team/Bad?Name');
+  input.props.onChangeText('Samples/Bad?Name');
   assert.match(reason(body()), /사용할 수 없는 문자/);
   assert.equal(save(body()), undefined);
-  input.props.onChangeText('Team/New');
+  input.props.onChangeText('Samples/New');
   assert.equal(reason(body()), undefined);
   assert.ok(save(body()));
   assert.match(reason(body({}, { busy: true })), /작업을 처리 중/);

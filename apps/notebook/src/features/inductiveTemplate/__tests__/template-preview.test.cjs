@@ -6,22 +6,22 @@ const { fillNoteTemplate } = loadTs('template.ts');
 const render = new MarkdownIt();
 
 test('preview reflects partial edits and clearing fields without changing the template', () => {
-  const markdown = '# {{title}}\n\nDate: {{Date}}\n\n{{Agenda}}';
+  const markdown = '# {{title}}\n\nDate: {{Date}}\n\n{{Vertices}}';
   assert.equal(
-    fillNoteTemplate(markdown, { Date: '2026-10-11', Agenda: '' }),
-    '# {{title}}\n\nDate: 2026-10-11\n\n{{Agenda}}'
+    fillNoteTemplate(markdown, { Date: '2026-10-11', Vertices: '' }),
+    '# {{title}}\n\nDate: 2026-10-11\n\n{{Vertices}}'
   );
   assert.match(
-    render.render(fillNoteTemplate(markdown, { Agenda: 'Review release' }, 'Meetings/Weekly')),
+    render.render(fillNoteTemplate(markdown, { Vertices: 'Review release' }, 'Shapes/Weekly')),
     /<h1>Weekly<\/h1>[\s\S]*Review release/
   );
-  assert.equal(fillNoteTemplate(markdown, { Date: '', Agenda: '' }, null), markdown);
+  assert.equal(fillNoteTemplate(markdown, { Date: '', Vertices: '' }, null), markdown);
 });
 
 test('resolved title uses only the literal note name and never substitutes twice', () => {
-  const markdown = '# {{title}}\n\n{{Agenda}}';
+  const markdown = '# {{title}}\n\n{{Vertices}}';
   const html = render.render(
-    fillNoteTemplate(markdown, { Agenda: '{{title}}', title: 'ignored' }, 'Team/[Java]_intro')
+    fillNoteTemplate(markdown, { Vertices: '{{title}}', title: 'ignored' }, 'Samples/[Java]_intro')
   );
   assert.match(html, /<h1>\[Java\]_intro<\/h1>/);
   assert.match(html, /<p>\{\{title\}\}<\/p>/);

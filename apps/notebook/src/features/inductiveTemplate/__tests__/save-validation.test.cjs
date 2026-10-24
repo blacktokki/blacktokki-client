@@ -14,13 +14,13 @@ const ko = require('../../../lang/ko.json');
 test('every blocked note path has a translated, specific explanation consistent with saving', () => {
   const cases = [
     ['', 'Enter a note title'],
-    ['Team/' + 'N'.repeat(240), '240 characters'],
-    ['Team/Bad?Name', 'unsupported characters'],
-    ['Team//New', 'empty folder'],
-    [' Team/New', 'spaces'],
-    ['Team/../New', '. or ..'],
-    ['Team/New.', 'end with a period'],
-    ['Team/CON.md', 'reserved'],
+    ['Samples/' + 'N'.repeat(240), '240 characters'],
+    ['Samples/Bad?Name', 'unsupported characters'],
+    ['Samples//New', 'empty folder'],
+    [' Samples/New', 'spaces'],
+    ['Samples/../New', '. or ..'],
+    ['Samples/New.', 'end with a period'],
+    ['Samples/CON.md', 'reserved'],
   ];
   for (const [title, detail] of cases) {
     const message = template.noteTitleIssue(title);
@@ -28,7 +28,7 @@ test('every blocked note path has a translated, specific explanation consistent 
     assert.equal(template.validNoteTitle(title), false);
     assert.ok(ko[message], 'Missing Korean translation: ' + message);
   }
-  for (const title of ['Team/새 노트', '.NET/Notes', 'Team/Name (2)', 'N'.repeat(240)]) {
+  for (const title of ['Samples/새 노트', '.NET/Notes', 'Samples/Name (2)', 'N'.repeat(240)]) {
     assert.equal(template.noteTitleIssue(title), undefined);
     assert.equal(template.validNoteTitle(title), true);
   }
@@ -37,8 +37,8 @@ test('every blocked note path has a translated, specific explanation consistent 
 test('required title fields identify missing and invalid inputs without rejecting valid embedded name fragments', () => {
   const title = {
     id: 'title',
-    path: 'Team',
-    pattern: 'Team/Report {{Date}}-{{Number}} draft',
+    path: 'Samples',
+    pattern: 'Samples/ShapeSet {{Date}}-{{Number}} draft',
     variables: ['Date', 'Number'],
     sourceTitles: [],
   };
@@ -59,7 +59,7 @@ test('required title fields identify missing and invalid inputs without rejectin
   });
   assert.equal(
     titleFromTemplate(title, { Date: '2026-10-17', Number: 'CON.' }),
-    'Team/Report 2026-10-17-CON. draft'
+    'Samples/ShapeSet 2026-10-17-CON. draft'
   );
 });
 

@@ -1,5 +1,10 @@
 import { Paragraph } from '../../components/HeaderSelectBar';
 import type { TemplateCandidate } from '../inductiveTemplate/types';
+import type {
+  AssociationContextKind,
+  RelationKeywordSource,
+  RelationObservation,
+} from './keywordRelation/types';
 
 // 1. Graph entity roles
 export type KnowledgeGraphEntityRole = 'CLASS' | 'INSTANCE';
@@ -11,8 +16,14 @@ export type KnowledgeGraphInstanceKind =
   | 'CONNECTED_PARAGRAPH'
   | 'EXTERNAL_LINK'
   | 'CONNECTED_EXTERNAL_LINK'
-  | 'TEMPLATE';
-export type KnowledgeGraphClassKind = 'NOTE' | 'BOARD_CARD' | 'EXTERNAL_LINK' | 'TEMPLATE_GROUP';
+  | 'TEMPLATE'
+  | 'KEYWORD';
+export type KnowledgeGraphClassKind =
+  | 'NOTE'
+  | 'BOARD_CARD'
+  | 'EXTERNAL_LINK'
+  | 'TEMPLATE_GROUP'
+  | 'KEYWORD_TYPE';
 export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD' | 'DERIVED';
 
 // 2. Note metadata (YAML frontmatter only)
@@ -47,7 +58,11 @@ export type KnowledgeGraphRelationType =
   | 'REFERENCES' // Document _NOTELINK (reference/citation)
   | 'EXTERNAL_REFERENCE' // Document -> external link individual
   | 'PART_OF' // Parent/Child document path hierarchy
-  | 'DERIVED_FROM'; // Automatically inferred template -> source document
+  | 'DERIVED_FROM' // Automatically inferred template -> source document
+  | 'KEYWORD_SOURCE'
+  | 'KEYWORD_GENERAL'
+  | 'KEYWORD_RELATION'
+  | 'KEYWORD_TYPE_RELATION';
 
 // 4. Axioms (Constraints, Validation)
 export type AxiomType =
@@ -82,6 +97,12 @@ export interface KnowledgeGraphParagraph extends Paragraph {
   section?: string;
 }
 
+export type KnowledgeGraphKeywordSource = Pick<
+  RelationKeywordSource,
+  'noteTitle' | 'section' | 'sectionPath'
+> &
+  Partial<Pick<RelationKeywordSource, 'kind' | 'href' | 'keyword'>>;
+
 export interface KnowledgeGraphNode {
   id: string;
   name: string;
@@ -97,6 +118,16 @@ export interface KnowledgeGraphNode {
   description?: string;
   /** Inferred content stays separate from original note YAML properties. */
   template?: TemplateCandidate;
+  keyword?: {
+    key: string;
+    type: string | null;
+    sources: KnowledgeGraphKeywordSource[];
+  };
+  keywordType?: {
+    key: string;
+    kind: 'entity-type' | 'entity-pattern';
+    sources: KnowledgeGraphKeywordSource[];
+  };
   properties: KnowledgeGraphDataProperties;
   x: number;
   y: number;
@@ -117,11 +148,21 @@ export interface KnowledgeGraphEdge {
   color?: string;
   targetSection?: string;
   propertyLabel?: string;
-}
-
-export interface KnowledgeGraphLinkEvidence {
-  label: string;
-  url: string;
+  /** False preserves source-order pairs without claiming a semantic arrow direction. */
+  directed?: boolean;
+  keywordRelation?: {
+    candidateId: string;
+    /** All contributing candidates when one pair/context edge merges several patterns. */
+    candidateIds?: string[];
+    associationContext?: AssociationContextKind;
+    score: number;
+    observations: number;
+  };
+  keywordTypeRelation?: {
+    score: number;
+    evidenceCount: number;
+    evidence: RelationObservation[];
+  };
 }
 
 export interface KnowledgeGraphData {

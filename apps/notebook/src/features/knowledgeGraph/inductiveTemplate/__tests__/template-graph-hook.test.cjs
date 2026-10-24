@@ -50,6 +50,11 @@ function fixture() {
           },
         ];
       },
+      useRef: (initial) => {
+        const index = stateIndex++;
+        if (!(index in state.slots)) state.slots[index] = { current: initial };
+        return state.slots[index];
+      },
       useMemo: (factory) => factory(),
       useEffect: (effect, deps) => {
         const index = effectIndex++;
@@ -194,6 +199,23 @@ test('base source updates refresh template data without generating any template 
     result = render();
     assert.equal(state.refetches, previous + 1);
     assert.equal(result.count, 1);
+  } finally {
+    close();
+  }
+});
+
+test('template overlays stay off until explicitly toggled', async () => {
+  const { render, tick, close } = fixture();
+  try {
+    render();
+    await tick();
+    let result = render();
+    assert.equal(result.mode, 'off');
+    result.toggle();
+    result = render();
+    assert.equal(result.mode, 'on');
+    result.toggle();
+    assert.equal(render().mode, 'off');
   } finally {
     close();
   }

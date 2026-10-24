@@ -9,9 +9,9 @@ const { discoverTemplates } = loadTs('discovery.ts', {
 });
 const { fillNoteTemplate } = loadTs('template.ts');
 const renderer = new MarkdownIt();
-const body = '<h2>Agenda</h2><p>private</p><h2>Actions</h2><p>secret</p>';
+const body = '<h2>Vertices</h2><p>private</p><h2>Edges</h2><p>secret</p>';
 const note = (name, title = '', level = 1) => ({
-  title: 'Meetings/' + name,
+  title: 'Shapes/' + name,
   description: (title ? `<h${level}>${title}</h${level}>` : '') + body,
 });
 const render = (notes) => {
@@ -25,9 +25,9 @@ test('title-less source bodies stay title-less in discovery, live preview and sa
   assert.ok(template);
   assert.doesNotMatch(template.markdown, /\{\{title\}\}/);
   const html = renderer.render(
-    fillNoteTemplate(template.markdown, { Agenda: 'Discuss', Actions: 'Proceed' }, 'Meetings/New')
+    fillNoteTemplate(template.markdown, { Vertices: 'Discuss', Edges: 'Proceed' }, 'Shapes/New')
   );
-  assert.match(html, /<h2>Agenda<\/h2>[\s\S]*Discuss[\s\S]*Proceed/);
+  assert.match(html, /<h2>Vertices<\/h2>[\s\S]*Discuss[\s\S]*Proceed/);
   assert.doesNotMatch(html, /<h1>|New|private|secret/);
 });
 
@@ -38,7 +38,7 @@ test('a supported source title is retained with its actual heading level and fil
       '<div class="yaml-frontmatter"><h1>ignored</h1></div><div>' + notes[0].description + '</div>';
     const markdown = render(notes);
     assert.ok(markdown.startsWith('#'.repeat(level) + ' {{title}}\n\n'));
-    const html = renderer.render(fillNoteTemplate(markdown, {}, 'Meetings/[New]_note'));
+    const html = renderer.render(fillNoteTemplate(markdown, {}, 'Shapes/[New]_note'));
     assert.ok(html.startsWith(`<h${level}>[New]_note</h${level}>`));
   }
 });
@@ -71,7 +71,7 @@ test('whole-note tables retain their source title and section context', () => {
   }));
   const markdown = render(notes);
   assert.match(markdown, /^# \{\{title\}\}/);
-  assert.match(markdown, /## Agenda[\s\S]*## Actions[\s\S]*\| Topic \| Result \|/);
+  assert.match(markdown, /## Vertices[\s\S]*## Edges[\s\S]*\| Topic \| Result \|/);
   assert.doesNotMatch(markdown, /private|secret/);
 });
 

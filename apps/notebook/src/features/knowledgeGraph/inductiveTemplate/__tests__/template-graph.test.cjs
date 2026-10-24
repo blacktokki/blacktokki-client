@@ -133,13 +133,13 @@ test('templates match reference arrows and groups retain the former template col
 
 test('templates and multi-member groups link to existing sources without changing the base graph', () => {
   const base = {
-    nodes: [node('one', 'Team/One'), node('two', 'Team/Two'), node('three', 'Other/Three')],
+    nodes: [node('one', 'Samples/One'), node('two', 'Samples/Two'), node('three', 'Other/Three')],
     edges: [],
     axioms: emptyAxioms,
   };
   const before = JSON.stringify(base);
-  const first = candidate('First', ['Team/One', 'Team/Two', 'Missing']);
-  const second = candidate('Second', ['Team/Two']);
+  const first = candidate('First', ['Samples/One', 'Samples/Two', 'Missing']);
+  const second = candidate('Second', ['Samples/Two']);
   const singleton = candidate('Single', ['Other/Three'], '## Result\n{{ Result }}');
   const groups = [
     { templates: [first, second], similarity: 1 },

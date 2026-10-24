@@ -5,6 +5,10 @@ import TurndownService from 'turndown';
 import { tables } from 'turndown-plugin-gfm';
 
 const markdownToHtml = markdownIt();
+const markdownToTokens = markdownIt({ html: true });
+
+/** Parse structural Markdown tokens, including inline HTML, without applying rendering plugins. */
+export const toToken = (markdownCode: string) => markdownToTokens.parse(markdownCode, {});
 
 markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];

@@ -64,6 +64,45 @@ compileFunction(code, ['require', 'module', 'exports'])(
   fixture.exports
 );
 const { getData, getValidationData } = fixture.exports;
+test('disabled validation does not schedule work and cancels already queued validation', async () => {
+  const load = require('../../knowledgeGraph/keywordRelation/__tests__/loadTs.cjs');
+  const harness = load.hookHarness();
+  const pages = [{ title: 'Synthetic validation source', description: 'Generated content' }];
+  const boards = [];
+  let checks = 0;
+  const useProblem = load('../../problem/useProblem.ts', {
+    ...dependencies,
+    react: harness.react,
+    '@blacktokki/account': { useAuthContext: () => ({ auth: {} }) },
+    '../../hooks/useNoteStorage': {
+      ...dependencies['../../hooks/useNoteStorage'],
+      useNotePages: () => ({ data: pages, isLoading: false }),
+    },
+    '../../hooks/useBoardStorage': { useBoardPages: () => ({ data: boards, isLoading: false }) },
+    '../../hooks/useUsageMode': { useUsageMode: () => ({}) },
+    '../../components/SearchBar': {
+      getLinks: () => {
+        checks++;
+        return [];
+      },
+      titleFormat: () => '',
+    },
+  }).default;
+  const render = (enabled) =>
+    harness.render(() => useProblem(1, { validationOnly: true, enabled }));
+  assert.equal(render(false).isLoading, false);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(checks, 0);
+  assert.equal(render(true).isLoading, true);
+  render(false);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(checks, 0, 'disabling must cancel the pending validation timer');
+  render(true);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(checks > 0);
+  assert.equal(render(true).isLoading, false);
+  harness.unmount();
+});
 const note = (title, links = [], description = 'body') => ({
   title,
   links,

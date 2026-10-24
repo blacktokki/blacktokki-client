@@ -1,10 +1,9 @@
 import type { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 
-/** External links gain the connected variant only through a relation beyond their base links and class. */
+/** External links gain the connected variant through a relation beyond their source references. */
 export const findConnectedExternalLinkIds = (
   nodes: KnowledgeGraphNode[],
-  edges: KnowledgeGraphEdge[],
-  externalLinkClassId: string
+  edges: KnowledgeGraphEdge[]
 ): string[] => {
   const linkIds = new Set(
     nodes
@@ -19,7 +18,6 @@ export const findConnectedExternalLinkIds = (
 
   for (const edge of edges) {
     if (edge.type === 'EXTERNAL_REFERENCE') continue;
-    if (edge.type === 'INSTANCE_OF' && edge.target === externalLinkClassId) continue;
     if (linkIds.has(edge.source)) connectedIds.add(edge.source);
     if (linkIds.has(edge.target)) connectedIds.add(edge.target);
   }

@@ -483,16 +483,17 @@ export const getValidationData = (pages: Content[], boards: Content[]) => {
   return records;
 };
 
-export default (delay?: number, options?: { validationOnly?: boolean }) => {
+export default (delay?: number, options?: { validationOnly?: boolean; enabled?: boolean }) => {
   const { auth } = useAuthContext();
   const { data: pages = [], isLoading } = useNotePages();
   const { data: boards = [], isLoading: isBoardLoading } = useBoardPages();
   const { notebook } = useUsageMode();
   const validationOnly = options?.validationOnly === true;
+  const enabled = options?.enabled !== false;
   const [data, setData] = useState<{ title: string; paragraph?: string; subtitles: string[] }[]>();
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
   useEffect(() => {
-    if (isLoading || isBoardLoading) return;
+    if (!enabled || isLoading || isBoardLoading) return;
     timeoutRef.current && clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setData(
@@ -505,6 +506,9 @@ export default (delay?: number, options?: { validationOnly?: boolean }) => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [pages, boards, auth.user, notebook, isLoading, isBoardLoading, validationOnly]);
-  return { data: data || [], isLoading: isLoading || isBoardLoading || data === undefined };
+  }, [pages, boards, auth.user, notebook, isLoading, isBoardLoading, validationOnly, enabled]);
+  return {
+    data: data || [],
+    isLoading: enabled && (isLoading || isBoardLoading || data === undefined),
+  };
 };

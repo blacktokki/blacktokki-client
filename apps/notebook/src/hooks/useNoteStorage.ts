@@ -3,6 +3,7 @@ import { useLangContext } from '@blacktokki/core';
 import { useIsFocused } from '@react-navigation/core';
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, QueryClient } from 'react-query';
+import type { UseQueryOptions } from 'react-query';
 
 import { useUsageMode } from './useUsageMode';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
@@ -85,25 +86,43 @@ export const saveContents = async (
   }
 };
 
-export const useNotePages = (targetNotebookId?: number | null) => {
+/** Share one source query across note views, analysis and template selectors. */
+export const useNotePages = <T = Content[]>(
+  targetNotebookId?: number | null,
+  options: Pick<
+    UseQueryOptions<Content[], unknown, T>,
+    'enabled' | 'select' | 'refetchInterval' | 'refetchOnWindowFocus'
+  > = {}
+) => {
   const { auth } = useAuthContext();
   const { usageMode, notebook } = useUsageMode();
   const currentNotebookId = notebook?.id || 0;
 
   const activeNotebookId = targetNotebookId !== undefined ? targetNotebookId : currentNotebookId;
 
-  return useQuery({
-    queryKey: ['pageContents', !auth.isLocal, usageMode, activeNotebookId],
+  return useQuery<Content[], unknown, T>({
+    queryKey: [
+      'pageContents',
+      !auth.isLocal,
+      usageMode,
+      activeNotebookId,
+      auth.isLocal ? null : auth.user?.id,
+    ],
     queryFn: async () => {
       const parentId = usageMode !== 'SIMPLE' ? activeNotebookId || 0 : 0;
       const contents = await getContents({
         isOnline: !auth.isLocal,
         types: ['NOTE'],
         parentId,
+        throwOnError: true,
       });
       return contents;
     },
-    refetchInterval: DEFAULT_POLLING_INTERVAL,
+    enabled: options.enabled,
+    select: options.select,
+    staleTime: DEFAULT_POLLING_INTERVAL,
+    refetchInterval: options.refetchInterval ?? DEFAULT_POLLING_INTERVAL,
+    refetchOnWindowFocus: options.refetchOnWindowFocus,
   });
 };
 

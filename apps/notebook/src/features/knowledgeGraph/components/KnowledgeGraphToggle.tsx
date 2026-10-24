@@ -1,16 +1,15 @@
 import { Text } from '@blacktokki/core';
 import React, { useState } from 'react';
-import { Platform, TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { templateGraphStyles as styles } from './styles';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { templateGraphStyles as styles } from '../inductiveTemplate/styles';
 
-interface TemplateGraphBadgeProps {
+interface KnowledgeGraphToggleProps {
   active: boolean;
   label: string;
   icon: string;
-  isDark: boolean;
   activeBackgroundColor?: string;
   activeBorderColor?: string;
   activeTextColor?: string;
@@ -18,15 +17,16 @@ interface TemplateGraphBadgeProps {
   inactiveBorderColor?: string;
   accessibilityLabel?: string;
   working?: boolean;
+  disabled?: boolean;
+  progress?: number;
   onToggle: () => void;
 }
 
-/** Match existing graph badges while keeping template-specific UI in this feature. */
-export const TemplateGraphBadge: React.FC<TemplateGraphBadgeProps> = ({
+/** Shared graph-overlay control with focus and pressed-state feedback. */
+export const KnowledgeGraphToggle: React.FC<KnowledgeGraphToggleProps> = ({
   active,
   label,
   icon,
-  isDark,
   activeBackgroundColor,
   activeBorderColor,
   activeTextColor,
@@ -34,46 +34,59 @@ export const TemplateGraphBadge: React.FC<TemplateGraphBadgeProps> = ({
   inactiveBorderColor = 'transparent',
   accessibilityLabel = label,
   working = false,
+  disabled = false,
+  progress,
   onToggle,
 }) => {
   const { commonStyles } = useNotebookTheme();
   const [focused, setFocused] = useState(false);
   const textColor = active ? activeTextColor : inactiveTextColor;
+  const ratio = progress === undefined ? undefined : Math.min(1, Math.max(0, progress));
+  const percent = ratio === undefined ? undefined : Math.round(ratio * 100);
   return (
     <TouchableOpacity
       style={[
         styles.toggle,
         {
-          backgroundColor: active
-            ? activeBackgroundColor
-            : isDark
-            ? 'rgba(255,255,255,0.08)'
-            : 'rgba(0,0,0,0.06)',
+          backgroundColor: active ? activeBackgroundColor : commonStyles.card?.backgroundColor,
           borderColor: active ? activeBorderColor : inactiveBorderColor,
         },
         Platform.OS === 'web' && styles.webButton,
         focused && commonStyles.focusedBorder,
       ]}
-      onPress={onToggle}
+      activeOpacity={1}
+      disabled={disabled}
+      onPress={disabled ? undefined : onToggle}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       {...(Platform.OS === 'web'
         ? {
             onClick: (event: any) => {
               event.stopPropagation();
-              onToggle();
+              if (!disabled) onToggle();
             },
             onPointerDown: (event: any) => event.stopPropagation(),
           }
         : {})}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected: active, busy: working }}
+      accessibilityState={{ selected: active, busy: working, disabled }}
+      accessibilityValue={percent === undefined ? undefined : { min: 0, max: 100, now: percent }}
       aria-pressed={active}
     >
+      {ratio !== undefined && (
+        <View
+          pointerEvents="none"
+          accessible={false}
+          style={[
+            styles.progressFill,
+            { width: `${ratio * 100}%`, backgroundColor: activeBackgroundColor },
+          ]}
+        />
+      )}
       <Icon name={icon} size={11} color={textColor} style={styles.icon} />
       <Text style={[styles.toggleText, { color: textColor, fontWeight: active ? 'bold' : '600' }]}>
-        {label}
+        {label + (percent === undefined ? '' : ` (${percent}%)`)}
       </Text>
     </TouchableOpacity>
   );

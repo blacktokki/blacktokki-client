@@ -419,11 +419,14 @@ test('shared evidence scopes preserve traversal order through cyclic and multi-b
       };
       const found = resolve(primary);
       const expected = [
-        ...(block.start ? [source.id + '@0:' + block.start] : []),
-        ...(block.end < source.text.length
-          ? [source.id + '@' + block.end + ':' + source.text.length]
-          : []),
-        ...(source.id === 's' ? ['t@10:20', 't@0:10', 't@20:40'] : ['s@0:30', 's@30:40']),
+        ...source.blocks
+          .filter((range) => range !== block)
+          .map((range) => source.id + '@' + range.start + ':' + range.end),
+        ...sources
+          .find((other) => other !== source)
+          .blocks.map(
+            (range) => (source.id === 's' ? 't' : 's') + '@' + range.start + ':' + range.end
+          ),
       ];
       assert.deepEqual(
         found.context.map((citation) => citation.id),
@@ -435,6 +438,67 @@ test('shared evidence scopes preserve traversal order through cyclic and multi-b
         assert.equal(citation.text, original.text.slice(citation.start, citation.end));
       }
     }
+  }
+});
+
+test('shared source partitions remove overlapping quotes while relationship claims and their path references stay distinct', () => {
+  const first = 'Alpha requires Beta only after approval.';
+  const second = 'Beta excludes Gamma under the recorded condition.';
+  const text = 'Heading\n' + first + '\n\n' + second;
+  const start = text.indexOf(first),
+    next = text.indexOf(second);
+  const source = {
+    id: 's',
+    title: 'Conditions',
+    text,
+    blocks: [
+      { start: 0, end: 7 },
+      { start, end: start + first.length },
+      { start: next, end: text.length },
+    ],
+    scopes: [
+      { start: 0, end: text.length },
+      { start: 7, end: text.length },
+    ],
+  };
+  const items = ['Alpha', 'Beta', 'Gamma'].map((id) => node(id));
+  const relations = [
+    {
+      ...edge('requires', 'Alpha', 'Beta'),
+      evidence: [{ sourceId: 's', start, end: start + first.length }],
+    },
+    {
+      ...edge('excludes', 'Beta', 'Gamma'),
+      evidence: [{ sourceId: 's', start: next, end: text.length }],
+    },
+  ];
+  const found = result(
+    items,
+    relations,
+    [source],
+    [{ nodes: ['Alpha', 'Beta', 'Gamma'], edges: ['requires', 'excludes'] }]
+  );
+  found.plan.terms = ['alpha', 'gamma'];
+  for (const budget of [16000, 32000, 64000]) {
+    const context = buildGraphSearchContext(found, budget);
+    const ordered = [...context.citations].sort((a, b) => a.start - b.start);
+    for (let index = 1; index < ordered.length; index++)
+      assert.ok(ordered[index - 1].end <= ordered[index].start);
+    for (const [id, claim] of [
+      ['requires', first],
+      ['excludes', second],
+    ])
+      assert.ok(citedBy(context, id)[0].text.includes(claim));
+    const path = context.entries.find((entry) => entry.kind === 'path');
+    for (const id of relations.map((edge) => edge.id))
+      for (const citation of citedBy(context, id))
+        assert.ok(path.citationIds.includes(citation.id));
+    assert.equal(
+      (context.text.match(/^### \d+\. /gm) || []).length,
+      1,
+      'one source heading serves all numbered source parts'
+    );
+    validRanges(context, [source]);
   }
 });
 

@@ -14,6 +14,43 @@ const {
 ]);
 const { createEvidenceText } = load('search/evidence.ts');
 
+test('immutable prepared search records validate by identity while score changes still invalidate cached context', () => {
+  let reads = 0;
+  const sourceIds = ['s'];
+  const item = {
+    id: 'a',
+    name: 'Alpha',
+    kind: 'note',
+    typeLabel: 'Note',
+    body: '',
+    get sourceIds() {
+      reads++;
+      return sourceIds;
+    },
+  };
+  const source = { id: 's', title: 'Record', text: 'Alpha retains the original condition.' };
+  graphSourceMetadataIdentity(item, true);
+  graphSourceMetadataIdentity(source, true);
+  const found = {
+    scope: 'prepared-records',
+    revision: 'same',
+    query: 'Alpha',
+    plan: { terms: ['alpha'], intent: 'related', maxHops: 1 },
+    nodes: [{ node: item, score: 100 }],
+    edges: [],
+    paths: [],
+    sources: [source],
+    limited: false,
+  };
+  const first = buildGraphSearchContext(found, 16000);
+  const initial = reads;
+  assert.strictEqual(buildGraphSearchContext(found, 16000), first);
+  assert.equal(reads, initial, 'cached validation does not traverse prepared provenance arrays');
+  found.nodes[0].score = 80;
+  assert.notStrictEqual(buildGraphSearchContext(found, 16000), first);
+  assert.equal(Object.isFrozen(sourceIds), true);
+});
+
 test('prepared table coordinates are reused without walking cells on repeated context requests', () => {
   let reads = 0;
   const row = {
@@ -245,6 +282,73 @@ test('formatting of standalone items is bounded by the available budget while du
   };
   const repeated = buildGraphSearchContext(duplicate, 1000);
   assert.equal(repeated.entries.filter((entry) => entry.kind === 'node').length, 10);
+});
+
+test('remaining output space rejects optional source formatting before preparing an unaffordable quotation', () => {
+  const first = 'First condition remains mandatory. ' + 'x'.repeat(1750);
+  const second = 'Second condition remains mandatory. ' + 'y'.repeat(1750);
+  const text = first + '\n\n' + second;
+  const source = {
+    id: 's',
+    title: 'Additional record',
+    text,
+    blocks: [
+      { start: 0, end: first.length },
+      { start: first.length + 2, end: text.length },
+    ],
+    scopes: [{ start: 0, end: text.length }],
+  };
+  const found = {
+    scope: 'remaining-budget',
+    revision: 'same',
+    query: 'Alpha',
+    plan: { terms: ['alpha'], intent: 'related', maxHops: 1 },
+    nodes: [
+      {
+        node: {
+          id: 'a',
+          name: 'Alpha',
+          kind: 'note',
+          typeLabel: 'Note',
+          body: JSON.stringify({ Detail: 'z'.repeat(14000) }),
+          sourceIds: [],
+        },
+        score: 100,
+      },
+      {
+        node: {
+          id: 'b',
+          name: 'Beta',
+          kind: 'note',
+          typeLabel: 'Note',
+          body: '',
+          sourceIds: ['s'],
+        },
+        score: 10,
+      },
+    ],
+    edges: [],
+    paths: [],
+    sources: [source],
+    limited: false,
+  };
+  const split = String.prototype.split;
+  let formatted = 0;
+  String.prototype.split = function (...args) {
+    if (String(this) === first || String(this) === second) formatted++;
+    return split.apply(this, args);
+  };
+  try {
+    const small = buildGraphSearchContext(found, 16000);
+    assert.equal(formatted, 0);
+    assert.ok(small.text.includes('z'.repeat(1000)));
+    const large = buildGraphSearchContext(found, 32000);
+    assert.ok(formatted > 0);
+    assert.ok(large.citations.some((c) => c.text === first));
+    assert.ok(large.citations.some((c) => c.text === second));
+  } finally {
+    String.prototype.split = split;
+  }
 });
 
 test('optional provenance is deferred before scanning a source when even its reference cannot fit', () => {
@@ -814,8 +918,8 @@ test('shared multi-paragraph evidence is evaluated as one bundle instead of all 
   t.diagnostic(`48 shared paragraphs: ${Math.round(performance.now() - started)} ms`);
   assert.ok(performance.now() - started < 5000, 'shared evidence must finish within five seconds');
   assert.ok(
-    context.citations.length < 48,
-    'adjacent context does not need one quotation per paragraph'
+    (context.text.match(/^### \d+\. /gm) || []).length === 1,
+    'adjacent source parts share one source heading while retaining their numbered ranges'
   );
   assert.equal(context.entries.filter((entry) => entry.kind === 'edge').length, 3);
   assert.equal(context.entries.filter((entry) => entry.kind === 'path').length, 1);

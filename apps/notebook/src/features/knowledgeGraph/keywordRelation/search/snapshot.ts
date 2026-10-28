@@ -104,7 +104,7 @@ export async function graphSearchInputRevision(
   return revision;
 }
 
-/** Build a text-only, scoped inventory. Rendering flags and layout coordinates never enter it. */
+/** Build an immutable text inventory; rendering flags and layout coordinates never enter it. */
 export async function createGraphSearchSnapshot({
   graph,
   scope,
@@ -388,8 +388,14 @@ export async function createGraphSearchSnapshot({
   const ids = new Set(keptNodes.map((node) => node.id));
   const keptEdges = edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target));
   const usedSources = new Set<string>();
-  for (const node of keptNodes) for (const id of node.sourceIds) usedSources.add(id);
-  for (const edge of keptEdges) for (const id of edge.sourceIds) usedSources.add(id);
+  for (const node of keptNodes) {
+    for (const id of node.sourceIds) usedSources.add(id);
+    graphSourceMetadataIdentity(node, true);
+  }
+  for (const edge of keptEdges) {
+    for (const id of edge.sourceIds) usedSources.add(id);
+    graphSourceMetadataIdentity(edge, true);
+  }
   for (const id of usedSources) {
     const origin = sources.get(id)?.origin;
     if (origin) usedSources.add(origin.sourceId);
@@ -401,7 +407,11 @@ export async function createGraphSearchSnapshot({
     scope,
     nodes: keptNodes,
     edges: keptEdges,
-    sources: [...sources.values()].filter((source) => usedSources.has(source.id)),
+    sources: [...sources.values()].filter((source) => {
+      if (!usedSources.has(source.id)) return false;
+      graphSourceMetadataIdentity(source, true);
+      return true;
+    }),
     coverage,
   };
   const revision = await relationCacheHash(JSON.stringify(data));

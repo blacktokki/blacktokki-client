@@ -751,7 +751,7 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
       blocks: EvidenceRange[];
       scopes: EvidenceRange[];
       index: ReturnType<typeof createScopeIndex>;
-      tables?: ReturnType<typeof createScopeIndex>;
+      parts?: GraphContextCitation[];
     }
   >();
   const navigationRanges = new Map<string, { ranges: EvidenceRange[]; counts: number[] }>();
@@ -808,26 +808,25 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
     };
     return graphNonWhitespaceLength(source, start, end) - before(end) + before(start);
   };
-  const cache = new Map<
-    string,
-    {
-      context: GraphContextCitation[];
-      unresolved: boolean;
-      bundleIdentity?: object;
-      minimumCharacters?: number;
-      hasBody: () => boolean;
-    }
-  >();
-  const blockIdentities = new Map<string, Set<string>>();
-  const scopeBundles = new Map<
-    string,
-    {
-      citations: GraphContextCitation[];
-      ids: Set<string>;
-      unresolved: boolean;
-      hasBody: () => boolean;
-    }
-  >();
+  type Bundle = {
+    citations: GraphContextCitation[];
+    byId: Map<string, GraphContextCitation>;
+    unresolved: boolean;
+    minimumCharacters: number;
+    hasBody: () => boolean;
+    selections: Map<string, Context>;
+  };
+  type Context = {
+    primary?: GraphContextCitation;
+    bundle?: GraphContextCitation[];
+    context: GraphContextCitation[];
+    unresolved: boolean;
+    bundleIdentity?: object;
+    minimumCharacters?: number;
+    hasBody: () => boolean;
+  };
+  const cache = new Map<string, Context>();
+  const scopeBundles = new Map<string, Bundle>();
   const structureFor = (source: GraphSource) => {
     let structure = structures.get(source.id);
     if (!structure) {
@@ -836,32 +835,85 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
         blocks: source.blocks || graphTextBlocks(source.text),
         scopes,
         index: createScopeIndex(scopes),
-        ...(source.tables?.length && { tables: createScopeIndex(source.tables) }),
       };
       structures.set(source.id, structure);
-      blockIdentities.set(
-        source.id,
-        new Set(structure.blocks.map((block) => block.start + ':' + block.end))
-      );
     }
     return structure;
   };
-  type ContextJob = { source: GraphSource; item: EvidenceRange; regions: EvidenceRange[] };
+  /** One nonoverlapping source partition is shared by all scopes and relationship claims. */
+  const partsFor = (source: GraphSource) => {
+    const structure = structureFor(source);
+    if (structure.parts) return structure.parts;
+    const parts: GraphContextCitation[] = [];
+    const add = (start: number, end: number) => {
+      if (end <= start || !/\S/u.test(source.text.slice(start, end))) return;
+      parts.push({
+        ...source,
+        start,
+        end,
+        sourceId: source.id,
+        id: source.id + '@' + start + ':' + end,
+        text: source.text.slice(start, end),
+      });
+    };
+    let end = 0;
+    for (const block of [...structure.blocks].sort((a, b) => a.start - b.start || b.end - a.end)) {
+      add(end, block.start);
+      add(Math.max(end, block.start), block.end);
+      end = Math.max(end, block.end);
+    }
+    add(end, source.text.length);
+    structure.parts = parts;
+    return parts;
+  };
+  const fromBundle = (primary: GraphContextCitation, bundle: Bundle): Context => {
+    let selected = bundle.byId.get(primary.id);
+    if (!selected) {
+      let overlap = 0;
+      for (const citation of bundle.citations) {
+        if (citation.sourceId !== primary.sourceId) continue;
+        const size = Math.min(citation.end, primary.end) - Math.max(citation.start, primary.start);
+        if (size > overlap) {
+          selected = citation;
+          overlap = size;
+        }
+      }
+    }
+    selected ||= primary;
+    const cached = bundle.selections.get(selected.id);
+    if (cached) return cached;
+    const context = bundle.citations.filter((citation) => citation.id !== selected.id);
+    const result = {
+      primary: selected,
+      bundle: [selected, ...context],
+      context,
+      unresolved: bundle.unresolved,
+      minimumCharacters: bundle.minimumCharacters,
+      bundleIdentity: bundle,
+      hasBody: bundle.hasBody,
+    };
+    bundle.selections.set(selected.id, result);
+    return result;
+  };
+  type ContextJob = { source: GraphSource; regions: EvidenceRange[] };
   const scopeMinimums = new Map<
     string,
-    { minimumCharacters: number; unresolved: boolean; jobs: ContextJob[]; hasBody: () => boolean }
+    {
+      minimumCharacters: number;
+      unresolved: boolean;
+      jobs: ContextJob[];
+      coverage: Map<string, EvidenceRange[]>;
+      hasBody: () => boolean;
+    }
   >();
   return (primary: GraphContextCitation, maxCharacters = Infinity) => {
     const cached = cache.get(primary.id);
     if (cached) return cached;
     const original = sources.get(primary.sourceId);
-    let bundleKey: string | undefined;
     let minimumKey: string | undefined;
-    let primaryScope: EvidenceRange | undefined;
     if (original) {
       const structure = structureFor(original);
       const parents = structure.index.parents(primary);
-      primaryScope = structure.scopes[parents[0]] || { start: 0, end: original.text.length };
       minimumKey = JSON.stringify([original.id, parents]);
       const minimum = scopeMinimums.get(minimumKey);
       if (minimum && minimum.minimumCharacters > maxCharacters)
@@ -871,29 +923,18 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
           hasBody: minimum.hasBody,
           context: [],
         };
-      if (blockIdentities.get(original.id)!.has(primary.start + ':' + primary.end)) {
-        bundleKey = minimumKey;
-        const bundle = scopeBundles.get(bundleKey);
-        if (bundle?.ids.has(primary.id)) {
-          const result = {
-            context: bundle.citations.filter((citation) => citation.id !== primary.id),
-            unresolved: bundle.unresolved,
-            bundleIdentity: bundle,
-            hasBody: bundle.hasBody,
-          };
-          cache.set(primary.id, result);
-          return result;
-        }
+      const bundle = scopeBundles.get(minimumKey);
+      if (bundle) {
+        const result = fromBundle(primary, bundle);
+        cache.set(primary.id, result);
+        return result;
       }
     }
-    const citations = new Map<string, GraphContextCitation>([[primary.id, primary]]);
     const metadata = minimumKey && scopeMinimums.get(minimumKey);
     const visited = new Set<string>();
     const queue = [{ sourceId: primary.sourceId, start: primary.start, end: primary.end }];
     let unresolved = metadata ? metadata.unresolved : false;
-    const jobs: ContextJob[] = metadata
-      ? metadata.jobs.map((job, index) => (index ? job : { ...job, item: primary }))
-      : [];
+    const jobs: ContextJob[] = metadata ? metadata.jobs : [];
     for (let index = 0; !metadata && index < queue.length; index++) {
       const item = queue[index];
       const source = sources.get(item.sourceId);
@@ -908,7 +949,7 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
       if (visited.has(identity)) continue;
       visited.add(identity);
       const regions = [scope, ...parents.slice(1).map((id) => structure.index.introduction(id))];
-      jobs.push({ source, item, regions });
+      jobs.push({ source, regions });
       for (const reference of source.references || []) {
         if (
           !reference.internal ||
@@ -929,101 +970,68 @@ export function createEvidenceContext(sources: Map<string, GraphSource>) {
               (range) => range.end > range.start && bodyLength(source, range.start, range.end) > 0
             )
           ));
-    const covered = new Map<string, EvidenceRange[]>();
+    const covered = metadata ? metadata.coverage : new Map<string, EvidenceRange[]>();
     for (const job of metadata ? [] : jobs) {
       const ranges = covered.get(job.source.id) || [];
       ranges.push(...job.regions);
       covered.set(job.source.id, ranges);
     }
-    for (const [sourceId, ranges] of covered) {
+    for (const [sourceId, ranges] of metadata ? [] : covered) {
       const ordered = ranges
         .filter((range) => range.end > range.start)
         .sort((a, b) => a.start - b.start);
       let end = 0;
+      const merged: EvidenceRange[] = [];
       for (const range of ordered) {
         const start = Math.max(end, range.start);
         if (range.end > start) {
           minimumCharacters += graphNonWhitespaceLength(sources.get(sourceId)!, start, range.end);
         }
         end = Math.max(end, range.end);
+        const previous = merged.at(-1);
+        if (previous && previous.end >= range.start)
+          previous.end = Math.max(previous.end, range.end);
+        else merged.push({ start: range.start, end: range.end });
       }
+      covered.set(sourceId, merged);
     }
     if (minimumKey && !metadata)
-      scopeMinimums.set(minimumKey, { minimumCharacters, unresolved, jobs, hasBody });
+      scopeMinimums.set(minimumKey, {
+        minimumCharacters,
+        unresolved,
+        jobs,
+        coverage: covered,
+        hasBody,
+      });
     if (minimumCharacters > maxCharacters)
       return { context: [], unresolved, minimumCharacters, hasBody };
-    for (const [index, { source, item, regions }] of jobs.entries()) {
-      const add = ({ start, end }: EvidenceRange) => {
-        // A partial table cannot retain column ownership; keep its original complete coordinates.
-        const index = structureFor(source).tables;
-        if (index && end > start) {
-          const first = index.parents({ start, end: start + 1 }).at(-1);
-          const last = index.parents({ start: end - 1, end }).at(-1);
-          if (first !== undefined) start = Math.min(start, source.tables![first].start);
-          if (last !== undefined) end = Math.max(end, source.tables![last].end);
+    const byId = new Map<string, GraphContextCitation>();
+    for (const [sourceId, ranges] of covered) {
+      const source = sources.get(sourceId);
+      if (!source) continue;
+      const parts = partsFor(source);
+      for (const range of ranges) {
+        let low = 0,
+          high = parts.length;
+        while (low < high) {
+          const middle = (low + high) >>> 1;
+          if (parts[middle].end <= range.start) low = middle + 1;
+          else high = middle;
         }
-        if (end <= start || !/\S/u.test(source.text.slice(start, end))) return;
-        for (const citation of citations.values())
-          if (citation.sourceId === source.id && citation.start <= start && citation.end >= end)
-            return;
-        const id = source.id + '@' + start + ':' + end;
-        citations.set(id, {
-          ...source,
-          start,
-          end,
-          sourceId: source.id,
-          id,
-          text: source.text.slice(start, end),
-        });
-      };
-      if (index) add(item);
-      for (const region of regions) {
-        // Preserve the primary claim separately; adjacent context keeps its original span.
-        if (region.start < item.start)
-          add({ start: region.start, end: Math.min(region.end, item.start) });
-        if (region.end > item.end)
-          add({ start: Math.max(region.start, item.end), end: region.end });
+        for (let index = low; index < parts.length && parts[index].start < range.end; index++)
+          byId.set(parts[index].id, parts[index]);
       }
     }
-    const result: {
-      context: GraphContextCitation[];
-      unresolved: boolean;
-      bundleIdentity?: object;
-      minimumCharacters?: number;
-      hasBody: () => boolean;
-    } = {
-      context: [...citations.values()].filter((citation) => citation.id !== primary.id),
+    const bundle = {
+      citations: [...byId.values()],
+      byId,
       unresolved,
       minimumCharacters,
       hasBody,
+      selections: new Map<string, Context>(),
     };
-    if (bundleKey && primaryScope) {
-      let index = 0;
-      while (index < result.context.length) {
-        const citation = result.context[index];
-        if (
-          citation.sourceId !== primary.sourceId ||
-          citation.start < primaryScope.start ||
-          citation.end > primaryScope.end ||
-          citation.start >= primary.end
-        )
-          break;
-        index++;
-      }
-      const ids = new Set([primary.id, ...result.context.map((citation) => citation.id)]);
-      let bundle = scopeBundles.get(bundleKey);
-      if (!bundle) {
-        bundle = {
-          citations: [...result.context.slice(0, index), primary, ...result.context.slice(index)],
-          ids,
-          unresolved,
-          hasBody,
-        };
-        scopeBundles.set(bundleKey, bundle);
-      }
-      if (bundle.ids.size === ids.size && [...ids].every((id) => bundle!.ids.has(id)))
-        result.bundleIdentity = bundle;
-    }
+    if (minimumKey) scopeBundles.set(minimumKey, bundle);
+    const result = fromBundle(primary, bundle);
     cache.set(primary.id, result);
     return result;
   };

@@ -8,15 +8,27 @@ import type {
 export const normalizeGraphQuery = (text: string) =>
   text.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 
+const nameTermPositions = new WeakMap<Map<string, string[]>, Map<string, Map<string, number>>>();
+
 /** Index literal name components once; query subjects may also occur inside longer titles. */
 export function indexQueryNameTerms(names: Map<string, string[]>) {
   const terms = new Map<string, string[]>();
-  for (const [name, ids] of names)
-    for (const term of new Set(name.match(/[\p{L}\p{M}\p{N}_]+/gu) || [])) {
+  const positions = new Map<string, Map<string, number>>();
+  for (const [name, ids] of names) {
+    const seen = new Set<string>();
+    for (const match of name.matchAll(/[\p{L}\p{M}\p{N}_]+/gu)) {
+      const term = match[0];
+      if (seen.has(term)) continue;
+      seen.add(term);
       const found = terms.get(term);
       if (found) found.push(...ids);
       else terms.set(term, [...ids]);
+      let offsets = positions.get(term);
+      if (!offsets) positions.set(term, (offsets = new Map()));
+      for (const id of ids) offsets.set(id, match.index! + term.length);
     }
+  }
+  nameTermPositions.set(terms, positions);
   return terms;
 }
 
@@ -56,19 +68,51 @@ export function resolveQueryNames(
     mentions.push({ ...span, ids: names.get(span.name)! });
     end = span.end;
   }
-  // A component already used to describe a named subject remains a search qualifier.
-  // Only complete name mentions can independently override that contextual reading.
-  const described = new Set(
-    [...selected].flatMap((name) =>
-      (name.match(/[\p{L}\p{M}\p{N}_]+/gu) || []).flatMap((term) => nameTerms.get(term) || [])
-    )
-  );
+  // A later title component can qualify an explicit name. A preceding subject is
+  // not a qualifier merely because a candidate also contains the later name.
+  let positions = nameTermPositions.get(nameTerms);
+  if (!positions) {
+    positions = nameTermPositions.get(indexQueryNameTerms(names))!;
+    nameTermPositions.set(nameTerms, positions);
+  }
+  const described = new Map<string, number>();
+  for (const name of selected)
+    for (const term of name.match(/[\p{L}\p{M}\p{N}_]+/gu) || [])
+      for (const [id, end] of positions.get(term) || [])
+        described.set(id, Math.min(described.get(id) ?? Infinity, end));
+  const queryWords = new Set(words.map((word) => word[0]));
+  const coverage = new Map<string, number>();
+  const coverageFor = (id: string) => {
+    let count = coverage.get(id);
+    if (count === undefined) {
+      count = 0;
+      for (const word of queryWords) if (positions!.get(word)?.has(id)) count++;
+      coverage.set(id, count);
+    }
+    return count;
+  };
   for (const token of words) {
     const start = token.index!;
     const end = start + token[0].length;
     if (mentions.some((mention) => mention.start <= start && mention.end >= end)) continue;
     const ids = nameTerms.get(token[0]);
-    if (ids?.length && !ids.some((id) => described.has(id))) mentions.push({ start, end, ids });
+    if (!ids?.length) continue;
+    const qualifies = (id: string) => {
+      const prefix = described.get(id);
+      const position = positions!.get(token[0])?.get(id);
+      return prefix !== undefined && position !== undefined && prefix <= position - token[0].length;
+    };
+    if (ids.some(qualifies)) {
+      let independent = 0,
+        qualifier = 0;
+      for (const id of ids) {
+        const count = coverageFor(id);
+        if (qualifies(id)) qualifier = Math.max(qualifier, count);
+        else independent = Math.max(independent, count);
+      }
+      if (independent < qualifier) continue;
+    }
+    mentions.push({ start, end, ids });
   }
   mentions.sort((a, b) => a.start - b.start);
   const seen = new Set<string>();

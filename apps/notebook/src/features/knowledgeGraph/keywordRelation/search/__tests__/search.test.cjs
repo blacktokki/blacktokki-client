@@ -1093,6 +1093,75 @@ describe('Search retrieval', () => {
     }
   });
 
+  test('an uncovered subject survives later literal components in the same indexed title and receives its own evidence', async () => {
+    for (const [subject, first, second] of [
+      ['Beacon', 'Build', 'Schedule'],
+      ['標本', '作成', '予定'],
+      ['Σήμα', 'Έργο', 'Χρόνος'],
+    ]) {
+      const data = snapshot([
+        node('subject', '[Project] ' + subject),
+        node('overlapping-prefix', '[' + first + '] ' + subject),
+        { ...node('specific', [subject, first, second, 'record'].join(' ')), sourceIds: ['proof'] },
+        node('first', first),
+        node('second', second),
+      ]);
+      const claim = [subject, first, second].join(' ') + ': 7 / 24.';
+      data.sources.push({ id: 'proof', title: 'Specific record', text: claim });
+      const index = await createGraphSearchIndex(data);
+      for (const query of [
+        [subject, first, second].join(' '),
+        [first, subject, second].join(' '),
+      ]) {
+        const found = await searchKnowledgeGraph(index, query);
+        assert.ok(
+          found.plan.targetGroups.some(
+            (group) => group.includes('subject') && group.includes('specific')
+          )
+        );
+        const entry = found.context.entries.find(
+          (entry) => entry.kind === 'node' && entry.id === 'specific'
+        );
+        assert.ok(
+          entry?.citationIds.some((id) =>
+            found.context.citations.some(
+              (c) => c.id === id && c.sourceId === 'proof' && c.text.includes(claim)
+            )
+          )
+        );
+        assert.ok(found.context.text.length <= 16000);
+      }
+    }
+  });
+
+  test('restored name-term indexes prepare title positions once and reuse them across new queries', () => {
+    const { indexQueryNameTerms, resolveQueryNames } = load('search/retrieval.ts');
+    const names = new Map([
+      ['beacon build record', ['specific']],
+      ['build', ['qualifier']],
+    ]);
+    const retained = new Map(indexQueryNameTerms(names));
+    let scans = 0;
+    const iterator = names[Symbol.iterator].bind(names);
+    names[Symbol.iterator] = () => {
+      scans++;
+      return iterator();
+    };
+    assert.ok(
+      resolveQueryNames('beacon build', names, retained).groups.some((group) =>
+        group.includes('specific')
+      )
+    );
+    const first = scans;
+    assert.equal(first, 1);
+    assert.ok(
+      resolveQueryNames('build beacon', names, retained).groups.some((group) =>
+        group.includes('specific')
+      )
+    );
+    assert.equal(scans, first);
+  });
+
   test('whole-source matches do not promote unrelated links and item evidence reuses only its matching provenance', async () => {
     const { graphSearchDocuments } = load('search/engine.ts', {
       './snapshot': { yieldGraphSearch: async () => {} },

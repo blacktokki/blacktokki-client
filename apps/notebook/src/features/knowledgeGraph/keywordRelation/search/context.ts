@@ -84,7 +84,7 @@ type ContextPreparation = {
   inline: Map<string, TextFormats>;
   highlighted: Map<string, TextFormats>;
   tableHighlighted: Map<string, TextFormats>;
-  quotations: Map<string, string>;
+  quotations: Map<string, { heading: string; body: string }>;
   tables: WeakMap<NonNullable<GraphSource['tables']>[number], string>;
   wording: Map<string, string>;
 };
@@ -182,19 +182,32 @@ function* createContextSteps(
     result.plan,
     result.limited,
     result.pathSearchComplete,
-    result.nodes.map(({ node, score }) => ({ node: { ...node, body: undefined }, score })),
-    result.edges,
+    result.nodes.map(({ node, score }) => {
+      const identity = graphSourceMetadataIdentity(node);
+      return {
+        node: typeof identity === 'symbol' ? identity : { ...node, body: undefined },
+        score,
+      };
+    }),
+    result.edges.map(({ edge, score }) => ({ edge: graphSourceMetadataIdentity(edge), score })),
     result.paths,
-    result.sources.map((source) => ({
-      ...source,
-      text: undefined,
-      ...(source.tables && { tables: graphSourceMetadataIdentity(source.tables) }),
-      ...(source.references && { references: graphSourceMetadataIdentity(source.references) }),
-      ...(source.blocks && { blocks: graphSourceMetadataIdentity(source.blocks) }),
-      ...(source.scopes && { scopes: graphSourceMetadataIdentity(source.scopes) }),
-      ...(source.anchors && { anchors: graphSourceMetadataIdentity(source.anchors) }),
-      ...(source.origin && { origin: graphSourceMetadataIdentity(source.origin) }),
-    })),
+    result.sources.map((source) => {
+      const identity = graphSourceMetadataIdentity(source);
+      return typeof identity === 'symbol'
+        ? identity
+        : {
+            ...source,
+            text: undefined,
+            ...(source.tables && { tables: graphSourceMetadataIdentity(source.tables) }),
+            ...(source.references && {
+              references: graphSourceMetadataIdentity(source.references),
+            }),
+            ...(source.blocks && { blocks: graphSourceMetadataIdentity(source.blocks) }),
+            ...(source.scopes && { scopes: graphSourceMetadataIdentity(source.scopes) }),
+            ...(source.anchors && { anchors: graphSourceMetadataIdentity(source.anchors) }),
+            ...(source.origin && { origin: graphSourceMetadataIdentity(source.origin) }),
+          };
+    }),
   ]);
   let prepared = contextPreparations.get(result.nodes);
   if (
@@ -243,7 +256,6 @@ function* createContextSteps(
   const nodeScores = new Map(result.nodes.map(({ node, score: value }) => [node.id, score(value)]));
   const edgeScores = new Map(result.edges.map(({ edge, score: value }) => [edge.id, score(value)]));
   const sources = new Map(result.sources.map((source) => [source.id, source]));
-  const sourceOrder = new Map(result.sources.map((source, index) => [source.id, index]));
   const sourceBlocks = prepared.sourceBlocks;
   const evidenceContext = prepared.evidenceContext;
   const sourceText = prepared.sourceText;
@@ -596,18 +608,19 @@ function* createContextSteps(
     const text = parts.join('\n\n');
     return hasTable ? '\n' + text + '\n' : text;
   };
-  const quotation = (citation: GraphContextCitation, index: number) => {
+  const quotation = (citation: GraphContextCitation, index: number, heading = false) => {
     const key = citation.id;
     let block = quotationCache.get(key);
     if (block === undefined) {
-      block =
+      const sourceHeading =
         '[' +
         contentInline(
           [citation.title, citation.section, citation.paragraph].filter(Boolean).join(' / ')
         ) +
         '](' +
         citationHref(citation) +
-        ')\n\n' +
+        ')';
+      const body =
         (citation.start ? '> …\n' : '') +
         quotationText(citation)
           .split('\n')
@@ -641,9 +654,52 @@ function* createContextSteps(
               .join(' · ')
           : '') +
         '\n\n';
+      block = { heading: sourceHeading, body };
       quotationCache.set(key, block);
     }
-    return '### ' + (index + 1) + '. ' + block;
+    return (
+      (heading
+        ? '### ' + (index + 1) + '. ' + block.heading + '\n\n'
+        : '**' + (index + 1) + '.**\n\n') + block.body
+    );
+  };
+  let quotedSourceCount = -1;
+  const quotedSources = new Set<string>();
+  const publishedQuoteSources = () => {
+    if (quotedSourceCount !== citations.length) {
+      quotedSources.clear();
+      for (const citation of citations) quotedSources.add(citation.sourceId);
+      quotedSourceCount = citations.length;
+    }
+    return quotedSources;
+  };
+  const quotationLength = (
+    quoted: Iterable<GraphContextCitation>,
+    offset = 0,
+    previous?: Set<string>
+  ) => {
+    const seen = new Set<string>();
+    let length = 0;
+    for (const citation of quoted) {
+      length += quotation(
+        citation,
+        offset++,
+        !seen.has(citation.sourceId) && !previous?.has(citation.sourceId)
+      ).length;
+      seen.add(citation.sourceId);
+    }
+    return length;
+  };
+  /** The first citation names the claim; adjacent references to the same source share their link. */
+  const referenceMinimum = (quoted: GraphContextCitation[]) => {
+    let length = 0,
+      previous: string | undefined;
+    for (const [index, citation] of quoted.entries()) {
+      const href = citationHref(citation);
+      length += index > 1 && previous === href ? 3 : href.length + 5 + (index ? 1 : 0);
+      previous = href;
+    }
+    return length;
   };
   const renderedLineCache = new WeakMap<ContextUnit, Map<string, ContextLine>>();
   const referenceIdentities = new Map<string, number>();
@@ -675,8 +731,15 @@ function* createContextSteps(
       for (const id of ids) key += referenceIdentity(id) + ':' + position(id) + ',';
       let text = referenceTexts.get(key);
       if (text === undefined) {
-        text = ids
-          .map((id) => '[' + position(id) + '](' + citationHref(citation(id)!) + ')')
+        const groups: { href: string; labels: number[] }[] = [];
+        for (const [index, id] of ids.entries()) {
+          const href = citationHref(citation(id)!);
+          const previous = groups.at(-1);
+          if (index > 1 && previous?.href === href) previous.labels.push(position(id)!);
+          else groups.push({ href, labels: [position(id)!] });
+        }
+        text = groups
+          .map(({ href, labels }) => '[' + labels.join(', ') + '](' + href + ')')
           .join(' ');
         referenceTexts.set(key, text);
       }
@@ -750,6 +813,19 @@ function* createContextSteps(
     }
     return lines;
   };
+  const renderedPathGroups = new Map<'path' | 'nearby', { lines: ContextLine[]; text: string }>();
+  const renderPathGroup = (kind: 'path' | 'nearby', lines: ContextLine[]) => {
+    const cached = renderedPathGroups.get(kind);
+    if (
+      cached &&
+      cached.lines.length === lines.length &&
+      lines.every((line, index) => line === cached.lines[index])
+    )
+      return cached.text;
+    const text = renderContextPaths(lines);
+    renderedPathGroups.set(kind, { lines, text });
+    return text;
+  };
   const renderProjection = (projection: ContextLine[], quoted: GraphContextCitation[]) => {
     const lines = new Map<string, ContextLine>();
     for (const line of projection)
@@ -768,22 +844,29 @@ function* createContextSteps(
     const paths =
       needsPathSection || pathLines.length || missingPathDescription || omittedPathDescription
         ? pathHeading(pathLines.length) +
-          renderContextPaths(pathLines) +
+          renderPathGroup('path', pathLines) +
           missingPathDescription +
           missingPaths +
           omittedPathDescription +
           pathNotices
         : '';
     const nearby = nearbyLines.length
-      ? headings.nearby(nearbyLines.length) + renderContextPaths(nearbyLines)
+      ? headings.nearby(nearbyLines.length) + renderPathGroup('nearby', nearbyLines)
       : '';
-    const evidence = quoted.map(quotation);
+    const evidence = new Map<string, string[]>();
+    for (const [index, citation] of quoted.entries()) {
+      let parts = evidence.get(citation.sourceId);
+      if (!parts) evidence.set(citation.sourceId, (parts = []));
+      parts.push(quotation(citation, index, !parts.length));
+    }
     return (
       title +
       paths +
       nearby +
       related +
-      (evidence.length ? headings.evidence(evidence.length) + evidence.join('') : '')
+      (quoted.length
+        ? headings.evidence(quoted.length) + [...evidence.values()].flat().join('')
+        : '')
     );
   };
   const render = (
@@ -1012,7 +1095,54 @@ function* createContextSteps(
   const futureCitationSets = new Map<string, Set<string>[]>();
   const optionReferenceCharacters = new WeakMap<RankedCitation, number>();
   const optionCitationIds = new WeakMap<RankedCitation, string[]>();
-  let optionQuoteFloors = new WeakMap<RankedCitation, number>();
+  let optionQuoteFloors = new WeakMap<object, number>();
+  let unquotedBundles = new WeakMap<object, GraphContextCitation[]>();
+  let registeredBundles = new WeakSet<object>();
+  const bundleConsumers = new Map<string, Set<object>>();
+  let bundleEdges = new WeakMap<object, Set<string>>();
+  const unquotedFor = (option: RankedCitation, existing: Set<string>) => {
+    const key = option.bundleIdentity || option;
+    const shared = existing === coreCitations;
+    let pending = shared ? unquotedBundles.get(key) : undefined;
+    if (!pending) {
+      pending = [];
+      const register = shared && !registeredBundles.has(key);
+      for (const citation of option.bundle!) {
+        if (!existing.has(citation.id)) pending.push(citation);
+        if (register) {
+          let consumers = bundleConsumers.get(citation.id);
+          if (!consumers) bundleConsumers.set(citation.id, (consumers = new Set()));
+          consumers.add(key);
+        }
+      }
+      if (shared) {
+        unquotedBundles.set(key, pending);
+        registeredBundles.add(key);
+      }
+    }
+    return pending;
+  };
+  const quoteFloorFor = (option: RankedCitation, allowance = budget) => {
+    const key = option.bundleIdentity || option;
+    let value = optionQuoteFloors.get(key);
+    if (value === undefined) {
+      const pending = unquotedFor(option, coreCitations);
+      value = pending.reduce((total, citation) => total + citation.text.length, 0);
+      if (value <= allowance) {
+        value = pending.reduce((total, citation) => total + quotation(citation, 0).length, 0);
+        optionQuoteFloors.set(key, value);
+      }
+    }
+    return value;
+  };
+  const referenceFloorFor = (option: RankedCitation) => {
+    let value = optionReferenceCharacters.get(option);
+    if (value === undefined) {
+      value = referenceMinimum(option.bundle!);
+      optionReferenceCharacters.set(option, value);
+    }
+    return value;
+  };
   const sourceCitations = new Map<string, GraphContextCitation>();
   const sourceRelevance = new Map<string, number>();
   const originLocations = new Map<string, { start: number; end: number }[]>();
@@ -1088,11 +1218,18 @@ function* createContextSteps(
           }
           const context = evidenceContext(citation, budget);
           const option: RankedCitation = {
-            citation,
             ...context,
+            citation: context.primary || citation,
             relevance,
             complete: range.complete,
           };
+          const normalized = ranked.get(option.citation.id);
+          if (
+            normalized &&
+            normalized.relevance >= relevance &&
+            (normalized.complete || !option.complete)
+          )
+            continue;
           if (context.bundleIdentity) {
             const existing = contextualBundles.get(context.bundleIdentity);
             if (existing) {
@@ -1103,7 +1240,7 @@ function* createContextSteps(
             }
             contextualBundles.set(context.bundleIdentity, option);
           }
-          ranked.set(citationId, option);
+          ranked.set(option.citation.id, option);
         }
       }
     };
@@ -1157,26 +1294,11 @@ function* createContextSteps(
       else resolve(id);
     }
     const ordered = [...ranked.values()].sort((a, b) => b.relevance - a.relevance);
-    const primaryOrder = new Map(ordered.map(({ citation }, index) => [citation.id, index]));
-    const bundles = new Map<object, GraphContextCitation[]>();
     for (const option of ordered) {
-      // The same evidence set has one order, led by the highest-ranked matching passages.
-      // Primary/context permutations must not become a combinatorial choice of identical evidence.
-      const cached = option.bundleIdentity && bundles.get(option.bundleIdentity);
-      if (cached) {
-        option.bundle = cached;
-        continue;
-      }
-      option.bundle = [option.citation, ...option.context].sort(
-        (a, b) =>
-          (primaryOrder.get(a.id) ?? Infinity) - (primaryOrder.get(b.id) ?? Infinity) ||
-          sourceOrder.get(a.sourceId)! - sourceOrder.get(b.sourceId)! ||
-          a.start - b.start ||
-          a.end - b.end
-      );
-      if (option.bundleIdentity) bundles.set(option.bundleIdentity, option.bundle);
+      option.bundle ||= [option.citation, ...option.context];
     }
     evidenceByUnit.set(unitKey(unit.entry), ordered);
+    if (unit.entry.kind === 'edge') forgetEdgeFloor(unit.entry.id);
     return ordered;
   };
   const synchronizePaths = (
@@ -1217,6 +1339,13 @@ function* createContextSteps(
         related: number;
       }
     | undefined;
+  let fitCommit: { text: string; accept: () => void } | undefined;
+  const commitFit = (accepted: string) => {
+    const pending = fitCommit;
+    fitCommit = undefined;
+    if (pending?.text === accepted) pending.accept();
+    else fitBase = undefined;
+  };
   const fits = (
     units: ContextUnit[],
     quoted: GraphContextCitation[],
@@ -1227,6 +1356,7 @@ function* createContextSteps(
       units?: Map<string, ContextUnit>;
     }
   ) => {
+    fitCommit = undefined;
     if (!fitBase || fitBase.text !== text) {
       const lines = renderLines(renderedUnits, citations, entries);
       const dependentPaths = new Map<string, Set<string>>();
@@ -1248,10 +1378,7 @@ function* createContextSteps(
         dependentPaths,
         measure,
         references: referencesFor(citations),
-        quoteCharacters: citations.reduce(
-          (total, citation, index) => total + quotation(citation, index).length,
-          0
-        ),
+        quoteCharacters: quotationLength(citations),
         rawCharacters: citations.reduce((total, citation) => total + citation.text.length, 0),
         related: measure([], new Set()).related,
       };
@@ -1263,26 +1390,35 @@ function* createContextSteps(
       limit
     )
       return;
-    const quoteCharacters =
-      (appended ? fitBase.quoteCharacters : 0) +
-      (appended || quoted).reduce(
-        (total, citation, index) =>
-          total + quotation(citation, index + (appended ? citations.length : 0)).length,
-        0
-      );
-    if (title.length + quoteCharacters > limit) return;
+    let savings = 0;
     if (changes) {
-      const changedKeys = new Set([
+      savings = fitBase.related ? headings.related(fitBase.related).length : 0;
+      for (const key of new Set([
         ...(changes.entries?.keys() || []),
         ...(changes.units?.keys() || []),
-      ]);
-      // Appended references grow every use of a relationship together. Only a changed
-      // standalone line can disappear by becoming equal to another standalone line.
-      let savings = fitBase.related ? headings.related(fitBase.related).length : 0;
-      for (const key of changedKeys) {
+      ])) {
         const line = fitBase.lines.get(key);
         if (line?.kind === 'node' || line?.kind === 'edge') savings += line.text.length;
       }
+      const minimum = appended!.reduce(
+        (total, citation) =>
+          total +
+          graphNonWhitespaceLength(sources.get(citation.sourceId)!, citation.start, citation.end),
+        0
+      );
+      if (text.length + minimum - savings > limit) return;
+    }
+    const quoteCharacters =
+      (appended ? fitBase.quoteCharacters : 0) +
+      quotationLength(
+        appended || quoted,
+        appended ? citations.length : 0,
+        appended ? publishedQuoteSources() : undefined
+      );
+    if (title.length + quoteCharacters > limit) return;
+    if (changes) {
+      // Appended references grow every use of a relationship together. Only a changed
+      // standalone line can disappear by becoming equal to another standalone line.
       if (text.length + quoteCharacters - fitBase.quoteCharacters - savings > limit) return;
     }
     let projection: ContextLine[] | undefined;
@@ -1304,7 +1440,7 @@ function* createContextSteps(
       const references = fitBase.references.extend(appended!);
       changed = [];
       for (const key of affected) {
-        if (!fitBase.lines.has(key)) continue;
+        if (!fitBase.lines.has(key) && !changes.units?.has(key)) continue;
         const unit = changes.units?.get(key) || fitBase.units.get(key)!;
         changed.push(renderLine(unit, lookup, references));
       }
@@ -1341,8 +1477,37 @@ function* createContextSteps(
     if (!projection) {
       const replacements = new Map(added.map((line) => [line.key, line]));
       projection = [...fitBase.lines.values()].map((line) => replacements.get(line.key) || line);
+      for (const line of added) if (!fitBase.lines.has(line.key)) projection.push(line);
     }
-    return renderProjection(projection, quoted);
+    const projectedText = renderProjection(projection, quoted);
+    if (changes) {
+      const base = fitBase;
+      const references = base.references.extend(appended!);
+      fitCommit = {
+        text: projectedText,
+        accept: () => {
+          if (fitBase !== base) {
+            fitBase = undefined;
+            return;
+          }
+          base.measure.accept!(added, removed);
+          const replaced = new Set(added.map((line) => line.key));
+          for (const key of removed) if (!replaced.has(key)) base.lines.delete(key);
+          for (const line of added) base.lines.set(line.key, line);
+          for (const [key, unit] of changes.units || []) base.units.set(key, unit);
+          for (const [key, entry] of changes.entries || []) base.entries.set(key, entry);
+          base.references = references;
+          base.related = measured.related;
+          base.quoteCharacters = quoteCharacters;
+          base.rawCharacters += appended!.reduce(
+            (total, citation) => total + citation.text.length,
+            0
+          );
+          base.text = projectedText;
+        },
+      };
+    }
+    return projectedText;
   };
   type CoreProjection = {
     measureLines: ReturnType<typeof createContextLineMeasure>;
@@ -1443,11 +1608,7 @@ function* createContextSteps(
             ? headings.evidence(citations.length + quoted.size).length
             : 0) +
           quoteCharacters +
-          addedQuotes.reduce(
-            (total, citation, index) =>
-              total + quotation(citation, citations.length + index).length,
-            0
-          );
+          quotationLength(addedQuotes, citations.length, publishedQuoteSources());
         if (characters > limit) return;
         trialCounts = [
           measured.related,
@@ -1581,6 +1742,22 @@ function* createContextSteps(
         if (!dependents) edgeFloorDependencies.set(key, (dependents = new Set()));
         dependents.add(id);
       }
+      const prepared = evidenceOptionsByUnit.get('edge:' + id) || evidenceByUnit.get('edge:' + id);
+      const sharedLine = publishedLines.has(bareLine(unit).text);
+      let supported = Infinity;
+      for (const option of prepared || []) {
+        if (option.unresolved) continue;
+        const key = option.bundleIdentity || option;
+        let consumers = bundleEdges.get(key);
+        if (!consumers) bundleEdges.set(key, (consumers = new Set()));
+        consumers.add(id);
+        supported = Math.min(
+          supported,
+          quoteFloorFor(option) + (sharedLine ? 0 : referenceFloorFor(option))
+        );
+      }
+      if (Number.isFinite(supported)) characters = Math.max(characters, supported);
+      cached.characters = characters;
     }
     return cached.characters;
   };
@@ -1605,6 +1782,7 @@ function* createContextSteps(
       quoteCharacters: number;
       referenceCharacters: number;
       counts: number[];
+      text?: string;
     };
     const allUnits = corePhase ? [] : [...renderedUnits, ...units];
     const existingCitations = corePhase
@@ -1649,16 +1827,31 @@ function* createContextSteps(
             .filter(({ entry }) => entry.kind === 'node')
             .map((unit) => unit.line.trimEnd() + (unit.details ? '\n' + unit.details : '') + '\n\n')
         );
-        return citations.reduce(
-          (total, citation, index) => total + quotation(citation, index).length,
-          title.length + [...nodeLines].reduce((total, line) => total + line.length, 0)
+        return (
+          quotationLength(citations) +
+          title.length +
+          [...nodeLines].reduce((total, line) => total + line.length, 0)
         );
       })();
-    const measure = (quoted: State['quoted'], allEntries: GraphContextEntry[]) =>
-      measureCore
-        ? measureCore(quoted, allEntries, limit)
-        : fits(allUnits, [...citations, ...quoted.values()], [...entries, ...allEntries], limit)
-            ?.length;
+    const appendedNodes =
+      !corePhase && units.every(({ entry }) => entry.kind === 'node')
+        ? new Map(units.map((unit) => [unitKey(unit.entry), unit]))
+        : undefined;
+    let plannedText: string | undefined;
+    const measure = (quoted: State['quoted'], allEntries: GraphContextEntry[]) => {
+      if (measureCore) return measureCore(quoted, allEntries, limit);
+      plannedText = fits(
+        allUnits,
+        [...citations, ...quoted.values()],
+        [...entries, ...allEntries],
+        limit,
+        appendedNodes && {
+          units: appendedNodes,
+          entries: new Map(allEntries.map((entry) => [unitKey(entry), entry])),
+        }
+      );
+      return plannedText?.length;
+    };
     const baseQuoted = new Map<string, GraphContextCitation>();
     const baseCharacters = measureCore
       ? measureCore(baseQuoted, [], Infinity)
@@ -1704,6 +1897,7 @@ function* createContextSteps(
           quoteCharacters: 0,
           referenceCharacters: 0,
           counts: [...trialCounts],
+          text: plannedText,
         },
       };
     const options = new Map<string, RankedCitation[]>();
@@ -1758,18 +1952,17 @@ function* createContextSteps(
       const bundle = option.bundle!;
       let optionCharacters = optionReferenceCharacters.get(option);
       if (optionCharacters === undefined) {
-        optionCharacters = bundle.reduce(
-          (total, citation) => total + citationHref(citation).length + 5,
-          Math.max(0, bundle.length - 1)
-        );
+        optionCharacters = referenceMinimum(bundle);
         optionReferenceCharacters.set(option, optionCharacters);
       }
       // At least the longest required citation list must occur in a displayed connection.
       // Taking the maximum also preserves cases whose identical connection lines collapse.
       const referenceCharacters = Math.max(state.referenceCharacters, optionCharacters);
-      const unquoted = bundle.filter(
-        (citation) => !existingCitations.has(citation.id) && !state.quoted.has(citation.id)
-      );
+      const unquoted = state.quoted.size
+        ? unquotedFor(option, existingCitations).filter(
+            (citation) => !state.quoted.has(citation.id)
+          )
+        : unquotedFor(option, existingCitations);
       if (
         fixedQuoteCharacters +
           state.quoteCharacters +
@@ -1780,6 +1973,7 @@ function* createContextSteps(
         return;
       const added: GraphContextCitation[] = [];
       let quoteCharacters = state.quoteCharacters;
+      const sources = new Set([...state.quoted.values()].map((citation) => citation.sourceId));
       for (const citation of unquoted) {
         // Item names and intact quotations already impose a lower bound on the final Markdown.
         if (
@@ -1789,8 +1983,10 @@ function* createContextSteps(
           return;
         quoteCharacters += quotation(
           citation,
-          citations.length + state.quoted.size + added.length
+          citations.length + state.quoted.size + added.length,
+          !sources.has(citation.sourceId) && !publishedQuoteSources().has(citation.sourceId)
         ).length;
+        sources.add(citation.sourceId);
         if (fixedQuoteCharacters + quoteCharacters + referenceCharacters > ceiling) return;
         added.push(citation);
       }
@@ -1832,32 +2028,8 @@ function* createContextSteps(
         let minimumQuotes = Infinity;
         let minimumReferences = Infinity;
         for (const option of options.get(unitKey(unit.entry))!) {
-          let quotes = optionQuoteFloors.get(option);
-          if (quotes === undefined) {
-            const unquoted = option.bundle!.filter(
-              (citation) => !existingCitations.has(citation.id)
-            );
-            quotes = unquoted.reduce(
-              (total, citation) => total + citation.text.length + citationHref(citation).length,
-              0
-            );
-            // An oversized bundle cannot fit even before escaping or highlighting its text.
-            if (baseCharacters + quotes <= limit) {
-              quotes = unquoted.reduce(
-                (total, citation) => total + quotation(citation, 0).length,
-                0
-              );
-              optionQuoteFloors.set(option, quotes);
-            }
-          }
-          let references = optionReferenceCharacters.get(option);
-          if (references === undefined) {
-            references = option.bundle!.reduce(
-              (total, citation) => total + citationHref(citation).length + 5,
-              Math.max(0, option.bundle!.length - 1)
-            );
-            optionReferenceCharacters.set(option, references);
-          }
+          const quotes = quoteFloorFor(option, limit - baseCharacters);
+          const references = referenceFloorFor(option);
           minimumQuotes = Math.min(minimumQuotes, quotes);
           minimumReferences = Math.min(minimumReferences, references);
         }
@@ -1996,12 +2168,20 @@ function* createContextSteps(
         removed
       );
       base.measureBareLines.accept!(visible.map(bareLine), removed);
-      for (const [index, citation] of [...state.quoted.values()].entries()) {
-        base.quoteCharacters += quotation(citation, citations.length + index).length;
+      base.quoteCharacters += quotationLength(
+        state.quoted.values(),
+        citations.length,
+        publishedQuoteSources()
+      );
+      for (const citation of state.quoted.values()) {
         base.rawCharacters += citation.text.length;
       }
-    } else text = render([...renderedUnits, ...units], allCitations, allEntries);
-    fitBase = undefined;
+    } else {
+      text = state.text ?? render([...renderedUnits, ...units], allCitations, allEntries);
+      if (state.text !== undefined && !state.quoted.size) commitFit(text);
+      else fitBase = undefined;
+    }
+    if (base) fitBase = undefined;
     coreMeasure = undefined;
     citations.push(...state.quoted.values());
     for (const citation of state.quoted.values())
@@ -2020,8 +2200,14 @@ function* createContextSteps(
         sourceFloors.delete(key);
         for (const id of edgeFloorDependencies.get(key) || []) forgetEdgeFloor(id);
       }
-    if (state.quoted.size) optionQuoteFloors = new WeakMap();
-    for (const citation of state.quoted.values()) coreCitations.add(citation.id);
+    for (const citation of state.quoted.values()) {
+      for (const consumer of bundleConsumers.get(citation.id) || []) {
+        optionQuoteFloors.delete(consumer);
+        unquotedBundles.delete(consumer);
+        for (const id of bundleEdges.get(consumer) || []) forgetEdgeFloor(id);
+      }
+      coreCitations.add(citation.id);
+    }
     if (base) entries.push(...allEntries);
     else entries.splice(0, entries.length, ...allEntries);
     renderedUnits.push(...units);
@@ -2255,11 +2441,7 @@ function* createContextSteps(
             continue;
           }
           if (minimum > (selected?.characters ?? budget)) continue;
-          const characters = bundle.reduce(
-            (sum, citation) =>
-              sum + quotation(citation, 0).length + citationHref(citation).length + 5,
-            unit.line.length
-          );
+          const characters = quotationLength(bundle) + referenceMinimum(bundle) + unit.line.length;
           if (characters > budget) {
             budgetRejected = true;
             continue;
@@ -2348,6 +2530,11 @@ function* createContextSteps(
     pathSourceFloors.clear();
     quotedRevision = -1;
     coreCitations.clear();
+    optionQuoteFloors = new WeakMap();
+    unquotedBundles = new WeakMap();
+    registeredBundles = new WeakSet();
+    bundleEdges = new WeakMap();
+    bundleConsumers.clear();
     publishedLines.clear();
     publishedNames.clear();
     publication++;
@@ -2806,6 +2993,14 @@ function* createContextSteps(
   const enhanced = new Set<string>();
   /** Spend remaining space on the selected results before adding lower-priority standalone items. */
   function* enhance(): Generator<void, void, void> {
+    const fresh = [...remainingEvidence].filter(([key]) => !enhanced.has(key));
+    const propertyCandidates = [...attributes].filter(
+      ([id, values]) => values.length && includedNodes.has(id) && !enhanced.has('node:' + id)
+    );
+    if (!propertyCandidates.length && !fresh.some(([, ranked]) => ranked.length)) {
+      for (const [key] of fresh) enhanced.add(key);
+      return;
+    }
     const entryIndices = new Map(entries.map((entry, index) => [unitKey(entry), index]));
     const wording = (citation: GraphContextCitation) => {
       let value = wordingCache.get(citation.id);
@@ -2816,7 +3011,6 @@ function* createContextSteps(
       return value;
     };
     const covered = new Set(citations.map(wording));
-    const fresh = [...remainingEvidence].filter(([key]) => !enhanced.has(key));
     const queued = fresh.flatMap(([key, ranked]) => ranked.map((item) => ({ key, ...item })));
     queued.sort(
       (a, b) =>
@@ -2875,17 +3069,15 @@ function* createContextSteps(
           novel,
           score: (unitScores.get(key) || 0) * (1 + relevance / evidenceScores.get(key)!),
         })),
-      ...[...attributes]
-        .filter(([id]) => includedNodes.has(id) && !enhanced.has('node:' + id))
-        .flatMap(([id, values]) =>
-          values.map((attribute) => ({
-            kind: 'attribute' as const,
-            id,
-            attribute,
-            novel: true,
-            score: (nodeScores.get(id) || 0) * (1 + attribute.relevance),
-          }))
-        ),
+      ...propertyCandidates.flatMap(([id, values]) =>
+        values.map((attribute) => ({
+          kind: 'attribute' as const,
+          id,
+          attribute,
+          novel: true,
+          score: (nodeScores.get(id) || 0) * (1 + attribute.relevance),
+        }))
+      ),
     ];
     enhancements.sort((a, b) => Number(b.novel) - Number(a.novel) || b.score - a.score);
     for (const enhancement of enhancements) {
@@ -2909,7 +3101,7 @@ function* createContextSteps(
         text = nextText;
         renderedUnits[renderedUnits.indexOf(unit)] = replacement;
         selectedAttributes.set(id, selected);
-        fitBase = undefined;
+        commitFit(nextText);
         continue;
       }
       const { key, citation, context } = enhancement;
@@ -2937,15 +3129,18 @@ function* createContextSteps(
       citations.splice(0, citations.length, ...allCitations);
       entries[entryIndex] = replacement;
       entries.splice(0, entries.length, ...synchronizePaths(entries));
-      fitBase = undefined;
+      commitFit(nextText);
     }
     for (const [key] of fresh) enhanced.add(key);
   }
   yield* enhance();
   // Only optional item provenance may be abbreviated, after complete context bundles have been tried.
   function* clipItemProvenance(nodeId?: string): Generator<void, void, void> {
-    for (const [key, ranked] of remainingEvidence) {
-      if (nodeId !== undefined && key !== 'node:' + nodeId) continue;
+    const candidates =
+      nodeId === undefined
+        ? remainingEvidence
+        : new Map([['node:' + nodeId, remainingEvidence.get('node:' + nodeId) || []]]);
+    for (const [key, ranked] of candidates) {
       yield;
       const entry = entries.find((entry) => unitKey(entry) === key)!;
       if (entry.kind !== 'node' || entry.citationIds.length) continue;
@@ -2992,7 +3187,7 @@ function* createContextSteps(
         citations.splice(0, citations.length, ...quoted);
         entries.splice(0, entries.length, ...nextEntries);
         clipped.set(clip.id, clip);
-        fitBase = undefined;
+        commitFit(next);
         break;
       }
     }
@@ -3072,31 +3267,35 @@ function* createContextSteps(
       fitBase = undefined;
     }
   }
-  const coverage = new Map<string, { start: number; end: number }[]>();
-  for (const citation of citations) {
-    const ranges = coverage.get(citation.sourceId) || [];
-    ranges.push({ start: citation.start, end: citation.end });
-    coverage.set(citation.sourceId, ranges);
-  }
-  for (const ranges of coverage.values()) ranges.sort((a, b) => a.start - b.start);
-  const coveredRange = (citation: GraphContextCitation) => {
-    const original = sources.get(citation.sourceId)!.text;
-    let cursor = citation.start;
-    for (const range of coverage.get(citation.sourceId) || []) {
-      if (range.end <= cursor || range.start >= citation.end) continue;
-      if (range.start > cursor && original.slice(cursor, range.start).trim()) return false;
-      cursor = Math.max(cursor, range.end);
-      if (cursor >= citation.end) return true;
-    }
-    return !original.slice(cursor, citation.end).trim();
-  };
   truncated ||=
     deferredProvenance ||
+    includedNodes.size < result.nodes.length ||
+    includedEdges.size < result.edges.length ||
+    includedPaths.size < distinctPaths.length ||
     [...attributes].some(
       ([id, values]) =>
         includedNodes.has(id) && values.length > (selectedAttributes.get(id)?.size || 0)
-    ) ||
-    [...remainingEvidence.values()].some((ranked) =>
+    );
+  if (!truncated) {
+    const coverage = new Map<string, { start: number; end: number }[]>();
+    for (const citation of citations) {
+      const ranges = coverage.get(citation.sourceId) || [];
+      ranges.push({ start: citation.start, end: citation.end });
+      coverage.set(citation.sourceId, ranges);
+    }
+    for (const ranges of coverage.values()) ranges.sort((a, b) => a.start - b.start);
+    const coveredRange = (citation: GraphContextCitation) => {
+      const original = sources.get(citation.sourceId)!.text;
+      let cursor = citation.start;
+      for (const range of coverage.get(citation.sourceId) || []) {
+        if (range.end <= cursor || range.start >= citation.end) continue;
+        if (range.start > cursor && original.slice(cursor, range.start).trim()) return false;
+        cursor = Math.max(cursor, range.end);
+        if (cursor >= citation.end) return true;
+      }
+      return !original.slice(cursor, citation.end).trim();
+    };
+    truncated ||= [...remainingEvidence.values()].some((ranked) =>
       ranked.some(
         ({ citation, context, unresolved, minimumCharacters }) =>
           unresolved ||
@@ -3104,10 +3303,7 @@ function* createContextSteps(
           [citation, ...context].some((range) => !coveredRange(range))
       )
     );
-  truncated ||=
-    includedNodes.size < result.nodes.length ||
-    includedEdges.size < result.edges.length ||
-    includedPaths.size < distinctPaths.length;
+  }
   if (!renderedUnits.length) {
     const empty = render([], [], []);
     if (empty.length <= budget - reserve) text = empty;

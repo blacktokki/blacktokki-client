@@ -1,6 +1,11 @@
 import { toRaw } from '@blacktokki/editor';
 
-import { graphSourceStructure, graphSourceRanges, createEvidenceText } from './evidence';
+import {
+  graphSourceStructure,
+  graphSourceRanges,
+  createEvidenceText,
+  graphSourceMetadataIdentity,
+} from './evidence';
 import { base64Decode, parseHtmlToParagraphs } from '../../../../components/HeaderSelectBar';
 import type { KnowledgeGraphData, KnowledgeGraphNode } from '../../types';
 import {
@@ -179,6 +184,8 @@ export async function createGraphSearchSnapshot({
         ? paragraph.description || ''
         : documents.get(title)?.description || '';
       const sourceText = text ?? raw(html);
+      const sourceStructure: Partial<GraphSource> =
+        text === undefined ? structure(html, sourceText) : {};
       sources.set(id, {
         id,
         title,
@@ -187,7 +194,11 @@ export async function createGraphSearchSnapshot({
         ...(paragraph?.path && { path: paragraph.path }),
         ...(href && { href }),
         text: sourceText,
-        ...(text === undefined && structure(html, sourceText)),
+        ...sourceStructure,
+        // The parsed layout is shared by equal HTML; relative destinations belong to each source note.
+        ...(sourceStructure.references && {
+          references: sourceStructure.references.map((reference) => ({ ...reference })),
+        }),
       });
       if (text !== undefined || paragraph) {
         const originalId = addSource(title, text !== undefined ? paragraph : undefined);
@@ -195,9 +206,33 @@ export async function createGraphSearchSnapshot({
           const original = sources.get(originalId)!;
           let search = originText.get(originalId);
           if (!search) originText.set(originalId, (search = createEvidenceText(original.text)));
+          let ranges = graphSourceRanges(original.text, sourceText, search);
+          if (!sourceText.trim() && paragraph?.title) {
+            const path = paragraph.path
+              .split(',')
+              .filter(Boolean)
+              .map(base64Decode)
+              .map((name) => name.normalize('NFC').trim());
+            ranges = (original.anchors || [])
+              .filter(
+                (anchor) =>
+                  anchor.kind === 'heading' &&
+                  anchor.name.normalize('NFC').trim() === paragraph.title.normalize('NFC').trim() &&
+                  (!path.length ||
+                    JSON.stringify(
+                      [...(anchor.path || []), anchor.name].map((name) =>
+                        name.normalize('NFC').trim()
+                      )
+                    ) === JSON.stringify(path))
+              )
+              .map((anchor) => ({
+                start: anchor.start,
+                end: Math.min(anchor.end, anchor.start + anchor.name.length),
+              }));
+          }
           sources.get(id)!.origin = {
             sourceId: originalId,
-            ranges: graphSourceRanges(original.text, sourceText, search),
+            ranges,
           };
         }
       }
@@ -335,11 +370,20 @@ export async function createGraphSearchSnapshot({
     });
   }
   // Resolving a reference may add another permitted note; Map iteration follows this closure once.
-  for (const source of sources.values())
+  for (const source of sources.values()) {
     resolveSourceReferences(source, (title) => {
       const id = addSource(title);
       return id ? sources.get(id) : undefined;
     });
+    for (const metadata of [
+      source.blocks,
+      source.scopes,
+      source.anchors,
+      source.references,
+      source.origin,
+    ])
+      graphSourceMetadataIdentity(metadata, true);
+  }
   const keptNodes = nodes.filter((node) => !node.url || node.sourceIds.length);
   const ids = new Set(keptNodes.map((node) => node.id));
   const keptEdges = edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target));
@@ -393,6 +437,8 @@ function resolveSourceReferences(
         target.searchParams.get('title') ||
         (relativeFile
           ? decodeURIComponent(target.pathname.slice(1)).replace(/\.(?:md|markdown)$/iu, '')
+          : reference.href.startsWith('#')
+          ? source.title
           : undefined);
       paragraph = target.hash
         ? decodeURIComponent(target.hash.slice(1))
@@ -441,5 +487,13 @@ function resolveSourceReferences(
           ).values(),
         ];
     reference.unresolved = !reference.targets.length;
+    if (!reference.unresolved)
+      reference.resolvedHref =
+        '?' +
+        new URLSearchParams({
+          title,
+          ...(paragraph && { paragraph }),
+          ...(section && { section }),
+        }).toString();
   }
 }

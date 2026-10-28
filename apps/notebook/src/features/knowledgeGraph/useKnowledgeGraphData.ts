@@ -2,20 +2,20 @@ import { useLangContext } from '@blacktokki/core';
 import { extractHtmlLinks, toRaw } from '@blacktokki/editor';
 import { useMemo, useCallback } from 'react';
 
+import { extractYamlFrontmatter } from './frontmatter';
+import {
+  buildConnectedParagraphNotePartOfAssignments,
+  buildParagraphPartOfAssignments,
+  findConnectedParagraphIds,
+} from './paragraphClassification';
 import { KnowledgeGraphEdge, KnowledgeGraphData, KnowledgeGraphNode } from './types';
 import { evaluateKnowledgeGraphAxioms } from './utils/axioms';
 import { findConnectedExternalLinkIds } from './utils/externalLinkClassification';
-import { extractYamlFrontmatter } from './utils/frontmatter';
 import {
   findKnowledgeGraphLinkSourceNodeId,
   findKnowledgeGraphLinkTargetNodeId,
 } from './utils/links';
 import { getKnowledgeGraphPalette } from './utils/palette';
-import {
-  buildConnectedParagraphNotePartOfAssignments,
-  buildParagraphPartOfAssignments,
-  findConnectedParagraphIds,
-} from './utils/paragraphClassification';
 import {
   Paragraph,
   paragraphDescription,

@@ -1,6 +1,6 @@
 import * as jsYaml from 'js-yaml';
 
-import { KnowledgeGraphDataProperties } from '../types';
+import { KnowledgeGraphDataProperties } from './types';
 
 /**
  * Extracts YAML frontmatter from markdown or editor HTML content.

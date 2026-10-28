@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 
-const load = require('../keywordRelation/__tests__/loadTs.cjs');
+const load = require('../../keywordRelation/__tests__/loadTs.cjs');
 const {
   initForceSimulation,
   stepForceSimulation,

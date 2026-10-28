@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
-const { test } = require('node:test');
+const { describe, test } = require('node:test');
 
 const load = require('../../__tests__/loadTs.cjs');
 const cancel = (signal) => {
@@ -102,6 +102,49 @@ test('changing only the hop range reuses query ranking while changed semantic va
   assert.ok(examined > changed, 'a different query gets its own ranking');
 });
 
+test('query changes reuse canonical source context from the prepared index', async () => {
+  const text = 'Alpha references Beta under the linked requirement.';
+  const condition = 'Independent owner review is mandatory.';
+  const data = snapshot([node('Alpha'), node('Beta')], [edge('relationship', 'Alpha', 'Beta')]);
+  data.sources = [
+    {
+      id: 's',
+      title: 'Source',
+      text,
+      blocks: [{ start: 0, end: text.length }],
+      scopes: [{ start: 0, end: text.length }],
+      references: [
+        {
+          start: 0,
+          end: text.length,
+          href: '?title=Policy',
+          name: 'requirement',
+          internal: true,
+          targets: [{ sourceId: 'policy', start: 0, end: condition.length }],
+        },
+      ],
+    },
+    { id: 'policy', title: 'Policy', text: condition },
+  ];
+  const index = await createGraphSearchIndex(data);
+  const resolve = index.evidenceContext;
+  const remembered = new Map();
+  let reused = 0;
+  index.evidenceContext = (citation, limit) => {
+    const evidence = resolve(citation, limit);
+    if (remembered.has(citation.id)) {
+      assert.strictEqual(evidence, remembered.get(citation.id));
+      reused++;
+    } else remembered.set(citation.id, evidence);
+    return evidence;
+  };
+  for (const query of ['Alpha', 'Beta']) {
+    const found = await searchKnowledgeGraph(index, query);
+    assert.ok(found.context.citations.some((c) => c.text.includes(condition)));
+  }
+  assert.ok(reused > 0, 'changing the query does not rebuild identical source context bundles');
+});
+
 const kinds = [
   'builtInClass',
   'boardClass',
@@ -149,7 +192,7 @@ test('search keeps literal words and detects connections by named items rather t
     connected.paths.some((path) => path.nodes.includes('Alpha') && path.nodes.includes('Beta'))
   );
   const particles = await searchKnowledgeGraph(index, 'Alpha와 Beta의');
-  assert.deepEqual(particles.plan.terms, ['alpha', 'beta']);
+  assert.deepEqual(particles.plan.terms, ['alpha와', 'beta의', 'alpha', 'beta']);
 });
 
 test('embedding documents use only the model prefix while lexical search covers metadata and full shared sources', async () => {
@@ -227,7 +270,7 @@ test('natural query anchors graph vocabulary; bounded paths preserve direction a
   );
 });
 
-test('nearby paths stay separate when matched keywords and paragraphs have the same name', async () => {
+test('homonymous keywords and paragraphs remain alternatives of one query subject', async () => {
   for (const [keyword, paragraph, query] of [
     ['Topic', 'TOPIC', 'Topic incident'],
     ['표본', '표본', '표본 연결'],
@@ -247,19 +290,16 @@ test('nearby paths stay separate when matched keywords and paragraphs have the s
       contextChars: 16000,
     });
     assert.equal(found.plan.targetIds.length, 2);
-    assert.equal(found.plan.intent, 'connection', query);
+    assert.equal(found.plan.intent, 'related', query);
+    assert.equal(found.plan.targetGroups.length, 1);
     assert.ok(found.paths.length);
-    assert.ok(found.paths.every((path) => path.kind === 'surrounding'));
+    assert.ok(found.paths.every((path) => path.kind === 'connection'));
     const traversal = found.context.text.split('## Traversal paths')[1]?.split('\n## ')[0];
     assert.ok(traversal, query);
-    assert.match(found.context.text, /^## Traversal paths \(0\/1\)$/m);
+    assert.match(found.context.text, /^## Traversal paths \(1\)$/m);
     assert.doesNotMatch(traversal, /^>[^\n]* \(\d+(?:\/\d+)?\)$/m);
-    assert.doesNotMatch(traversal, /Helper/);
-    const nearby = found.context.text.split('## Nearby paths ')[1]?.split('\n## ')[0];
-    assert.ok(nearby, query);
-    assert.match(nearby, /^\(1\)/);
-    assert.match(nearby, /Helper/);
-    assert.equal((nearby.match(/^- /gm) || []).length, 1);
+    assert.match(traversal, /Helper/);
+    assert.doesNotMatch(found.context.text, /No path found|Path search was not completed/);
   }
 });
 
@@ -789,4 +829,521 @@ test('a graph sharing a 2 MB note across 1000 memberships indexes and searches w
   const metrics = JSON.parse(child.stdout);
   assert.ok(metrics.documentChars < metrics.sourceChars);
   t.diagnostic(JSON.stringify(metrics));
+});
+
+describe('Search retrieval', () => {
+  const { createGraphSearchIndex, searchKnowledgeGraph, graphSearchDocuments } = load(
+    'search/engine.ts',
+    {
+      './snapshot': { yieldGraphSearch: async () => {} },
+    }
+  );
+  const node = (id, name = id) => ({
+    id,
+    name,
+    kind: 'keyword',
+    typeLabel: 'Keyword',
+    noteTitle: 'Source',
+    body: '',
+    sourceIds: ['s'],
+  });
+  const edge = (id, source, target) => ({
+    id,
+    source,
+    target,
+    type: 'REFERENCES',
+    label: 'references',
+    directed: true,
+    sourceIds: ['s'],
+  });
+  const snapshot = (nodes, edges = []) => ({
+    version: 1,
+    scope: 'generated',
+    revision: 'v',
+    nodes,
+    edges,
+    sources: [{ id: 's', title: 'Source', text: 'Recorded source.' }],
+    coverage: { keywords: true, templates: true },
+  });
+
+  test('identifier fragments retain proportional evidence confidence across scripts and exact searches', async () => {
+    for (const [fragment, identifier, query] of [
+      ['ti', 'work_notification_channel', 'Signal'],
+      ['결', '작업결과목록', '표식'],
+      ['é', 'Cafe\u0301Index', 'Indice'],
+      ['𐐀', '𐐀𐐁𐐂', 'Marker'],
+    ]) {
+      const text = `${query} ${identifier}.`;
+      const data = snapshot([
+        { ...node('fragment', fragment), noteTitle: query },
+        { ...node('whole', identifier.normalize('NFC')), noteTitle: query },
+      ]);
+      data.sources = [{ id: 's', title: query, text }];
+      const documents = graphSearchDocuments(data);
+      const index = await createGraphSearchIndex(data);
+      const found = await searchKnowledgeGraph(index, query);
+      const partial = found.nodes.find(({ node }) => node.id === 'fragment');
+      const whole = found.nodes.find(({ node }) => node.id === 'whole');
+      assert.ok(partial.score > 0 && partial.score < whole.score);
+      assert.equal(whole.score, 25);
+      assert.equal(data.nodes[0].name, fragment);
+      const exact = await searchKnowledgeGraph(index, fragment);
+      assert.equal(exact.nodes.find(({ node }) => node.id === 'fragment').score, 100);
+      assert.deepEqual(graphSearchDocuments(data), documents);
+    }
+  });
+
+  test('independent occurrences and verified link identities keep full evidence confidence', async () => {
+    const text = 'Signal work_notification.\nSignal ti.\nSignal tiny.';
+    const data = snapshot([
+      node('fragment', 'ti'),
+      { ...node('link', 'tiny'), kind: 'externalLink', url: 'https://example.invalid/item' },
+    ]);
+    const start = text.indexOf('tiny');
+    data.sources = [
+      {
+        id: 's',
+        title: 'Source',
+        text,
+        references: [{ start, end: start + 4, name: 'tiny', href: 'https://example.invalid/item' }],
+      },
+    ];
+    const index = await createGraphSearchIndex(data);
+    const found = await searchKnowledgeGraph(index, 'Signal');
+    assert.equal(found.nodes.find(({ node }) => node.id === 'fragment').score, 25);
+    assert.equal(found.nodes.find(({ node }) => node.id === 'link').score, 25);
+    assert.strictEqual((await searchKnowledgeGraph(index, 'Signal')).context, found.context);
+  });
+
+  test('returning to recent words reuses ranking, traversal and context while changed semantic scores invalidate them', async () => {
+    const index = await createGraphSearchIndex(snapshot([node('Alpha'), node('Beta')]));
+    let scoreReads = 0,
+      traversals = 0,
+      sourceReads = 0;
+    const adjacent = index.adjacent.get.bind(index.adjacent);
+    index.adjacent.get = (id) => {
+      traversals++;
+      return adjacent(id);
+    };
+    const source = index.normalizedSource;
+    index.normalizedSource = (id) => {
+      sourceReads++;
+      return source(id);
+    };
+    const semanticScores = new Map([['Beta', 0.4]]);
+    const semantic = semanticScores.get.bind(semanticScores);
+    semanticScores.get = (id) => {
+      scoreReads++;
+      return semantic(id);
+    };
+    const first = await searchKnowledgeGraph(index, 'Alpha', { semanticScores });
+    await searchKnowledgeGraph(index, 'Beta');
+    const counts = [scoreReads, traversals, sourceReads];
+    const again = await searchKnowledgeGraph(index, 'Alpha', { semanticScores });
+    assert.strictEqual(again.context, first.context);
+    assert.deepEqual([scoreReads, traversals, sourceReads], counts);
+    semanticScores.set('Beta', 0.8);
+    await searchKnowledgeGraph(index, 'Alpha', { semanticScores });
+    assert.equal(scoreReads, counts[0] + 1);
+  });
+
+  test('literal queries keep their names intact across scripts and discover indexed names without suffix rules', async () => {
+    for (const name of ['휴가', '사과', '結果', 'résumé', 'Alpha']) {
+      const index = await createGraphSearchIndex(snapshot([node(name)]));
+      const found = await searchKnowledgeGraph(index, name);
+      assert.deepEqual(found.plan.terms, [name.normalize('NFC').toLowerCase()]);
+      assert.equal(found.nodes[0].node.id, name);
+    }
+    const found = await searchKnowledgeGraph(
+      await createGraphSearchIndex(snapshot([node('Alpha'), node('Beta')])),
+      'Alpha​Beta'
+    );
+    assert.deepEqual(found.plan.targetGroups, [['Alpha'], ['Beta']]);
+    const punctuation = await searchKnowledgeGraph(
+      await createGraphSearchIndex(snapshot([node('Alpha')])),
+      '()[]{}'
+    );
+    assert.equal(punctuation.nodes.length, 0);
+  });
+
+  test('higher scoring nodes precede lower scoring relationship endpoints in results and context', async () => {
+    const items = [node('Relevant'), ...Array.from({ length: 16 }, (_, i) => node('Peer' + i))];
+    const relations = Array.from({ length: 8 }, (_, i) =>
+      edge('e' + i, 'Peer' + i * 2, 'Peer' + (i * 2 + 1))
+    );
+    const semanticScores = new Map([['Relevant', 0.99], ...relations.map((e) => [e.id, 0.4])]);
+    const result = await searchKnowledgeGraph(
+      await createGraphSearchIndex(snapshot(items, relations)),
+      'Unlisted query',
+      { semanticScores }
+    );
+    assert.equal(result.nodes[0].node.id, 'Relevant');
+    assert.ok(
+      result.context.entries.some((entry) => entry.kind === 'node' && entry.id === 'Relevant')
+    );
+  });
+
+  test('homonyms stay separate alternatives while disjoint short and long name mentions remain subjects', async () => {
+    const index = await createGraphSearchIndex(
+      snapshot([
+        node('k', 'Topic'),
+        node('p', 'TOPIC'),
+        node('short', 'Spring'),
+        node('long', 'Spring Boot'),
+      ])
+    );
+    const homonyms = await searchKnowledgeGraph(index, 'Topic');
+    assert.equal(homonyms.plan.intent, 'related');
+    assert.deepEqual(homonyms.plan.targetGroups, [['k', 'p']]);
+    assert.deepEqual(new Set(homonyms.plan.targetIds), new Set(['k', 'p']));
+    assert.doesNotMatch(homonyms.context.text, /No path found|Path search was not completed/);
+    const distinct = await searchKnowledgeGraph(index, 'Spring Spring Boot');
+    assert.equal(distinct.plan.intent, 'connection');
+    assert.deepEqual(distinct.plan.targetGroups, [['short'], ['long']]);
+    const nested = await searchKnowledgeGraph(index, 'Spring Boot');
+    assert.equal(nested.plan.intent, 'related');
+    assert.deepEqual(nested.plan.targetGroups, [['long']]);
+  });
+
+  test('word fragments do not become query subjects or expand the literal query terms', async () => {
+    const index = await createGraphSearchIndex(
+      snapshot([
+        node('fragment-a', 'ot'),
+        node('fragment-b', 'fi'),
+        node('fragment-c', 'at'),
+        node('fragment-d', 'on'),
+        node('topic', 'Notification reference'),
+      ])
+    );
+    const found = await searchKnowledgeGraph(index, 'notification');
+    assert.deepEqual(found.plan.terms, ['notification']);
+    assert.deepEqual(found.plan.targetGroups, [['topic']]);
+    assert.equal(found.plan.intent, 'related');
+    const literal = await searchKnowledgeGraph(index, 'on');
+    assert.deepEqual(literal.plan.targetGroups, [['fragment-d']]);
+  });
+
+  test('longer indexed titles represent uncovered query mentions and each subject appears in the context', async () => {
+    for (const [first, second] of [
+      ['Alpha', 'Beacon'],
+      ['표본', '자료'],
+      ['Δείγμα', 'Σήμα'],
+    ]) {
+      const index = await createGraphSearchIndex(
+        snapshot([
+          node('first', first),
+          node('second-a', '[Project] ' + second),
+          node('second-b', second + ' specification'),
+        ])
+      );
+      const found = await searchKnowledgeGraph(index, first + ' ' + second, {
+        contextChars: 16000,
+      });
+      assert.deepEqual(found.plan.targetGroups, [['first'], ['second-a', 'second-b']]);
+      assert.equal(found.plan.intent, 'connection');
+      assert.ok(found.context.entries.some((e) => e.kind === 'node' && e.id === 'first'));
+      assert.ok(
+        found.context.entries.some(
+          (e) => e.kind === 'node' && ['second-a', 'second-b'].includes(e.id)
+        )
+      );
+      assert.match(found.context.text, /No path found/);
+      let reads = 0;
+      const original = index.names.keys.bind(index.names);
+      index.names.keys = () => {
+        reads++;
+        return original();
+      };
+      await searchKnowledgeGraph(index, first + ' ' + second, { contextChars: 32000 });
+      assert.equal(reads, 0, 'context repacking reuses resolved name groups');
+    }
+  });
+
+  test('name components that describe an explicit subject stay qualifiers across scripts, while literal names stay subjects', async () => {
+    for (const [first, second, qualifier, condition] of [
+      ['Origin', 'Beacon', 'mode', 'constraint'],
+      ['표본', '자료', '작동', '제한'],
+      ['Δείγμα', 'Σήμα', 'χρήση', 'όρος'],
+    ]) {
+      const items = [
+        node('first', first),
+        node('second-a', '[Project] ' + second),
+        node('second-b', second + ' specification'),
+        node('qualifier-a', first + ' ' + qualifier + ' guide'),
+        node('qualifier-b', 'Other ' + qualifier + ' guide'),
+        node('condition', first + ' ' + condition + ' guide'),
+      ];
+      const query = [first, second, qualifier, condition].join(' ');
+      const found = await searchKnowledgeGraph(
+        await createGraphSearchIndex(snapshot(items)),
+        query
+      );
+      assert.deepEqual(found.plan.targetGroups, [['first'], ['second-a', 'second-b']]);
+      for (const word of [qualifier, condition])
+        assert.ok(found.plan.terms.includes(word.toLowerCase()));
+      const literal = await searchKnowledgeGraph(
+        await createGraphSearchIndex(snapshot([...items, node('literal', qualifier)])),
+        query
+      );
+      assert.deepEqual(literal.plan.targetGroups, [
+        ['first'],
+        ['second-a', 'second-b'],
+        ['literal'],
+      ]);
+    }
+  });
+
+  test('whole-source matches do not promote unrelated links and item evidence reuses only its matching provenance', async () => {
+    const { graphSearchDocuments } = load('search/engine.ts', {
+      './snapshot': { yieldGraphSearch: async () => {} },
+    });
+    for (const query of ['Signal', '標本', 'Δείγμα', 'résumé']) {
+      const first = 'Link belongs to different work.';
+      const second = query.normalize('NFD') + ' includes Link and Owner.';
+      const text = first + '\n' + second;
+      const source = {
+        id: 's',
+        title: 'Recorded work',
+        text,
+        blocks: [{ start: 0, end: text.length }],
+        scopes: [{ start: 0, end: text.length }],
+        references: [
+          { start: 0, end: 4, name: 'Link', href: 'https://example.invalid/unrelated' },
+          {
+            start: first.length + 1 + second.indexOf('Link'),
+            end: first.length + 1 + second.indexOf('Link') + 4,
+            name: 'Link',
+            href: 'https://example.invalid/related',
+          },
+        ],
+      };
+      const extras = Array.from({ length: 40 }, (_, i) => ({
+        id: 'other' + i,
+        title: 'Other ' + i,
+        text: 'Owner belongs to another recorded context.',
+      }));
+      const owner = { ...node('owner', 'Owner'), sourceIds: ['s', ...extras.map((s) => s.id)] };
+      const data = snapshot([
+        node('subject', query),
+        { ...node('note', 'Recorded work'), kind: 'note' },
+        owner,
+        {
+          ...node('unrelated', 'Link'),
+          kind: 'externalLink',
+          url: 'https://example.invalid/unrelated',
+        },
+        {
+          ...node('related', 'Link'),
+          kind: 'externalLink',
+          url: 'https://example.invalid/related',
+        },
+      ]);
+      data.sources = [source, ...extras];
+      const documents = graphSearchDocuments(data);
+      const index = await createGraphSearchIndex(data);
+      const found = await searchKnowledgeGraph(index, query);
+      assert.ok(found.nodes.some(({ node }) => node.id === 'related'));
+      assert.ok(!found.nodes.some(({ node }) => node.id === 'unrelated'));
+      const selected = found.nodes.find(({ node }) => node.id === 'owner').node;
+      assert.deepEqual(selected.matchedSourceIds, ['s']);
+      assert.deepEqual(selected.sourceIds, owner.sourceIds);
+      const record = found.context.entries.find((e) => e.kind === 'node' && e.id === 'owner');
+      assert.ok(record.citationIds.length);
+      for (const id of record.citationIds)
+        assert.equal(found.context.citations.find((c) => c.id === id).sourceId, 's');
+      assert.ok(
+        found.nodes.find(({ node }) => node.id === 'note').score <=
+          found.nodes.find(({ node }) => node.id === 'related').score
+      );
+      await searchKnowledgeGraph(index, query, { maxHops: 3, contextChars: 32000 });
+      assert.strictEqual((await searchKnowledgeGraph(index, query)).context, found.context);
+      assert.deepEqual(graphSearchDocuments(data), documents);
+      assert.equal(owner.matchedSourceIds, undefined);
+    }
+  });
+
+  test('adjacent structural blocks keep independent link contexts even without separator characters', async () => {
+    const text = 'LinkSignal Owner';
+    const data = snapshot([
+      node('subject', 'Signal'),
+      { ...node('link', 'Link'), kind: 'externalLink', url: 'https://example.invalid/link' },
+      node('owner', 'Owner'),
+    ]);
+    data.sources = [
+      {
+        id: 's',
+        title: 'Source',
+        text,
+        blocks: [
+          { start: 0, end: 4 },
+          { start: 4, end: text.length },
+        ],
+        references: [{ start: 0, end: 4, name: 'Link', href: 'https://example.invalid/link' }],
+      },
+    ];
+    const found = await searchKnowledgeGraph(await createGraphSearchIndex(data), 'Signal');
+    assert.ok(found.nodes.some(({ node }) => node.id === 'owner'));
+    assert.ok(!found.nodes.some(({ node }) => node.id === 'link'));
+    const separate = snapshot([node('subject', 'Signal'), node('owner', 'Owner')]);
+    separate.sources = [
+      {
+        id: 's',
+        title: 'Source',
+        text: 'Owner belongs to different work.\nSignal has independent context.',
+      },
+    ];
+    const independent = await searchKnowledgeGraph(
+      await createGraphSearchIndex(separate),
+      'Signal'
+    );
+    assert.ok(!independent.nodes.some(({ node }) => node.id === 'owner'));
+  });
+
+  test('actual Markdown budgets select beyond former caps and repack without reranking or revisiting adjacency', async () => {
+    const peers = Array.from({ length: 240 }, (_, i) => node('Point ' + i));
+    const relations = peers.map((item, i) => edge('e' + i, 'Origin', item.id));
+    const index = await createGraphSearchIndex(snapshot([node('Origin'), ...peers], relations));
+    let visits = 0;
+    let sourceReads = 0;
+    const source = index.normalizedSource;
+    index.normalizedSource = (id) => {
+      sourceReads++;
+      return source(id);
+    };
+    const get = index.adjacent.get.bind(index.adjacent);
+    index.adjacent.get = (id) => {
+      visits++;
+      return get(id);
+    };
+    const first = await searchKnowledgeGraph(index, 'Origin', { contextChars: 16000 });
+    const visited = visits;
+    const rankedSourceReads = sourceReads;
+    const larger = await searchKnowledgeGraph(index, 'Origin', { contextChars: 256000 });
+    assert.equal(visits, visited);
+    assert.equal(sourceReads, rankedSourceReads);
+    assert.equal(larger.nodes.length, 241);
+    assert.equal(larger.edges.length, 240);
+    assert.equal(larger.limited, false);
+    assert.ok(larger.context.entries.filter((e) => e.kind === 'edge').length > 180);
+    const retained = new Set(
+      larger.context.entries.map((e) =>
+        JSON.stringify(e.kind === 'path' ? [e.kind, e.index] : [e.kind, e.id])
+      )
+    );
+    for (const e of first.context.entries.filter((e) => e.kind !== 'node'))
+      assert.ok(
+        retained.has(JSON.stringify(e.kind === 'path' ? [e.kind, e.index] : [e.kind, e.id]))
+      );
+    assert.ok(larger.context.usage.characters <= 256000);
+    const again = await searchKnowledgeGraph(index, 'Origin', { contextChars: 16000 });
+    assert.strictEqual(again.context, first.context);
+    assert.equal(visits, visited);
+  });
+
+  test('a shared suffix retains alternative complete routes between query subjects', async () => {
+    const index = await createGraphSearchIndex(
+      snapshot(
+        ['Start', 'Upper', 'Lower', 'Merge', 'Goal'].map((id) => node(id)),
+        [
+          edge('a', 'Start', 'Upper'),
+          edge('b', 'Start', 'Lower'),
+          edge('c', 'Upper', 'Merge'),
+          edge('d', 'Lower', 'Merge'),
+          edge('e', 'Merge', 'Goal'),
+        ]
+      )
+    );
+    const found = await searchKnowledgeGraph(index, 'Start Goal', { maxHops: 3 });
+    const paths = found.paths.filter((path) => path.kind === 'connection');
+    assert.ok(paths.some((path) => path.nodes.join(',') === 'Start,Upper,Merge,Goal'));
+    assert.ok(paths.some((path) => path.nodes.join(',') === 'Start,Lower,Merge,Goal'));
+    assert.equal(found.pathSearchComplete, true);
+  });
+
+  test('explicit subject connections verify category bridges without expanding unrelated siblings for one subject', async () => {
+    const group = { ...node('group', 'Group'), kind: 'builtInClass' };
+    const index = await createGraphSearchIndex(
+      snapshot(
+        [node('Alpha'), node('Beta'), node('Unrelated'), group],
+        ['Alpha', 'Beta', 'Unrelated'].map((id) => edge(id, id, 'group'))
+      )
+    );
+    const related = await searchKnowledgeGraph(index, 'Alpha', { maxHops: 2 });
+    assert.ok(!related.paths.some((path) => path.nodes.includes('Unrelated')));
+    const connection = await searchKnowledgeGraph(index, 'Alpha Beta', { maxHops: 2 });
+    assert.ok(connection.paths.some((path) => path.nodes.join(',') === 'Alpha,group,Beta'));
+    assert.doesNotMatch(connection.context.text, /No path found|Path search was not completed/);
+  });
+
+  test('complete disconnected searches report absence, interrupted searches report unverified typed pairs', async () => {
+    const graph = snapshot(
+      [node('Alpha'), node('Bridge'), node('Beta')],
+      [edge('first', 'Alpha', 'Bridge'), edge('last', 'Bridge', 'Beta')]
+    );
+    const index = await createGraphSearchIndex(graph);
+    const stopped = await searchKnowledgeGraph(index, 'Alpha Beta', { maxEdges: 1, maxHops: 2 });
+    assert.equal(stopped.pathSearchComplete, false);
+    assert.match(stopped.context.text, /Path search was not completed/);
+    assert.match(stopped.context.text, /Alpha.*\(Keyword\)/);
+    assert.match(stopped.context.text, /Beta.*\(Keyword\)/);
+    assert.doesNotMatch(stopped.context.text, /No path found|Path omitted due to context size/);
+    const disconnected = await searchKnowledgeGraph(
+      await createGraphSearchIndex(snapshot([node('Alpha'), node('Beta')])),
+      'Alpha Beta'
+    );
+    assert.equal(disconnected.pathSearchComplete, true);
+    assert.match(disconnected.context.text, /No path found/);
+    const full = await searchKnowledgeGraph(index, 'Alpha Beta', { maxHops: 2 });
+    assert.ok(full.paths.some((path) => path.nodes.join(',') === 'Alpha,Bridge,Beta'));
+    assert.doesNotMatch(full.context.text, /No path found|Path search was not completed/);
+  });
+
+  test('the first literal search shares normalized evidence, while full phrases still collapse whitespace', async () => {
+    const engine = load(
+      'search/engine.ts',
+      {
+        './snapshot': { yieldGraphSearch: async () => {} },
+        './context': { buildGraphSearchContextAsync: async (result) => result.context },
+      },
+      [],
+      new Map()
+    );
+    const text = 'Owner.\nRésumé 가 İ Alpha\t\nBeta.';
+    const data = snapshot([
+      node('owner', 'Owner'),
+      { ...node('note', 'Other'), kind: 'note' },
+      { ...node('phrase', 'Alpha Beta'), sourceIds: [] },
+    ]);
+    data.sources = [
+      {
+        id: 's',
+        title: 'Stored',
+        text,
+        blocks: [
+          { start: 0, end: 6 },
+          { start: 7, end: text.length },
+        ],
+      },
+    ];
+    const index = await engine.createGraphSearchIndex(data);
+    const normalize = String.prototype.normalize;
+    let fullSourceNormalizations = 0;
+    String.prototype.normalize = function (...args) {
+      if (String(this) === text) fullSourceNormalizations++;
+      return normalize.apply(this, args);
+    };
+    try {
+      for (const query of ['Résumé', '가', 'İ']) {
+        const result = await engine.searchKnowledgeGraph(index, query);
+        assert.equal(result.nodes.find(({ node }) => node.id === 'note').score, 25);
+      }
+      assert.equal(fullSourceNormalizations, 0);
+      const phrase = await engine.searchKnowledgeGraph(index, 'Alpha Beta');
+      assert.equal(phrase.nodes.find(({ node }) => node.id === 'note').score, 25);
+      assert.equal(phrase.nodes.find(({ node }) => node.id === 'phrase').score, 100);
+      assert.equal(fullSourceNormalizations, 0);
+    } finally {
+      String.prototype.normalize = normalize;
+    }
+  });
 });

@@ -804,7 +804,7 @@ test('graph search renders Markdown, follows source links and hands analysis ove
   const searchState = {
     result,
   };
-  const { GraphSearchSection } = load('search/GraphSearchSection.tsx', {
+  const { GraphSearchSection } = load('components/GraphSearchSection.tsx', {
     react: harness.react,
     '@blacktokki/core': { useLangContext: () => ({ lang }) },
     '@blacktokki/editor': {
@@ -827,7 +827,7 @@ test('graph search renders Markdown, follows source links and hands analysis ove
       StyleSheet: { create: (s) => s },
     },
     'react-native-vector-icons/MaterialCommunityIcons': 'Icon',
-    './useGraphSearch': {
+    '../search/useGraphSearch': {
       useGraphSearch: (_query, _depth, _requested, _focused, limit) => {
         if (searchState.result && searchState.result.context.usage.limit !== limit)
           searchState.result.context = buildGraphSearchContext(searchState.result, limit);
@@ -855,7 +855,7 @@ test('graph search renders Markdown, follows source links and hands analysis ove
       onLink: (url, navigation) => openedLinks.push({ url, navigation }),
     },
     '../../components/KnowledgeGraphNavToolbar': { KnowledgeGraphNavToolbar: 'Nav' },
-    '../components/AnalysisControls': { AnalysisAction: 'Action' },
+    './AnalysisControls': { AnalysisAction: 'Action' },
     '../screens/AnalysisProgressSection': { AnalysisProgressSection: 'AnalysisProgress' },
     '../useRelationAnalysisSession': {
       useRelationAnalysisSession: () => ({

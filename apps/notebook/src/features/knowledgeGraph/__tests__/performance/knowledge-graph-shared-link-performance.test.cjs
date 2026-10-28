@@ -6,7 +6,7 @@ const { compileFunction } = require('node:vm');
 const ts = require('typescript');
 
 const compiled = ts.transpileModule(
-  readFileSync(path.join(__dirname, '../utils/forceLayout.ts'), 'utf8'),
+  readFileSync(path.join(__dirname, '../../utils/forceLayout.ts'), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }
 ).outputText;
 

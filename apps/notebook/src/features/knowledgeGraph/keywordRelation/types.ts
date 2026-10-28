@@ -419,6 +419,20 @@ export type GraphSource = {
   href?: string;
   /** Complete structural units, in the unchanged text's character coordinates. */
   blocks?: { start: number; end: number }[];
+  /** Table cells retain source coordinates and merged-cell ownership without copying their text. */
+  tables?: {
+    start: number;
+    end: number;
+    rows: {
+      cells: {
+        start: number;
+        end: number;
+        header?: boolean;
+        rowSpan?: number;
+        columnSpan?: number;
+      }[];
+    }[];
+  }[];
   /** Enclosing heading sections; without headings the whole source is the context scope. */
   scopes?: { start: number; end: number }[];
   /** Heading names and HTML anchor identities resolve references without vocabulary rules. */
@@ -439,6 +453,8 @@ export type GraphSource = {
     internal?: boolean;
     unresolved?: boolean;
     targets?: { sourceId: string; start: number; end: number }[];
+    /** Resolved app destination; the original href remains unchanged for source identity. */
+    resolvedHref?: string;
   }[];
   /** Extraction text remains linked to its accessible original paragraph or note. */
   origin?: { sourceId: string; ranges: { start: number; end: number }[] };
@@ -453,6 +469,8 @@ export type SearchNode = {
   /** Node-local metadata; shared source text is resolved through sourceIds. */
   body: string;
   sourceIds: string[];
+  /** Query-local provenance hints; the complete source inventory and embedding input stay unchanged. */
+  matchedSourceIds?: string[];
   url?: string;
 };
 
@@ -500,6 +518,8 @@ export type GraphQueryPlan = {
   maxHops: number;
   /** Explicitly named question subjects, before retrieval seed limits are applied. */
   targetIds?: string[];
+  /** Alternatives matched at the same query mention; distinct mentions define distinct subjects. */
+  targetGroups?: string[][];
   /** Names remain available even when retrieval limits exclude a named target. */
   targetNames?: Record<string, string>;
   /** Retain classifications for query targets outside the retrieved result. */
@@ -543,6 +563,8 @@ export type GraphSearchResult = {
     usage: { characters: number; limit: number };
   };
   limited: boolean;
+  /** False when an explicit retrieval limit interrupted the requested path search. */
+  pathSearchComplete?: boolean;
 };
 
 export type GraphSearchProgress = {

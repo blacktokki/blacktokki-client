@@ -10,10 +10,10 @@ import { TemplateGraphDetails } from '../inductiveTemplate/TemplateGraphDetails'
 import { isTemplateGraphNode } from '../inductiveTemplate/graph';
 import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
 import { KeywordGraphDetails } from '../keywordRelation/components/KeywordGraphControls';
+import { getBoardParagraphSourceNotes } from '../paragraphClassification';
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
 import { findInstanceClassIds } from '../utils/classMembership';
 import { getNhopDepthOptions } from '../utils/nhop';
-import { getBoardParagraphSourceNotes } from '../utils/paragraphClassification';
 import { getKnowledgeGraphNodeKind, getKnowledgeGraphNodeKindLabel } from '../utils/relations';
 
 interface KnowledgeGraphPreviewSheetProps {

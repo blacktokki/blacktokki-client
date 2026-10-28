@@ -1,14 +1,300 @@
 const assert = require('node:assert/strict');
-const { createHash } = require('node:crypto');
 const { test } = require('node:test');
 
 const load = require('../../__tests__/loadTs.cjs');
-const { buildGraphSearchContext, createContextLineMeasure, renderContextPaths } = load(
-  'search/context.ts',
-  {},
-  ['createContextLineMeasure', 'renderContextPaths']
-);
+const {
+  buildGraphSearchContext,
+  createContextLineMeasure,
+  renderContextPaths,
+  graphSourceMetadataIdentity,
+} = load('search/context.ts', {}, [
+  'createContextLineMeasure',
+  'renderContextPaths',
+  'graphSourceMetadataIdentity',
+]);
 const { createEvidenceText } = load('search/evidence.ts');
+
+test('prepared table coordinates are reused without walking cells on repeated context requests', () => {
+  let reads = 0;
+  const row = {
+    cells: [
+      { start: 0, end: 5, header: true },
+      { start: 5, end: 9, header: true },
+    ],
+  };
+  const rows = [row];
+  const table = {
+    start: 0,
+    end: 9,
+    get rows() {
+      reads++;
+      return rows;
+    },
+  };
+  const source = {
+    id: 'table',
+    title: 'Table',
+    text: 'AlphaBeta',
+    blocks: [{ start: 0, end: 9 }],
+    tables: [table],
+  };
+  const found = {
+    scope: 'table-cache',
+    revision: 'same',
+    query: 'Alpha',
+    plan: { terms: ['alpha'], intent: 'related', maxHops: 1 },
+    nodes: [
+      {
+        node: {
+          id: 'alpha',
+          name: 'Alpha',
+          kind: 'note',
+          typeLabel: 'Note',
+          body: '',
+          noteTitle: 'Table',
+          sourceIds: ['table'],
+        },
+        score: 100,
+      },
+    ],
+    edges: [],
+    paths: [],
+    limited: false,
+    sources: [source],
+  };
+  graphSourceMetadataIdentity(source.tables, true);
+  const first = buildGraphSearchContext(found, 16000);
+  assert.match(first.text, /\|.*Alpha.*\|.*Beta.*\|/);
+  const initial = reads;
+  assert.ok(initial > 0);
+  assert.strictEqual(buildGraphSearchContext(found, 16000), first);
+  assert.equal(reads, initial);
+  assert.equal(Object.isFrozen(source.tables), true);
+  assert.equal(Object.isFrozen(row.cells), true);
+  source.tables = [{ start: 0, end: 9, rows: [{ cells: [{ start: 0, end: 9, header: true }] }] }];
+  const changed = buildGraphSearchContext(found, 16000);
+  assert.notStrictEqual(changed, first);
+  assert.notEqual(changed.text, first.text);
+});
+
+test('context validation avoids copying unused metadata strings and still detects nested edits', () => {
+  const marker = 'unused-source-reference-' + 'x'.repeat(100000);
+  const found = {
+    scope: 'metadata-cost',
+    revision: 'same',
+    query: 'Topic',
+    plan: { terms: ['topic'], intent: 'related', maxHops: 1 },
+    nodes: [
+      {
+        node: {
+          id: 'topic',
+          name: 'Topic',
+          kind: 'note',
+          typeLabel: 'Note',
+          body: '',
+          sourceIds: ['used'],
+        },
+        score: 100,
+      },
+    ],
+    edges: [],
+    paths: [],
+    limited: false,
+    sources: [
+      { id: 'used', title: 'Used', text: 'Topic has a recorded source.' },
+      {
+        id: 'unused',
+        title: 'Unused',
+        text: '',
+        references: [
+          {
+            start: 0,
+            end: 0,
+            href: marker,
+            name: 'Other',
+            targets: [{ sourceId: 'used', start: 0, end: 1 }],
+          },
+        ],
+      },
+    ],
+  };
+  const stringify = JSON.stringify;
+  let metadataCopies = 0;
+  JSON.stringify = (...args) => {
+    const value = stringify(...args);
+    if (typeof value === 'string' && value.includes(marker)) metadataCopies++;
+    return value;
+  };
+  try {
+    const first = buildGraphSearchContext(found, 3000);
+    assert.strictEqual(buildGraphSearchContext(found, 3000), first);
+    buildGraphSearchContext(found, 6000);
+    found.sources[1].references[0].targets[0].end = 2;
+    const changed = buildGraphSearchContext(found, 3000);
+    assert.notStrictEqual(changed, first);
+    assert.equal(changed.text, first.text);
+    assert.equal(metadataCopies, 0);
+  } finally {
+    JSON.stringify = stringify;
+  }
+});
+
+test('oversized evidence bundles are rejected before formatting and remain available at a larger size', () => {
+  const text =
+    'Alpha uses Beta.' + ' '.repeat(4000) + 'A complete qualification remains mandatory.';
+  const found = {
+    scope: 'quotation-cost',
+    revision: 'same',
+    query: 'Alpha Beta',
+    plan: { terms: ['alpha', 'beta'], intent: 'connection', maxHops: 1, targetIds: ['a', 'b'] },
+    nodes: ['a', 'b'].map((id, index) => ({
+      node: {
+        id,
+        name: index ? 'Beta' : 'Alpha',
+        kind: 'note',
+        typeLabel: 'Note',
+        body: '',
+        sourceIds: [],
+      },
+      score: 100,
+    })),
+    edges: [
+      {
+        edge: {
+          id: 'ab',
+          source: 'a',
+          target: 'b',
+          label: 'uses',
+          type: 'REFERENCES',
+          directed: true,
+          sourceIds: ['s'],
+        },
+        score: 80,
+      },
+    ],
+    paths: [{ nodes: ['a', 'b'], edges: ['ab'] }],
+    sources: [
+      {
+        id: 's',
+        title: 'Source',
+        text,
+        blocks: [{ start: 0, end: text.length }],
+        scopes: [{ start: 0, end: text.length }],
+      },
+    ],
+    limited: false,
+  };
+  const split = String.prototype.split;
+  let formatted = 0;
+  String.prototype.split = function (...args) {
+    if (String(this) === text) formatted++;
+    return split.apply(this, args);
+  };
+  try {
+    const small = buildGraphSearchContext(found, 1200);
+    assert.equal(formatted, 0);
+    assert.ok(!small.entries.some((entry) => entry.kind === 'edge'));
+    const large = buildGraphSearchContext(found, 16000);
+    assert.ok(formatted > 0);
+    assert.ok(large.entries.some((entry) => entry.kind === 'edge' && entry.id === 'ab'));
+    assert.ok(large.citations.some((citation) => citation.text === text));
+  } finally {
+    String.prototype.split = split;
+  }
+});
+
+test('formatting of standalone items is bounded by the available budget while duplicate entries survive', () => {
+  let reads = 0;
+  const items = Array.from({ length: 600 }, (_, index) => ({
+    id: 'n' + index,
+    get name() {
+      reads++;
+      return ('Item ' + index).padEnd(200, 'x');
+    },
+    kind: 'note',
+    typeLabel: 'Note',
+    body: '',
+    sourceIds: [],
+  }));
+  const found = {
+    scope: 'item-cost',
+    revision: 'v',
+    query: 'Topic',
+    plan: { terms: [], intent: 'related', maxHops: 1 },
+    nodes: items.map((node) => ({ node, score: 100 })),
+    edges: [],
+    paths: [],
+    sources: [],
+    limited: false,
+  };
+  const context = buildGraphSearchContext(found, 1000);
+  const visible = context.entries.filter((entry) => entry.kind === 'node').length;
+  assert.ok(
+    reads <= 2 * items.length + 2 * visible,
+    'unaffordable items do not require another name-formatting pass'
+  );
+  const duplicate = {
+    ...found,
+    nodes: [
+      ...items.slice(0, 10).map((node, index) => ({
+        node: { ...node, id: 'copy' + index, name: 'Shared'.repeat(100) },
+        score: 100,
+      })),
+      { node: { ...items[0], id: 'too-large', name: 'Other'.repeat(300) }, score: 100 },
+    ],
+  };
+  const repeated = buildGraphSearchContext(duplicate, 1000);
+  assert.equal(repeated.entries.filter((entry) => entry.kind === 'node').length, 10);
+});
+
+test('optional provenance is deferred before scanning a source when even its reference cannot fit', () => {
+  let examined = 0;
+  const evidence = load('search/evidence.ts');
+  const { buildGraphSearchContext } = load('search/context.ts', {
+    './evidence': {
+      ...evidence,
+      graphEvidenceExcerpts: (...args) => {
+        examined++;
+        return evidence.graphEvidenceExcerpts(...args);
+      },
+    },
+  });
+  const found = {
+    scope: 'reference-cost',
+    revision: 'v',
+    query: 'Subject',
+    plan: { terms: ['subject'], intent: 'related', maxHops: 1 },
+    nodes: [
+      {
+        node: {
+          id: 'subject',
+          name: 'Subject',
+          kind: 'note',
+          typeLabel: 'Note',
+          noteTitle: 'Source',
+          body: '',
+          sourceIds: ['s'],
+        },
+        score: 100,
+      },
+    ],
+    edges: [],
+    paths: [],
+    sources: [
+      {
+        id: 's',
+        title: 'Long source title '.repeat(200),
+        text: 'Subject and its full source context. '.repeat(10000),
+      },
+    ],
+    limited: false,
+  };
+  const context = buildGraphSearchContext(found, 1000);
+  assert.equal(examined, 0);
+  assert.equal(context.citations.length, 0);
+  assert.equal(context.truncated, true);
+  assert.ok(context.text.includes('Subject'));
+});
 
 test('a 256k context with many evidence alternatives retains paths and exact quotes within five seconds', (t) => {
   const points = Array.from({ length: 63 }, (_, index) => index);
@@ -73,11 +359,14 @@ test('a 256k context with many evidence alternatives retains paths and exact quo
 test('context sizes share source preparation and repeated sizes reuse completed Markdown with input and translation invalidation', () => {
   const evidence = load('search/evidence.ts');
   let excerpts = 0;
+  const sourcePreparations = new Set();
+  const originalText = 'Alpha uses Beta under the original condition.';
   const { buildGraphSearchContext } = load('search/context.ts', {
     './evidence': {
       ...evidence,
       graphEvidenceExcerpts: (...args) => {
         excerpts++;
+        if (args[0] === originalText) sourcePreparations.add(args[1]);
         return evidence.graphEvidenceExcerpts(...args);
       },
     },
@@ -114,7 +403,7 @@ test('context sizes share source preparation and repeated sizes reuse completed 
       },
     ],
     paths: [{ nodes: ['Alpha', 'Beta'], edges: ['uses'] }],
-    sources: [{ id: 's', title: 'Note', text: 'Alpha uses Beta under the original condition.' }],
+    sources: [{ id: 's', title: 'Note', text: originalText }],
     limited: false,
   };
   let label = 'Related items';
@@ -127,6 +416,27 @@ test('context sizes share source preparation and repeated sizes reuse completed 
   assert.strictEqual(buildGraphSearchContext(result, 16000, translate), first);
   assert.strictEqual(buildGraphSearchContext(result, 32000, translate), larger);
   assert.equal(excerpts, prepared, 'completed sizes do no evidence work');
+  const acrossRanges = {
+    ...result,
+    nodes: [...result.nodes],
+    plan: { ...result.plan, maxHops: 3 },
+  };
+  buildGraphSearchContext(acrossRanges, 16000, translate);
+  buildGraphSearchContext(
+    {
+      ...acrossRanges,
+      query: 'Beta',
+      nodes: [...result.nodes],
+      plan: { ...acrossRanges.plan, terms: ['beta'] },
+    },
+    16000,
+    translate
+  );
+  assert.equal(
+    sourcePreparations.size,
+    1,
+    'queries and ranges reuse the prepared index source text'
+  );
   result.sources[0].text = 'Alpha uses Beta under a changed condition.';
   const changed = buildGraphSearchContext(result, 16000, translate);
   assert.notStrictEqual(changed, first);
@@ -392,6 +702,7 @@ test('dense partial-budget searches retain complete trees without scanning all p
     sourceIds: ['s' + (index + 1)],
   }));
   let pathReads = 0;
+  let edgeReads = 0;
   const paths = edges
     .flatMap((edge, index) => [
       { nodes: [edge.source, edge.target], edges: [edge.id] },
@@ -405,7 +716,10 @@ test('dense partial-budget searches retain complete trees without scanning all p
         pathReads++;
         return path.nodes;
       },
-      edges: path.edges,
+      get edges() {
+        edgeReads++;
+        return path.edges;
+      },
     }));
   const sources = nodes.map((_, index) => ({
     id: 's' + index,
@@ -430,12 +744,23 @@ test('dense partial-budget searches retain complete trees without scanning all p
   const started = performance.now();
   const context = buildGraphSearchContext(result, 16000);
   t.diagnostic(`${paths.length} candidate paths: ${Math.round(performance.now() - started)} ms`);
-  // Includes nested typed paths, entries, citations and omissions within the Markdown budget.
-  assert.equal(
-    createHash('sha256').update(JSON.stringify(context)).digest('hex'),
-    '581ec56b88fe31e144bee981e06e21f8793fd4bab7a340c880fc7469e2d6c02f'
-  );
+  assert.ok(context.entries.some((entry) => entry.kind === 'path'));
+  for (const entry of context.entries.filter((entry) => entry.kind === 'path'))
+    for (const id of paths[entry.index].edges)
+      assert.ok(
+        context.entries.some(
+          (entry) => entry.kind === 'edge' && entry.id === id && entry.citationIds.length
+        )
+      );
+  for (const citation of context.citations) {
+    const source = sources.find((source) => source.id === citation.sourceId);
+    assert.equal(citation.text, source.text.slice(citation.start, citation.end));
+  }
   assert.ok(pathReads < 60000, `published paths were repeatedly scanned (${pathReads} reads)`);
+  assert.ok(
+    edgeReads < 60000,
+    `candidate relationships were repeatedly scanned (${edgeReads} reads)`
+  );
   assert.equal(context.usage.characters, context.text.length);
   assert.ok(context.text.length <= context.usage.limit);
 });
@@ -488,13 +813,113 @@ test('shared multi-paragraph evidence is evaluated as one bundle instead of all 
   const context = buildGraphSearchContext(result, 16000);
   t.diagnostic(`48 shared paragraphs: ${Math.round(performance.now() - started)} ms`);
   assert.ok(performance.now() - started < 5000, 'shared evidence must finish within five seconds');
-  assert.equal(context.citations.length, 48);
+  assert.ok(
+    context.citations.length < 48,
+    'adjacent context does not need one quotation per paragraph'
+  );
   assert.equal(context.entries.filter((entry) => entry.kind === 'edge').length, 3);
   assert.equal(context.entries.filter((entry) => entry.kind === 'path').length, 1);
   for (const citation of context.citations)
     assert.equal(citation.text, source.text.slice(citation.start, citation.end));
-  for (const entry of context.entries.filter((entry) => entry.kind === 'edge'))
-    assert.equal(entry.citationIds.length, 48);
+  for (const entry of context.entries.filter((entry) => entry.kind === 'edge')) {
+    const quoted = entry.citationIds.map((id) => context.citations.find((c) => c.id === id).text);
+    for (let index = 0; index < 48; index++)
+      assert.ok(
+        quoted.some((text) => text.includes('condition ' + index + '.')),
+        'each relationship retains every original condition'
+      );
+  }
   assert.equal(context.usage.characters, context.text.length);
   assert.ok(context.text.length <= 16000);
+});
+
+test('scope indexing preserves overlapping, nested and duplicate ranges without scanning the inventory per lookup', () => {
+  const { createScopeIndex } = load('search/retrieval.ts');
+  let seed = 17;
+  const random = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0);
+  const scopes = Array.from({ length: 180 }, () => {
+    const start = random() % 500;
+    return { start, end: start + (random() % 200) };
+  });
+  scopes.push({ ...scopes[0] }, { start: 0, end: 800 });
+  const index = createScopeIndex(scopes);
+  for (let i = 0; i < 300; i++) {
+    const start = random() % 800,
+      range = { start, end: start + (random() % 40) };
+    const expected = scopes
+      .map((scope, id) => ({ ...scope, id }))
+      .filter((s) => s.start <= range.start && s.end >= range.end)
+      .sort((a, b) => a.end - a.start - (b.end - b.start) || a.id - b.id)
+      .map((s) => s.id);
+    assert.deepEqual(index.parents(range), expected);
+  }
+  for (const [id, parent] of scopes.entries()) {
+    const children = scopes.filter(
+      (child) =>
+        child.start >= parent.start &&
+        child.end <= parent.end &&
+        (child.start !== parent.start || child.end !== parent.end)
+    );
+    assert.deepEqual(index.introduction(id), {
+      start: parent.start,
+      end: Math.min(parent.end, ...children.map((c) => c.start)),
+    });
+  }
+  let reads = 0;
+  const inventory = Array.from({ length: 6000 }, (_, i) => ({
+    get start() {
+      reads++;
+      return i * 10;
+    },
+    get end() {
+      reads++;
+      return i * 10 + 9;
+    },
+  }));
+  const indexed = createScopeIndex(inventory);
+  reads = 0;
+  for (let i = 0; i < 100; i++)
+    assert.deepEqual(indexed.parents({ start: i * 10 + 2, end: i * 10 + 5 }), [i]);
+  assert.ok(reads < inventory.length);
+});
+
+test('query and predicate scoring skips blocks excluded by intact party evidence without losing alternatives', () => {
+  const { graphEvidenceExcerpts } = load('search/evidence.ts');
+  const lines = [
+    'Alpha uses Beta for Topic.',
+    'Alpha excludes Beta for Topic.',
+    ...Array.from({ length: 1200 }, (_, i) => 'Other record ' + i + '.'),
+  ];
+  const text = lines.join('\n');
+  let cursor = 0;
+  const blocks = lines.map((line) => {
+    const range = { start: cursor, end: cursor + line.length };
+    cursor = range.end + 1;
+    return range;
+  });
+  const original = createEvidenceText(text);
+  let scored = 0;
+  const search = {
+    ...original,
+    coverage: (range, terms) => {
+      if (terms.includes('topic')) scored++;
+      return original.coverage(range, terms);
+    },
+  };
+  const excerpts = graphEvidenceExcerpts(text, search, 16000, {
+    terms: ['topic'],
+    pair: ['alpha', 'beta'],
+    relation: 'uses',
+    blocks,
+  });
+  assert.equal(excerpts.length, 2);
+  assert.equal(scored, excerpts.length);
+  assert.deepEqual(
+    excerpts.map((e) => text.slice(e.start, e.end)),
+    lines.slice(0, 2)
+  );
+  assert.deepEqual(
+    excerpts.map((e) => e.relevance),
+    [325, 320]
+  );
 });

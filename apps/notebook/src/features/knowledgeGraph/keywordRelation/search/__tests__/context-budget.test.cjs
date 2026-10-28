@@ -162,6 +162,167 @@ test('source blocks retain entire paragraphs, nested lists and table structure w
   assert.ok(passages[2].includes('| --- |'));
 });
 
+test('table quotations retain column ownership, empty cells and literal content within the Markdown budget', (t) => {
+  const domino = require('@mixmark-io/domino');
+  const previous = global.DOMParser;
+  global.DOMParser = class {
+    parseFromString(html) {
+      return domino.createDocument(html);
+    }
+  };
+  t.after(() => {
+    global.DOMParser = previous;
+  });
+  for (const labels of [
+    ['Alpha', 'First', 'Second'],
+    ['甲', '一案', '二案'],
+  ]) {
+    const [subject, first, second] = labels;
+    const html = `<p>Introduction.</p><table><thead><tr><th>Option</th><th>${first}</th><th>${second}</th></tr></thead><tbody><tr><td>${subject}</td><td>7 | &lt;raw&gt;</td><td>24</td></tr><tr><td></td><td>Conditional only.</td><td>Never enabled.</td></tr></tbody></table><p>Afterwards.</p>`;
+    const text = editor.toRaw(html);
+    const structure = graphSourceStructure(html, text);
+    assert.equal(structure.tables.length, 1);
+    const table = structure.tables[0];
+    assert.deepEqual(
+      table.rows.map((row) => row.cells.map((cell) => text.slice(cell.start, cell.end))),
+      [
+        ['Option', first, second],
+        [subject, '7 | <raw>', '24'],
+        ['', 'Conditional only.', 'Never enabled.'],
+      ]
+    );
+    const source = { id: 's', title: 'Schedule', text, ...structure };
+    const found = result([{ ...node(subject, ['s']), name: subject }], [], [source]);
+    found.query = subject;
+    found.plan = { terms: [subject.toLowerCase()], intent: 'related', maxHops: 1 };
+    for (const budget of [512, 16000, 32000]) {
+      const context = buildGraphSearchContext(found, budget);
+      valid(context, [source]);
+      if (context.citations.length) {
+        const rendered = editor.renderer(context.text);
+        assert.match(rendered, /<table>/);
+        assert.match(rendered, /<td>7 \| &lt;raw&gt;<\/td>\s*<td>24<\/td>/);
+        assert.match(
+          rendered,
+          /<td><\/td>\s*<td>Conditional only\.<\/td>\s*<td>Never enabled\.<\/td>/
+        );
+        assert.match(rendered, /<strong><code>/);
+        assert.doesNotMatch(rendered, /<raw>/);
+      }
+    }
+    found.query = '7 |';
+    found.plan.terms = ['7 |'];
+    const matchedPipe = buildGraphSearchContext(found, 16000);
+    assert.match(editor.renderer(matchedPipe.text), /<code>7 \|<\/code>/);
+    valid(matchedPipe, [source]);
+  }
+});
+
+test('resolved relative references navigate from the search route with original paragraph and section parameters', async (t) => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const ts = require('typescript');
+  const { compileFunction } = require('node:vm');
+  const filename = path.resolve(__dirname, '../../../../../components/SearchBar.tsx');
+  const parsed = ts.createSourceFile(
+    filename,
+    fs.readFileSync(filename, 'utf8'),
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TSX
+  );
+  const functions = parsed.statements.filter(
+    (node) =>
+      ts.isFunctionDeclaration(node) &&
+      ['toNoteParams', 'urlToNoteLink', 'onLink'].includes(node.name?.text)
+  );
+  const compiled = ts.transpileModule(functions.map((node) => node.getText(parsed)).join('\n'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const handlers = {};
+  compileFunction(compiled, ['exports'])(handlers);
+  const previousLocation = global.location;
+  const previousWindow = global.window;
+  const opened = [];
+  global.location = { origin: 'https://localhost', href: 'https://localhost/?query=Alpha' };
+  global.window = { open: (...args) => opened.push(args) };
+  t.after(() => {
+    global.location = previousLocation;
+    global.window = previousWindow;
+  });
+  const paragraph = 'Rule [二]&1';
+  const section = 'Parent / 条件';
+  const title = 'Policy & [1]';
+  const relative = `./${encodeURIComponent(title)}.md?section=${encodeURIComponent(
+    section
+  )}#${encodeURIComponent(paragraph)}`;
+  const description = `<p>Alpha uses Beta subject to <a href="${relative}">the original rule</a> and <a href="https://external.test/doc.md?q=1&amp;x=2">external material</a>.</p>`;
+  const data = await observedSnapshot(description, 'Alpha uses Beta', {
+    extraNotes: [
+      {
+        title,
+        description: `<h1>${section}</h1><h2 id="${paragraph}">${paragraph}</h2><p>Owner review remains mandatory.</p>`,
+      },
+    ],
+  });
+  const source = data.sources.find((source) => source.title === 'Note' && !source.origin);
+  const internal = source.references.find((reference) => reference.href === relative);
+  assert.equal(internal.unresolved, false);
+  assert.equal(internal.href, relative);
+  assert.deepEqual(handlers.urlToNoteLink(internal.resolvedHref), { title, paragraph, section });
+  const found = await searchKnowledgeGraph(await createGraphSearchIndex(data), 'Alpha Beta');
+  const rendered = editor.renderer(found.context.text);
+  const hrefs = [...rendered.matchAll(/href="([^"]+)"/g)].map((match) =>
+    match[1].replaceAll('&amp;', '&')
+  );
+  assert.ok(hrefs.includes(internal.resolvedHref));
+  assert.ok(hrefs.includes('https://external.test/doc.md?q=1&x=2'));
+  assert.equal(hrefs.includes(relative), false);
+  const routes = [];
+  const navigation = {
+    getState: () => ({ routes: [{ params: { query: 'Alpha Beta' } }], index: 0 }),
+    push: (...args) => routes.push(args),
+  };
+  handlers.onLink(internal.resolvedHref, navigation);
+  assert.deepEqual(routes, [['NotePage', { title, paragraph, section }]]);
+  assert.deepEqual(opened, []);
+  valid(found.context, data.sources);
+});
+
+test('equal cached HTML resolves relative links separately for each source note', async () => {
+  const folders = ['First', '第二'];
+  const description = '<p>Alpha uses Beta subject to <a href="./Rule.md">the rule</a>.</p>';
+  const data = await createGraphSearchSnapshot({
+    scope: 'shared-layout',
+    coverage: { keywords: true, templates: false },
+    translate: (key) => key,
+    graph: {
+      nodes: folders.map((folder, id) => ({
+        ...graphNode('note-' + id),
+        instanceKind: 'NOTE',
+        noteTitle: folder + '/Source',
+      })),
+      edges: [],
+    },
+    notes: folders.flatMap((folder) => [
+      { title: folder + '/Source', description },
+      { title: folder + '/Rule', description: '<p>' + folder + ' qualification.</p>' },
+    ]),
+  });
+  for (const folder of folders) {
+    const source = data.sources.find((source) => source.title === folder + '/Source');
+    const reference = source.references[0];
+    assert.equal(
+      new URLSearchParams(reference.resolvedHref.slice(1)).get('title'),
+      folder + '/Rule'
+    );
+    assert.equal(
+      data.sources.find((source) => source.id === reference.targets[0].sourceId).title,
+      folder + '/Rule'
+    );
+  }
+});
+
 test('unrecorded evidence keeps every sentence in its paragraph, including an unfamiliar qualification', () => {
   for (const qualification of [
     'This is an unapproved proposal.',
@@ -907,12 +1068,10 @@ test('exception notices retain classifications of targets excluded from retrieva
   assert.deepEqual(found.plan.targetNotes.Beta, ['Origin Note']);
   assert.match(
     found.context.text,
-    /> No path found[^\n]*\n\n[\s\S]*Beta.*\(Paragraph\[Origin Note\]\)/
+    /> Path search was not completed[^\n]*\n\n[\s\S]*Beta.*\(Paragraph\[Origin Note\]\)/
   );
   assert.doesNotMatch(found.context.text, /Query item connections|Unclassified/);
-  const missing = found.context.text
-    .split('> No path found within the selected search range')[1]
-    .split('\n## ')[0];
+  const missing = found.context.text.split('> Path search was not completed')[1].split('\n## ')[0];
   assert.match(found.context.text, /^## Traversal paths \(0\/3\)$/m);
   assert.doesNotMatch(missing, /^\\\. \(\d/);
   assert.equal((missing.match(/^- /gm) || []).length, 2, 'missing pairs share their start');
@@ -1033,6 +1192,22 @@ test('explicit anchors and relative note links resolve transitive conditions and
   );
   assert.equal(found.context.truncated, false);
   valid(found.context, data.sources);
+});
+
+test('failed text matching preserves nested reference links and same-note fragments retain unresolved status', async () => {
+  const data = await observedSnapshot(
+    '<blockquote><p>Alpha uses Beta under <a href="./Policy.md">Policy</a><br>and extra context.</p><ul><li><input type="checkbox">See <a href="#missing-condition">condition</a>.</li></ul></blockquote>',
+    'Alpha uses Beta under Policy'
+  );
+  const source = data.sources.find((s) => s.title === 'Note' && !s.origin);
+  assert.deepEqual(
+    new Set(source.references.map((r) => r.href)),
+    new Set(['./Policy.md', '#missing-condition'])
+  );
+  assert.ok(source.references.every((r) => r.internal && r.unresolved));
+  const found = await searchKnowledgeGraph(await createGraphSearchIndex(data), 'Alpha Beta');
+  assert.ok(!found.context.entries.some((e) => e.kind === 'edge'));
+  assert.equal(found.context.truncated, true);
 });
 
 test('a relationship cannot fit by dropping a linked condition, and unavailable internal sources report omission', async () => {

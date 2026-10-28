@@ -6,13 +6,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { useGraphSearch } from './useGraphSearch';
+import { AnalysisAction } from './AnalysisControls';
 import { onLink } from '../../../../components/SearchBar';
 import type { SearchSectionProps } from '../../../../hooks/useExtension';
 import { useNotebookTheme } from '../../../../hooks/useNotebookTheme';
 import type { NavigationParamList } from '../../../../types';
-import { AnalysisAction } from '../components/AnalysisControls';
 import { AnalysisProgressSection } from '../screens/AnalysisProgressSection';
+import { useGraphSearch } from '../search/useGraphSearch';
 import { useRelationAnalysisSession } from '../useRelationAnalysisSession';
 
 const formatContextSize = (characters: number) =>

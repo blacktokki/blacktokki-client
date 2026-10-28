@@ -3,6 +3,7 @@ const { test } = require('node:test');
 
 const load = require('../../__tests__/loadTs.cjs');
 const { buildGraphSearchContext } = load('search/context.ts');
+const { createEvidenceText, graphEvidenceExcerpt } = load('search/evidence.ts');
 const { createGraphSearchIndex, searchKnowledgeGraph } = load('search/engine.ts', {
   './snapshot': { yieldGraphSearch: async () => {} },
   '../keyword/keywordUtils': {
@@ -61,6 +62,321 @@ const validRanges = (context, sources) => {
   }
 };
 
+test('representative subjects prefer intact body evidence over cheaper headings and navigation labels', () => {
+  for (const [first, second, portal] of [
+    ['Alpha', 'Beta', 'Portal'],
+    ['甲', '乙', '入口'],
+  ]) {
+    const navigation = `${second}\n${portal}`;
+    const body = `${second}\n${first} → ${second}: 12 / 24.`;
+    const sources = [
+      { id: 'first', title: first, text: `${first}: 12 / 24.` },
+      {
+        id: 'nav',
+        title: second,
+        text: navigation,
+        anchors: [{ name: second, kind: 'heading', start: 0, end: navigation.length }],
+        references: [
+          {
+            name: portal,
+            start: second.length + 1,
+            end: navigation.length,
+            href: 'https://example.invalid/',
+          },
+        ],
+      },
+      {
+        id: 'body',
+        title: second,
+        text: body,
+        anchors: [{ name: second, kind: 'heading', start: 0, end: body.length }],
+        blocks: [
+          { start: 0, end: second.length },
+          { start: second.length + 1, end: body.length },
+        ],
+        scopes: [{ start: 0, end: body.length }],
+      },
+    ];
+    for (const shared of [false, true]) {
+      const items = [
+        { ...node('a', ['first']), name: first },
+        { ...node('nav', shared ? ['nav', 'body'] : ['nav']), name: second },
+        ...(shared ? [] : [{ ...node('body', ['body']), name: second }]),
+        node('neighbor', ['first']),
+      ];
+      const found = result(items, [edge('near', 'a', 'neighbor', ['first'])], sources, [
+        { nodes: ['a', 'neighbor'], edges: ['near'], kind: 'surrounding' },
+      ]);
+      found.query = `${first} ${second}`;
+      found.plan = {
+        terms: [first.toLowerCase(), second.toLowerCase()],
+        intent: 'connection',
+        maxHops: 2,
+        targetGroups: [['a'], shared ? ['nav'] : ['nav', 'body']],
+      };
+      let previous;
+      for (const budget of [16000, 32000, 64000]) {
+        const context = buildGraphSearchContext(found, budget);
+        const entry = context.entries.find(
+          (entry) => entry.kind === 'node' && entry.id === (shared ? 'nav' : 'body')
+        );
+        assert.ok(
+          entry?.citationIds.some(
+            (id) => context.citations.find((c) => c.id === id).sourceId === 'body'
+          )
+        );
+        assert.ok(context.citations.some((citation) => citation.text.includes('12 / 24')));
+        assert.ok(context.entries.some((entry) => entry.kind === 'path'));
+        if (previous)
+          for (const entry of previous.entries.filter((entry) => entry.kind !== 'node'))
+            assert.ok(
+              context.entries.some(
+                (next) =>
+                  next.kind === entry.kind && next.id === entry.id && next.index === entry.index
+              )
+            );
+        previous = context;
+        validRanges(context, sources);
+      }
+    }
+  }
+});
+
+test('each question subject receives an affordable intact source before peripheral paths, including linked conditions', () => {
+  const a = 'Alpha has a separately recorded rule.';
+  const rule = 'The original qualification must remain attached.';
+  const b = 'Beta is available under the recorded condition.';
+  const large = 'Alpha has a long qualification. ' + 'Unabridged context. '.repeat(1500);
+  const sources = [
+    {
+      id: 'a-large',
+      title: 'Large',
+      text: large,
+      blocks: [{ start: 0, end: large.length }],
+      scopes: [{ start: 0, end: large.length }],
+    },
+    {
+      id: 'a',
+      title: 'First',
+      text: a,
+      blocks: [{ start: 0, end: a.length }],
+      scopes: [{ start: 0, end: a.length }],
+      references: [
+        {
+          start: a.indexOf('rule'),
+          end: a.indexOf('rule') + 4,
+          href: '?title=Rules',
+          name: 'rule',
+          internal: true,
+          targets: [{ sourceId: 'rule', start: 0, end: rule.length }],
+        },
+      ],
+    },
+    { id: 'rule', title: 'Rules', text: rule },
+    { id: 'b', title: 'Second', text: b },
+    { id: 'side', title: 'Surrounding', text: 'Alpha references Neighbor.' },
+  ];
+  const items = [
+    { ...node('expensive', ['a-large']), name: 'Alpha' },
+    { ...node('affordable', ['a']), name: 'Alpha' },
+    { ...node('b', ['b']), name: 'Beta' },
+    node('Neighbor', []),
+  ];
+  const found = result(items, [edge('side', 'affordable', 'Neighbor', ['side'])], sources, [
+    { nodes: ['affordable', 'Neighbor'], edges: ['side'], kind: 'surrounding' },
+  ]);
+  found.query = 'Alpha Beta';
+  found.plan = {
+    terms: ['alpha', 'beta'],
+    intent: 'connection',
+    maxHops: 2,
+    targetIds: ['expensive', 'affordable', 'b'],
+    targetGroups: [['expensive', 'affordable'], ['b']],
+  };
+  let previous = [];
+  for (const size of [2000, 4000, 16000, 64000]) {
+    const context = buildGraphSearchContext(found, size);
+    for (const id of ['affordable', 'b']) {
+      const entry = context.entries.find((e) => e.kind === 'node' && e.id === id);
+      assert.ok(entry.citationIds.length, id);
+    }
+    assert.ok(context.citations.some((c) => c.sourceId === 'rule' && c.text === rule));
+    const related = context.citations.findIndex((c) => c.sourceId === 'side');
+    if (related >= 0) {
+      assert.ok(context.citations.findIndex((c) => c.sourceId === 'a') < related);
+      assert.ok(context.citations.findIndex((c) => c.sourceId === 'b') < related);
+    }
+    const keys = new Set(
+      context.entries.filter((e) => e.kind !== 'node').map((e) => JSON.stringify(e))
+    );
+    for (const key of previous) assert.ok(keys.has(key));
+    previous = [...keys];
+    validRanges(context, sources);
+  }
+});
+
+test('peripheral explanations wait when the subject evidence cannot fit, and growing budgets keep admitted paths', () => {
+  const text =
+    'Alpha has a complete qualification. ' +
+    'A recorded qualification remains applicable. '.repeat(90);
+  const sources = [
+    {
+      id: 'a',
+      title: 'First',
+      text,
+      blocks: [{ start: 0, end: text.length }],
+      scopes: [{ start: 0, end: text.length }],
+    },
+    { id: 'b', title: 'Second', text: 'Beta has a recorded condition.' },
+    { id: 'side', title: 'Side', text: 'Alpha references Neighbor.' },
+  ];
+  const found = result(
+    [node('Alpha', ['a']), node('Beta', ['b']), node('Neighbor', [])],
+    [edge('side', 'Alpha', 'Neighbor', ['side'])],
+    sources,
+    [{ nodes: ['Alpha', 'Neighbor'], edges: ['side'], kind: 'surrounding' }]
+  );
+  found.query = 'Alpha Beta';
+  found.plan = {
+    terms: ['alpha', 'beta'],
+    intent: 'connection',
+    maxHops: 2,
+    targetIds: ['Alpha', 'Beta'],
+  };
+  const small = buildGraphSearchContext(found, 1800);
+  assert.equal(small.entries.filter((e) => e.kind === 'path' || e.kind === 'edge').length, 0);
+  assert.equal(small.truncated, true);
+  const large = buildGraphSearchContext(found, 8000);
+  assert.ok(large.entries.some((e) => e.kind === 'path'));
+  assert.ok(large.entries.find((e) => e.kind === 'node' && e.id === 'Alpha').citationIds.length);
+  validRanges(small, sources);
+  validRanges(large, sources);
+});
+
+test('normalization offsets retain long unchanged prefixes and suffixes around composed and reordered characters', () => {
+  const prefix = 'Unchanged prefix. '.repeat(4000);
+  const suffix = ' Unchanged suffix.'.repeat(4000);
+  for (const fragment of [
+    'e\u0301',
+    'x\u0301\u0323',
+    'a\u0323\u0301',
+    '\u1100\u1161\u11a8',
+    '\u0399\u0308\u0301',
+    'İ',
+  ]) {
+    const original = prefix + fragment + suffix;
+    const search = createEvidenceText(original);
+    const needle = fragment.normalize('NFC').toLowerCase();
+    const start = search.text.indexOf(needle, prefix.length);
+    const range = search.range(start, start + needle.length);
+    assert.equal(original.slice(range.start, range.end), fragment);
+    assert.deepEqual(search.range(0, 10), { start: 0, end: 10 });
+    const tail = search.range(search.text.length - 10, search.text.length);
+    assert.equal(original.slice(tail.start, tail.end), suffix.slice(-10));
+  }
+});
+
+test('source relationships quote their own occurrence and file hierarchy retains its available evidence', () => {
+  const sources = [
+    { id: 'one', title: 'First', text: 'Topic occurs in this first note.' },
+    { id: 'two', title: 'Second', text: 'An independent occurrence in another note.' },
+  ];
+  const items = [node('Topic', ['one', 'two']), { ...node('First', ['one']), noteTitle: 'First' }];
+  const relationship = {
+    ...edge('source', 'Topic', 'First', ['one', 'two']),
+    type: 'KEYWORD_SOURCE',
+  };
+  const context = buildGraphSearchContext(result(items, [relationship], sources), 16000);
+  assert.deepEqual(
+    new Set(citedBy(context, 'source').map((citation) => citation.sourceId)),
+    new Set(['one'])
+  );
+  const hierarchy = { ...edge('parent', 'First', 'Folder', ['one']), type: 'PART_OF' };
+  const parent = { ...node('Folder', []), noteTitle: 'Folder' };
+  const nested = buildGraphSearchContext(result([items[1], parent], [hierarchy], sources), 16000);
+  assert.deepEqual(
+    new Set(citedBy(nested, 'parent').map((citation) => citation.sourceId)),
+    new Set(['one'])
+  );
+  validRanges(context, sources);
+  validRanges(nested, sources);
+});
+
+test('empty source bodies never create quotation numbers and canonical heading evidence remains usable', () => {
+  const heading = 'Subject';
+  const text = heading + '\nA nested condition is required.';
+  const sources = [
+    {
+      id: 'empty',
+      title: 'Source',
+      text: '',
+      origin: { sourceId: 'parent', ranges: [{ start: 0, end: heading.length }] },
+    },
+    {
+      id: 'parent',
+      title: 'Source',
+      text,
+      blocks: [
+        { start: 0, end: heading.length },
+        { start: heading.length + 1, end: text.length },
+      ],
+      scopes: [{ start: 0, end: text.length }],
+    },
+  ];
+  const relationship = {
+    ...edge('membership', 'Subject', 'Container', ['empty']),
+    type: 'PART_OF',
+  };
+  const context = buildGraphSearchContext(
+    result([node('Subject', ['empty']), node('Container', ['parent'])], [relationship], sources)
+  );
+  assert.ok(citedBy(context, 'membership').some((c) => c.text.includes(heading)));
+  assert.ok(context.citations.every((c) => c.text.trim().length > 0));
+  const empty = buildGraphSearchContext(
+    result([node('Empty', ['empty'])], [], [{ id: 'empty', title: 'Source', text: '' }])
+  );
+  assert.equal(empty.citations.length, 0);
+});
+
+test('optional item provenance cannot bypass an oversized linked condition by quoting only its primary passage', () => {
+  const text = 'Alpha is available under the linked requirement.';
+  const condition = 'An independently linked requirement must remain intact. '.repeat(100);
+  const sources = [
+    {
+      id: 'main',
+      title: 'Main',
+      text,
+      blocks: [{ start: 0, end: text.length }],
+      scopes: [{ start: 0, end: text.length }],
+      references: [
+        {
+          start: 0,
+          end: text.length,
+          name: 'requirement',
+          href: '?title=Requirements',
+          internal: true,
+          targets: [{ sourceId: 'condition', start: 0, end: condition.length }],
+        },
+      ],
+    },
+    { id: 'condition', title: 'Requirements', text: condition },
+  ];
+  const found = {
+    ...result([node('Alpha', ['main'])], [], sources),
+    query: 'Alpha',
+    plan: { terms: ['alpha'], intent: 'related', maxHops: 2 },
+  };
+  const small = buildGraphSearchContext(found, 1600);
+  assert.equal(small.citations.length, 0);
+  assert.equal(small.truncated, true);
+  const large = buildGraphSearchContext(found, 16000);
+  assert.deepEqual(
+    new Set(large.citations.map((citation) => citation.sourceId)),
+    new Set(['main', 'condition'])
+  );
+  validRanges(large, sources);
+});
+
 test('shared evidence scopes preserve traversal order through cyclic and multi-block references', () => {
   const { createEvidenceContext } = load('search/evidence.ts');
   const sources = ['s', 't'].map((id) => {
@@ -103,12 +419,11 @@ test('shared evidence scopes preserve traversal order through cyclic and multi-b
       };
       const found = resolve(primary);
       const expected = [
-        ...source.blocks
-          .filter((range) => range.start !== block.start)
-          .map((range) => source.id + '@' + range.start + ':' + range.end),
-        ...(source.id === 's'
-          ? ['t@10:20', 't@0:10', 't@20:30', 't@30:40']
-          : ['s@0:30', 's@30:40']),
+        ...(block.start ? [source.id + '@0:' + block.start] : []),
+        ...(block.end < source.text.length
+          ? [source.id + '@' + block.end + ':' + source.text.length]
+          : []),
+        ...(source.id === 's' ? ['t@10:20', 't@0:10', 't@20:40'] : ['s@0:30', 's@30:40']),
       ];
       assert.deepEqual(
         found.context.map((citation) => citation.id),
@@ -262,13 +577,13 @@ test('reaching an exact node or relationship capacity is not a limit unless some
   assert.equal(found.limited, false);
 });
 
-test('actual seed, item and relationship exclusions still report their retrieval limits', async () => {
+test('default retrieval has no fixed seed cap and explicit caller limits still report exclusions', async () => {
   const sources = [{ id: 's', title: 'Note', text: 'UniqueNeedle appears here.' }];
   const items = Array.from({ length: 13 }, (_, index) => node('Item' + index));
   const disconnected = await createGraphSearchIndex(snapshot(items, [], sources));
   const seeded = await searchKnowledgeGraph(disconnected, 'UniqueNeedle');
-  assert.equal(seeded.nodes.length, 12);
-  assert.equal(seeded.limited, true);
+  assert.equal(seeded.nodes.length, 13);
+  assert.equal(seeded.limited, false);
   const connected = await createGraphSearchIndex(
     snapshot(
       items,
@@ -282,8 +597,6 @@ test('actual seed, item and relationship exclusions still report their retrieval
     assert.match(found.context.text, /Search limits reached: Present/);
   }
 });
-
-const { createEvidenceText, graphEvidenceExcerpt } = load('search/evidence.ts');
 
 test('a joint endpoint statement is retained even when centering on either name would lose the other', () => {
   const claim = 'Alpha references ' + 'configuration '.repeat(32) + 'Beta.';

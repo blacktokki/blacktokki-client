@@ -18,7 +18,7 @@ import { ProblemsScreen } from './problem/ProblemScreen';
 import QuickMemoButton from './quickMemo/QuickMemoButton';
 import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
 import RandomButton from './random/RandomButton';
-import { SearchPageScreen } from './search/SearchPageScreen';
+import { SearchPageScreen } from './search';
 import { SyncButton } from './sync/SyncButton';
 import { SyncNotebookScreen } from './sync/SyncNotebookScreen';
 import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';

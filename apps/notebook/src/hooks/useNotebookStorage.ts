@@ -4,12 +4,7 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 import { deleteSyncAnchor, deleteSyncOptions } from '../features/sync/syncStorage';
 import { deleteContent, getContentList, patchContent, postContent } from '../services/notebook';
-import {
-  deleteStorageConfig,
-  getStoreItems,
-  saveStoreItems,
-  setStorageConfig,
-} from '../services/storage';
+import { getStoreItems, saveStoreItems, setStorageConfig } from '../services/storage';
 import { Content, NotebookOption, PostContent } from '../types';
 
 const getNotebookContents = async (isOnline: boolean): Promise<Content[]> => {
@@ -19,7 +14,7 @@ const getNotebookContents = async (isOnline: boolean): Promise<Content[]> => {
   try {
     return await getStoreItems('NOTEBOOK', 0);
   } catch (e) {
-    console.error('Error loading notebooks from File System:', e);
+    console.error('Error loading notebooks from IndexedDB:', e);
     return [];
   }
 };
@@ -47,17 +42,12 @@ const saveNotebookContent = async (
     return undefined;
   }
 
-  try {
-    await saveStoreItems('NOTEBOOK', contents, deleteId, 0);
-    if (deleteId) {
-      await deleteStorageConfig(deleteId);
-      return deleteId;
-    }
-    if (content) {
-      return (content as Content).id;
-    }
-  } catch (e) {
-    console.error('Error saving notebook to File System:', e);
+  await saveStoreItems('NOTEBOOK', contents, deleteId, 0);
+  if (deleteId) {
+    return deleteId;
+  }
+  if (content) {
+    return (content as Content).id;
   }
   return undefined;
 };

@@ -1,9 +1,103 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
+import sanitizeHtml from 'sanitize-html';
 
 import { paragraphDescription } from '../../components/HeaderSelectBar';
 import { NoteSectionProps } from '../../hooks/useExtension';
+
+/** ADR-2603: Keep document formatting while removing active HTML from PDF output. */
+const sanitizePdfHtml = (html: string) =>
+  sanitizeHtml(html, {
+    allowedTags: [
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'p',
+      'div',
+      'span',
+      'br',
+      'hr',
+      'a',
+      'img',
+      'b',
+      'strong',
+      'i',
+      'em',
+      'u',
+      's',
+      'del',
+      'sub',
+      'sup',
+      'mark',
+      'small',
+      'blockquote',
+      'pre',
+      'code',
+      'kbd',
+      'ul',
+      'ol',
+      'li',
+      'dl',
+      'dt',
+      'dd',
+      'figure',
+      'figcaption',
+      'table',
+      'caption',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td',
+      'colgroup',
+      'col',
+    ],
+    allowedAttributes: {
+      '*': ['title'],
+      a: ['href'],
+      img: ['src', 'alt', 'width', 'height'],
+      ol: ['start', 'reversed', 'type'],
+      li: ['value'],
+      th: ['colspan', 'rowspan', 'scope'],
+      td: ['colspan', 'rowspan'],
+      col: ['span', 'width'],
+      colgroup: ['span'],
+      pre: ['class'],
+      code: ['class'],
+    },
+    allowedClasses: {
+      pre: [/^language-[\w+-]+$/],
+      code: [/^language-[\w+-]+$/],
+    },
+    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+    allowedSchemesByTag: { img: ['http', 'https', 'data', 'blob'] },
+    allowProtocolRelative: false,
+    parseStyleAttributes: false,
+    nonTextTags: [
+      'script',
+      'style',
+      'textarea',
+      'option',
+      'iframe',
+      'object',
+      'svg',
+      'math',
+      'template',
+    ],
+  });
+
+const escapeHtml = (text: string) =>
+  text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 export const exportPdf = async (
   props: NoteSectionProps,
@@ -13,10 +107,13 @@ export const exportPdf = async (
   const docTitle = props.path
     ? props.paragraphs.find((p) => p.path === props.path)?.title || props.title
     : props.title || 'Untitled';
+  const escapedTitle = escapeHtml(docTitle);
 
-  const contentHtml = props.path
-    ? paragraphDescription(props.paragraphs, props.path, true)
-    : props.paragraphs.map((p) => (p.level === 0 ? '' : p.header) + p.description).join('');
+  const contentHtml = sanitizePdfHtml(
+    props.path
+      ? paragraphDescription(props.paragraphs, props.path, true)
+      : props.paragraphs.map((p) => (p.level === 0 ? '' : p.header) + p.description).join('')
+  );
 
   const isDark =
     styleType === 'midnight' ||
@@ -170,13 +267,14 @@ export const exportPdf = async (
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${docTitle}</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src http: https: data: blob:; base-uri 'none'; form-action 'none'">
+  <title>${escapedTitle}</title>
   <style>
     ${css}
   </style>
 </head>
 <body class="${isDark ? 'dark' : 'light'}">
-  <h1 class="pdf-doc-title">${docTitle}</h1>
+  <h1 class="pdf-doc-title">${escapedTitle}</h1>
   <div class="pdf-content">
     ${contentHtml}
   </div>
@@ -186,6 +284,7 @@ export const exportPdf = async (
   try {
     if (Platform.OS === 'web') {
       const iframe = document.createElement('iframe');
+      iframe.setAttribute('sandbox', 'allow-same-origin allow-modals');
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
       iframe.style.bottom = '0';

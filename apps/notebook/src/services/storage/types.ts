@@ -7,14 +7,13 @@ export type StorageConfig = {
   type: 'opfs' | 'local';
   pathName: string; // 폴더 이름 또는 OPFS 하위 디렉토리 경로
   handle?: any; // FileSystemDirectoryHandle (type === 'local'일 때 IndexedDB에 보존됨)
+  notebook?: Content;
 };
 
 export interface IFileStorageDriver {
-  getStoreItems(
-    storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA'
-  ): Promise<Content[]>;
+  getStoreItems(storeName: 'NOTE' | 'BOARD' | 'SNAPSHOT' | 'DELTA'): Promise<Content[]>;
   saveItems(
-    storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
+    storeName: 'NOTE' | 'BOARD' | 'SNAPSHOT' | 'DELTA',
     contents: (Content | PostContent)[],
     deleteId?: number | string
   ): Promise<void>;

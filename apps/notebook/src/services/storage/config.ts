@@ -53,21 +53,17 @@ export async function setStorageConfig(config: StorageConfig): Promise<void> {
   await new Promise((resolve, reject) => {
     const tx = db.transaction(CONFIG_STORE, 'readwrite');
     const store = tx.objectStore(CONFIG_STORE);
-    store.put(config);
+    const request = store.get(config.parentId);
+    request.onsuccess = () => {
+      try {
+        store.put({ ...request.result, ...config });
+      } catch (error) {
+        tx.abort();
+        reject(error);
+      }
+    };
     tx.oncomplete = () => resolve(undefined);
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-export async function deleteStorageConfig(parentId: number): Promise<void> {
-  if (parentId === 0) return;
-  const db = await getDB();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(CONFIG_STORE, 'readwrite');
-    const store = tx.objectStore(CONFIG_STORE);
-    store.delete(parentId);
-    tx.oncomplete = () => resolve(undefined);
-    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error('Could not save storage config'));
   });
 }
 

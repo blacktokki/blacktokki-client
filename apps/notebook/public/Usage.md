@@ -47,6 +47,7 @@
 * Use top buttons to edit the note, rearrange sections, or view edit history.
 * Clicking a URL-encoded relative file link such as `[Document](../folder/Document%20Title.md)` opens the target document relative to the current note's folder.
 * The note viewer, focus view, and search resolve relative links from the source note's folder. Editing and saving preserve `../` and `../../` paths, paragraph fragments, and section information. A `#paragraph` link opens that paragraph in the current note.
+* External links in notes, search, and browsing history can open only HTTP(S), email (`mailto:`), and telephone (`tel:`) addresses. Script URLs are blocked, and external pages open in a new tab.
 
 ### ✏️ Note Editing
 
@@ -68,6 +69,7 @@ You can adjust the app's complexity and features across 3 levels according to yo
 * **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
 * **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Mode Settings`. If no notebook mode has been created, selecting Notebook Mode will automatically open the modal to create a new notebook.
 * Refreshing in local mode restores the last selected usage mode and notebook. Deleted notebooks and locked private notebooks return to Note Mode.
+* Local notebook registrations and folder connections are saved in your browser. Existing registrations in `notebooks.json` are not imported automatically; register each notebook again by selecting the same local folder. Clearing the site's browser data removes these registrations while keeping the note files in your local folders.
 
 ### 🌱 Simple Mode
 The lightest memo environment providing only essential features. Useful when you want to focus on quick note-taking and reading, hiding unnecessary UI (extensions, changelog, etc.).

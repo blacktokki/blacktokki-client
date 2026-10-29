@@ -1,4 +1,3 @@
-import { useAuthContext } from '@blacktokki/account';
 import { useLangContext, Text, useResizeContext } from '@blacktokki/core';
 import { extractHtmlLinks } from '@blacktokki/editor';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -26,6 +25,18 @@ let _searchText = '';
 
 type SearchContent = Content | KeywordContent;
 
+function safeLinkUrl(url: string) {
+  try {
+    if (!url.trim()) return undefined;
+    const target = new URL(url, location.href);
+    return ['http:', 'https:', 'mailto:', 'tel:'].includes(target.protocol)
+      ? target.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function toNoteParams(
   title: string,
   paragraph?: string,
@@ -44,6 +55,7 @@ export function urlToNoteLink(url: string, baseNoteTitle?: string) {
       const base =
         location.origin + '/' + baseNoteTitle.split('/').map(encodeURIComponent).join('/') + '.md';
       const target = new URL(url, base);
+      if (target.origin !== location.origin) return undefined;
       return toNoteParams(
         decodeURIComponent(target.pathname.slice(1)).replace(/\.(md|markdown)$/i, ''),
         target.hash ? decodeURIComponent(target.hash.slice(1)) : undefined,
@@ -73,6 +85,8 @@ export function onLink(
   navigation: StackNavigationProp<NavigationParamList>,
   baseNoteTitle?: string
 ) {
+  const safeUrl = safeLinkUrl(url);
+  if (!safeUrl) return false;
   if (baseNoteTitle === undefined) {
     const { routes, index } = navigation.getState();
     const params = routes[index].params;
@@ -82,14 +96,17 @@ export function onLink(
   if (noteLink) {
     navigation.push('NotePage', noteLink);
   } else {
-    window.open(url, '_blank');
+    window.open(safeUrl, '_blank', 'noopener,noreferrer');
   }
+  return true;
 }
 
 export function getLinks(pages: Content[], sameTitle?: boolean) {
   return pages
     .flatMap((v) =>
       extractHtmlLinks(v.description || '').map((v2) => {
+        const safeUrl = safeLinkUrl(v2.url);
+        if (!safeUrl) return undefined;
         const noteLink = urlToNoteLink(v2.rawUrl || v2.url, v.title);
         if (noteLink) {
           if (sameTitle || v2.text !== noteLink.title) {
@@ -102,7 +119,7 @@ export function getLinks(pages: Content[], sameTitle?: boolean) {
           }
           return undefined;
         }
-        return { type: '_LINK' as '_LINK', url: v2.url, name: v2.text, origin: v.title };
+        return { type: '_LINK' as '_LINK', url: safeUrl, name: v2.text, origin: v.title };
       })
     )
     .filter((v) => v !== undefined);
@@ -154,8 +171,9 @@ const useOnPressKeyword = ({
       ) {
         onPress(item.title);
       } else if (item.type === '_LINK') {
-        window.open(item.url, '_blank');
-        addKeyword && addKeywordMutate(item);
+        if (onLink(item.url, navigation, item.origin)) {
+          addKeyword && addKeywordMutate(item);
+        }
       } else if (item.type === '_NOTELINK') {
         navigation.push('NotePage', toNoteParams(item.title, item.paragraph, item.section));
         addKeyword && addKeywordMutate(item);
@@ -293,7 +311,6 @@ export const SearchBar: React.FC<
   const [showResults, setShowResults] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const { lang } = useLangContext();
-  const { auth } = useAuthContext();
   const { commonStyles } = useNotebookTheme();
   const inputRef = useRef<TextInput>(null);
   const { data: keywords = [] } = useKeywords();

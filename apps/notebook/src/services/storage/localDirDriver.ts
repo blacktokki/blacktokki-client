@@ -3,7 +3,7 @@ import { readContentsFromDir, saveContentsToDir } from './fsHelper';
 import { Content, PostContent } from '../../types';
 
 export async function localDirGetStoreItems(
-  storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
+  storeName: 'NOTE' | 'BOARD' | 'SNAPSHOT' | 'DELTA',
   parentId: number,
   handle: any
 ): Promise<Content[]> {
@@ -25,7 +25,7 @@ export async function localDirGetStoreItems(
 }
 
 export async function localDirSaveItems(
-  storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
+  storeName: 'NOTE' | 'BOARD' | 'SNAPSHOT' | 'DELTA',
   parentId: number,
   handle: any,
   contents: (Content | PostContent)[],

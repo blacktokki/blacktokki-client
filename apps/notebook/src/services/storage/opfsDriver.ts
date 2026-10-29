@@ -8,7 +8,7 @@ export async function getOpfsDirHandle(pathName: string): Promise<any> {
 }
 
 export async function opfsGetStoreItems(
-  storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
+  storeName: 'NOTE' | 'BOARD' | 'SNAPSHOT' | 'DELTA',
   parentId: number,
   pathName: string
 ): Promise<Content[]> {
@@ -22,7 +22,7 @@ export async function opfsGetStoreItems(
 }
 
 export async function opfsSaveItems(
-  storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
+  storeName: 'NOTE' | 'BOARD' | 'SNAPSHOT' | 'DELTA',
   parentId: number,
   pathName: string,
   contents: (Content | PostContent)[],

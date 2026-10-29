@@ -9,7 +9,7 @@ const markdownToHtml = markdownIt();
 markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const code = token.content;
-  let language = token.info || '';
+  let language = token.info.trim().split(/\s+/)[0] || '';
   if (language === 'html') {
     language = 'markup';
   }
@@ -18,7 +18,9 @@ markdownToHtml.renderer.rules.fence = (tokens, idx, options, env, self) => {
     escapeCode = escapeCode.slice(0, escapeCode.length - 1);
   }
   // Create custom HTML for code blocks
-  return `<pre class="language-${language}"><code>${escapeCode}</code></pre>`;
+  return `<pre class="language-${markdownToHtml.utils.escapeHtml(
+    language
+  )}"><code>${escapeCode}</code></pre>`;
 };
 
 const renderStrong: typeof markdownToHtml.renderer.rules.strong_open = (

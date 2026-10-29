@@ -1,5 +1,6 @@
 import { getAllStorageConfigs, getStorageConfig } from './config';
 import { localDirGetStoreItems, localDirSaveItems } from './localDirDriver';
+import { getNotebookItems, saveNotebookItems } from './notebookStore';
 import { opfsGetStoreItems, opfsSaveItems } from './opfsDriver';
 import { Content, PostContent } from '../../types';
 
@@ -11,6 +12,7 @@ export async function getStoreItems(
   storeName: 'NOTE' | 'BOARD' | 'NOTEBOOK' | 'SNAPSHOT' | 'DELTA',
   parentId = 0
 ): Promise<Content[]> {
+  if (storeName === 'NOTEBOOK') return await getNotebookItems();
   const config = await getStorageConfig(parentId);
   if (parentId > 0 || config.type === 'local') {
     return await localDirGetStoreItems(storeName, parentId, config.handle);
@@ -25,6 +27,10 @@ export async function saveStoreItems(
   parentId?: number,
   createOnly = false
 ): Promise<void> {
+  if (storeName === 'NOTEBOOK') {
+    await saveNotebookItems(contents, deleteIdOrTitle);
+    return;
+  }
   if (contents.length === 0 && deleteIdOrTitle !== undefined && parentId === undefined) {
     const allConfigs = await getAllStorageConfigs();
     const parentIds = new Set([0, ...allConfigs.map((c) => c.parentId)]);

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { KnowledgeGraphCanvasView } from './KnowledgeGraphCanvasView';
+import KnowledgeGraphCanvasView from './KnowledgeGraphCanvasView';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
 import { AxiomEvaluationResult, KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
@@ -118,8 +118,8 @@ const GraphToolbarToggle: React.FC<GraphToolbarToggleProps> = ({
           backgroundColor: active
             ? activeBackgroundColor
             : isDark
-            ? 'rgba(255,255,255,0.08)'
-            : 'rgba(0,0,0,0.06)',
+              ? 'rgba(255,255,255,0.08)'
+              : 'rgba(0,0,0,0.06)',
           borderColor: active ? activeBorderColor : inactiveBorderColor,
         },
         webButtonStyle,
@@ -181,6 +181,10 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   const { lang } = useLangContext();
   const isDark = colorScheme === 'dark';
   const palette = getKnowledgeGraphPalette(isDark);
+  const focusedNodeIdList = useMemo(
+    () => (focusedNodeIds ? Array.from(focusedNodeIds) : null),
+    [focusedNodeIds]
+  );
 
   const [dimensions, setDimensions] = useState({ width: 600, height: 600 });
   const [topToolbarHeight, setTopToolbarHeight] = useState(32);
@@ -240,14 +244,14 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     onSelectNode,
   ]);
 
-  const violatingNodeIdSet = useMemo(() => {
+  const violatingNodeIdList = useMemo(() => {
     const set = new Set<string>();
     for (const v of axioms.violations) {
       for (const nid of v.affectedNodeIds) {
         set.add(nid);
       }
     }
-    return set;
+    return Array.from(set);
   }, [axioms]);
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -322,20 +326,20 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   const validationIcon = axioms.hasErrors
     ? 'times-circle'
     : axioms.hasWarnings
-    ? 'exclamation-triangle'
-    : 'check-circle';
+      ? 'exclamation-triangle'
+      : 'check-circle';
   const validationLabel = axioms.hasErrors
     ? `${lang('Validation Error')} (${axioms.violations.length})`
     : axioms.hasWarnings
-    ? `${lang('Validation Warning')} (${axioms.violations.length})`
-    : lang('Validation Passed');
+      ? `${lang('Validation Warning')} (${axioms.violations.length})`
+      : lang('Validation Passed');
   const validationBackground = axioms.hasErrors
     ? violationColor('error', isDark ? 0.28 : 0.24)
     : axioms.hasWarnings
-    ? violationColor('warning', isDark ? 0.25 : 0.18)
-    : isDark
-    ? 'rgba(39, 174, 96, 0.28)'
-    : 'rgba(46, 204, 113, 0.24)';
+      ? violationColor('warning', isDark ? 0.25 : 0.18)
+      : isDark
+        ? 'rgba(39, 174, 96, 0.28)'
+        : 'rgba(46, 204, 113, 0.24)';
   const placeViewportControlsBesideToolbar = dimensions.width >= 1100;
   const viewportControlsTop = placeViewportControlsBesideToolbar
     ? 12
@@ -358,9 +362,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   );
 
   const toolbarToggles: (
-    | Omit<GraphToolbarToggleProps, 'isDark' | 'inactiveTextColor'>
-    | false
-    | undefined
+    Omit<GraphToolbarToggleProps, 'isDark' | 'inactiveTextColor'> | false | undefined
   )[] = [
     nodeLegendCounts.paragraph > 0 && {
       active: showParagraphs,
@@ -403,9 +405,9 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           selectedNodeId={selectedNode?.id || null}
           selectionTrigger={selectionTrigger}
           reservedBottomHeight={reservedBottomHeight}
-          focusedNodeIds={focusedNodeIds}
+          focusedNodeIds={focusedNodeIdList}
           focusDepth={focusDepth}
-          violatingNodeIds={violatingNodeIdSet}
+          violatingNodeIds={violatingNodeIdList}
           isDark={isDark}
           animateEdges={animateEdges}
           spacingScale={spacingScale}
@@ -413,6 +415,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           onViewportChange={handleViewportChange}
           onNodeSelect={onSelectNode}
           style={{ width: '100%', height: '100%' }}
+          dom={{ style: { flex: 1 } }}
         />
       </View>
 

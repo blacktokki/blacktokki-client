@@ -1,3 +1,4 @@
+/* eslint-env node */
 // Learn more https://docs.expo.dev/guides/monorepos
 const { getDefaultConfig } = require('expo/metro-config');
 const { FileStore } = require('metro-cache');
@@ -13,14 +14,18 @@ config.cacheStores = [
   new FileStore({ root: path.join(__dirname, 'node_modules', '.cache', 'metro') }),
 ];
 
-// Alias onnxruntime-web to unminified ort.all.js to avoid minified magic comment issue
+// Use unminified ONNX bundles, including the WebGPU entry used by Transformers.js v4,
+// to avoid the minified magic comment issue
 // where /*webpackIgnore:true*/ without space fails Metro bundler check.
 const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'onnxruntime-web') {
+  if (moduleName === 'onnxruntime-web' || moduleName === 'onnxruntime-web/webgpu') {
     const onnxDir = path.dirname(require.resolve('onnxruntime-web'));
     return {
-      filePath: path.join(onnxDir, 'ort.all.js'),
+      filePath: path.join(
+        onnxDir,
+        moduleName === 'onnxruntime-web/webgpu' ? 'ort.webgpu.js' : 'ort.all.js'
+      ),
       type: 'sourceFile',
     };
   }

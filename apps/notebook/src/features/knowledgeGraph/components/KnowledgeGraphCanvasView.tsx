@@ -1,5 +1,6 @@
 'use dom';
 
+import type { DOMProps } from 'expo/dom';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 import { KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
@@ -41,9 +42,9 @@ export interface KnowledgeGraphCanvasViewProps {
   selectedNodeId: string | null;
   selectionTrigger: number;
   reservedBottomHeight: number;
-  focusedNodeIds?: Set<string> | string[] | null;
+  focusedNodeIds?: string[] | null;
   focusDepth?: number;
-  violatingNodeIds?: Set<string> | string[];
+  violatingNodeIds?: string[];
   isDark: boolean;
   animateEdges?: boolean;
   spacingScale?: number;
@@ -51,9 +52,10 @@ export interface KnowledgeGraphCanvasViewProps {
   onViewportChange?: (viewport: { zoom: number; panX: number; panY: number }) => void;
   onNodeSelect?: (node: KnowledgeGraphNode | null) => void;
   style?: React.CSSProperties | any;
+  dom?: DOMProps;
 }
 
-export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> = ({
+const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> = ({
   nodes,
   edges,
   selectedNodeId,
@@ -112,11 +114,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   const lastTouchDistRef = useRef<number | null>(null);
 
   const focusedSet = useRef<Set<string> | null>(null);
-  focusedSet.current = focusedNodeIds
-    ? focusedNodeIds instanceof Set
-      ? focusedNodeIds
-      : new Set(focusedNodeIds)
-    : null;
+  focusedSet.current = focusedNodeIds ? new Set(focusedNodeIds) : null;
   const layoutFocusId = focusDepth === 1 || focusDepth === 2 ? selectedNodeId : null;
   const layoutFocusDepth = layoutFocusId ? focusDepth : undefined;
   const layoutFocusedNodeIds = layoutFocusId ? focusedSet.current : null;
@@ -132,11 +130,7 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
   };
 
   const violatingSet = useRef<Set<string>>(new Set());
-  violatingSet.current = violatingNodeIds
-    ? violatingNodeIds instanceof Set
-      ? violatingNodeIds
-      : new Set(violatingNodeIds)
-    : new Set();
+  violatingSet.current = new Set(violatingNodeIds);
 
   const nodeMapRef = useRef<Map<string, KnowledgeGraphNode>>(new Map());
   const centerSelectedNodeRef = useRef<(schedule?: boolean) => boolean>(() => false);
@@ -884,3 +878,5 @@ export const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> =
     </div>
   );
 };
+
+export default KnowledgeGraphCanvasView;

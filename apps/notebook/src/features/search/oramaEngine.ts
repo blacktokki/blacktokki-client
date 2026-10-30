@@ -1,11 +1,18 @@
 import { toMarkdown } from '@blacktokki/editor';
 import { count, create, insert, remove, search, Orama } from '@orama/orama';
 
-import { getEmbeddingVector, getEmbeddingVectors, VECTOR_DIMENSION } from './embeddingService';
+import {
+  generateLightweightVector,
+  getEmbeddingVector,
+  getEmbeddingVectors,
+  isSemanticEmbeddingAvailable,
+  VECTOR_DIMENSION,
+} from './embeddingService';
 import { createSearchIndexComponent } from './searchIndexComponent';
 import { Content } from '../../types';
 
 export interface SearchResult {
+  key?: string;
   id: number;
   distance: number;
   title: string;
@@ -25,6 +32,7 @@ interface IndexedChunk {
   paragraph: string;
   text: string;
   embedding: number[];
+  semanticEmbedding?: number[];
 }
 
 export interface SearchIndex {
@@ -37,6 +45,9 @@ export interface SearchIndex {
   indexedContents?: Content[];
   sourceRevision: number;
   syncing?: Promise<void>;
+  preparing?: { revision: number; promise: Promise<boolean> };
+  preparedRevision?: number;
+  embeddingRevision: number;
   results: Map<string, Promise<SearchResult[]>>;
 }
 
@@ -178,6 +189,7 @@ export const getSearchIndex = (scope = 'default'): SearchIndex => {
         description: 'string',
         link: 'string',
         embedding: `vector[${VECTOR_DIMENSION}]`,
+        semanticEmbedding: `vector[${VECTOR_DIMENSION}]`,
       },
       components: {
         tokenizer: cjkTokenizer as any,
@@ -187,6 +199,7 @@ export const getSearchIndex = (scope = 'default'): SearchIndex => {
     documents: new Map(),
     snapshots: new WeakMap(),
     sourceRevision: 0,
+    embeddingRevision: 0,
     results: new Map(),
   };
   return activeIndex;
@@ -254,29 +267,12 @@ const synchronizeContents = async (contents: Content[], index: SearchIndex) => {
             title: content.title,
             paragraph,
             text: source.text,
-            embedding: [],
+            embedding: generateLightweightVector(content.title + ' ' + source.text),
           };
     });
     updates.push({ content, chunks });
     await yieldIfNeeded();
   }
-  const pending = updates.flatMap(({ chunks }) =>
-    chunks.filter((chunk) => !chunk.embedding.length)
-  );
-  const vectors = pending.length
-    ? await getEmbeddingVectors(
-        pending.map((chunk) => chunk.title + ' ' + chunk.text),
-        index.cancellation.signal
-      ).catch((error) => {
-        if (index.db && contents !== index.contents) return [];
-        throw error;
-      })
-    : [];
-  assertActive(index);
-  if (contents !== index.contents) return;
-  pending.forEach((chunk, row) => {
-    chunk.embedding = vectors[row];
-  });
   for (const { content, chunks } of updates) {
     if (contents !== index.contents) return;
     const previous = index.documents.get(content.id);
@@ -292,6 +288,7 @@ const synchronizeContents = async (contents: Content[], index: SearchIndex) => {
         paragraph: chunk.paragraph,
         description: chunk.text,
         embedding: chunk.embedding,
+        semanticEmbedding: chunk.semanticEmbedding,
       });
       await yieldIfNeeded();
     }
@@ -328,6 +325,61 @@ export const indexNoteContents = (contents: Content[], index = getSearchIndex())
   return task;
 };
 
+/** Add semantic vectors in the background without holding up keyword search. */
+export const prepareSearchEmbeddings = (index: SearchIndex): Promise<boolean> => {
+  const revision = index.sourceRevision;
+  if (index.preparedRevision === revision) return Promise.resolve(false);
+  if (index.preparing?.revision === revision) return index.preparing.promise;
+  const signal = index.cancellation.signal;
+  const task = (async () => {
+    if (index.contents) await indexNoteContents(index.contents, index);
+    signal.throwIfAborted();
+    const pending = [...index.documents.entries()].flatMap(([documentId, { chunks }]) =>
+      chunks.filter((chunk) => !chunk.semanticEmbedding).map((chunk) => ({ documentId, chunk }))
+    );
+    const vectors = await getEmbeddingVectors(
+      pending.map(({ chunk }) => chunk.title + ' ' + chunk.text),
+      signal
+    );
+    signal.throwIfAborted();
+    const db = assertActive(index);
+    if (!isSemanticEmbeddingAvailable()) {
+      index.preparedRevision = revision;
+      return false;
+    }
+    for (let row = 0; row < pending.length; row++) {
+      signal.throwIfAborted();
+      const { documentId, chunk } = pending[row];
+      chunk.semanticEmbedding = vectors[row];
+      remove(db, chunk.id);
+      insert(db, {
+        id: chunk.id,
+        original_id: documentId,
+        title: chunk.title,
+        paragraph: chunk.paragraph,
+        description: chunk.text,
+        embedding: chunk.embedding,
+        semanticEmbedding: chunk.semanticEmbedding,
+      });
+      if (row % 8 === 7) await yieldSearchWork();
+    }
+    signal.throwIfAborted();
+    index.preparedRevision = revision;
+    index.embeddingRevision++;
+    index.results.clear();
+    return true;
+  })()
+    .catch((error) => {
+      if (!signal.aborted) console.warn('Semantic search preparation skipped:', error);
+      return false;
+    })
+    .finally(() => {
+      if (index.preparing?.promise === task) index.preparing = undefined;
+    });
+  index.preparing = { revision, promise: task };
+  return task;
+};
+
 export const searchVectorDb = async (
   query: string,
   page: number = 0,
@@ -339,17 +391,24 @@ export const searchVectorDb = async (
   if (index.contents) await indexNoteContents(index.contents, index);
   const db = assertActive(index);
   if (!count(db)) return [];
-  const key = JSON.stringify([index.sourceRevision, trimmedQuery]);
+  const key = JSON.stringify([
+    index.sourceRevision,
+    index.embeddingRevision,
+    isSemanticEmbeddingAvailable(),
+    trimmedQuery,
+  ]);
   let cached = index.results.get(key);
   if (!cached) {
     const sourceRevision = index.sourceRevision;
     const task = (async () => {
-      const queryVector = await getEmbeddingVector(trimmedQuery, index.cancellation.signal).catch(
-        (error) => {
-          if (sourceRevision !== index.sourceRevision) return undefined;
-          throw error;
-        }
-      );
+      const semanticReady =
+        index.preparedRevision === sourceRevision && isSemanticEmbeddingAvailable();
+      const queryVector = semanticReady
+        ? await getEmbeddingVector(trimmedQuery, index.cancellation.signal).catch((error) => {
+            if (sourceRevision !== index.sourceRevision) return undefined;
+            throw error;
+          })
+        : generateLightweightVector(trimmedQuery);
       assertActive(index);
       if (sourceRevision !== index.sourceRevision) {
         return searchVectorDb(trimmedQuery, 0, Number.MAX_SAFE_INTEGER, index);
@@ -357,7 +416,11 @@ export const searchVectorDb = async (
       const results = await search(db, {
         term: trimmedQuery,
         mode: 'hybrid',
-        vector: { property: 'embedding', value: queryVector! },
+        vector: {
+          property:
+            semanticReady && isSemanticEmbeddingAvailable() ? 'semanticEmbedding' : 'embedding',
+          value: queryVector!,
+        },
         similarity: 0.0,
         limit: count(db),
         includeVectors: true,
@@ -365,6 +428,7 @@ export const searchVectorDb = async (
       return results.hits.map((hit) => {
         const doc = hit.document as any;
         return {
+          key: hit.id,
           id: doc.original_id || 0,
           distance: Math.max(0, 1 - (hit.score || 0)),
           title: doc.title || '',
@@ -383,4 +447,24 @@ export const searchVectorDb = async (
   const results = await cached;
   assertActive(index);
   return results.slice(page * size, (page + 1) * size);
+};
+
+/** Keep one ranking across result pages, even when semantic preparation finishes meanwhile. */
+export const createSearchSession = (query: string, index: SearchIndex, size = 20) => {
+  let results: Promise<SearchResult[]> | undefined;
+  const pageResults = async (page: number) => {
+    assertActive(index);
+    if (!results) {
+      results = searchVectorDb(query, 0, Number.MAX_SAFE_INTEGER, index).catch((error) => {
+        results = undefined;
+        throw error;
+      });
+    }
+    const snapshot = await results;
+    assertActive(index);
+    return snapshot.slice(page * size, (page + 1) * size);
+  };
+  return Object.assign(pageResults, {
+    version: JSON.stringify([index.embeddingRevision, isSemanticEmbeddingAvailable()]),
+  });
 };

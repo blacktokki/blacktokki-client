@@ -1,6 +1,6 @@
 import { Spacer, useLangContext } from '@blacktokki/core';
-import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import React, { memo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, ListRenderItem } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import LoadingView from '../../components/LoadingView';
@@ -9,30 +9,72 @@ import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { ParagraphKey } from '../../types';
 
 type Item = {
+  key?: string;
   title: string;
   subtitles?: string[];
   id?: number;
   link?: string;
 } & ParagraphKey;
 
-export const NoteListSection = ({
-  contents,
-  isLoading,
-  onPress,
-  emptyMessage,
-  onScrollEnd,
-}: {
+type NoteListProps = {
   contents: Item[];
   isLoading: boolean;
   onPress: (title: string, paragraph?: string, section?: string, item?: Item) => void;
   emptyMessage: string;
   onScrollEnd?: () => void;
-}) => {
+};
+
+const NoteRow = memo(function NoteRow({
+  item,
+  onPress,
+  commonStyles,
+}: {
+  item: Item;
+  onPress: NoteListProps['onPress'];
+  commonStyles: ReturnType<typeof useNotebookTheme>['commonStyles'];
+}) {
+  return (
+    <TouchableOpacity
+      style={commonStyles.card}
+      onPress={() => onPress(item.title, item.paragraph, item.section, item)}
+    >
+      <View style={commonStyles.searchContainer}>
+        <Icon
+          style={commonStyles.noteListIcon}
+          name={item.link ? 'external-link' : 'file-text'}
+          size={12}
+          color={commonStyles.text.color}
+        />
+        <Text style={commonStyles.title}>{titleFormat(item)}</Text>
+      </View>
+      {(item.subtitles || []).map((subtitle, index) => (
+        <Text key={index} style={commonStyles.smallText}>
+          {subtitle}
+        </Text>
+      ))}
+    </TouchableOpacity>
+  );
+});
+
+const NoteSeparator = () => <Spacer height={8} />;
+const itemKey = (item: Item, index: number) =>
+  item.key ?? JSON.stringify([item.id, item.title, item.paragraph, item.section, item.link, index]);
+
+export const NoteListSection = memo(function NoteListSection({
+  contents,
+  isLoading,
+  onPress,
+  emptyMessage,
+  onScrollEnd,
+}: NoteListProps) {
   const { commonStyles } = useNotebookTheme();
   const { lang } = useLangContext();
-  const height = useRef(0);
+  const renderItem = useCallback<ListRenderItem<Item>>(
+    ({ item }) => <NoteRow item={item} onPress={onPress} commonStyles={commonStyles} />,
+    [onPress, commonStyles]
+  );
   return (
-    <View style={{ flex: 1 }}>
+    <View style={commonStyles.flex}>
       {isLoading ? (
         <View style={commonStyles.container}>
           <LoadingView />
@@ -41,39 +83,14 @@ export const NoteListSection = ({
         <FlatList
           data={contents}
           contentContainerStyle={commonStyles.container}
-          keyExtractor={(item, i) => `${i}`}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={commonStyles.card}
-              onPress={() => onPress(item.title, item.paragraph, item.section, item)}
-            >
-              <View style={{ flexDirection: 'row' }}>
-                <Icon
-                  style={{ top: 6, paddingRight: 6 }}
-                  name={item.link ? 'external-link' : 'file-text'}
-                  size={12}
-                  color={commonStyles.text.color}
-                />
-                <Text style={commonStyles.title}>{titleFormat(item)}</Text>
-              </View>
-              {(item.subtitles || []).map((subtitle, index) => (
-                <Text key={index} style={[commonStyles.smallText]}>
-                  {subtitle}
-                </Text>
-              ))}
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <Spacer height={8} />}
-          onScroll={(e) => {
-            if (
-              e.nativeEvent.contentSize.height - height.current - e.nativeEvent.contentOffset.y <
-              1
-            )
-              onScrollEnd?.();
-          }}
-          onLayout={(p) => {
-            height.current = p.nativeEvent.layout.height;
-          }}
+          keyExtractor={itemKey}
+          renderItem={renderItem}
+          ItemSeparatorComponent={NoteSeparator}
+          onEndReached={onScrollEnd}
+          onEndReachedThreshold={0.3}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={7}
         />
       ) : (
         <View style={commonStyles.container}>
@@ -86,4 +103,4 @@ export const NoteListSection = ({
       )}
     </View>
   );
-};
+});

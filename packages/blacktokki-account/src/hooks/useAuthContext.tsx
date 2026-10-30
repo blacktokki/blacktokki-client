@@ -161,13 +161,13 @@ export const AuthProvider = ({
           authState.user && !authState.useLocal
             ? authState.user.otpDeletionRequested !== undefined
             : authState.otpRequest
-            ? null
-            : undefined,
+              ? null
+              : undefined,
         guestType,
         isLoading:
           authState.request !== undefined ||
           (authState.user === undefined && authState.useLocal !== undefined),
-      } as Auth),
+      }) as Auth,
     [authState]
   );
   const otp = useMemo(() => {

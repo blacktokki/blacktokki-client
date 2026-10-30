@@ -81,3 +81,26 @@ export type NavigationParamList = {
   Archive: { title?: string };
   Extension: undefined;
 };
+
+export interface EmbeddingOptions {
+  pooling: 'mean';
+  normalize: boolean;
+}
+
+export type EmbeddingPipeline = ((
+  texts: string[],
+  options: EmbeddingOptions
+) => Promise<{ data: Float32Array }>) & { dispose: () => Promise<void> };
+
+export type EmbeddingWorkerRequest =
+  | { id: number; type: 'initialize' }
+  | { id: number; type: 'embed'; texts: string[]; options: EmbeddingOptions };
+
+export interface EmbeddingWorkerResponse {
+  id: number;
+  data?: Float32Array;
+  error?: string;
+}
+
+export const EMBEDDING_LOAD_TIMEOUT = 60_000;
+export const EMBEDDING_INFERENCE_TIMEOUT = 50_000;

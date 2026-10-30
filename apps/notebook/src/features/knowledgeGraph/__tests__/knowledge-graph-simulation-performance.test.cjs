@@ -325,7 +325,7 @@ for (const nodeCount of [2, 9557]) {
         return frameId;
       };
       global.cancelAnimationFrame = (id) => frames.delete(id);
-      const tree = exports.KnowledgeGraphCanvasView({
+      const tree = exports.default({
         nodes,
         edges: [],
         selectedNodeId: null,

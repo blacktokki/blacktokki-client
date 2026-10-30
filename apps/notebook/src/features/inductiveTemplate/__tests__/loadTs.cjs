@@ -13,6 +13,7 @@ module.exports = (relativePath, dependencies = {}) => {
     Object.hasOwn(dependencies, request) ? dependencies[request] : originalRequire(request);
   loaded._compile(
     ts.transpileModule(readFileSync(filename, 'utf8'), {
+      fileName: filename,
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,
         target: ts.ScriptTarget.ES2022,

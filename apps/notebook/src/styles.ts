@@ -270,6 +270,10 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
     icon: {
       color: commonColors.icon,
     },
+    noteListIcon: {
+      top: 6,
+      paddingRight: 6,
+    },
     iconColor: {
       color: commonColors.iconColor,
     },

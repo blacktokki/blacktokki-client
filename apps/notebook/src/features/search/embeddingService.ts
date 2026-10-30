@@ -1,7 +1,35 @@
+import { createEmbeddingPipeline } from './embeddingPipeline';
+import {
+  EMBEDDING_INFERENCE_TIMEOUT,
+  EMBEDDING_LOAD_TIMEOUT,
+  EmbeddingPipeline,
+} from '../../types';
+
 export const VECTOR_DIMENSION = 384;
 
-let pipelinePromise: Promise<any> | null = null;
-let pipelineInstance: any = null;
+let pipelinePromise: Promise<EmbeddingPipeline | null> | null = null;
+let pipelineInstance: EmbeddingPipeline | null = null;
+let pipelineDisabled = false;
+
+const withEmbeddingTimeout = <T>(work: Promise<T>, milliseconds: number): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pipelineDisabled = true;
+      reject(new Error('Embedding model timed out'));
+    }, milliseconds);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+
+export const isSemanticEmbeddingAvailable = () => !!pipelineInstance && !pipelineDisabled;
 
 // Fast N-gram & DJB2 feature hashing vectorizer for Korean/English text
 export const generateLightweightVector = (
@@ -55,16 +83,21 @@ export const generateLightweightVector = (
 
 // Initialize Transformers.js pipeline asynchronously
 export const initEmbeddingPipeline = async () => {
+  if (pipelineDisabled) return null;
   if (pipelineInstance) return pipelineInstance;
   if (!pipelinePromise) {
     pipelinePromise = (async () => {
       try {
-        const { pipeline, env } = await import('@huggingface/transformers');
-        env.allowLocalModels = false;
-        const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-        pipelineInstance = extractor;
-        return extractor;
+        const loading = createEmbeddingPipeline();
+        loading
+          .then((extractor) => {
+            if (pipelineDisabled) return extractor?.dispose?.();
+          })
+          .catch(() => {});
+        pipelineInstance = await withEmbeddingTimeout(loading, EMBEDDING_LOAD_TIMEOUT);
+        return pipelineInstance;
       } catch (e) {
+        pipelineDisabled = true;
         console.warn('Transformers.js pipeline initialization skipped/fallback:', e);
         return null;
       }
@@ -101,7 +134,10 @@ export const getEmbeddingVectors = (texts: string[], signal?: AbortSignal): Prom
       const batch = texts.slice(offset, offset + 8);
       try {
         if (extractor) {
-          const output = await extractor(batch, { pooling: 'mean', normalize: true });
+          const output = await withEmbeddingTimeout(
+            extractor(batch, { pooling: 'mean', normalize: true }),
+            EMBEDDING_INFERENCE_TIMEOUT
+          );
           signal?.throwIfAborted();
           if (output?.data?.length !== batch.length * VECTOR_DIMENSION) {
             throw new Error('Unexpected embedding dimensions');
@@ -115,21 +151,9 @@ export const getEmbeddingVectors = (texts: string[], signal?: AbortSignal): Prom
         }
       } catch (e) {
         if (signal?.aborted) throw e;
+        pipelineDisabled = true;
         console.warn('Fallback to lightweight vectorizer for embedding batch:', e);
-        if (extractor && batch.length > 1) {
-          for (const text of batch) {
-            signal?.throwIfAborted();
-            try {
-              const output = await extractor([text], { pooling: 'mean', normalize: true });
-              if (output?.data?.length !== VECTOR_DIMENSION)
-                throw new Error('Unexpected embedding dimensions');
-              vectors.push(Array.from(output.data));
-            } catch {
-              vectors.push(generateLightweightVector(text, VECTOR_DIMENSION));
-            }
-          }
-          continue;
-        }
+        return texts.map((text) => generateLightweightVector(text, VECTOR_DIMENSION));
       }
       vectors.push(...batch.map((text) => generateLightweightVector(text, VECTOR_DIMENSION)));
     }

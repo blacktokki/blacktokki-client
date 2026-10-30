@@ -1,12 +1,13 @@
 import { useAuthContext } from '@blacktokki/account';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useInfiniteQuery } from 'react-query';
 
 import {
+  createSearchSession,
   getSearchIndex,
   getSearchSourceRevision,
   indexNoteContents,
-  searchVectorDb,
+  prepareSearchEmbeddings,
 } from './oramaEngine';
 import { useNotePages } from '../../hooks/useNoteStorage';
 import { usePrivate } from '../../hooks/usePrivate';
@@ -31,20 +32,39 @@ export const useSearch = (query: string, exact: boolean, withExternal: boolean) 
     () => getSearchSourceRevision(index, contents || EMPTY_CONTENTS),
     [index, contents]
   );
+  const enabled =
+    !!query?.trim() &&
+    contents !== undefined &&
+    usageMode !== undefined &&
+    auth.isLocal !== undefined;
+  const searchPage = useMemo(
+    () => createSearchSession(query, index),
+    [query, index, sourceRevision]
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+    prepareSearchEmbeddings(index);
+  }, [enabled, index, sourceRevision]);
 
   return useInfiniteQuery({
-    queryKey: ['agentSearch', scope, index.db?.id, query, exact, withExternal, sourceRevision],
+    queryKey: [
+      'agentSearch',
+      scope,
+      index.db?.id,
+      query,
+      exact,
+      withExternal,
+      sourceRevision,
+      searchPage.version,
+    ],
     queryFn: async ({ pageParam = 0 }) => {
       await indexNoteContents(contents || EMPTY_CONTENTS, index);
-      return searchVectorDb(query, pageParam, 20, index);
+      return searchPage(pageParam);
     },
     getNextPageParam: (lastPage, allPages) =>
       lastPage && lastPage.length >= 20 ? allPages.length : undefined,
-    enabled:
-      !!query?.trim() &&
-      contents !== undefined &&
-      usageMode !== undefined &&
-      auth.isLocal !== undefined,
+    enabled,
     staleTime: 1000 * 5,
   });
 };

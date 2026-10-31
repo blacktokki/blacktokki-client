@@ -6,39 +6,44 @@ import {
   useColorScheme as useOriginalColorScheme,
   Platform,
 } from 'react-native';
-// The useColorScheme value is always either light or dark, but the built-in
-// type suggests that it can be null. This will not happen in practice, so this
-// makes it a bit easier to work with.
 
-const NO_PREFERENCE = 'no-preference'
+const NO_PREFERENCE = 'no-preference';
+type UserColorScheme = 'light' | 'dark' | null;
 
-function getUserScheme(){
-  if (Platform.OS === 'web'){
-    const userValue = document.documentElement.getAttribute('data-theme');
-    return userValue && userValue !== NO_PREFERENCE ? userValue as ColorSchemeName : null;
+const normalizeColorScheme = (scheme: string | null | undefined): UserColorScheme =>
+  scheme === 'light' || scheme === 'dark' ? scheme : null;
+
+function getUserScheme(): UserColorScheme {
+  if (Platform.OS === 'web') {
+    return normalizeColorScheme(document.documentElement.getAttribute('data-theme'));
   }
-  return Appearance.getColorScheme()
+  return normalizeColorScheme(Appearance.getColorScheme());
 }
-const userListener = new Set<(scheme:ColorSchemeName) => void>()
+const userListener = new Set<(scheme: UserColorScheme) => void>();
 
 if (Platform.OS === 'web') {
-  Appearance.setColorScheme = (scheme/*: 'light' | 'dark' | null */) => {
-    document.documentElement.setAttribute('data-theme', scheme || NO_PREFERENCE);
+  Appearance.setColorScheme = (scheme) => {
+    document.documentElement.setAttribute(
+      'data-theme',
+      normalizeColorScheme(scheme) || NO_PREFERENCE
+    );
   };
 
-  Appearance.getColorScheme/*: () => 'light' | 'dark' */ = () => {
-    const systemValue = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  Appearance.getColorScheme = () => {
+    const systemValue = window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
     const userValue = getUserScheme();
     return userValue ? userValue : systemValue;
   };
 
   Appearance.addChangeListener = (listener) => {
     // Listen for changes of system value
-    const systemValueListener = (e: any) => {
-      const colorScheme = Appearance.getColorScheme();
+    const systemValueListener = () => {
+      const colorScheme = Appearance.getColorScheme() ?? 'unspecified';
       listener({ colorScheme });
     };
-    
+
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     media.addEventListener('change', systemValueListener);
 
@@ -46,8 +51,8 @@ if (Platform.OS === 'web') {
     const observer = new MutationObserver((mutationsList) => {
       for (const mutation of mutationsList) {
         if (mutation.attributeName === 'data-theme') {
-          listener({ colorScheme: Appearance.getColorScheme() });
-          userListener.forEach(l => l(getUserScheme()))
+          listener({ colorScheme: Appearance.getColorScheme() ?? 'unspecified' });
+          userListener.forEach((l) => l(getUserScheme()));
         }
       }
     });
@@ -67,7 +72,7 @@ export function useInitColorScheme() {
   useEffect(() => {
     if (!complete) {
       AsyncStorage.getItem('color').then((v) => {
-        Appearance.setColorScheme(v === NO_PREFERENCE ? null : (v as ColorSchemeName));
+        Appearance.setColorScheme(normalizeColorScheme(v) ?? 'unspecified');
         setComplete(true);
       });
     }
@@ -75,18 +80,26 @@ export function useInitColorScheme() {
   return complete;
 }
 
-export function useUserColorScheme():['light' | 'dark' | null, (colorScheme: ColorSchemeName) => void] {
-  const [scheme, setScheme] = useState<ColorSchemeName>(getUserScheme());
+export function useUserColorScheme(): [
+  UserColorScheme,
+  (colorScheme: ColorSchemeName | null | undefined) => void,
+] {
+  const [scheme, setScheme] = useState<UserColorScheme>(getUserScheme());
   useEffect(() => {
     userListener.add(setScheme);
-    return () => { userListener.delete(setScheme) };
+    return () => {
+      userListener.delete(setScheme);
+    };
   }, []);
   return [
     scheme || null,
-    (colorScheme) => AsyncStorage.setItem('color', colorScheme || NO_PREFERENCE).then(() =>
-      Appearance.setColorScheme(colorScheme)
-    )
-  ]
+    (colorScheme) => {
+      const preference = normalizeColorScheme(colorScheme);
+      return AsyncStorage.setItem('color', preference || NO_PREFERENCE).then(() =>
+        Appearance.setColorScheme(preference ?? 'unspecified')
+      );
+    },
+  ];
 }
 
 export default function useColorScheme(): 'light' | 'dark' {

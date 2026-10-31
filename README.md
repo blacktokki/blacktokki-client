@@ -8,7 +8,7 @@ blacktokki-client는 Blacktokki 에코시스템의 React Native 및 Expo 기반 
 
 ## Installation
 
-Expo SDK 54를 사용하며 Node.js 20.19.4 이상과 Yarn 1.x가 필요합니다.
+Expo SDK 55를 사용하며 Node.js 20.19.4 이상과 Yarn 1.x가 필요합니다.
 
 패키지 매니저 [Yarn](https://yarnpkg.com/)을 사용하여 의존성을 설치하고 패키지를 빌드합니다.
 

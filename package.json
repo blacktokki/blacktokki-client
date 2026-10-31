@@ -25,12 +25,11 @@
   "resolutions": {
     "@babel/preset-env": "7.29.5",
     "@babel/core": "*",
-    "@types/react": "~19.1.10",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "react-native": "0.81.5",
+    "@types/react": "~19.2.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.10",
     "react-native-web": "~0.21.0",
-    "postcss": "8.5.32",
     "serialize-javascript": "7.1.3"
   }
 }

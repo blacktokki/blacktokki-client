@@ -62,4 +62,6 @@ Non-goals: 웹과 모바일의 빌드 도구를 분리하여 Webpack/Vite를 별
 
 ## More Information
 
+* 2026-03-03: 두 앱을 Expo SDK 53 (`^53.0.27`)으로 업데이트했습니다. 루트 코어 버전은 React 19.0.0, React Native 0.79.6, React Native Web 0.20.0으로 정렬했고, Notebook의 Metro 런타임과 Expo 모듈 및 React Native 연동 라이브러리 버전도 함께 갱신했습니다.
+* 2026-10-30: 두 앱을 Expo SDK 54 (React 19.1.0, React Native 0.81.5)로 갱신하고 자동 연결·DOM/WebView·검색의 네이티브 호환성을 보완했습니다. TypeScript는 각 워크스페이스에서 `~5.9.2`로 관리하며, 중복 resolution 제거와 PostCSS 보안 패치를 반영했습니다. 빌드·타입 검사·전 플랫폼 번들·테스트 253개가 통과했고, 기존 lint 오류와 Expo Doctor 메타데이터 경고는 남아 있습니다.
 * 패키지 빌드 규칙: 공통 패키지(`packages/*`) 수정 시에는 반드시 해당 소스(`src/`)를 수정한 후 빌드 스크립트를 실행하며, 단일 앱(`apps/*`) 소스만 변경된 경우 패키지 빌드는 생략합니다 ([AGENTS.md](../../AGENTS.md)).

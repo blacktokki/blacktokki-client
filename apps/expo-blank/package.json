@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@blacktokki/core": "*",
-    "expo": "^53.0.27",
-    "expo-status-bar": "~2.2.3",
+    "expo": "^54.0.38",
+    "expo-status-bar": "~3.0.9",
     "react": "*",
     "react-dom": "*",
     "react-native": "*",
@@ -20,7 +20,16 @@
   },
   "devDependencies": {
     "@babel/core": "*",
-    "@types/react": "*"
+    "@types/react": "*",
+    "typescript": "~5.9.2"
+  },
+  "expo": {
+    "autolinking": {
+      "searchPaths": [
+        "../../node_modules",
+        "./node_modules"
+      ]
+    }
   },
   "private": true
 }

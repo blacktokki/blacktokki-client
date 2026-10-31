@@ -19,13 +19,13 @@
     "@babel/core": "*",
     "@babel/preset-env": "*",
     "@blacktokki/eslint-config": "*",
-    "@react-native-async-storage/async-storage": ">= 2.0.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@tsconfig/recommended": "^1.0.1",
     "axios": "^1.18.0",
     "react": "*",
     "react-native": "*",
     "react-native-builder-bob": "^0.18.3",
-    "typescript": "^5.1.3"
+    "typescript": "~5.9.2"
   },
   "peerDependencies": {
     "react": "*",

@@ -312,33 +312,21 @@ export const drawEdges = (
       ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
       : false;
 
-    if (activeFocusId) {
-      if (isConnectedToActive) {
-        opacity = 0.95;
-        strokeWidth = 2.2;
-      } else if (isWithinFocus) {
-        opacity = isDark ? 0.85 : 0.8;
-        strokeWidth = 1.8;
-      } else {
-        opacity = 0.04;
-        strokeWidth = 0.7;
-      }
-    } else if (focusedNodeIds) {
-      if (isWithinFocus) {
-        opacity = isDark ? 0.85 : 0.8;
-        strokeWidth = 1.8;
-      } else {
-        opacity = 0.04;
-        strokeWidth = 0.7;
-      }
+    if (isConnectedToActive) {
+      opacity = isDark ? 0.5 : 0.58;
+      strokeWidth = 1.35;
+    } else if (isWithinFocus) {
+      opacity = isDark ? 0.3 : 0.36;
+      strokeWidth = 1.0;
+    } else if (activeFocusId || focusedNodeIds) {
+      opacity = 0.04;
+      strokeWidth = 0.7;
+    } else if (sourceIn && targetIn) {
+      opacity = isDark ? 0.38 : 0.3;
+      strokeWidth = edge.type === 'REFERENCES' ? 1.4 : 1.1;
     } else {
-      if (sourceIn && targetIn) {
-        opacity = isDark ? 0.38 : 0.3;
-        strokeWidth = edge.type === 'REFERENCES' ? 1.4 : 1.1;
-      } else {
-        opacity = isDark ? 0.12 : 0.09;
-        strokeWidth = 0.8;
-      }
+      opacity = isDark ? 0.12 : 0.09;
+      strokeWidth = 0.8;
     }
 
     const strokeColor =
@@ -589,12 +577,12 @@ const getOverviewNodeGroups = (nodes: KnowledgeGraphNode[], isDark: boolean) => 
           ? '#AACCFF'
           : '#5588CC'
         : outerRing
-        ? isDark
-          ? '#48C78E'
-          : '#27AE60'
-        : isDark
-        ? '#70A1FF'
-        : '#3060C0');
+          ? isDark
+            ? '#48C78E'
+            : '#27AE60'
+          : isDark
+            ? '#70A1FF'
+            : '#3060C0');
     const key = `${node.color}:${stroke}:${lineWidth}:${outerRing}`;
     let group = groups.get(key);
     if (!group) {

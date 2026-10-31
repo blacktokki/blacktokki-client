@@ -31,6 +31,7 @@ export function addTemplateGraph(
       ?.radius ?? 17;
   const nodes: KnowledgeGraphNode[] = [];
   const edges: KnowledgeGraphEdge[] = [];
+  const templateSourceIds = new Set<string>();
   const sources = new Map<string, KnowledgeGraphNode>();
   // Prefer a full note. A board's corresponding document is represented by its class.
   for (const node of graph.nodes) {
@@ -121,6 +122,7 @@ export function addTemplateGraph(
         })
       );
       for (const target of targets) {
+        templateSourceIds.add(target);
         edges.push({
           id: `edge:templateSource:${id}->${target}`,
           source: id,
@@ -132,7 +134,22 @@ export function addTemplateGraph(
       }
     }
   }
-  return { nodes: [...graph.nodes, ...nodes], edges: [...graph.edges, ...edges] };
+  return {
+    nodes: [
+      ...graph.nodes.map((node) =>
+        node.instanceKind === 'NOTE' && !node.boardTitle && templateSourceIds.has(node.id)
+          ? {
+              ...node,
+              templateSource: true,
+              color: palette.templateNote.fill,
+              strokeColor: palette.templateNote.stroke,
+            }
+          : node
+      ),
+      ...nodes,
+    ],
+    edges: [...graph.edges, ...edges],
+  };
 }
 
 /** Include template membership and provenance in the ordinary bidirectional N-hop traversal. */

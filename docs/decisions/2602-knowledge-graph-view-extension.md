@@ -173,6 +173,18 @@ Git HEAD의 최적화 전 코드는 매 조회마다 파일 본문을 읽고 변
 
 앱 테스트 485개, TypeScript 및 변경 파일의 ESLint 검사가 통과했습니다. 단일 앱 소스 변경이므로 저장소 규칙에 따라 빌드는 생략했습니다.
 
+### 2026-10-30: 모드 시작 노드와 최상위 노트 연결
+
+`keyword1`의 그래프 구조에 맞춰 공통 시작 노드를 모드별 `노트 모드` 또는 `노트북: 이름`으로 표시합니다. 그래프에 표시된 상위 노트가 없는 최상위 일반 노트만 시작 노드에 직접 연결하고, 하위 노트는 가장 가까운 기존 상위 노트를 통해 연결합니다. 보드 경계를 넘어 일반 노트 계층에 연결하지 않으며, 외부 링크 전용 분류와 그 소속 연결은 생성하지 않습니다. 따라서 공통 분류를 통한 무관한 하위 노트의 2-hop 우회 연결을 제거합니다.
+
+`useKnowledgeGraphData.ts`가 연결을 구성하고, `utils/relations.ts`와 범례·상세 시트가 모드별 명칭을 표시합니다. `canvasRenderer.ts`는 직접 연결을 1.35px, 선택 범위 안의 다른 연결을 1.0px로 표시하며 `keyword1`과 같은 투명도를 사용합니다. 기존 연결선 순회 강조 알고리즘은 바꾸지 않고 새 계층을 따라 진행합니다. `knowledge-graph-use-data.test.cjs`에서 최상위 연결·가장 가까운 상위 노트·보드 경계·2-hop 대상을, `knowledge-graph-canvas.test.cjs`에서 두 테마의 연결선 강조를 검증합니다.
+
+### 2026-10-30: 문단 표시와 포함 관계 전환
+
+`keyword1`과 같이 문단 표시를 끄면 `paragraphPartOf`를 숨기고, 보이는 연결 문단·공유 보드 문단의 각 출처 노트로 `connectedPartOf`를 보완합니다. 문단 표시를 켜면 `connectedPartOf`를 숨기고 원래 문단 계층을 표시합니다. `utils/relations.ts`의 `visibleKnowledgeGraphEdges`가 표시용 관계를 구성하며 원본 관계와 N-hop 탐색 기준은 유지합니다. 두 문단 포함 관계는 황색 계열을 사용합니다.
+
+사용자 요청에 따라 물리 배치·거리 제약 변경은 되돌리고 기존 계산 규칙을 유지합니다. 표시 전환·공유 출처 보존은 `knowledge-graph-display.test.cjs`, 실제 문단 토글과 원본 관계 보존은 `knowledge-graph-paragraph-visibility.test.cjs`에서 검증합니다.
+
 ## Related Decisions
 
 - [2504-plugin-extension-architecture.md](2504-plugin-extension-architecture.md)

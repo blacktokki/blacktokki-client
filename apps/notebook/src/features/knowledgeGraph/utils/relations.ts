@@ -23,19 +23,24 @@ export const getKnowledgeGraphNodeKind = (
     if (node.classKind === 'TEMPLATE_GROUP') return 'templateGroup';
     return node.classCategory === 'BOARD' ? 'boardClass' : 'builtInClass';
   }
-  if (node.instanceKind === 'NOTE') return node.boardTitle ? 'boardNote' : 'note';
+  if (node.instanceKind === 'NOTE') {
+    if (node.boardTitle) return 'boardNote';
+    return node.templateSource ? 'templateNote' : 'note';
+  }
   return INSTANCE_NODE_KINDS[node.instanceKind || 'CARD'] || 'card';
 };
 
 /** Human-facing category names for the legend and node detail badge. */
 export const getKnowledgeGraphNodeKindLabel = (
   kind: KnowledgeGraphNodeKindLabel,
-  translate: (key: string) => string
+  translate: (key: string) => string,
+  usageMode: string | undefined = 'NOTE'
 ): string => {
   const labels: Record<KnowledgeGraphNodeKindLabel, string> = {
-    builtInClass: 'Built-in category',
+    builtInClass: usageMode === 'NOTEBOOK' ? 'Notebook' : 'Note Mode',
     boardClass: 'Board category',
     note: 'Note',
+    templateNote: 'Template-based note',
     boardNote: 'Board note',
     boardParagraph: 'Board paragraph',
     card: 'Card paragraph',
@@ -83,6 +88,60 @@ export const getKnowledgeGraphRelationDisplayLabel = (
     default:
       return edge.propertyLabel || edge.label || edge.type;
   }
+};
+
+/** Switch between the full paragraph hierarchy and direct note containment for visible paragraphs. */
+export const visibleKnowledgeGraphEdges = (
+  nodes: KnowledgeGraphNode[],
+  edges: KnowledgeGraphEdge[],
+  showParagraphs: boolean
+): KnowledgeGraphEdge[] => {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const visible = edges.filter((edge) => {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) return false;
+    if (edge.type !== 'PART_OF') return true;
+    if (edge.propertyLabel === 'connectedPartOf') return !showParagraphs;
+    if (edge.propertyLabel === 'paragraphPartOf') return showParagraphs;
+    return true;
+  });
+  if (showParagraphs) return visible;
+
+  const notes = new Map(
+    nodes.filter((node) => node.instanceKind === 'NOTE').map((node) => [node.noteTitle, node.id])
+  );
+  const hierarchy = new Map(
+    edges
+      .filter((edge) => edge.propertyLabel === 'paragraphPartOf')
+      .map((edge) => [edge.source, edge])
+  );
+  const direct = new Set(
+    visible
+      .filter((edge) => edge.propertyLabel === 'connectedPartOf')
+      .map((edge) => JSON.stringify([edge.source, edge.target]))
+  );
+  for (const node of nodes) {
+    if (node.instanceKind !== 'CONNECTED_PARAGRAPH' && node.instanceKind !== 'BOARD_PARAGRAPH')
+      continue;
+    const origins = node.paragraphOccurrences?.length
+      ? node.paragraphOccurrences.map((paragraph) => paragraph.origin || node.noteTitle)
+      : [node.paragraph?.origin || node.noteTitle];
+    for (const origin of new Set(origins)) {
+      const target = notes.get(origin);
+      const key = JSON.stringify([node.id, target]);
+      if (!target || direct.has(key)) continue;
+      direct.add(key);
+      visible.push({
+        id: `edge:connectedPart:${node.id}->${target}`,
+        source: node.id,
+        target,
+        type: 'PART_OF',
+        propertyLabel: 'connectedPartOf',
+        color: hierarchy.get(node.id)?.color,
+        dashed: true,
+      });
+    }
+  }
+  return visible;
 };
 
 export interface KnowledgeGraphRelationSummary {

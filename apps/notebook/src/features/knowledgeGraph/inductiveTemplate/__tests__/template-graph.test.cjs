@@ -1,6 +1,7 @@
+const markdownIt = require('markdown-it');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const markdownIt = require('markdown-it');
+
 const loadTs = require('../../../inductiveTemplate/__tests__/loadTs.cjs');
 const { addTemplateGraph, isTemplateGraphNode, templateGraphNeighbors } = loadTs(
   '../knowledgeGraph/inductiveTemplate/graph.ts'
@@ -156,7 +157,7 @@ test('templates and multi-member groups link to existing sources without changin
   assert.ok(augmented.edges.every((e) => ids.has(e.source) && ids.has(e.target)));
   assert.equal(new Set(augmented.edges.map((e) => e.id)).size, augmented.edges.length);
   assert.equal(JSON.stringify(base), before);
-  assert.equal(augmented.nodes[0], base.nodes[0]);
+  assert.notEqual(augmented.nodes[0], base.nodes[0]);
   assert.ok(
     templates.every((n) => n.template && n.noteTitle === '' && !Object.keys(n.properties).length)
   );
@@ -169,6 +170,78 @@ test('templates and multi-member groups link to existing sources without changin
   assert.ok(neighbors('one', 99).has('two'));
   assert.ok(!neighbors('one', 99).has('three'));
   assert.equal(base.axioms, emptyAxioms);
+});
+
+test('ordinary template source notes get their own color and legend without changing note behavior', () => {
+  const title = '일반 노트';
+  for (const dark of [false, true]) {
+    const colors = getKnowledgeGraphPalette(dark);
+    const original = node('source', title, {
+      color: colors.note.fill,
+      strokeColor: colors.note.stroke,
+      properties: { schedule: '2026-10-30' },
+    });
+    const otherNodes = [
+      node('plain', 'Plain'),
+      node('boardNote', 'Board/Note', { boardTitle: 'Board' }),
+      node('board', 'Board', { role: 'CLASS', instanceKind: undefined, classKind: 'BOARD_CARD' }),
+      node('card', 'Board/Column', { instanceKind: 'CARD' }),
+    ];
+    const base = {
+      nodes: [original, ...otherNodes],
+      edges: [{ id: 'reference', source: 'source', target: 'plain', type: 'REFERENCES' }],
+    };
+    const before = JSON.stringify(base);
+    const groups = [
+      {
+        templates: [
+          candidate('First', [title.normalize('NFD'), 'Board/Note', 'Board', 'Board/Column']),
+          candidate('Second', [title]),
+        ],
+        similarity: 1,
+      },
+    ];
+    const augmented = addTemplateGraph(base, groups, colors, 'Template group');
+    const source = augmented.nodes.find((n) => n.id === 'source');
+    assert.equal(source.templateSource, true);
+    assert.equal(source.color, colors.templateNote.fill);
+    assert.equal(source.strokeColor, colors.templateNote.stroke);
+    assert.equal(source.role, 'INSTANCE');
+    assert.equal(source.instanceKind, 'NOTE');
+    assert.equal(source.radius, original.radius);
+    assert.equal(source.noteTitle, title);
+    assert.equal(source.properties, original.properties);
+    assert.equal(isTemplateGraphNode(source), false);
+    assert.equal(relations.getKnowledgeGraphNodeKind(source), 'templateNote');
+    assert.equal(
+      relations.getKnowledgeGraphNodeKindLabel('templateNote', (key) => key),
+      'Template-based note'
+    );
+    assert.notEqual(colors.templateNote.fill, colors.note.fill);
+    assert.notEqual(colors.templateNote.fill, colors.template.fill);
+    assert.equal(augmented.nodes.filter((n) => n.templateSource).length, 1);
+    for (const unchanged of otherNodes) {
+      assert.equal(
+        augmented.nodes.find((n) => n.id === unchanged.id),
+        unchanged
+      );
+    }
+    assert.ok(augmented.edges.includes(base.edges[0]));
+    assert.ok(templateGraphNeighbors(augmented.edges)('source').has('plain'));
+    assert.equal(JSON.stringify(base), before);
+    const refreshed = addTemplateGraph(
+      base,
+      [{ templates: [candidate('Other', ['Plain'])], similarity: null }],
+      colors,
+      'Template group'
+    );
+    assert.equal(
+      refreshed.nodes.find((n) => n.id === 'source'),
+      original
+    );
+    assert.equal(relations.getKnowledgeGraphNodeKind(original), 'note');
+    assert.equal(addTemplateGraph(base, [], colors, 'Template group'), base);
+  }
 });
 
 test('template IDs remain stable across source order, translated names and theme changes', () => {

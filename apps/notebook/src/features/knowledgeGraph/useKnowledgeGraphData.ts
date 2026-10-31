@@ -92,7 +92,8 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
   const { usageMode, notebook } = useUsageMode();
   const { lang } = useLangContext();
   const isDark = colorScheme === 'dark';
-  const noteClassName = lang('Note') || '노트';
+  const noteClassName =
+    usageMode === 'NOTEBOOK' ? lang('Notebook') || '노트북' : lang('Note Mode') || '노트 모드';
   const notebookName = usageMode === 'NOTEBOOK' ? notebook?.title?.trim() : undefined;
   const noteClassLabel = notebookName ? `${noteClassName}: ${notebookName}` : noteClassName;
 
@@ -239,11 +240,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
         radius: 9,
       });
       titleToNodeMap.set(note.title, id);
-      addInstanceOf(
-        boardClassId ? `edge:inst:${id}->${boardClassId}` : `edge:inst:${id}->noteClass`,
-        id,
-        boardClassId || noteClassNode.id
-      );
+      if (boardClassId) addInstanceOf(`edge:inst:${id}->${boardClassId}`, id, boardClassId);
     };
 
     for (const note of knowledgeGraphNotePages) {
@@ -370,10 +367,18 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
     for (const noteNode of nodes) {
       if (noteNode.role !== 'INSTANCE' || noteNode.instanceKind !== 'NOTE') continue;
       const parts = noteNode.noteTitle.split('/');
-      if (parts.length <= 1) continue;
-      const parentTitle = parts.slice(0, -1).join('/');
-      const parentNodeId = titleToNodeMap.get(parentTitle);
-      if (!parentNodeId || parentNodeId === noteNode.id) continue;
+      let parentNodeId: string | undefined;
+      while (parts.length > 1 && !parentNodeId) {
+        parts.pop();
+        const parentTitle = parts.join('/');
+        parentNodeId = titleToNodeMap.get(parentTitle);
+        if (boardTitles.has(parentTitle)) break;
+      }
+      if (!parentNodeId) {
+        if (!noteNode.boardTitle)
+          addInstanceOf(`edge:inst:${noteNode.id}->noteClass`, noteNode.id, noteClassNode.id);
+        continue;
+      }
       addRelation(
         `edge:part:${noteNode.id}->${parentNodeId}`,
         noteNode.id,
@@ -556,22 +561,11 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       }
     }
 
-    // External links are individuals with their own class and source relations.
+    // External links connect to their sources without a separate classification node.
     const externalLinkOccurrences = knowledgeGraphLinkOccurrences.filter(
       (occurrence) =>
         !occurrence.target && /^(?:https?:\/\/|ftp:\/\/|mailto:|\/\/)/i.test(occurrence.url)
     );
-    if (externalLinkOccurrences.length > 0) {
-      addNode('builtInClass', {
-        id: 'class:externalLink',
-        name: lang('External Link Class') || '외부 링크',
-        role: 'CLASS',
-        classKind: 'EXTERNAL_LINK',
-        classCategory: 'BUILT_IN',
-        noteTitle: lang('External Link Class') || '외부 링크',
-        radius: 17,
-      });
-    }
     const externalLinkNodeIdByKey = new Map<string, string>();
     for (const occurrence of externalLinkOccurrences) {
       const linkKey = JSON.stringify([normalizeTitle(occurrence.linkName), occurrence.url]);
@@ -588,7 +582,6 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
           description: occurrence.url,
           radius: 6.5,
         });
-        addInstanceOf(`edge:externalLinkType:${linkNodeId}`, linkNodeId, 'class:externalLink');
       }
       addRelation(
         `edge:externalReference:${occurrence.sourceNodeId}->${linkNodeId}`,
@@ -633,7 +626,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
         assignment.targetNodeId,
         'PART_OF',
         'connectedPartOf',
-        isDark ? '#F2A2A8' : '#B84B56',
+        isDark ? '#7D6608' : '#B7950B',
         { dashed: true }
       );
     }
@@ -645,7 +638,7 @@ export const useKnowledgeGraphData = (): KnowledgeGraphData & {
       paragraphNode.strokeColor = palette.connectedParagraph.stroke;
     }
 
-    for (const linkId of findConnectedExternalLinkIds(nodes, edges, 'class:externalLink')) {
+    for (const linkId of findConnectedExternalLinkIds(nodes, edges)) {
       const linkNode = nodeIdMap.get(linkId);
       if (!linkNode) continue;
       linkNode.instanceKind = 'CONNECTED_EXTERNAL_LINK';

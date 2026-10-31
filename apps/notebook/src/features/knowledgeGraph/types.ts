@@ -19,12 +19,7 @@ export type KnowledgeGraphClassCategory = 'BUILT_IN' | 'BOARD' | 'DERIVED';
 // Enforced constraint: Only NOTE instances can have non-empty properties.
 // Always and only keys defined in YAML frontmatter can become properties.
 export type KnowledgeGraphPropertyValue =
-  | string
-  | number
-  | boolean
-  | null
-  | unknown[]
-  | Record<string, unknown>;
+  string | number | boolean | null | unknown[] | Record<string, unknown>;
 
 export interface KnowledgeGraphSectionProperty {
   title: string;
@@ -105,6 +100,8 @@ export interface KnowledgeGraphNode {
   radius: number;
   color: string;
   strokeColor?: string;
+  /** Ordinary note represented as a source of a currently displayed inferred template. */
+  templateSource?: boolean;
 }
 
 export interface KnowledgeGraphEdge {

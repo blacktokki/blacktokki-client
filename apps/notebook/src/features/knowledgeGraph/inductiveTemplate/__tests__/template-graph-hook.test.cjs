@@ -1,6 +1,8 @@
+const markdownIt = require('markdown-it');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const markdownIt = require('markdown-it');
+const { setTimeout } = require('node:timers');
+
 const loadTs = require('../../../inductiveTemplate/__tests__/loadTs.cjs');
 const inference = loadTs('inference.ts');
 const discovery = loadTs('discovery.ts', {
@@ -133,10 +135,13 @@ test('integration cycles on/off, resets on scope and extension changes, and canc
     result = render();
     assert.equal(result.count, 1);
     assert.equal(result.nodes.filter((node) => node.instanceKind === 'TEMPLATE').length, 1);
+    assert.equal(result.nodes.filter((node) => node.templateSource).length, 2);
     assert.ok(result.getNeighbors('0').size > 1);
     result.toggle();
     result = render();
     assert.equal(result.mode, 'off');
+    assert.equal(result.nodes, base.nodes);
+    assert.ok(result.nodes.every((node) => !node.templateSource));
     result.toggle();
     result = render();
     assert.equal(result.mode, 'on');

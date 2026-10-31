@@ -1,15 +1,13 @@
-﻿const assert = require('node:assert/strict');
+const assert = require('node:assert/strict');
 const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
 const ts = require('typescript');
-const { createLayoutRunner } = require('./layoutTestHelper.cjs');
 
 const output = mkdtempSync(path.join(tmpdir(), 'knowledge-graph-canvas-test-'));
 let initForceSimulation;
 let stepForceSimulation;
-let computeForceLayout;
 let screenToWorld;
 let centeredViewportForNode;
 let advanceSelectionCamera;
@@ -26,7 +24,6 @@ try {
     writeFileSync(path.join(output, `${name}.js`), compiled.outputText);
   }
   ({ initForceSimulation, stepForceSimulation } = require(path.join(output, 'forceLayout.js')));
-  computeForceLayout = createLayoutRunner(initForceSimulation, stepForceSimulation);
   ({
     screenToWorld,
     centeredViewportForNode,
@@ -447,27 +444,32 @@ test('drawEdges highlights both 1-hop and N-hop (2-hop/all) edges when focusedNo
     focusedNodeIds: new Set(['node:1', 'node:2', 'node:3']), // 2-hop or All range
   };
 
-  drawEdges(mockCtx, edges, nodeMap, options);
+  for (const isDark of [false, true]) {
+    edgeIndex = 0;
+    edgeStyles.clear();
+    arrowFills = 0;
+    drawEdges(mockCtx, edges, nodeMap, { ...options, isDark });
 
-  const directEdge = edgeStyles.get('edge:1-2');
-  const twoHopEdge = edgeStyles.get('edge:2-3');
-  const externalEdge = edgeStyles.get('edge:other');
+    const directEdge = edgeStyles.get('edge:1-2');
+    const twoHopEdge = edgeStyles.get('edge:2-3');
+    const externalEdge = edgeStyles.get('edge:other');
 
-  assert.ok(directEdge, 'Direct 1-hop edge was styled');
-  assert.ok(twoHopEdge, '2-hop edge was styled');
-  assert.ok(externalEdge, 'External edge was styled');
-
-  // Direct 1-hop: strong highlight (opacity >= 0.9, width >= 2.0)
-  assert.ok(directEdge.opacity >= 0.9, `Direct edge has high opacity: ${directEdge.opacity}`);
-  assert.ok(directEdge.width >= 2.0, `Direct edge has thick stroke: ${directEdge.width}`);
-
-  // 2-hop / All: line highlight (opacity >= 0.75, width >= 1.7)
-  assert.ok(twoHopEdge.opacity >= 0.75, `2-hop edge is highlighted: ${twoHopEdge.opacity}`);
-  assert.ok(twoHopEdge.width >= 1.7, `2-hop edge has emphasized stroke: ${twoHopEdge.width}`);
-
-  // External: dimmed (opacity <= 0.05, width <= 0.8)
-  assert.ok(externalEdge.opacity <= 0.05, `External edge is dimmed: ${externalEdge.opacity}`);
-  assert.ok(arrowFills > 0, 'Straight edges render arrowheads');
+    assert.ok(directEdge, 'Direct 1-hop edge was styled');
+    assert.ok(twoHopEdge, '2-hop edge was styled');
+    assert.ok(externalEdge, 'External edge was styled');
+    assert.ok(
+      directEdge.opacity >= 0.45 && directEdge.opacity <= 0.65 && directEdge.width <= 1.4,
+      'Direct connections remain visible with moderate opacity and thin strokes'
+    );
+    assert.ok(
+      twoHopEdge.opacity >= 0.25 && twoHopEdge.opacity <= 0.4 && twoHopEdge.width <= 1.2,
+      'Other related connections use a softer emphasis'
+    );
+    assert.ok(directEdge.opacity > twoHopEdge.opacity && directEdge.width > twoHopEdge.width);
+    assert.ok(twoHopEdge.opacity > externalEdge.opacity);
+    assert.ok(externalEdge.opacity <= 0.05, `External edge is dimmed: ${externalEdge.opacity}`);
+    assert.ok(arrowFills > 0, 'Straight edges render arrowheads');
+  }
 });
 
 test('drawEdges separates labels for every relationship between the same two nodes', () => {

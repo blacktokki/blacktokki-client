@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { useUsageMode } from '../../../hooks/useUsageMode';
 import { TemplateGraphDetails } from '../inductiveTemplate/TemplateGraphDetails';
 import { isTemplateGraphNode } from '../inductiveTemplate/graph';
 import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
@@ -50,6 +51,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
 }) => {
   const { lang } = useLangContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
+  const { usageMode } = useUsageMode();
   const isDark = colorScheme === 'dark';
   const palette = getKnowledgeGraphPalette(isDark);
 
@@ -59,7 +61,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
 
   const nodeKind = getKnowledgeGraphNodeKind(node);
   const badgeColor = palette[nodeKind].stroke;
-  const typeLabel = getKnowledgeGraphNodeKindLabel(nodeKind, lang);
+  const typeLabel = getKnowledgeGraphNodeKindLabel(nodeKind, lang, usageMode);
 
   const typeIcon = {
     builtInClass: 'sitemap',
@@ -67,6 +69,7 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
     externalLink: 'external-link',
     connectedExternalLink: 'external-link',
     note: 'file-text-o',
+    templateNote: 'file-code-o',
     boardNote: 'file-text-o',
     connectedParagraph: 'link',
     boardParagraph: 'align-left',
@@ -259,24 +262,24 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
                 key === 'schedule'
                   ? '#E67E22'
                   : key === 'updated'
-                  ? isDark
-                    ? '#AAB7B8'
-                    : '#7F8C8D'
-                  : isDark
-                  ? '#5DADE2'
-                  : '#2980B9';
+                    ? isDark
+                      ? '#AAB7B8'
+                      : '#7F8C8D'
+                    : isDark
+                      ? '#5DADE2'
+                      : '#2980B9';
               const chipBg =
                 key === 'schedule'
                   ? isDark
                     ? 'rgba(230, 126, 34, 0.2)'
                     : 'rgba(230, 126, 34, 0.12)'
                   : key === 'updated'
-                  ? isDark
-                    ? 'rgba(170, 183, 184, 0.16)'
-                    : 'rgba(127, 140, 141, 0.12)'
-                  : isDark
-                  ? 'rgba(93, 173, 226, 0.16)'
-                  : 'rgba(41, 128, 185, 0.12)';
+                    ? isDark
+                      ? 'rgba(170, 183, 184, 0.16)'
+                      : 'rgba(127, 140, 141, 0.12)'
+                    : isDark
+                      ? 'rgba(93, 173, 226, 0.16)'
+                      : 'rgba(41, 128, 185, 0.12)';
               return (
                 <View key={key} style={[styles.propertyChip, { backgroundColor: chipBg }]}>
                   <Icon name={iconName} size={9.5} color={chipColor} style={{ marginRight: 4 }} />
@@ -329,8 +332,8 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
                       backgroundColor: isActive
                         ? commonStyles.button?.backgroundColor || '#3498DB'
                         : isDark
-                        ? 'rgba(255,255,255,0.08)'
-                        : 'rgba(0,0,0,0.05)',
+                          ? 'rgba(255,255,255,0.08)'
+                          : 'rgba(0,0,0,0.05)',
                     },
                   ]}
                   onPress={() => onChangeNhopDepth(depth)}

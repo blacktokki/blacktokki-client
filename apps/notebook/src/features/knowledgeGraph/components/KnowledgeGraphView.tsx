@@ -1,20 +1,13 @@
 import { Text, useLangContext } from '@blacktokki/core';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  LayoutChangeEvent,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import KnowledgeGraphCanvasView from './KnowledgeGraphCanvasView';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { useUsageMode } from '../../../hooks/useUsageMode';
 import { getKnowledgeGraphPalette } from '../inductiveTemplate/palette';
 import { AxiomEvaluationResult, KnowledgeGraphEdge, KnowledgeGraphNode } from '../types';
-import { shouldHideExternalLinkClass } from '../utils/externalLinkClassification';
 import {
   getKnowledgeGraphRelationDisplayLabel,
   getKnowledgeGraphNodeKind,
@@ -22,6 +15,7 @@ import {
   KnowledgeGraphNodeKindLabel,
   KnowledgeGraphRelationSummary,
   summarizeKnowledgeGraphRelations,
+  visibleKnowledgeGraphEdges,
 } from '../utils/relations';
 
 interface KnowledgeGraphViewProps {
@@ -38,8 +32,11 @@ interface KnowledgeGraphViewProps {
 }
 
 const relationLegendColor = (summary: KnowledgeGraphRelationSummary, isDark: boolean): string => {
-  if (summary.label === 'connectedPartOf') return isDark ? '#F2A2A8' : '#B84B56';
-  if (summary.label === 'paragraphPartOf' || summary.label === 'cardPartOf')
+  if (
+    summary.label === 'connectedPartOf' ||
+    summary.label === 'paragraphPartOf' ||
+    summary.label === 'cardPartOf'
+  )
     return isDark ? '#7D6608' : '#B7950B';
   switch (summary.type) {
     case 'REFERENCES':
@@ -64,6 +61,14 @@ const violationColor = (severity: 'error' | 'warning', alpha: number): string =>
 const nodeLegendKinds = Object.keys(
   getKnowledgeGraphPalette(false)
 ) as KnowledgeGraphNodeKindLabel[];
+const countNodeKinds = (nodes: KnowledgeGraphNode[]) => {
+  const counts = Object.fromEntries(nodeLegendKinds.map((kind) => [kind, 0])) as Record<
+    KnowledgeGraphNodeKindLabel,
+    number
+  >;
+  for (const node of nodes) counts[getKnowledgeGraphNodeKind(node)]++;
+  return counts;
+};
 const isWeb = Platform.OS === 'web';
 const stopPointerDown = (event: any) => event.stopPropagation();
 const webCursor = isWeb ? ({ cursor: 'pointer' } as any) : {};
@@ -88,7 +93,6 @@ interface GraphToolbarToggleProps {
   active: boolean;
   label: string;
   icon: string;
-  isDark: boolean;
   activeBackgroundColor?: string;
   activeBorderColor?: string;
   activeTextColor?: string;
@@ -101,7 +105,6 @@ const GraphToolbarToggle: React.FC<GraphToolbarToggleProps> = ({
   active,
   label,
   icon,
-  isDark,
   activeBackgroundColor,
   activeBorderColor,
   activeTextColor,
@@ -109,21 +112,19 @@ const GraphToolbarToggle: React.FC<GraphToolbarToggleProps> = ({
   inactiveBorderColor = 'transparent',
   onToggle,
 }) => {
+  const { commonStyles } = useNotebookTheme();
   const textColor = active ? activeTextColor : inactiveTextColor;
   return (
     <TouchableOpacity
       style={[
         styles.toolbarToggle,
         {
-          backgroundColor: active
-            ? activeBackgroundColor
-            : isDark
-              ? 'rgba(255,255,255,0.08)'
-              : 'rgba(0,0,0,0.06)',
+          backgroundColor: active ? activeBackgroundColor : commonStyles.card?.backgroundColor,
           borderColor: active ? activeBorderColor : inactiveBorderColor,
         },
         webButtonStyle,
       ]}
+      activeOpacity={1}
       onPress={onToggle}
       {...webButtonEvents(onToggle)}
       accessibilityRole="button"
@@ -178,6 +179,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   extraToolbar,
 }) => {
   const { commonStyles, colorScheme } = useNotebookTheme();
+  const { usageMode } = useUsageMode();
   const { lang } = useLangContext();
   const isDark = colorScheme === 'dark';
   const palette = getKnowledgeGraphPalette(isDark);
@@ -186,8 +188,6 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     [focusedNodeIds]
   );
 
-  const [dimensions, setDimensions] = useState({ width: 600, height: 600 });
-  const [topToolbarHeight, setTopToolbarHeight] = useState(32);
   const [scale, setScale] = useState(1);
   const [zoomAction, setZoomAction] = useState<{
     type: 'in' | 'out' | 'fit';
@@ -200,49 +200,34 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   const [isLegendExpanded, setIsLegendExpanded] = useState<boolean>(true);
 
   const [showAxiomModal, setShowAxiomModal] = useState<boolean>(false);
-
-  const hideExternalLinkClass = useMemo(
-    () => shouldHideExternalLinkClass(nodes, showOrdinaryExternalLinks),
-    [nodes, showOrdinaryExternalLinks]
-  );
+  const [showControls, setShowControls] = useState(true);
+  const toggleControls = () => setShowControls((previous) => !previous);
 
   const activeNodes = useMemo(() => {
     const visibleNodes = nodes.filter(
       (node) =>
         (showParagraphs || node.instanceKind !== 'PARAGRAPH') &&
-        (showOrdinaryExternalLinks || node.instanceKind !== 'EXTERNAL_LINK') &&
-        (!hideExternalLinkClass ||
-          (node.id !== 'class:externalLink' &&
-            !(node.role === 'CLASS' && node.classKind === 'EXTERNAL_LINK')))
+        (showOrdinaryExternalLinks || node.instanceKind !== 'EXTERNAL_LINK')
     );
     return visibleNodes;
-  }, [nodes, showParagraphs, showOrdinaryExternalLinks, hideExternalLinkClass]);
+  }, [nodes, showParagraphs, showOrdinaryExternalLinks]);
 
-  const activeNodeIds = useMemo(() => new Set(activeNodes.map((node) => node.id)), [activeNodes]);
   const nodeMap = useMemo(() => new Map(activeNodes.map((node) => [node.id, node])), [activeNodes]);
 
-  const allEdges = useMemo(() => {
-    return edges.filter((edge) => activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target));
-  }, [edges, activeNodeIds]);
+  const allEdges = useMemo(
+    () => visibleKnowledgeGraphEdges(activeNodes, edges, showParagraphs),
+    [activeNodes, edges, showParagraphs]
+  );
 
   useEffect(() => {
     if (!selectedNode) return;
     if (
       (!showParagraphs && selectedNode.instanceKind === 'PARAGRAPH') ||
-      (!showOrdinaryExternalLinks && selectedNode.instanceKind === 'EXTERNAL_LINK') ||
-      (hideExternalLinkClass &&
-        (selectedNode.id === 'class:externalLink' ||
-          (selectedNode.role === 'CLASS' && selectedNode.classKind === 'EXTERNAL_LINK')))
+      (!showOrdinaryExternalLinks && selectedNode.instanceKind === 'EXTERNAL_LINK')
     ) {
       onSelectNode(null);
     }
-  }, [
-    showParagraphs,
-    showOrdinaryExternalLinks,
-    hideExternalLinkClass,
-    selectedNode,
-    onSelectNode,
-  ]);
+  }, [showParagraphs, showOrdinaryExternalLinks, selectedNode, onSelectNode]);
 
   const violatingNodeIdList = useMemo(() => {
     const set = new Set<string>();
@@ -253,22 +238,6 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     }
     return Array.from(set);
   }, [axioms]);
-
-  const onLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    if (width > 0 && height > 0) {
-      setDimensions((prev) =>
-        prev.width === width && prev.height === height ? prev : { width, height }
-      );
-    }
-  }, []);
-
-  const onTopToolbarLayout = useCallback((e: LayoutChangeEvent) => {
-    const height = Math.ceil(e.nativeEvent.layout.height);
-    if (height > 0) {
-      setTopToolbarHeight((prev) => (prev === height ? prev : height));
-    }
-  }, []);
 
   const [spacingScale, setSpacingScale] = useState<number>(1.0);
 
@@ -296,23 +265,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     setScale(viewport.zoom);
   }, []);
 
-  const nodeLegendCounts = useMemo(() => {
-    const counts = Object.fromEntries(nodeLegendKinds.map((kind) => [kind, 0])) as Record<
-      KnowledgeGraphNodeKindLabel,
-      number
-    >;
-    for (const node of nodes) {
-      if (
-        hideExternalLinkClass &&
-        (node.id === 'class:externalLink' ||
-          (node.role === 'CLASS' && node.classKind === 'EXTERNAL_LINK'))
-      ) {
-        continue;
-      }
-      counts[getKnowledgeGraphNodeKind(node)]++;
-    }
-    return counts;
-  }, [nodes, hideExternalLinkClass]);
+  const nodeCounts = useMemo(() => countNodeKinds(nodes), [nodes]);
+  const nodeLegendCounts = useMemo(() => countNodeKinds(activeNodes), [activeNodes]);
   const displayEdges = useMemo(
     () =>
       allEdges.map((edge) => ({
@@ -340,10 +294,6 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       : isDark
         ? 'rgba(39, 174, 96, 0.28)'
         : 'rgba(46, 204, 113, 0.24)';
-  const placeViewportControlsBesideToolbar = dimensions.width >= 1100;
-  const viewportControlsTop = placeViewportControlsBesideToolbar
-    ? 12
-    : Math.max(60, 20 + topToolbarHeight);
   const hudSurfaceStyle = {
     backgroundColor: isDark ? 'rgba(28, 32, 38, 0.94)' : 'rgba(255, 255, 255, 0.96)',
     borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.10)',
@@ -361,43 +311,39 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     [isDark]
   );
 
-  const toolbarToggles: (
-    Omit<GraphToolbarToggleProps, 'isDark' | 'inactiveTextColor'> | false | undefined
-  )[] = [
-    nodeLegendCounts.paragraph > 0 && {
-      active: showParagraphs,
-      label: `${lang('Paragraphs')} (${nodeLegendCounts.paragraph})`,
-      icon: showParagraphs ? 'eye' : 'eye-slash',
-      activeBackgroundColor: isDark ? '#5B2C6F' : '#BB8FCE',
-      activeBorderColor: isDark ? '#BB8FCE' : '#8E44AD',
-      activeTextColor: '#FFFFFF',
-      onToggle: () => setShowParagraphs((previous) => !previous),
-    },
-    nodeLegendCounts.externalLink > 0 && {
-      active: showOrdinaryExternalLinks,
-      label: `${lang('External Links')} (${nodeLegendCounts.externalLink})`,
-      icon: showOrdinaryExternalLinks ? 'eye' : 'eye-slash',
-      activeBackgroundColor: palette.externalLink.fill,
-      activeBorderColor: palette.externalLink.stroke,
-      activeTextColor: isDark ? '#FFFFFF' : commonStyles.text?.color,
-      onToggle: () => setShowOrdinaryExternalLinks((previous) => !previous),
-    },
-    {
-      active: animateEdges,
-      label: lang('Highlight Edges'),
-      icon: 'share-alt',
-      activeBackgroundColor: palette.builtInClass.fill,
-      activeBorderColor: palette.builtInClass.stroke,
-      activeTextColor: isDark ? '#FFFFFF' : commonStyles.text?.color,
-      onToggle: () => setAnimateEdges((previous) => !previous),
-    },
-  ];
+  const toolbarToggles: (Omit<GraphToolbarToggleProps, 'inactiveTextColor'> | false | undefined)[] =
+    [
+      nodeCounts.paragraph > 0 && {
+        active: showParagraphs,
+        label: `${lang('Paragraphs')} (${nodeCounts.paragraph})`,
+        icon: showParagraphs ? 'eye' : 'eye-slash',
+        activeBackgroundColor: isDark ? '#5B2C6F' : '#BB8FCE',
+        activeBorderColor: isDark ? '#BB8FCE' : '#8E44AD',
+        activeTextColor: '#FFFFFF',
+        onToggle: () => setShowParagraphs((previous) => !previous),
+      },
+      nodeCounts.externalLink > 0 && {
+        active: showOrdinaryExternalLinks,
+        label: `${lang('External Links')} (${nodeCounts.externalLink})`,
+        icon: showOrdinaryExternalLinks ? 'eye' : 'eye-slash',
+        activeBackgroundColor: palette.externalLink.fill,
+        activeBorderColor: palette.externalLink.stroke,
+        activeTextColor: isDark ? '#FFFFFF' : commonStyles.text?.color,
+        onToggle: () => setShowOrdinaryExternalLinks((previous) => !previous),
+      },
+      {
+        active: animateEdges,
+        label: lang('Highlight Edges'),
+        icon: 'share-alt',
+        activeBackgroundColor: palette.builtInClass.fill,
+        activeBorderColor: palette.builtInClass.stroke,
+        activeTextColor: isDark ? '#FFFFFF' : commonStyles.text?.color,
+        onToggle: () => setAnimateEdges((previous) => !previous),
+      },
+    ];
 
   return (
-    <View
-      style={[styles.container, isWeb ? ({ userSelect: 'none', ...dotGridStyle } as any) : {}]}
-      onLayout={onLayout}
-    >
+    <View style={[styles.container, isWeb ? ({ userSelect: 'none', ...dotGridStyle } as any) : {}]}>
       <View style={StyleSheet.absoluteFill}>
         <KnowledgeGraphCanvasView
           nodes={activeNodes}
@@ -420,125 +366,150 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       </View>
 
       <View
-        style={[
-          styles.topHudContainer,
-          placeViewportControlsBesideToolbar ? { right: 210 } : {},
-          isWeb ? ({ pointerEvents: 'box-none' } as any) : {},
-        ]}
-        onLayout={onTopToolbarLayout}
+        style={[styles.topHudContainer, isWeb ? ({ pointerEvents: 'box-none' } as any) : {}]}
         pointerEvents="box-none"
       >
+        <View
+          style={[styles.controlsContent, !showControls && styles.controlsHidden]}
+          accessibilityElementsHidden={!showControls}
+          importantForAccessibility={showControls ? 'auto' : 'no-hide-descendants'}
+          pointerEvents="box-none"
+        >
+          <View style={styles.viewportControls} pointerEvents="box-none">
+            <View style={[styles.hudBar, hudSurfaceStyle]} {...webSurfaceProps}>
+              <View style={styles.hudLabelRow}>
+                <Icon
+                  name="arrows-h"
+                  size={11}
+                  color={commonStyles.smallText?.color}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[styles.hudLabelText, { color: commonStyles.smallText?.color }]}>
+                  {lang('Spacing')}
+                </Text>
+              </View>
+
+              <View style={styles.hudDivider} />
+
+              <HudButton
+                label="Decrease node spacing"
+                onPress={handleDecreaseSpacing}
+                icon="minus"
+                color={commonStyles.text?.color}
+              />
+              <HudButton
+                label="Reset node spacing"
+                onPress={handleResetSpacing}
+                value={`${spacingScale.toFixed(1)}x`}
+                color={commonStyles.text?.color}
+              />
+              <HudButton
+                label="Increase node spacing"
+                onPress={handleIncreaseSpacing}
+                icon="plus"
+                color={commonStyles.text?.color}
+              />
+            </View>
+
+            <View style={[styles.hudBar, hudSurfaceStyle]} {...webSurfaceProps}>
+              <HudButton
+                label="Zoom out"
+                onPress={() => handleZoomCenter(0.83)}
+                icon="minus"
+                iconSize={11}
+                color={commonStyles.text?.color}
+              />
+
+              <View style={styles.hudDivider} />
+
+              <Text style={[styles.hudZoomText, { color: commonStyles.smallText?.color }]}>
+                {Math.round(scale * 100)}%
+              </Text>
+
+              <View style={styles.hudDivider} />
+
+              <HudButton
+                label="Zoom in"
+                onPress={() => handleZoomCenter(1.2)}
+                icon="plus"
+                iconSize={11}
+                color={commonStyles.text?.color}
+              />
+
+              <View style={styles.hudDivider} />
+
+              <HudButton
+                label="Fit to screen"
+                onPress={fitToScreen}
+                icon="arrows-alt"
+                iconSize={11}
+                color={commonStyles.text?.color}
+              />
+            </View>
+          </View>
+          <View style={styles.toolbarBadges} pointerEvents="box-none">
+            <TouchableOpacity
+              style={[
+                styles.axiomBadge,
+                {
+                  backgroundColor: validationBackground,
+                  borderColor: validationColor,
+                },
+                webButtonStyle,
+              ]}
+              onPress={() => setShowAxiomModal(true)}
+              {...webButtonEvents(() => setShowAxiomModal(true))}
+              activeOpacity={0.8}
+            >
+              <Icon
+                name={validationIcon}
+                size={12}
+                color={validationColor}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.axiomBadgeText, { color: validationColor }]}>
+                {validationLabel}
+              </Text>
+            </TouchableOpacity>
+
+            {toolbarToggles.map(
+              (toggle, index) =>
+                toggle && (
+                  <GraphToolbarToggle
+                    key={index}
+                    {...toggle}
+                    inactiveTextColor={commonStyles.text?.color}
+                  />
+                )
+            )}
+            {extraToolbar}
+          </View>
+        </View>
         <TouchableOpacity
           style={[
-            styles.axiomBadge,
-            {
-              backgroundColor: validationBackground,
-              borderColor: validationColor,
-            },
+            styles.toolbarToggle,
+            styles.controlsToggle,
+            hudSurfaceStyle,
+            { backgroundColor: commonStyles.card?.backgroundColor },
             webButtonStyle,
           ]}
-          onPress={() => setShowAxiomModal(true)}
-          {...webButtonEvents(() => setShowAxiomModal(true))}
-          activeOpacity={0.8}
+          activeOpacity={1}
+          onPress={toggleControls}
+          {...webButtonEvents(toggleControls)}
+          accessibilityRole="button"
+          accessibilityLabel={lang('Graph controls')}
+          accessibilityState={{ expanded: showControls }}
         >
-          <Icon
-            name={validationIcon}
-            size={12}
-            color={validationColor}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={[styles.axiomBadgeText, { color: validationColor }]}>{validationLabel}</Text>
-        </TouchableOpacity>
-
-        {toolbarToggles.map(
-          (toggle, index) =>
-            toggle && (
-              <GraphToolbarToggle
-                key={index}
-                {...toggle}
-                isDark={isDark}
-                inactiveTextColor={commonStyles.text?.color}
-              />
-            )
-        )}
-        {extraToolbar}
-      </View>
-
-      <View
-        style={[styles.hudBar, { top: viewportControlsTop }, hudSurfaceStyle]}
-        {...webSurfaceProps}
-      >
-        <View style={styles.hudLabelRow}>
-          <Icon
-            name="arrows-h"
-            size={11}
-            color={commonStyles.smallText?.color}
-            style={{ marginRight: 4 }}
-          />
-          <Text style={[styles.hudLabelText, { color: commonStyles.smallText?.color }]}>
-            {lang('Spacing')}
+          <Icon name="sliders" size={11} color={commonStyles.text?.color} />
+          <Text style={[styles.hudLabelText, { color: commonStyles.text?.color }]}>
+            {lang('Graph controls')}
           </Text>
-        </View>
-
-        <View style={styles.hudDivider} />
-
-        <HudButton
-          label="Decrease node spacing"
-          onPress={handleDecreaseSpacing}
-          icon="minus"
-          color={commonStyles.text?.color}
-        />
-        <HudButton
-          label="Reset node spacing"
-          onPress={handleResetSpacing}
-          value={`${spacingScale.toFixed(1)}x`}
-          color={commonStyles.text?.color}
-        />
-        <HudButton
-          label="Increase node spacing"
-          onPress={handleIncreaseSpacing}
-          icon="plus"
-          color={commonStyles.text?.color}
-        />
-      </View>
-
-      <View
-        style={[styles.hudBar, { top: viewportControlsTop + 48 }, hudSurfaceStyle]}
-        {...webSurfaceProps}
-      >
-        <HudButton
-          label="Zoom in"
-          onPress={() => handleZoomCenter(1.2)}
-          icon="plus"
-          iconSize={12}
-          color={commonStyles.text?.color}
-        />
-
-        <View style={styles.hudDivider} />
-
-        <Text style={[styles.hudZoomText, { color: commonStyles.smallText?.color }]}>
-          {Math.round(scale * 100)}%
-        </Text>
-
-        <View style={styles.hudDivider} />
-
-        <HudButton
-          label="Zoom out"
-          onPress={() => handleZoomCenter(0.83)}
-          icon="minus"
-          iconSize={12}
-          color={commonStyles.text?.color}
-        />
-
-        <View style={styles.hudDivider} />
-
-        <HudButton
-          label="Fit to screen"
-          onPress={fitToScreen}
-          icon="arrows-alt"
-          iconSize={12}
-          color={commonStyles.text?.color}
-        />
+          <Icon
+            name={showControls ? 'chevron-up' : 'chevron-down'}
+            size={10}
+            color={commonStyles.smallText?.color}
+          />
+        </TouchableOpacity>
       </View>
 
       <View
@@ -595,7 +566,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                       ]}
                     />
                     <Text style={[styles.legendText, { color: commonStyles.text?.color }]}>
-                      {getKnowledgeGraphNodeKindLabel(kind, lang)} ({nodeLegendCounts[kind]})
+                      {getKnowledgeGraphNodeKindLabel(kind, lang, usageMode)} (
+                      {nodeLegendCounts[kind]})
                     </Text>
                   </View>
                 ))}
@@ -756,10 +728,16 @@ const styles = StyleSheet.create({
     left: 14,
     right: 14,
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-end',
+    gap: 6,
+    zIndex: 10,
+  },
+  toolbarBadges: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
-    zIndex: 10,
   },
   axiomBadge: {
     flexDirection: 'row',
@@ -786,14 +764,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   hudBar: {
-    position: 'absolute',
-    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 24,
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -801,12 +777,22 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     zIndex: 8,
   },
+  viewportControls: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 11,
+  },
+  controlsToggle: { gap: 5 },
+  controlsContent: { flex: 1, minWidth: 0, gap: 6 },
+  controlsHidden: { display: 'none' },
   hudButton: {
-    width: 28,
-    height: 28,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 11,
   },
   hudDivider: {
     width: 1,

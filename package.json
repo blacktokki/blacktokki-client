@@ -26,13 +26,12 @@
     "@types/node": "^20.19.0"
   },
   "resolutions": {
-    "hermes-compiler": "0.15.0",
     "@babel/preset-env": "7.29.5",
     "@babel/core": "*",
     "@types/react": "~19.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-native": "0.85.3",
+    "react-native": "0.86.3",
     "react-native-web": "~0.21.0",
     "serialize-javascript": "7.1.3"
   }

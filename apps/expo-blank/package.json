@@ -10,10 +10,9 @@
   },
   "dependencies": {
     "@blacktokki/core": "*",
-    "expo": "^56.0.24",
-    "expo-build-properties": "~56.0.27",
-    "expo-splash-screen": "~56.0.16",
-    "expo-status-bar": "~56.0.4",
+    "expo": "^57.0.31",
+    "expo-splash-screen": "~57.0.10",
+    "expo-status-bar": "~57.0.1",
     "react": "*",
     "react-dom": "*",
     "react-native": "*",

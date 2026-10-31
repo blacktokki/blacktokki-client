@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@blacktokki/core": "*",
-    "expo": "^55.0.32",
-    "expo-status-bar": "~55.0.6",
+    "expo": "^56.0.24",
+    "expo-build-properties": "~56.0.27",
+    "expo-splash-screen": "~56.0.16",
+    "expo-status-bar": "~56.0.4",
     "react": "*",
     "react-dom": "*",
     "react-native": "*",
@@ -21,7 +23,7 @@
   "devDependencies": {
     "@babel/core": "*",
     "@types/react": "*",
-    "typescript": "~5.9.2"
+    "typescript": "~6.0.3"
   },
   "expo": {
     "autolinking": {

@@ -1,8 +1,10 @@
 import { AuthProvider } from '@blacktokki/account';
 import { IntlProvider, useInitColorScheme } from '@blacktokki/core';
 import Constants from 'expo-constants';
+import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from 'react-query';
 
@@ -12,10 +14,23 @@ const queryClient = new QueryClient();
 
 const ko = require('./src/lang/ko.json');
 
+const iconFonts = {
+  FontAwesome: require('react-native-vector-icons/Fonts/FontAwesome.ttf'),
+  [Platform.OS === 'ios'
+    ? 'Material Design Icons'
+    : 'MaterialCommunityIcons']: require('react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf'),
+  [Platform.OS === 'ios'
+    ? 'anticon'
+    : 'AntDesign']: require('react-native-vector-icons/Fonts/AntDesign.ttf'),
+};
+
 export default function App() {
   const isAppearenceComplete = useInitColorScheme();
+  const [iconsLoaded, iconFontError] = useFonts(iconFonts);
 
-  return isAppearenceComplete ? (
+  if (iconFontError) throw iconFontError;
+
+  return isAppearenceComplete && iconsLoaded ? (
     <SafeAreaProvider>
       <StatusBar style="auto" />
       <AuthProvider guestType="local">

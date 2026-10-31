@@ -324,7 +324,7 @@ export const RecentBoardSection: React.FC<{ board: Content; title: string }> = R
 
 const styles = StyleSheet.create({
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(127,127,127,0.3)',
     justifyContent: 'center',
     alignItems: 'center',

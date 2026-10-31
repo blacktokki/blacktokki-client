@@ -68,6 +68,7 @@
 You can adjust the app's complexity and features across 3 levels according to your workflow and purpose.
 * **Header Dropdown Menu (Quick Switcher):** Click the app/notebook title in the top navigation header to open a dropdown popover, allowing you to quickly switch between registered notebooks, add a new notebook mode, return to note mode, or edit notebook settings.
 * **Config Menu:** You can also change the usage mode and manage notebooks in `Config > Note Settings > Mode Settings`. If no notebook mode has been created, selecting Notebook Mode will automatically open the modal to create a new notebook.
+* Creating a notebook from the header or mode settings automatically switches to that notebook after saving.
 * Refreshing in local mode restores the last selected usage mode and notebook. Deleted notebooks and locked private notebooks return to Note Mode.
 * Local notebook registrations and folder connections are saved in your browser. Existing registrations in `notebooks.json` are not imported automatically; register each notebook again by selecting the same local folder. Clearing the site's browser data removes these registrations while keeping the note files in your local folders.
 

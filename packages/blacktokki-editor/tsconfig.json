@@ -2,6 +2,8 @@
   "extends": "@tsconfig/recommended/tsconfig.json",
   "include": ["src"],
   "compilerOptions": {
+    "types": ["node"],
+    "rootDir": "src",
     "target": "ES2021",
     "jsx": "react-native"
   }

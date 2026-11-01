@@ -1,7 +1,8 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "types": ["node"],
     "module": "ES2022",
-    "strict": true,
+    "strict": true
   }
 }

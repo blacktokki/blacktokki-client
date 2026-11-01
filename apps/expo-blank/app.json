@@ -28,13 +28,6 @@
           "backgroundColor": "#ffffff",
           "enableFullScreenImage_legacy": true
         }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "useHermesV1": false,
-          "buildReactNativeFromSource": true
-        }
       ]
     ]
   }

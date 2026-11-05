@@ -144,8 +144,8 @@ export const useCreateOrUpdateNotebook = () => {
         option: notebookData.option,
       } as Content;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notebookContents'] });
       queryClient.invalidateQueries({ queryKey: ['pageContents'] });
       queryClient.invalidateQueries({ queryKey: ['pageContent'] });
       queryClient.invalidateQueries({ queryKey: ['boardContents'] });

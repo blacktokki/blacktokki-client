@@ -15,12 +15,12 @@ import PdfExportMidnightSection from './pdf/PdfExportMidnightSection';
 import PdfExportThemeSection from './pdf/PdfExportThemeSection';
 import ProblemButton from './problem/ProblemButton';
 import { ProblemsScreen } from './problem/ProblemScreen';
-import QuickMemoButton from './quickMemo/QuickMemoButton';
-import { QuickMemoScreen } from './quickMemo/QuickMemoScreen';
 import RandomButton from './random/RandomButton';
 import { SearchPageScreen } from './search';
 import { SyncButton } from './sync/SyncButton';
 import { SyncNotebookScreen } from './sync/SyncNotebookScreen';
+import TempMemoButton from './tempMemo/TempMemoButton';
+import { TempMemoScreen } from './tempMemo/TempMemoScreen';
 import { createCommonStyles as createGitHubStyles } from './themeGithub/styles';
 import { createCommonStyles as createNamuwikiStyles } from './themeNamuwiki/styles';
 import { createCommonStyles as createVSCodeStyles } from './themeVscode/styles';
@@ -50,15 +50,15 @@ features['sync'] = {
   ],
 };
 
-features['quickMemo'] = {
-  title: 'Quick Memo',
-  description: 'Add a sub-paragraph quickly to a specific note.',
+features['tempMemo'] = {
+  title: 'Temporary Memo',
+  description: 'Edit whole notes in tabs linked to the app tab list.',
   useNoteMode: true,
   screens: {
-    QuickMemo: {
+    TempMemo: {
       title: '',
-      component: QuickMemoScreen,
-      path: 'quickmemo',
+      component: TempMemoScreen,
+      path: 'tempmemo',
     },
   },
   NoteSections: [],
@@ -66,7 +66,7 @@ features['quickMemo'] = {
   elements: [
     {
       type: 'button',
-      Component: <QuickMemoButton key={'quickMemo'} />,
+      Component: <TempMemoButton key={'tempMemo'} />,
     },
   ],
 };
@@ -288,11 +288,14 @@ features['themeNamuwiki'] = {
 };
 
 export default (title: string | ((auth: Auth) => string)) => {
-  return Object.keys(features).reduce((prev, k) => {
-    const screens = features[k as keyof typeof features].screens;
-    Object.keys(screens).forEach((k2) => {
-      prev[k2] = { ...screens[k2 as keyof typeof screens], title };
-    });
-    return prev;
-  }, {} as NavigationConfig['main']);
+  return Object.keys(features).reduce(
+    (prev, k) => {
+      const screens = features[k as keyof typeof features].screens;
+      Object.keys(screens).forEach((k2) => {
+        prev[k2] = { ...screens[k2 as keyof typeof screens], title };
+      });
+      return prev;
+    },
+    {} as NavigationConfig['main']
+  );
 };

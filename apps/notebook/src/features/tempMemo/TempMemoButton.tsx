@@ -9,8 +9,8 @@ export default () => {
   const { lang } = useLangContext();
   return (
     <List.Item
-      title={lang('Quick Memo')}
-      onPress={() => navigate('QuickMemo')}
+      title={lang('Temporary Memo')}
+      onPress={() => navigate('TempMemo')}
       left={RenderIcon('note-plus-outline')}
     />
   );

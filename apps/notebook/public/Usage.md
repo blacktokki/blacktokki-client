@@ -228,10 +228,17 @@ Use recurring headings and table layouts from similar notes in the current noteb
 
 If no templates appear, check that at least two notes have similar heading structures or table layouts. Individual source contents are not copied into the template, so review the new note before saving.
 
-### ⚡ Quick Memo
-* A feature that allows you to immediately add sub-paragraphs by selecting a specific note and a parent paragraph.
-* Information about the most recently used note and paragraph is automatically saved, allowing for quick recording in the same location next time.
-* You can easily change the target (note and paragraph) by clicking the exchange icon at the top.
+### ⚡ Temporary Memo
+
+* Enable **Temporary Memo** in **Extension Settings**, then open it from the menu. You can use notes from the existing **Tab List**, and selecting a note tab also updates the app's **Current Tab**.
+* Select **＋** to open a blank memo. Its first line becomes the tab title as you type.
+* Drag tabs left or right to reorder them. Use **‹ / ›** to reach tabs that do not fit on screen.
+* Drafts are automatically kept in the current browser, so you can switch tabs or return later and continue editing.
+* A **●** marks a tab with unsaved changes. Pause typing to reveal the **Save** button at the bottom-right of the editor; it hides when you resume typing.
+* Select **Save** to save the current tab to its note and continue editing. A brief confirmation appears on the button after saving.
+* Saving a new memo creates a note with the tab title and lets you continue editing. A number is added if that title is already in use.
+* Saving an existing note overwrites it with your edits. You can also select **×** to choose whether to save changes when closing a tab.
+* Closing a tab also removes it from the Tab List, but does not delete the note itself.
 
 ### 🔍 Full-text Search
 

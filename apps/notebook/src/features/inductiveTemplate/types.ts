@@ -1,4 +1,4 @@
-export type ExampleNote = { title: string; description?: string };
+export type ExampleNote = { title: string; description?: string; updated?: string };
 export type TemplateStage = 'preview' | 'sources' | 'writing';
 
 /** Only structural labels are retained; example body values are never stored here. */
@@ -30,13 +30,16 @@ export type SavedTemplate = {
 };
 
 export type TemplateCandidate = Pick<SavedTemplate, 'name' | 'markdown' | 'sourceTitles'> & {
+  /** Locale-independent body used to compute a checksum when creating or resolving links. */
+  canonicalMarkdown: string;
   /** Source folder added as a prefix to the catalog name; omitted from note tags. */
   folderName?: string;
 };
 
 /** A selected template opens its preview, source list and note-writing workspace. */
 export type TemplateNavigationParams = {
-  template: TemplateCandidate;
+  template: string;
+  group: string;
   /** Full path of the unsaved note, prefilled when opening its template tag. */
   noteTitle?: string;
 };

@@ -11,12 +11,12 @@ const template = (name, sourceTitles) => ({
 
 test('tag names omit generated folder prefixes while preserving headings and duplicate numbers', () => {
   assert.equal(
-    templateTagName({ name: '회의록 · 안건 · 세부 / 결과 (2)', folderName: '회의록' }),
-    '안건 · 세부 / 결과 (2)'
+    templateTagName({ name: '회의록 · 안건 · 세부 · 결과 (2)', folderName: '회의록' }),
+    '안건 · 세부 · 결과 (2)'
   );
   assert.equal(
-    templateTagName({ name: '팀 · 회의록 · 안건 / 결과', folderName: '팀 · 회의록' }),
-    '안건 / 결과'
+    templateTagName({ name: '팀 · 회의록 · 안건 · 결과', folderName: '팀 · 회의록' }),
+    '안건 · 결과'
   );
   assert.equal(templateTagName({ name: '회의록 · 안건' }), '회의록 · 안건');
 });

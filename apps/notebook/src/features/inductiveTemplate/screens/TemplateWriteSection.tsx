@@ -1,11 +1,19 @@
-import { CommonButton, useLangContext } from '@blacktokki/core';
+import { useLangContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import React, { useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Icon } from 'react-native-paper';
 
+import { TemplateHeaderSection } from './TemplateHeaderSection';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
-import { HeaderIconButton } from '../../../screens/main/NoteItemSections';
 import { TemplateChoice } from '../components/TemplateChoice';
 import { TemplateTableForm } from '../components/TemplateTableForm';
 import { templateStyles as styles } from '../styles';
@@ -39,6 +47,7 @@ export const TemplateWriteSection = ({
   error,
   onSave,
   onPreview,
+  onCatalog,
 }: {
   templateName: string;
   templateHtml: string;
@@ -46,6 +55,7 @@ export const TemplateWriteSection = ({
   error?: unknown;
   onSave: () => void;
   onPreview: () => void;
+  onCatalog: () => void;
 }) => {
   const { lang } = useLangContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
@@ -105,15 +115,13 @@ export const TemplateWriteSection = ({
   const titleIssue = resolvedTitle
     ? ''
     : issues.missing.length
-    ? lang('Complete the required title fields.') + ' ' + issues.missing.join(', ')
-    : issues.invalid.length
-    ? lang('Correct the title fields containing invalid characters or placeholders.') +
-      ' ' +
-      issues.invalid.join(', ')
-    : lang(noteTitleIssue(previewTitle) || 'Enter a note title to save.');
-  const saveIssue = busy
-    ? lang('Please wait until the current operation finishes.')
-    : titleIssue || (!templateHtml.trim() ? lang('This template has no content to save.') : '');
+      ? lang('Complete the required title fields.') + ' ' + issues.missing.join(', ')
+      : issues.invalid.length
+        ? lang('Correct the title fields containing invalid characters or placeholders.') +
+          ' ' +
+          issues.invalid.join(', ')
+        : lang(noteTitleIssue(previewTitle) || 'Enter a note title to save.');
+  const canSave = !busy && !titleIssue && !!templateHtml.trim();
   const tableFields = new Set(
     tables.flatMap((table) =>
       table.rows.flatMap((row) => row.cells.flatMap((cell) => cell.variables))
@@ -165,16 +173,13 @@ export const TemplateWriteSection = ({
   );
   return (
     <>
-      <View style={[styles.wrap, styles.between]}>
-        <Text accessibilityRole="header" style={[commonStyles.title, styles.title]}>
-          {lang('Write a note from the template')}
-        </Text>
-        <View style={styles.row}>
-          <Text style={commonStyles.smallText}>{templateName}</Text>
-          <HeaderIconButton name="file-text-o" onPress={onPreview} />
-        </View>
-      </View>
-      <View style={styles.stack}>
+      <TemplateHeaderSection
+        templateName={templateName}
+        titleSuffix={lang('Write a note from the template')}
+        onTitlePress={onPreview}
+        onCatalog={onCatalog}
+      />
+      <View style={[styles.workspace, styles.stack]}>
         <View style={[commonStyles.card, styles.panel, styles.fields]}>
           <Text accessibilityRole="header" style={[commonStyles.title, styles.title]}>
             {lang('Title template')}
@@ -222,7 +227,10 @@ export const TemplateWriteSection = ({
             />
           )}
           {!!titleIssue && (
-            <Text style={[commonStyles.smallText, styles.helper]}>{titleIssue}</Text>
+            <View accessibilityRole="alert" style={styles.warning}>
+              <Icon source="alert-circle-outline" size={18} color={commonStyles.smallText.color} />
+              <Text style={[commonStyles.smallText, styles.helper, styles.grow]}>{titleIssue}</Text>
+            </View>
           )}
         </View>
         <View style={[commonStyles.card, styles.panel, styles.fields]}>
@@ -328,26 +336,33 @@ export const TemplateWriteSection = ({
             </View>
           )}
           {error !== undefined && (
-            <Text accessibilityRole="alert" style={[commonStyles.text, styles.notice]}>
-              {lang(error instanceof Error ? error.message : 'Could not create note.')}
-            </Text>
+            <View accessibilityRole="alert" style={[styles.warning, styles.notice]}>
+              <Icon source="alert-circle-outline" size={18} color={commonStyles.text.color} />
+              <Text style={[commonStyles.text, styles.grow]}>
+                {lang(error instanceof Error ? error.message : 'Could not create note.')}
+              </Text>
+            </View>
           )}
-          <View style={[styles.wrap, styles.formActions]}>
-            {saveIssue ? (
-              <View style={styles.saveStatus}>
-                <Icon source="information-outline" size={18} color={commonStyles.smallText.color} />
-                <Text
-                  accessibilityLiveRegion="polite"
-                  style={[commonStyles.smallText, styles.helper, styles.saveMessage]}
-                >
-                  {saveIssue}
-                </Text>
-              </View>
-            ) : (
-              <CommonButton title={lang('save')} onPress={onSave} />
-            )}
-          </View>
         </View>
+      </View>
+      <View style={[styles.workspace, commonStyles.buttonContainer]}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={lang('cancel')}
+          style={[commonStyles.secondaryButton, styles.grow]}
+          onPress={onPreview}
+        >
+          <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={lang('save')}
+          disabled={!canSave}
+          style={[canSave ? commonStyles.button : commonStyles.secondaryButton, styles.grow]}
+          onPress={canSave ? onSave : undefined}
+        >
+          <Text style={commonStyles.buttonText}>{lang('save')}</Text>
+        </TouchableOpacity>
       </View>
     </>
   );

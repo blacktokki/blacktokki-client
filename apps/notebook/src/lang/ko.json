@@ -291,6 +291,8 @@
   "Preview template": "템플릿 미리보기",
   "Template preview": "템플릿 미리보기",
   "Similar notes": "비슷한 노트",
+  "Some notes were saved. Unsaved changes remain in the table.": "일부 노트가 저장되었습니다. 저장하지 못한 변경사항은 표에 남아 있습니다.",
+  "The notebook changed. Reopen the editor before saving.": "노트북이 변경되었습니다. 편집 화면을 다시 열어주세요.",
   "Number": "번호",
   "Keyword": "키워드",
   "Title template": "제목 템플릿",

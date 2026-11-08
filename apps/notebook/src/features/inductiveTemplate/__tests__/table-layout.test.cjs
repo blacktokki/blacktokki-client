@@ -46,6 +46,15 @@ function setup(markdown) {
 const group = (fixture, axis) => fixture.definitions[0].groups.find((item) => item.axis === axis);
 const variables = (row) => row.cells.flatMap((cell) => cell.variables);
 
+test('repeat groups use table headers instead of a variable note heading as their label', () => {
+  const markdown = '# {{title}}\n\n' + table(['Name', 'Result'], [['{{Name}}', '{{Result}}']]);
+  const fixture = setup(markdown);
+  assert.equal(fixture.definitions[0].name, 'Name · Result');
+  assert.equal(fixture.view().tables[0].name, 'Name · Result');
+  assert.equal(fixture.view().tables[0].rows[0].label, '1');
+  assert.equal(setup('## People\n\n' + markdown.split('\n\n')[1]).definitions[0].name, 'People');
+});
+
 test('REQ rows grow and shrink independently of their fixed instruction row', () => {
   const markdown = numbered();
   const fixture = setup(markdown);

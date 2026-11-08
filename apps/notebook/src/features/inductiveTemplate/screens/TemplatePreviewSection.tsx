@@ -11,12 +11,14 @@ export const TemplatePreviewSection = ({
   busy,
   onSources,
   onWriting,
+  onCatalog,
 }: {
   templateName: string;
   templateHtml: string;
   busy: boolean;
   onSources: () => void;
   onWriting: () => void;
+  onCatalog: () => void;
 }) => {
   const canWrite = !busy && !!templateHtml.trim();
   return (
@@ -26,6 +28,7 @@ export const TemplatePreviewSection = ({
         canWrite={canWrite}
         onSources={onSources}
         onWriting={onWriting}
+        onCatalog={onCatalog}
       />
       <NotePageSection active description={templateHtml} />
     </View>

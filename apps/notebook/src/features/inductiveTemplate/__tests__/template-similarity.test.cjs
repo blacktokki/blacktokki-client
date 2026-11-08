@@ -271,7 +271,7 @@ test('identical bodies separated by top-level source folders remain distinct in 
   assert.equal(groups[0].templates.length, 2);
   assert.deepEqual(
     new Set(groups[0].templates.map((template) => template.name)),
-    new Set(['Agenda / Actions', 'Agenda / Actions (2)'])
+    new Set(['Agenda · Actions', 'Agenda · Actions (2)'])
   );
   assert.deepEqual(
     new Set(groups[0].templates.flatMap((template) => template.sourceTitles)),

@@ -1,20 +1,76 @@
-import { SavedTemplate, TemplateNavigationParams } from './types';
+import { groupNotePaths } from './titleGrouping';
+import { SavedTemplate, TemplateCandidate, TemplateNavigationParams } from './types';
 
-/** Restored navigation state can contain an incomplete object despite the route's static type. */
+/** Normalize transport differences while retaining meaningful Markdown formatting. */
+export async function templateChecksum(markdown: string): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(markdown.normalize('NFC').replace(/\r\n?/g, '\n').trim())
+  );
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** Identify discovery's top-level source groups without depending on note membership or order. */
+export async function templateGroupKey(
+  sourceTitles: string[],
+  notebookRoots: string[] = []
+): Promise<string> {
+  const tree = groupNotePaths(
+    sourceTitles.map((title) => ({ title })),
+    notebookRoots
+  );
+  const paths = [
+    ...(tree.groups.length ? [''] : []),
+    ...tree.folders.map((folder) => folder.path),
+  ].sort();
+  return templateChecksum(JSON.stringify(['template-source-groups-v1', ...paths]));
+}
+
+/** Keep URL parameters scalar; names and template bodies are resolved from current scoped notes. */
+export async function templateLinkParams(
+  template: TemplateCandidate,
+  notebookRoots: string[] = [],
+  noteTitle?: string
+): Promise<TemplateNavigationParams> {
+  const [checksum, group] = await Promise.all([
+    templateChecksum(template.canonicalMarkdown),
+    templateGroupKey(template.sourceTitles, notebookRoots),
+  ]);
+  return {
+    template: checksum,
+    group,
+    ...(noteTitle === undefined ? {} : { noteTitle }),
+  };
+}
+
+export async function resolveTemplateLink(
+  templates: TemplateCandidate[],
+  params: TemplateNavigationParams,
+  notebookRoots: string[] = []
+): Promise<TemplateCandidate | undefined> {
+  const candidates = await Promise.all(
+    templates.map(async (template) => {
+      const link = await templateLinkParams(template, notebookRoots);
+      return link.template === params.template.toLowerCase() &&
+        link.group === params.group.toLowerCase()
+        ? template
+        : undefined;
+    })
+  );
+  return candidates.find((template) => template !== undefined);
+}
+
+/** Only scalar checksums are accepted from restored navigation state or a deep link. */
 export function validateTemplateNavigationParams(
   value: unknown
 ): value is TemplateNavigationParams {
   if (!value || typeof value !== 'object') return false;
-  const { template, noteTitle } = value as TemplateNavigationParams;
-  if (!template || typeof template !== 'object') return false;
+  const { template, group, noteTitle } = value as TemplateNavigationParams;
   return (
-    typeof template.name === 'string' &&
-    !!template.name.trim() &&
-    typeof template.markdown === 'string' &&
-    !!template.markdown.trim() &&
-    Array.isArray(template.sourceTitles) &&
-    template.sourceTitles.every((title) => typeof title === 'string') &&
-    (template.folderName === undefined || typeof template.folderName === 'string') &&
+    typeof template === 'string' &&
+    /^[a-f0-9]{64}$/i.test(template) &&
+    typeof group === 'string' &&
+    /^[a-f0-9]{64}$/i.test(group) &&
     (noteTitle === undefined || typeof noteTitle === 'string')
   );
 }

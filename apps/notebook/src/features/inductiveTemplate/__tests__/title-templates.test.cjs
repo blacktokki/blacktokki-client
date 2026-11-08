@@ -29,7 +29,7 @@ test('one body template offers multiple title patterns from only its source note
     { title: 'Science/Experiment 1', description: '<h2>Hypothesis</h2><h2>Result</h2>' },
     { title: 'Science/Experiment 2', description: '<h2>Hypothesis</h2><h2>Result</h2>' },
   ];
-  const body = discoverTemplates(notes).find((item) => item.name === 'Meetings · Agenda / Actions');
+  const body = discoverTemplates(notes).find((item) => item.name === 'Meetings · Agenda · Actions');
   const titles = discoverTitleTemplates(templateNotes(body, notes), names);
   assert.deepEqual(
     titles.map((item) => item.pattern),

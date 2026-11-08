@@ -34,7 +34,7 @@ test('similar-note discovery produces usable templates directly across folders a
   const snapshot = JSON.stringify(sources);
   const templates = discoverTemplates(sources);
   assert.equal(templates.length, 2);
-  const meeting = templates.find((template) => template.name === 'Agenda / Actions');
+  const meeting = templates.find((template) => template.name === 'Agenda · Actions');
   assert.deepEqual(meeting.sourceTitles, ['Meetings/One', 'Archive/Two']);
   assert.doesNotMatch(meeting.markdown, /2026-|Secret|Private|Alice|Bob/);
   const renderer = new markdownIt();
@@ -84,7 +84,7 @@ test('supported top-level groups split together and use the original structural 
   );
   assert.deepEqual(
     new Set(templates.map((template) => template.name)),
-    new Set(['Agenda / Actions', 'Agenda / Actions (2)', 'Agenda / Actions (3)'])
+    new Set(['Agenda · Actions', 'Agenda · Actions (2)', 'Agenda · Actions (3)'])
   );
   assert.equal(new Set(templates.map((template) => template.markdown)).size, 1);
   const titles = templates.flatMap((template) => template.sourceTitles);
@@ -98,7 +98,7 @@ test('a single-note top-level group keeps the entire original template together'
   const sources = [note('Teams/One', body), note('Teams/Two', body), note('Archive/One', body)];
   const templates = discoverTemplates(sources);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, 'Agenda / Actions');
+  assert.equal(templates[0].name, 'Agenda · Actions');
   assert.deepEqual(
     templates[0].sourceTitles,
     sources.map((source) => source.title)
@@ -117,7 +117,7 @@ test('splitting cannot leave a single loose note behind as its own template', ()
   sources.push(note('Loose note', body));
   const templates = discoverTemplates(sources);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, 'Agenda / Actions');
+  assert.equal(templates[0].name, 'Agenda · Actions');
   assert.deepEqual(
     templates[0].sourceTitles,
     sources.map((source) => source.title)
@@ -133,7 +133,7 @@ test('one top-level folder names the template and retains loose sources without 
   ];
   const templates = discoverTemplates(sources);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, '팀 회의 · Agenda / Actions');
+  assert.equal(templates[0].name, '팀 회의 · Agenda · Actions');
   assert.equal(templates[0].folderName, '팀 회의');
   assert.deepEqual(
     templates[0].sourceTitles,
@@ -145,7 +145,7 @@ test('templates without top-level folders use their common outline and retain so
   const body = '<h2>Agenda</h2><h2>Actions</h2>';
   const sources = [note('One', body), note('Two', body)];
   const [template] = discoverTemplates(sources);
-  assert.equal(template.name, 'Agenda / Actions');
+  assert.equal(template.name, 'Agenda · Actions');
   assert.deepEqual(template.sourceTitles, ['One', 'Two']);
   assert.equal(titleGrouping.groupNotePaths(templateNotes(template, sources)).folders.length, 0);
 });
@@ -159,7 +159,7 @@ test('notebook containers do not count as top-level groups for naming or splitti
   assert.equal(templates.length, 2);
   assert.deepEqual(
     new Set(templates.map((template) => template.name)),
-    new Set(['Agenda / Actions', 'Agenda / Actions (2)'])
+    new Set(['Agenda · Actions', 'Agenda · Actions (2)'])
   );
   for (const template of templates) {
     assert.ok(template.sourceTitles.every((title) => title.startsWith('Notebook/')));
@@ -169,7 +169,7 @@ test('notebook containers do not count as top-level groups for naming or splitti
     );
   }
   const [single] = discoverTemplates(sources.slice(0, 2), 'Date', ['Notebook']);
-  assert.equal(single.name, 'Teams · Agenda / Actions');
+  assert.equal(single.name, 'Teams · Agenda · Actions');
 });
 
 test('shared tables do not produce templates when surrounding document structures differ', () => {
@@ -198,7 +198,7 @@ test('recurring title families recover monthly report cores despite different op
   );
   const before = JSON.stringify(sources);
   const [template] = discoverTemplates(sources, 'Date', []);
-  assert.equal(template.name, 'Reports · Summary / Trend / Risks');
+  assert.equal(template.name, 'Reports · Summary · Trend · Risks');
   assert.deepEqual(
     template.sourceTitles,
     sources.map((source) => source.title)
@@ -256,7 +256,7 @@ test('different names and folders share a three-section research core despite op
     Array.from({ length: 4 }, (_, index) => `<h2>Unique ${id}-${index}</h2>`).join('');
   const sources = [note('Research/One', body(1)), note('Research/Two', body(2))];
   const [template] = discoverTemplates(sources, 'Date', []);
-  assert.equal(template.name, 'Research · Purpose / Evidence / Next steps');
+  assert.equal(template.name, 'Research · Purpose · Evidence · Next steps');
   assert.deepEqual(new Set(template.sourceTitles), new Set(sources.map((source) => source.title)));
   assert.doesNotMatch(template.markdown, /Unique|Secret/);
   assert.match(template.markdown, /## Purpose[\s\S]*## Evidence[\s\S]*## Next steps/);
@@ -314,7 +314,7 @@ test('whole-note templates do not add separate table forms from unmatched child 
   );
   const templates = discoverTemplates(sources);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, 'Plan / Validation');
+  assert.equal(templates[0].name, 'Plan · Validation');
   assert.doesNotMatch(templates[0].markdown, /Environment|Domain|Service|private/);
 });
 
@@ -328,7 +328,7 @@ test('discovery retains dates, notebook-root exclusion and minimum split group s
   const before = JSON.stringify(sources);
   const templates = discoverTemplates(sources, '날짜', ['Notebook']);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, 'Agenda / Actions');
+  assert.equal(templates[0].name, 'Agenda · Actions');
   assert.match(templates[0].markdown, /\*\*\{\{ 날짜 \}\}\*\*/);
   assert.doesNotMatch(templates[0].markdown, /05-25|06-01|06-08/);
   assert.deepEqual(
@@ -339,11 +339,11 @@ test('discovery retains dates, notebook-root exclusion and minimum split group s
   const expandedTemplates = discoverTemplates(expanded, '날짜', ['Notebook']);
   assert.deepEqual(
     expandedTemplates.map((template) => template.name),
-    ['Agenda / Actions', 'Agenda / Actions (2)']
+    ['Agenda · Actions', 'Agenda · Actions (2)']
   );
   assert.ok(expandedTemplates.every((template) => template.sourceTitles.length === 2));
   const [single] = discoverTemplates(sources.slice(0, 2), '날짜', ['Notebook']);
-  assert.equal(single.name, 'Teams · Agenda / Actions');
+  assert.equal(single.name, 'Teams · Agenda · Actions');
   assert.equal(JSON.stringify(sources), before);
 });
 
@@ -359,7 +359,7 @@ test('heading-driven discovery offers a usable common skeleton despite varying f
   const before = JSON.stringify(sources);
   const templates = discoverTemplates(sources, 'Date', ['Notebook']);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, 'Plans · Plan / Steps');
+  assert.equal(templates[0].name, 'Plans · Plan · Steps');
   assert.deepEqual(
     templates[0].sourceTitles,
     sources.map((note) => note.title)
@@ -406,7 +406,7 @@ test('topic notes share an outer outline despite many unique child headings and 
   const before = JSON.stringify(sources);
   const templates = discoverTemplates(sources, 'Date', []);
   assert.equal(templates.length, 1);
-  assert.equal(templates[0].name, 'Concept / Version / Examples');
+  assert.equal(templates[0].name, 'Concept · Version · Examples');
   assert.deepEqual(templates[0].sourceTitles, [
     'Framework A',
     'Framework B',
@@ -455,11 +455,21 @@ test('template names include retained headings at every level, excluding unique 
     )
   );
   const [template] = discoverTemplates(sources, '날짜', []);
-  assert.equal(template.name, '개념 / 버전 / 예제 / 세부 내용 / 실행 방법');
+  assert.equal(template.name, '개념 · 버전 · 예제 · 세부 내용 · 실행 방법');
   assert.doesNotMatch(template.markdown, /개별 서문|개별 주제/);
   assert.match(template.markdown, /### 세부 내용/);
   assert.match(template.markdown, /#### 실행 방법/);
   assert.match(template.markdown, /\{\{예제 \(2\)\}\}/);
+});
+
+test('table-only template names separate columns with dots and retain literal slashes', () => {
+  const body =
+    '<table><tr><th>Input/Output</th><th>Status</th></tr>' +
+    '<tr><td>Example</td><td>Ready</td></tr></table>';
+  const [template] = discoverTemplates([note('Notes/One', body), note('Notes/Two', body)]);
+  assert.equal(template.name, 'Notes · Input/Output · Status');
+  assert.match(template.markdown, /Input\/Output/);
+  assert.deepEqual(template.sourceTitles, ['Notes/One', 'Notes/Two']);
 });
 
 test('long common outlines retain their final child heading in the template name', () => {
@@ -467,7 +477,7 @@ test('long common outlines retain their final child heading in the template name
   const body =
     sections.map((heading) => `<h2>${heading}</h2>`).join('') + '<h3>마지막 하위 헤더</h3>';
   const [template] = discoverTemplates([note('One', body), note('Two', body)], '날짜', []);
-  assert.equal(template.name, [...sections, '마지막 하위 헤더'].join(' / '));
+  assert.equal(template.name, [...sections, '마지막 하위 헤더'].join(' · '));
   assert.ok(template.name.length > 110);
 });
 

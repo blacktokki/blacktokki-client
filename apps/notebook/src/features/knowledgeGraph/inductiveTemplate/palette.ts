@@ -9,7 +9,7 @@ export const getKnowledgeGraphPalette = (isDark: boolean) => ({
   },
   template: { fill: isDark ? '#5DADE2' : '#2874A6', stroke: '#0065A4' },
   templateNote: {
-    fill: isDark ? '#2B5875' : '#A9D4EE',
-    stroke: isDark ? '#6FAED4' : '#347CA8',
+    fill: isDark ? '#3169F5' : '#1244C8',
+    stroke: isDark ? '#99B7FF' : '#0B2E91',
   },
 });

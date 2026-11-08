@@ -1,14 +1,16 @@
 import { useLangContext } from '@blacktokki/core';
 import { push } from '@blacktokki/navigation';
-import React, { useEffect, useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 
 import { NoteSectionProps } from '../../../hooks/useExtension';
 import { useNotePages } from '../../../hooks/useNoteStorage';
 import { isHiddenTitle } from '../../../hooks/usePrivate';
 import { discoverTemplates } from '../discovery';
 import { templateStyles as styles } from '../styles';
+import { templateLinkParams } from '../template';
 import { templateTagName, templatesForNote } from '../templateTags';
+import { TemplateCandidate } from '../types';
 import { useInductiveTemplates } from '../useInductiveTemplates';
 
 /** Show the same whole-note template memberships as the default template catalog. */
@@ -18,8 +20,35 @@ export default function TemplateTagSection({ title, paragraphs }: NoteSectionPro
   const noteExists = notes
     ? notes.find((note) => note.title.normalize('NFC') === title.normalize('NFC'))?.id !== undefined
     : undefined;
-  const { isPrivate, enabled, examples, notebookRoots } = useInductiveTemplates(!!title);
+  const { isPrivate, enabled, examples, notebookRoots, scope } = useInductiveTemplates(!!title);
   const { refetch } = examples;
+  const opening = useRef(false);
+  const request = useRef(0);
+  useEffect(
+    () => () => {
+      request.current += 1;
+      opening.current = false;
+    },
+    [title, scope, notebookRoots]
+  );
+  const openTemplate = async (template: TemplateCandidate) => {
+    if (opening.current) return;
+    opening.current = true;
+    const current = request.current;
+    try {
+      const params = await templateLinkParams(
+        template,
+        notebookRoots,
+        noteExists === false ? title : undefined
+      );
+      if (current === request.current) push('TemplateItem', params);
+    } catch {
+      if (current === request.current)
+        Alert.alert(lang('error'), lang('Could not discover templates.'));
+    } finally {
+      if (current === request.current) opening.current = false;
+    }
+  };
   const description = paragraphs
     .map((paragraph) => paragraph.header + paragraph.description)
     .join('');
@@ -55,12 +84,7 @@ export default function TemplateTagSection({ title, paragraphs }: NoteSectionPro
             key={template.name}
             accessibilityRole="button"
             accessibilityLabel={lang('Extracted Templates') + ': ' + templateTagName(template)}
-            onPress={() =>
-              push('TemplateItem', {
-                template,
-                noteTitle: noteExists === false ? title : undefined,
-              })
-            }
+            onPress={() => openTemplate(template)}
           >
             <View style={styles.noteTagSurface}>
               <View style={styles.noteTagLabelRow}>

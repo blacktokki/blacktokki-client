@@ -95,7 +95,9 @@ export function discoverTemplates(
     const headings = draft.blocks.filter(
       (block) => block.kind === 'heading' && selected.has(block.id)
     );
-    const name = [...new Set(headings.map((block) => block.label))].join(' / ') || group.title;
+    const name =
+      [...new Set(headings.map((block) => block.label))].join(' · ') ||
+      group.title.replaceAll(' / ', ' · ');
     const markdown = renderTemplate(draft, ids, dateLabel);
     const existing = templates.get(markdown);
     if (existing) {
@@ -104,6 +106,7 @@ export function discoverTemplates(
       templates.set(markdown, {
         name,
         markdown,
+        canonicalMarkdown: renderTemplate(draft, ids),
         sourceTitles: draft.sourceTitles,
       });
     }

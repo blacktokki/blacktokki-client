@@ -1,7 +1,7 @@
 import { useLangContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
 import { push } from '@blacktokki/navigation';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Icon } from 'react-native-paper';
 
@@ -14,6 +14,7 @@ import { TemplateChoice } from '../components/TemplateChoice';
 import { discoverTemplates } from '../discovery';
 import { extractStructure } from '../inference';
 import { templateStyles as styles } from '../styles';
+import { templateLinkParams } from '../template';
 import { groupSimilarTemplates } from '../templateSimilarity';
 import { TemplateCandidate } from '../types';
 import { useInductiveTemplates } from '../useInductiveTemplates';
@@ -25,6 +26,14 @@ const TemplateList = ({ data }: { data: ReturnType<typeof useInductiveTemplates>
   const [candidates, setCandidates] = useState<TemplateCandidate[]>();
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState('');
+  const [linkPending, setLinkPending] = useState(false);
+  const opening = useRef(false);
+  useEffect(
+    () => () => {
+      opening.current = false;
+    },
+    []
+  );
   const [viewportWidth, setViewportWidth] = useState(0);
   const contentStyle = useMemo(() => {
     const style: ViewStyle = { ...StyleSheet.flatten(commonStyles.container) };
@@ -48,7 +57,22 @@ const TemplateList = ({ data }: { data: ReturnType<typeof useInductiveTemplates>
   }, [examples.data, examples.dataUpdatedAt, lang, notebookRoots]);
   const discovering =
     working || examples.isFetching || (!examples.isError && candidates === undefined);
-  const busy = discovering;
+  const busy = discovering || linkPending;
+  const openTemplate = async (template: TemplateCandidate) => {
+    if (opening.current) return;
+    opening.current = true;
+    setLinkPending(true);
+    setNotice('');
+    try {
+      const params = await templateLinkParams(template, notebookRoots);
+      if (opening.current) push('TemplateItem', params);
+    } catch {
+      setNotice(lang('Could not discover templates.'));
+    } finally {
+      opening.current = false;
+      setLinkPending(false);
+    }
+  };
   const groups = useMemo(() => groupSimilarTemplates(candidates || [], toHtml), [candidates]);
   const outlines = useMemo(
     () =>
@@ -72,7 +96,7 @@ const TemplateList = ({ data }: { data: ReturnType<typeof useInductiveTemplates>
       disabled={busy}
       highlightBorder={false}
       style={standalone ? [commonStyles.card, styles.panel] : undefined}
-      onPress={() => push('TemplateItem', { template })}
+      onPress={() => openTemplate(template)}
     >
       <View style={styles.row}>
         <View style={[commonStyles.backgroundContainer, styles.iconTile]}>
@@ -121,7 +145,20 @@ const TemplateList = ({ data }: { data: ReturnType<typeof useInductiveTemplates>
       ]}
     >
       <View style={styles.workspace}>
-        <UsageButton compact paragraph={'🧩 ' + lang('Extracted Templates')} />
+        <View style={[styles.row, styles.catalogHeader]}>
+          <View style={[styles.row, styles.grow]}>
+            <Text
+              style={[commonStyles.title, styles.title, styles.headerPathTitle]}
+              numberOfLines={1}
+            >
+              {lang('Discovered templates')}
+            </Text>
+            <Text style={[commonStyles.smallText, commonStyles.resultsContainer, styles.badge]}>
+              {discovering ? '…' : count}
+            </Text>
+          </View>
+          <UsageButton compact paragraph={'🧩 ' + lang('Extracted Templates')} />
+        </View>
         {!!notice && (
           <Text accessibilityRole="alert" style={[commonStyles.text, styles.notice]}>
             {notice}
@@ -133,12 +170,6 @@ const TemplateList = ({ data }: { data: ReturnType<typeof useInductiveTemplates>
               {lang('Could not load notes.')}
             </Text>
           )}
-          <View style={styles.row}>
-            <Text style={[commonStyles.title, styles.title]}>{lang('Discovered templates')}</Text>
-            <Text style={[commonStyles.smallText, commonStyles.resultsContainer, styles.badge]}>
-              {discovering ? '…' : count}
-            </Text>
-          </View>
           {groups.map((group) =>
             group.templates.length === 1 ? (
               renderTemplate(group.templates[0], true)

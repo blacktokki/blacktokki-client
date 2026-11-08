@@ -93,8 +93,8 @@ function groupsFor(
       (generic
         ? placeholder(labels[end])
         : pattern
-        ? labels[end] === numberedLabel(pattern, end - start)
-        : variableColumns || labels[end] === labels[start])
+          ? labels[end] === numberedLabel(pattern, end - start)
+          : variableColumns || labels[end] === labels[start])
     )
       end++;
     if (generic || end - start >= 2) {
@@ -179,7 +179,7 @@ export function findTemplateTables(markdown: string): TemplateTable[] {
     if (rowGroups.length || columnGroups.length)
       tables.push({
         id,
-        name: heading || headers.join(' / '),
+        name: (heading && !templateVariables(heading).length ? heading : '') || headers.join(' · '),
         start,
         end: index,
         headers,

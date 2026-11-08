@@ -7,6 +7,7 @@ import {
   ViewStyle,
   ButtonProps,
   TextStyle,
+  ColorValue,
 } from 'react-native';
 
 import Colors from '../constants/Colors';
@@ -19,7 +20,7 @@ export type CustomButtonProps = ButtonProps & {
   children?: React.ReactNode;
 };
 
-const DefaultButton = (props: CustomButtonProps & { borderColor: string }) => {
+const DefaultButton = (props: CustomButtonProps & { borderColor: ColorValue }) => {
   const [hover, setHover] = useState(false);
   return (
     <Pressable
@@ -53,9 +54,11 @@ const DefaultButton = (props: CustomButtonProps & { borderColor: string }) => {
 export default (props: CustomButtonProps) => {
   const theme = useColorScheme();
   const _props = {
-    color: Colors[theme].hoverColor,
-    borderColor: theme === 'light' ? Colors[theme].buttonBorderColor : '#7d8590',
+    borderColor:
+      StyleSheet.flatten(props.style)?.borderColor ??
+      (theme === 'light' ? Colors[theme].buttonBorderColor : '#7d8590'),
     ...props,
+    color: props.color ?? Colors[theme].hoverColor,
     style: [
       styles.style,
       {

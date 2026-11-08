@@ -4,6 +4,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleProp, ViewStyle, View } from 'react-native';
 import { List, TouchableRipple, Badge } from 'react-native-paper';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
 import { useBoardPages } from '../../../hooks/useBoardStorage';
@@ -20,8 +21,69 @@ import { useTapDetector } from '../../../hooks/useTapDetector';
 import { Content } from '../../../types';
 
 // --- Helpers ---
-export const RenderIcon = (icon: string, color?: string) => (p: any) =>
-  <List.Icon {...p} icon={icon} color={color || p.color} style={[p.style, { margin: 0 }]} />;
+const ContentListIcon = ({
+  icon,
+  color,
+  style,
+  ...props
+}: React.ComponentProps<typeof List.Icon>) => {
+  const { commonStyles } = useNotebookTheme();
+  if (!commonStyles.listItemTitle?.fontSize) {
+    return <List.Icon {...props} icon={icon} color={color} style={style} />;
+  }
+  return (
+    <List.Icon
+      {...props}
+      icon={
+        typeof icon === 'string'
+          ? () => (
+              <Icon
+                name={icon}
+                color={color || commonStyles.iconColor.color}
+                size={commonStyles.listItemIcon?.fontSize || 24}
+              />
+            )
+          : icon
+      }
+      color={color}
+      style={[style, { margin: 0 }, commonStyles.listItemIcon]}
+    />
+  );
+};
+
+export const RenderIcon = (icon: string, color?: string) => (p: any) => (
+  <ContentListIcon {...p} icon={icon} color={color || p.color} style={[p.style, { margin: 0 }]} />
+);
+
+export const ContentListItem = ({
+  style,
+  titleStyle,
+  descriptionStyle,
+  contentStyle,
+  ...props
+}: React.ComponentProps<typeof List.Item>) => {
+  const { commonStyles } = useNotebookTheme();
+  if (!commonStyles.listItemTitle?.fontSize) {
+    return (
+      <List.Item
+        {...props}
+        style={style}
+        titleStyle={titleStyle}
+        descriptionStyle={descriptionStyle}
+        contentStyle={contentStyle}
+      />
+    );
+  }
+  return (
+    <List.Item
+      {...props}
+      style={[commonStyles.listItem, style]}
+      titleStyle={[commonStyles.text, titleStyle, commonStyles.listItemTitle]}
+      descriptionStyle={[commonStyles.smallText, descriptionStyle]}
+      contentStyle={[contentStyle, commonStyles.listItemContent]}
+    />
+  );
+};
 
 export const CountBadge = ({ count }: { count: number }) => (
   <View style={{ alignSelf: 'center', backgroundColor: 'transparent' }}>
@@ -33,20 +95,23 @@ export const RippleIconButton = (props: {
   onPress: () => void;
   itemPadding: number;
   children: React.ReactNode;
-}) => (
-  <TouchableRipple
-    onPress={props.onPress}
-    style={{
-      justifyContent: 'center',
-      borderRadius: props.itemPadding,
-      width: 40 + props.itemPadding * 2,
-      height: 40 + props.itemPadding * 2,
-      margin: -props.itemPadding,
-    }}
-  >
-    {props.children}
-  </TouchableRipple>
-);
+}) => {
+  const { commonStyles } = useNotebookTheme();
+  return (
+    <TouchableRipple
+      onPress={props.onPress}
+      style={{
+        justifyContent: 'center',
+        borderRadius: props.itemPadding,
+        width: commonStyles.listItemIcon.width + props.itemPadding * 2,
+        height: commonStyles.listItemIcon.height + props.itemPadding * 2,
+        margin: -props.itemPadding,
+      }}
+    >
+      {props.children}
+    </TouchableRipple>
+  );
+};
 
 export const toRecentContents = (data: Content[]) =>
   data
@@ -240,14 +305,15 @@ const DraggableTabItem = ({
 // --- Main Component Types ---
 export type ContentGroupType = 'BOARD' | 'RECENT' | 'CURRENT_NOTE';
 export type ContentGroupSubType = 'TOC' | 'SUBNOTE' | 'HISTORY';
-type Props =
-  | { type: 'BOARD' | ContentGroupSubType | 'PAGE' | 'LAST' }
-  | { type: 'RECENT'; noteCount: number };
+type Props = { type: 'BOARD' | ContentGroupSubType | 'PAGE' | 'LAST' | 'RECENT' };
 
 const ContentGroupSection = (props: Props) => {
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
-  const itemPadding = useResizeContext() === 'landscape' ? 5 : 8;
+  const isLandscape = useResizeContext() === 'landscape';
+  const itemPadding = isLandscape
+    ? commonStyles.listItemCompact.padding
+    : commonStyles.listItem.padding;
   const detectTap = useTapDetector();
 
   // Data Hooks
@@ -333,14 +399,15 @@ const ContentGroupSection = (props: Props) => {
   const isLinked = (title: string) => tabs.data?.some((v) => v.title === title);
 
   // --- Render Sections ---
+  const noteCount = 400 / (commonStyles.listItemTitle.lineHeight || 40);
 
   if (props.type === 'BOARD') {
     return (
       <List.Section>
         {getBoardStatsList(boards, notes.data || [])
-          .slice(0, 10)
+          .slice(0, noteCount)
           .map((b) => (
-            <List.Item
+            <ContentListItem
               key={b.id}
               title={b.title}
               style={{ padding: itemPadding }}
@@ -349,7 +416,7 @@ const ContentGroupSection = (props: Props) => {
               onLongPress={() => onNoteLongPress(b)}
             />
           ))}
-        <List.Item
+        <ContentListItem
           title={lang('more...')}
           left={RenderIcon('view-dashboard-variant')}
           onPress={() => push('BoardList')}
@@ -362,7 +429,7 @@ const ContentGroupSection = (props: Props) => {
     if (!lastTab?.title) return null;
     return (
       <List.Section>
-        <List.Item
+        <ContentListItem
           title={lastTab.title}
           style={{ padding: 5, paddingLeft: 8 }}
           titleStyle={{ fontWeight: 'bold', fontSize: 14 }}
@@ -377,7 +444,7 @@ const ContentGroupSection = (props: Props) => {
           onPress={() => navigate('NotePage', { title: lastTab.title })}
         />
         {tocList.map((p, i) => (
-          <List.Item
+          <ContentListItem
             key={i}
             title={p.title}
             titleStyle={{ fontSize: 14 }}
@@ -399,8 +466,8 @@ const ContentGroupSection = (props: Props) => {
     if (!lastTab?.title) return null;
     return (
       <List.Section>
-        {historyList.slice(0, 20).map((h, i) => (
-          <List.Item
+        {historyList.slice(0, noteCount * 2).map((h, i) => (
+          <ContentListItem
             key={h.id || i}
             title={h.title}
             description={updatedFormat(h.updated)}
@@ -409,7 +476,7 @@ const ContentGroupSection = (props: Props) => {
             onPress={() => navigate('NotePage', { title: lastTab.title, archiveId: h.id })}
           />
         ))}
-        <List.Item
+        <ContentListItem
           title={lang('more...')}
           left={RenderIcon('history')}
           style={{ paddingLeft: 5 }}
@@ -425,7 +492,7 @@ const ContentGroupSection = (props: Props) => {
     return (
       <List.Section>
         {listData.length > 0 && lastTab && (
-          <List.Item
+          <ContentListItem
             title={lastTab.title}
             titleStyle={{
               fontStyle: 'italic',
@@ -458,7 +525,7 @@ const ContentGroupSection = (props: Props) => {
       {parentContent && (
         // ... (parentContent 렌더링 유지)
         <>
-          <List.Item
+          <ContentListItem
             title={parentContent.title}
             titleStyle={{ color: '#888B' }}
             style={{ padding: itemPadding }}
@@ -480,7 +547,7 @@ const ContentGroupSection = (props: Props) => {
           />
         </>
       )}
-      {(props.type === 'RECENT' ? listData.slice(0, props.noteCount) : listData).map((v, index) => {
+      {(props.type === 'RECENT' ? listData.slice(0, noteCount) : listData).map((v, index) => {
         const isActive = (props.type === 'PAGE' || props.type === 'LAST') && v.id === lastTab?.id;
         const tabStyles =
           props.type === 'PAGE' || props.type === 'LAST'
@@ -489,7 +556,7 @@ const ContentGroupSection = (props: Props) => {
 
         // 공통 아이템 렌더링
         const itemContent = (
-          <List.Item
+          <ContentListItem
             // PAGE 타입일 경우 DraggableWrapper에서 key를 처리하므로 여기서는 index를 key로 쓰거나 생략 가능하지만,
             // DraggableWrapper 내부가 아니면 key 필수.
             // Draggable 내부에서는 key를 Draggable에 부여.
@@ -508,8 +575,8 @@ const ContentGroupSection = (props: Props) => {
                   ? 'view-dashboard'
                   : 'file-document-edit'
                 : !isLinked(v.title)
-                ? 'notebook'
-                : 'notebook-edit',
+                  ? 'notebook'
+                  : 'notebook-edit',
               tabStyles.color
             )}
             right={
@@ -519,7 +586,7 @@ const ContentGroupSection = (props: Props) => {
                       onPress={() => deleteRecent.mutate(v.id)}
                       itemPadding={itemPadding}
                     >
-                      <List.Icon style={{ left: itemPadding - 7 }} icon={'close'} />
+                      <ContentListIcon style={{ left: itemPadding - 7 }} icon={'close'} />
                     </RippleIconButton>
                   )
                 : undefined
@@ -547,7 +614,7 @@ const ContentGroupSection = (props: Props) => {
       })}
       {/* ... (더보기 버튼 유지) */}
       {(props.type === 'RECENT' || props.type === 'SUBNOTE') && (
-        <List.Item
+        <ContentListItem
           title={lang('more...')}
           left={RenderIcon('notebook-multiple')}
           style={{ padding: itemPadding }}
@@ -567,7 +634,10 @@ export const CurrentTabSection = () => {
     <View style={commonStyles.backgroundContainer}>
       <List.Subheader
         selectable={false}
-        style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+        style={[
+          { fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color },
+          commonStyles.listSectionHeader,
+        ]}
       >
         {lang('Current Tab')}
       </List.Subheader>
@@ -584,7 +654,10 @@ export const TabsSection = () => {
     <View style={commonStyles.backgroundContainer}>
       <List.Subheader
         selectable={false}
-        style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+        style={[
+          { fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color },
+          commonStyles.listSectionHeader,
+        ]}
       >
         {lang('Tab List')}
       </List.Subheader>

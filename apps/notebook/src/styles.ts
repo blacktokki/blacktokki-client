@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TextStyle, ViewStyle } from 'react-native';
 
 export type AppColors = {
   // From old styles.ts
@@ -154,6 +154,48 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 16,
       fontFamily: layout.fontFamily,
     },
+    secondaryButtonText: {
+      color: '#FFFFFF',
+      fontWeight: '500',
+      fontSize: 16,
+      fontFamily: layout.fontFamily,
+    },
+    commonButton: {},
+    commonButtonText: {} as TextStyle,
+    commonButtonHover: {} as ViewStyle,
+    drawer: {},
+    tabText: {} as TextStyle,
+    tabIcon: {},
+    listItem: { padding: 8 },
+    listItemCompact: { padding: 5 },
+    listItemTitle: {} as TextStyle,
+    listItemContent: {},
+    listSectionHeader: {},
+    settingsSection: {},
+    settingsSectionTitle: {},
+    settingsSectionDescription: {},
+    optionButton: {},
+    optionText: {} as TextStyle,
+    selectedOption: {},
+    tabIndicator: {},
+    tabLabel: {} as TextStyle,
+    listItemIcon: {
+      fontSize: 24,
+      width: 40,
+      height: 40,
+    },
+    buttonCompact: {},
+    secondaryButtonCompact: {},
+    commonButtonCompact: {},
+    optionButtonCompact: {},
+    searchButtonCompact: {},
+    inputCompact: {},
+    searchInputCompact: {},
+    appHeaderCompact: {},
+    appHeaderLeftButtonCompact: {},
+    navButtonCompact: {},
+    activeTabCompact: {},
+    inactiveTabCompact: {},
     buttonContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -220,6 +262,11 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
     appHeaderTitle: {
       color: commonColors.headerTitle,
     },
+    appHeaderLeftIcon: {
+      left: -18,
+      top: -14,
+    },
+    appHeaderLeftButton: {},
     appHeaderLeftContainer: {
       backgroundColor: commonColors.header,
       borderBottomWidth: 1,

@@ -1,6 +1,8 @@
 import { CommonButton, Text, useLangContext, useModalsContext, View } from '@blacktokki/core';
 import React from 'react';
 
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
+
 export default function AlertModal({
   type,
   callbacks,
@@ -9,6 +11,7 @@ export default function AlertModal({
   callbacks: (() => void)[];
 }) {
   const { lang } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
   const { setModal } = useModalsContext();
   const back = () => {
     setModal(AlertModal, null);
@@ -45,12 +48,20 @@ export default function AlertModal({
           {messages[type].buttons.map((button, i) => (
             <CommonButton
               key={i}
-              style={{ marginRight: 10 }}
+              style={[commonStyles.commonButton, { marginRight: 10 }]}
+              textStyle={commonStyles.commonButtonText}
+              color={commonStyles.commonButtonHover?.backgroundColor}
               title={lang(button.title)}
               onPress={button.onPress}
             />
           ))}
-          <CommonButton title={lang('cancel')} onPress={() => back()} />
+          <CommonButton
+            title={lang('cancel')}
+            onPress={() => back()}
+            style={commonStyles.commonButton}
+            textStyle={commonStyles.commonButtonText}
+            color={commonStyles.commonButtonHover?.backgroundColor}
+          />
         </View>
       </View>
     </View>

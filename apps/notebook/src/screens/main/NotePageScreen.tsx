@@ -2,7 +2,7 @@ import { useAuthContext } from '@blacktokki/account';
 import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
 import {
@@ -71,9 +71,14 @@ export const NotePageScreen: React.FC = () => {
     navigation.navigate('MovePage', paragraph ? { title, paragraph, section } : { title });
   };
 
-  const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const paragraphItem = paragraphs.find((v) =>
-    paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })
+  const paragraphs = useMemo(
+    () => parseHtmlToParagraphs(page?.description || ''),
+    [page?.description]
+  );
+  const paragraphItem = useMemo(
+    () =>
+      paragraphs.find((v) => paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })),
+    [paragraphs, paragraph, section]
   );
   const [description, setDescription] = useState<string>();
   useEffect(() => {
@@ -83,10 +88,10 @@ export const NotePageScreen: React.FC = () => {
           ? diffToSnapshot(snapshot.description, archive.description)
           : archive.description
         : paragraphItem
-        ? fullParagraph
-          ? paragraphDescription(paragraphs, paragraphItem.path, true).trim()
-          : paragraphItem?.description?.trim()
-        : page?.description?.trim()
+          ? fullParagraph
+            ? paragraphDescription(paragraphs, paragraphItem.path, true).trim()
+            : paragraphItem?.description?.trim()
+          : page?.description?.trim()
     );
   }, [page, archive, paragraphItem?.path, fullParagraph]);
   const isEmptyParagraph =

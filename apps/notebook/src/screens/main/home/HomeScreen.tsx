@@ -8,7 +8,7 @@ import { List } from 'react-native-paper';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import ConfigSection from './ConfigSection';
-import { CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
+import { ContentListItem, CurrentTabSection, RenderIcon, TabsSection } from './ContentGroupSection';
 import HeaderNotebookDropdown from '../../../components/HeaderNotebookDropdown';
 import { SearchBar } from '../../../components/SearchBar';
 import { useExtension } from '../../../hooks/useExtension';
@@ -27,13 +27,13 @@ const NotesTabView = () => {
       <CurrentTabSection />
       <TabsSection />
       {(buttons.length > 0 || isBoardEnabled) && (
-        <List.Subheader style={{}} selectable={false}>
+        <List.Subheader style={commonStyles.listSectionHeader} selectable={false}>
           {lang('Menu')}
         </List.Subheader>
       )}
       {buttons}
       {isBoardEnabled && (
-        <List.Item
+        <ContentListItem
           left={RenderIcon('view-dashboard-variant')}
           title={lang('Board')}
           onPress={() => push('BoardList')}
@@ -75,8 +75,8 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
     usageMode === 'NOTEBOOK' && notebook?.title
       ? notebook.title
       : auth.isLocal
-      ? 'Blacktokki Notebook - Local'
-      : 'Blacktokki Notebook';
+        ? 'Blacktokki Notebook - Local'
+        : 'Blacktokki Notebook';
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
@@ -110,6 +110,11 @@ export default function HomeScreen({ navigation, route }: StackScreenProps<any, 
   return (
     <HomeSection
       tabViews={tabViews}
+      tabBarOptions={{
+        indicatorStyle: commonStyles.tabIndicator,
+        labelStyle: commonStyles.tabLabel,
+        activeTabStyle: commonStyles.selectedOption,
+      }}
       swipeEnabled={!boardView || parseInt(route.params?.['tab'] || 0, 10) !== 1}
       homeView={{ title, headerRight: () => <SearchBar /> }}
       headerTitle={title}

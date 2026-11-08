@@ -11,16 +11,21 @@ import {
   TouchableOpacity,
   ColorSchemeName,
   View,
+  StyleProp,
+  TextStyle,
+  ViewStyle,
 } from 'react-native';
 
 export const ConfigSection = ({
   title,
   children,
   onPress,
+  titleStyle,
 }: {
   title: string;
   children?: React.ReactNode;
   onPress?: () => void;
+  titleStyle?: StyleProp<TextStyle>;
 }) => {
   const theme = useColorScheme();
   const color = Colors[theme].text;
@@ -31,7 +36,7 @@ export const ConfigSection = ({
         onPress={onPress}
         disabled={!onPress}
       >
-        <Text style={{ fontSize: 20, color, fontWeight: '600' }}>{title}</Text>
+        <Text style={[{ fontSize: 20, color, fontWeight: '600' }, titleStyle]}>{title}</Text>
         {onPress && <Text>{'>'}</Text>}
       </TouchableOpacity>
       {children}
@@ -70,13 +75,23 @@ export const ConfigSection = ({
 //   );
 // };
 
-export const LanguageConfigSection = () => {
+export const LanguageConfigSection = ({
+  titleStyle,
+  buttonStyle,
+  buttonTextStyle,
+  activeButtonStyle,
+}: {
+  titleStyle?: StyleProp<TextStyle>;
+  buttonStyle?: StyleProp<ViewStyle>;
+  buttonTextStyle?: StyleProp<TextStyle>;
+  activeButtonStyle?: StyleProp<ViewStyle>;
+} = {}) => {
   const { lang, locale, setLocale, localeActived } = useLangContext();
   const theme = useColorScheme();
   const color = Colors[theme].text;
   return (
     localeActived && (
-      <ConfigSection title={lang('* Language Settings')}>
+      <ConfigSection title={lang('* Language Settings')} titleStyle={titleStyle}>
         <View style={{ flexDirection: 'row' }}>
           {[
             [lang('Auto'), 'auto'],
@@ -86,12 +101,15 @@ export const LanguageConfigSection = () => {
             <TextButton
               key={title}
               title={title || ''}
-              textStyle={{
-                fontSize: 16,
-                color,
-                textDecorationLine: locale === l ? 'underline' : 'none',
-              }}
-              style={{ borderRadius: 20 }}
+              textStyle={[
+                {
+                  fontSize: 16,
+                  color,
+                  textDecorationLine: locale === l ? 'underline' : 'none',
+                },
+                buttonTextStyle,
+              ]}
+              style={[{ borderRadius: 20 }, buttonStyle, locale === l && activeButtonStyle]}
               onPress={() => setLocale(l)}
             />
           ))}

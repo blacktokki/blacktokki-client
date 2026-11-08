@@ -20,7 +20,13 @@ export const ExtensionScreen: React.FC = () => {
         <List.Item
           title={lang(item.title)}
           description={lang(item.description)}
-          style={[commonStyles.card, { marginBottom: 16, paddingVertical: 8 }]}
+          titleStyle={commonStyles.settingsSectionTitle}
+          descriptionStyle={commonStyles.settingsSectionDescription}
+          style={[
+            commonStyles.card,
+            { marginBottom: 16, paddingVertical: 8 },
+            commonStyles.settingsSection,
+          ]}
           right={() => (
             <Switch
               style={{ marginTop: 4 }}

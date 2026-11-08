@@ -1,4 +1,4 @@
-import { useColorScheme } from '@blacktokki/core';
+import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { useMemo } from 'react';
 
 import { createCommonStyles as _createCommonStyles } from '../styles';
@@ -65,10 +65,28 @@ export const createCommonStyles = (
 
 export function useNotebookTheme() {
   const colorScheme = useColorScheme();
+  const isLandscape = useResizeContext() === 'landscape';
   const { data: extension } = useExtension();
   const commonStyles = useMemo(() => {
-    return createCommonStyles(colorScheme, extension?.feature.createCommonStylesList || []);
-  }, [colorScheme, extension?.feature.createCommonStylesList]);
+    const styles = createCommonStyles(colorScheme, extension?.feature.createCommonStylesList || []);
+    if (!isLandscape) return styles;
+    return {
+      ...styles,
+      button: { ...styles.button, ...styles.buttonCompact },
+      secondaryButton: { ...styles.secondaryButton, ...styles.secondaryButtonCompact },
+      commonButton: { ...styles.commonButton, ...styles.commonButtonCompact },
+      listItem: { ...styles.listItem, ...styles.listItemCompact },
+      optionButton: { ...styles.optionButton, ...styles.optionButtonCompact },
+      searchButton: { ...styles.searchButton, ...styles.searchButtonCompact },
+      input: { ...styles.input, ...styles.inputCompact },
+      searchInput: { ...styles.searchInput, ...styles.searchInputCompact },
+      appHeader: { ...styles.appHeader, ...styles.appHeaderCompact },
+      appHeaderLeftButton: { ...styles.appHeaderLeftButton, ...styles.appHeaderLeftButtonCompact },
+      navButton: { ...styles.navButton, ...styles.navButtonCompact },
+      activeTab: { ...styles.activeTab, ...styles.activeTabCompact },
+      inactiveTab: { ...styles.inactiveTab, ...styles.inactiveTabCompact },
+    };
+  }, [colorScheme, extension?.feature.createCommonStylesList, isLandscape]);
 
   return {
     colorScheme,

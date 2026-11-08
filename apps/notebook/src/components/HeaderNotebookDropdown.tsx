@@ -38,7 +38,7 @@ export default function HeaderNotebookDropdown() {
   if (usageMode === 'SIMPLE') {
     return (
       <View style={styles.headerTitleContainer}>
-        <Text numberOfLines={1} style={[commonStyles.appHeaderTitle, styles.headerText]}>
+        <Text numberOfLines={1} style={[styles.headerText, commonStyles.appHeaderTitle]}>
           {headerTitle}
         </Text>
       </View>
@@ -76,7 +76,7 @@ export default function HeaderNotebookDropdown() {
         <Text
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={[commonStyles.appHeaderTitle, styles.headerText]}
+          style={[styles.headerText, commonStyles.appHeaderTitle]}
         >
           {headerTitle}
         </Text>

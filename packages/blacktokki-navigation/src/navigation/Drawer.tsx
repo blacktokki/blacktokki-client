@@ -2,14 +2,22 @@ import { Auth } from '@blacktokki/account';
 import { Colors, useColorScheme, useResizeContext } from '@blacktokki/core';
 import { useTheme } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, StyleProp, ViewStyle } from 'react-native';
 
 let setDrawerVisibleGlobal: ((visible: boolean) => void) | undefined;
 export const setDrawerVisible = (visible: boolean) => {
   setDrawerVisibleGlobal?.(visible);
 };
 
-export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) => {
+export default ({
+  auth,
+  children,
+  style,
+}: {
+  auth: Auth;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) => {
   const { colors } = useTheme();
   const theme = useColorScheme();
   const { height } = useWindowDimensions();
@@ -36,6 +44,7 @@ export default ({ auth, children }: { auth: Auth; children: React.ReactNode }) =
                 borderTopColor: colors.border,
                 maxHeight: height,
               },
+              style,
             ]
           : { width: 0 }
       }

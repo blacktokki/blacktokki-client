@@ -50,9 +50,17 @@ export default function OtpModal({ onSuccess }: { onSuccess: () => Promise<void>
           <CommonButton
             title={lang('cancel')}
             onPress={() => setModal(OtpModal, null)}
-            style={styles.cancelButton}
+            style={[commonStyles.commonButton, styles.cancelButton]}
+            textStyle={commonStyles.commonButtonText}
+            color={commonStyles.commonButtonHover?.backgroundColor}
           />
-          <CommonButton title={lang('Verify')} onPress={handleVerify} style={styles.verifyButton} />
+          <CommonButton
+            title={lang('Verify')}
+            onPress={handleVerify}
+            style={[commonStyles.commonButton, styles.verifyButton]}
+            textStyle={commonStyles.commonButtonText}
+            color={commonStyles.commonButtonHover?.backgroundColor}
+          />
         </View>
       </View>
     </View>

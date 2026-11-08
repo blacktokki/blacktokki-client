@@ -89,7 +89,7 @@ const checkAndProcessBacklinks = <T extends { oldTitle: string }>(
           return { hasMatch: true, processedHtml: html };
         }
       }
-    } catch (e) {
+    } catch {
       // URL 파싱 오류 무시
     }
   }
@@ -201,7 +201,7 @@ export const MoveActionButtons: React.FC<{
   return (
     <View style={commonStyles.buttonContainer}>
       <TouchableOpacity style={[commonStyles.secondaryButton, { flex: 1 }]} onPress={onCancel}>
-        <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+        <Text style={commonStyles.secondaryButtonText}>{lang('cancel')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[
@@ -260,14 +260,14 @@ export const MovePageScreen: React.FC = () => {
     usageMode === 'SIMPLE'
       ? undefined
       : currentNotebookId
-      ? notebooks.find((nb) => nb.id === currentNotebookId)?.title || lang('Note Mode')
-      : lang('Note Mode');
+        ? notebooks.find((nb) => nb.id === currentNotebookId)?.title || lang('Note Mode')
+        : lang('Note Mode');
   const newNotebookName =
     usageMode === 'SIMPLE'
       ? undefined
       : selectedNotebookId
-      ? notebooks.find((nb) => nb.id === selectedNotebookId)?.title || lang('None')
-      : lang('None');
+        ? notebooks.find((nb) => nb.id === selectedNotebookId)?.title || lang('None')
+        : lang('None');
 
   const { data: page, isLoading } = useNotePage(title);
   const { data: pages = [] } = useNotePages();

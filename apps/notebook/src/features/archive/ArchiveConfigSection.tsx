@@ -61,8 +61,8 @@ export default () => {
   const mdfs = markdownFs();
   const { usageMode, notebook } = useUsageMode();
   return (
-    <View style={commonStyles.card}>
-      <ConfigSection title={lang('* Archive')}>
+    <View style={[commonStyles.card, commonStyles.settingsSection]}>
+      <ConfigSection title={lang('* Archive')} titleStyle={commonStyles.settingsSectionTitle}>
         <View style={{ flexDirection: 'row' }}>
           <OptionButton
             title={lang('Export')}

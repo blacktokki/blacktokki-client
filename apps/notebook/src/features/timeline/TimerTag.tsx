@@ -5,6 +5,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
 import { Paragraph } from '../../components/HeaderSelectBar';
+import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 
 type DatePattern = {
   pattern: string;
@@ -206,6 +207,7 @@ const TimerTag = (props: {
   const diffTotal = start.diff(end);
   const ratio = diffTotal === 0 ? 1 : start.diff(props.now) / diffTotal;
   const { lang } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
   return (
     <TouchableOpacity onPress={() => props.toggleExpand()}>
       <View
@@ -235,7 +237,12 @@ const TimerTag = (props: {
                     v.onPress();
                     props.toggleExpand();
                   }}
-                  style={{ width: '100%', backgroundColor: '#8888', margin: 4, maxWidth: 150 }}
+                  style={[
+                    commonStyles.commonButton,
+                    { width: '100%', backgroundColor: '#8888', margin: 4, maxWidth: 150 },
+                  ]}
+                  textStyle={commonStyles.commonButtonText}
+                  color={commonStyles.commonButtonHover?.backgroundColor}
                 />
               ))}
             </View>

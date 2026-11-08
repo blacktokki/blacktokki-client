@@ -1,11 +1,14 @@
 import { useLangContext } from '@blacktokki/core';
 import { navigate } from '@blacktokki/navigation';
 import React from 'react';
-import { List } from 'react-native-paper';
 
 import { useNotebookSync } from './useNotebookSync';
 import { useUsageMode } from '../../hooks/useUsageMode';
-import { CountBadge, RenderIcon } from '../../screens/main/home/ContentGroupSection';
+import {
+  ContentListItem,
+  CountBadge,
+  RenderIcon,
+} from '../../screens/main/home/ContentGroupSection';
 
 export const SyncButton = () => {
   const { lang } = useLangContext();
@@ -15,7 +18,7 @@ export const SyncButton = () => {
   if (usageMode !== 'NOTEBOOK' || !notebook?.title) return null;
 
   return (
-    <List.Item
+    <ContentListItem
       title={lang('Sync Notebook')}
       onPress={() => navigate('SyncNotebook')}
       left={RenderIcon('sync')}

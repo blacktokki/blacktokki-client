@@ -352,7 +352,7 @@ export const TemplateWriteSection = ({
           style={[commonStyles.secondaryButton, styles.grow]}
           onPress={onPreview}
         >
-          <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+          <Text style={commonStyles.secondaryButtonText}>{lang('cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           accessibilityRole="button"
@@ -361,7 +361,9 @@ export const TemplateWriteSection = ({
           style={[canSave ? commonStyles.button : commonStyles.secondaryButton, styles.grow]}
           onPress={canSave ? onSave : undefined}
         >
-          <Text style={commonStyles.buttonText}>{lang('save')}</Text>
+          <Text style={!canSave ? commonStyles.secondaryButtonText : commonStyles.buttonText}>
+            {lang('save')}
+          </Text>
         </TouchableOpacity>
       </View>
     </>

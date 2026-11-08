@@ -1,6 +1,7 @@
 import { Auth } from '@blacktokki/account';
 import { TabViewData, ModalComponent } from '@blacktokki/core';
 import { PathConfig, DocumentTitleOptions } from '@react-navigation/native';
+import { ColorValue, StyleProp, ViewStyle } from 'react-native';
 
 export type Screens = Record<
   string,
@@ -27,11 +28,15 @@ export type NavigationConfig = {
     login: string;
   };
   headerLeftIcon: React.JSX.Element;
+  headerLeftButtonStyle?: StyleProp<ViewStyle>;
+  headerLeftButtonHoverColor?: ColorValue;
   headerRight: React.JSX.Element;
   headerTitle?: (props?: any) => React.ReactNode;
   headerStyle?: any;
+  headerCompactStyle?: StyleProp<ViewStyle>;
   headerTitleStyle?: any;
   headerLeftContainerStyle?: any;
   modals: ModalComponent[];
   drawer: React.ReactNode;
+  drawerStyle?: StyleProp<ViewStyle>;
 };

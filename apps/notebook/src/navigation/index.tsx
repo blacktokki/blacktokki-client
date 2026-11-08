@@ -2,14 +2,16 @@ import { useColorScheme, useResizeContext } from '@blacktokki/core';
 import { login, Navigation, NavigationConfig } from '@blacktokki/navigation';
 import * as Linking from 'expo-linking';
 import React, { useMemo } from 'react';
+import { Platform } from 'react-native';
 import { List, MD2DarkTheme, MD2LightTheme, PaperProvider } from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import Drawer from './Drawer';
 import HeaderNotebookDropdown from '../components/HeaderNotebookDropdown';
 import { SearchBar } from '../components/SearchBar';
 import features from '../features';
-import Drawer from './Drawer';
 import { useExtension } from '../hooks/useExtension';
-import { createCommonStyles } from '../hooks/useNotebookTheme';
+import { createCommonStyles, useNotebookTheme } from '../hooks/useNotebookTheme';
 import { useUsageMode } from '../hooks/useUsageMode';
 import modals from '../modals';
 import { main, screenTitle } from '../screens';
@@ -17,6 +19,18 @@ import { main, screenTitle } from '../screens';
 const HeaderRight = () => {
   const windowType = useResizeContext();
   return windowType === 'landscape' ? <SearchBar /> : undefined;
+};
+
+const HeaderLeftIcon = () => {
+  const { commonStyles } = useNotebookTheme();
+  return (
+    <List.Icon
+      icon={({ color }) => (
+        <Icon name="backburger" color={color} size={commonStyles.listItemIcon.fontSize} />
+      )}
+      style={[commonStyles.listItemIcon, commonStyles.appHeaderLeftIcon]}
+    />
+  );
 };
 
 const getConfig = (): NavigationConfig => ({
@@ -33,7 +47,7 @@ const getConfig = (): NavigationConfig => ({
     main: 'Home',
     login: 'LoginScreen',
   },
-  headerLeftIcon: <List.Icon icon="backburger" style={{ left: -18, top: -14 }} />,
+  headerLeftIcon: <HeaderLeftIcon />,
   headerRight: <HeaderRight />,
   headerTitle: () => <HeaderNotebookDropdown />,
   modals,
@@ -78,13 +92,34 @@ export default () => {
 
   return (
     <PaperProvider theme={theme}>
+      {Platform.OS === 'web' && (
+        <style>{`
+          :root {
+            color-scheme: ${scheme};
+            scrollbar-color: ${commonStyles.inactiveTab.color} ${commonStyles.container.backgroundColor};
+          }
+          ::-webkit-scrollbar { width: 10px; height: 10px; }
+          ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner {
+            background-color: ${commonStyles.container.backgroundColor};
+          }
+          ::-webkit-scrollbar-thumb {
+            background-color: ${commonStyles.inactiveTab.color};
+            border-radius: ${commonStyles.card.borderRadius}px;
+          }
+          ::-webkit-scrollbar-thumb:hover { background-color: ${commonStyles.text.color}; }
+        `}</style>
+      )}
       {isReady && (
         <Navigation
           config={{
             ...config,
             headerStyle: commonStyles.appHeader,
+            headerCompactStyle: commonStyles.appHeaderCompact,
             headerTitleStyle: commonStyles.appHeaderTitle,
             headerLeftContainerStyle: commonStyles.appHeaderLeftContainer,
+            headerLeftButtonStyle: commonStyles.appHeaderLeftButton,
+            headerLeftButtonHoverColor: commonStyles.commonButtonHover?.backgroundColor,
+            drawerStyle: commonStyles.drawer,
           }}
         />
       )}

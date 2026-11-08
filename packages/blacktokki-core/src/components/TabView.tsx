@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions, Platform, StyleProp, TextStyle, ViewStyle } from 'react-native';
 import {
   TabView,
   SceneMap,
@@ -27,7 +27,11 @@ export default (props: {
   index?: number;
   onTab?: (index: number) => void;
   swipeEnabled?: boolean;
+  indicatorStyle?: StyleProp<ViewStyle>;
+  labelStyle?: StyleProp<TextStyle>;
+  activeTabStyle?: StyleProp<ViewStyle>;
 }) => {
+  const { indicatorStyle, labelStyle, activeTabStyle } = props;
   const { lang } = useLangContext();
   const index = props.index || 0;
   const theme = useColorScheme();
@@ -58,14 +62,23 @@ export default (props: {
         return (
           <TabBar
             {...props}
-            indicatorStyle={{ backgroundColor: color }}
+            indicatorStyle={[{ backgroundColor: color }, indicatorStyle]}
             style={{ backgroundColor: Colors[theme].background }}
             /* @ts-ignore */
             labelStyle={{ whiteSpace: 'nowrap' }}
             activeColor={Colors[theme].text}
             inactiveColor={Colors[theme].text}
             renderTabBarItem={(itemProps) => (
-              <TabBarItem {...itemProps} icon={(scene) => icons[scene.route.key]} />
+              <TabBarItem
+                {...itemProps}
+                labelStyle={[itemProps.labelStyle, labelStyle]}
+                style={[
+                  itemProps.style,
+                  itemProps.route.key ===
+                    props.navigationState.routes[props.navigationState.index].key && activeTabStyle,
+                ]}
+                icon={(scene) => icons[scene.route.key]}
+              />
             )}
             onTabPress={(scene) => onTab?.(entries.findIndex(([k, v]) => k === scene.route.key))}
           />

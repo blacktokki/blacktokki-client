@@ -140,9 +140,34 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 16,
       fontFamily: layout.fontFamily,
     },
+    secondaryButtonText: {
+      color: '#FFFFFF',
+      fontWeight: '500',
+      fontSize: 16,
+      fontFamily: layout.fontFamily,
+    },
+    buttonCompact: {},
+    secondaryButtonCompact: {},
+    commonButtonCompact: {},
+    optionButtonCompact: {},
+    searchButtonCompact: {},
+    inputCompact: {},
+    searchInputCompact: {},
+    appHeaderCompact: {},
+    appHeaderLeftButtonCompact: {},
+    navButtonCompact: {},
+    activeTabCompact: {},
+    inactiveTabCompact: {},
     buttonContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+    },
+    listItem: { padding: 8 },
+    listItemCompact: { padding: 5 },
+    listItemIcon: {
+      fontSize: 24,
+      width: 40,
+      height: 40,
     },
     searchButton: {
       backgroundColor: commonColors.button,
@@ -206,6 +231,11 @@ export const createCommonStyles = (colorScheme: 'light' | 'dark') => {
     appHeaderTitle: {
       color: commonColors.headerTitle,
     },
+    appHeaderLeftIcon: {
+      left: -18,
+      top: -14,
+    },
+    appHeaderLeftButton: {},
     appHeaderLeftContainer: {
       backgroundColor: commonColors.header,
       borderBottomWidth: 1,

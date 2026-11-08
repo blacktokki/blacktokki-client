@@ -189,6 +189,13 @@ export const TemplateSheetSection = ({
   const [measuring, setMeasuring] = useState(false);
   const working = saving || preparing || measuring;
   const [viewport, setViewport] = useState({ x: 0, width: 1200 });
+  const updateViewportWidth = (width: number) => {
+    /** Only virtual column visibility uses this width; round up to avoid per-pixel renders. */
+    const visibleWidth = Math.ceil(width / noteColumnWidth) * noteColumnWidth;
+    setViewport((current) =>
+      current.width === visibleWidth ? current : { ...current, width: visibleWidth }
+    );
+  };
   const [sizes, setSizes] = useState<Record<string, { value: string; height: number }>>({});
   const [labelSizes, setLabelSizes] = useState<Record<string, number>>({});
   const [, setHeightRevision] = useState(0);
@@ -322,7 +329,7 @@ export const TemplateSheetSection = ({
   );
   const mutation = useTemplateSheet();
   const changes = useMemo(() => sheetChanges(markdown, rows), [markdown, rows]);
-  const issue = validateSheet(rows, allNotes);
+  const issue = useMemo(() => validateSheet(rows, allNotes), [rows, allNotes]);
   const inset = {
     paddingHorizontal: paddingHorizontal ?? commonStyles.container.paddingHorizontal,
   };
@@ -1064,9 +1071,7 @@ export const TemplateSheetSection = ({
         <View
           ref={webScroll}
           style={sheetStyles.webViewport}
-          onLayout={(event) =>
-            setViewport((current) => ({ ...current, width: event.nativeEvent.layout.width }))
-          }
+          onLayout={(event) => updateViewportWidth(event.nativeEvent.layout.width)}
           {...{
             onScroll: (event: React.UIEvent<HTMLElement>) => {
               const x =
@@ -1099,9 +1104,7 @@ export const TemplateSheetSection = ({
           scrollEventThrottle={16}
           nestedScrollEnabled
           directionalLockEnabled={false}
-          onLayout={(event) =>
-            setViewport((current) => ({ ...current, width: event.nativeEvent.layout.width }))
-          }
+          onLayout={(event) => updateViewportWidth(event.nativeEvent.layout.width)}
           onScroll={(event) => {
             const x =
               Math.floor(Math.max(0, event.nativeEvent.contentOffset.x) / noteColumnWidth) *
@@ -1138,7 +1141,7 @@ export const TemplateSheetSection = ({
             style={[commonStyles.secondaryButton, styles.grow]}
             onPress={onCancel}
           >
-            <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+            <Text style={commonStyles.secondaryButtonText}>{lang('cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             accessibilityRole="button"
@@ -1153,7 +1156,15 @@ export const TemplateSheetSection = ({
             ]}
             onPress={save}
           >
-            <Text style={commonStyles.buttonText}>{lang('save')}</Text>
+            <Text
+              style={
+                working || !!issue || !changes.length
+                  ? commonStyles.secondaryButtonText
+                  : commonStyles.buttonText
+              }
+            >
+              {lang('save')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

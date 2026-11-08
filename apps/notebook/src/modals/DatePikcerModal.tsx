@@ -1,15 +1,17 @@
 import {
   Calendar,
+  CommonButton,
   useLangContext,
   useModalsContext,
   View,
   Text,
-  CommonButton,
 } from '@blacktokki/core';
 import { CalendarProps } from '@blacktokki/core/build/typescript/components/Calendar';
 import dayjs from 'dayjs';
 import React, { Suspense, useState } from 'react';
 import { TouchableOpacity } from 'react-native';
+
+import { useNotebookTheme } from '../hooks/useNotebookTheme';
 
 export type MarkedDateRange = { dateStart: string; dateEnd: string };
 
@@ -36,18 +38,27 @@ const getMarkedDays = (dateString: string, markedDateStrings: MarkedDateRange[])
     startDate = startDate.add(1, 'day');
   }
   return {
-    ...disableDays.reduce((p, c) => {
-      p[c] = { disabled: true };
-      return p;
-    }, {} as Record<string, any>),
-    ...markedDays.reduce((p, c) => {
-      p[c] = { marked: true, dotColor: 'red' };
-      return p;
-    }, {} as Record<string, any>),
-    ...(dateString ? [dateString] : []).reduce((p, c) => {
-      p[c] = { selected: true };
-      return p;
-    }, {} as Record<string, any>),
+    ...disableDays.reduce(
+      (p, c) => {
+        p[c] = { disabled: true };
+        return p;
+      },
+      {} as Record<string, any>
+    ),
+    ...markedDays.reduce(
+      (p, c) => {
+        p[c] = { marked: true, dotColor: 'red' };
+        return p;
+      },
+      {} as Record<string, any>
+    ),
+    ...(dateString ? [dateString] : []).reduce(
+      (p, c) => {
+        p[c] = { selected: true };
+        return p;
+      },
+      {} as Record<string, any>
+    ),
   };
 };
 
@@ -68,6 +79,7 @@ export default function DatePickerModal({
 }) {
   const _dayjs = datetime ? dayjs(datetime) : defaultDayjs();
   const { lang, locale } = useLangContext();
+  const { commonStyles } = useNotebookTheme();
   const [date, setDate] = useState(_dayjs.format('YYYY-MM-DD'));
   const [markedDates, setMarkedDates] = useState<CalendarProps['markedDates']>(
     getMarkedDays(_dayjs.format('YYYY-MM-DD'), markedDateStrings || [])
@@ -116,8 +128,20 @@ export default function DatePickerModal({
         </Suspense>
         {!DIRECT_PICK && (
           <View style={{ flexDirection: 'row' }}>
-            <CommonButton title={lang('save')} onPress={() => onSave(date)} />
-            <CommonButton title={lang('cancel')} onPress={() => onSave(undefined)} />
+            <CommonButton
+              title={lang('save')}
+              onPress={() => onSave(date)}
+              style={commonStyles.commonButton}
+              textStyle={commonStyles.commonButtonText}
+              color={commonStyles.commonButtonHover?.backgroundColor}
+            />
+            <CommonButton
+              title={lang('cancel')}
+              onPress={() => onSave(undefined)}
+              style={commonStyles.commonButton}
+              textStyle={commonStyles.commonButtonText}
+              color={commonStyles.commonButtonHover?.backgroundColor}
+            />
           </View>
         )}
       </View>

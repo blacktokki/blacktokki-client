@@ -1,37 +1,56 @@
 /* eslint-disable prettier/prettier */
 import { Auth, useAuthContext } from '@blacktokki/account';
-import { useLangContext, useColorScheme, Colors, useResizeContext, ModalsProvider, useIsMobile, CommonButton } from '@blacktokki/core';
-import { CardStyleInterpolators, createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
+import {
+  useLangContext,
+  useColorScheme,
+  Colors,
+  useResizeContext,
+  ModalsProvider,
+  useIsMobile,
+  CommonButton,
+} from '@blacktokki/core';
+import {
+  CardStyleInterpolators,
+  createStackNavigator,
+  StackNavigationProp,
+} from '@react-navigation/stack';
 import React, { useMemo } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 
 import NotFoundScreen from '../screens/NotFoundScreen';
 import { NavigationConfig } from '../types';
 import Drawer from './Drawer';
 
-
 const Root = createStackNavigator();
-const rootRef: {current?:StackNavigationProp<any>} = {}
+const rootRef: { current?: StackNavigationProp<any> } = {};
 
 export function push<T>(name: string, params?: T) {
   const routes = rootRef.current?.getState().routes;
-  const route = routes?routes[routes?.length - 1]:undefined
-  if (route === undefined || name === route.name && JSON.stringify(params) === JSON.stringify(route.params)){
+  const route = routes ? routes[routes?.length - 1] : undefined;
+  if (
+    route === undefined ||
+    (name === route.name && JSON.stringify(params) === JSON.stringify(route.params))
+  ) {
     return;
   }
   if (params) rootRef.current?.push(name, params);
   else rootRef.current?.push(name);
 }
 
-function HeaderLeft({navigation, route, config}:{
-  navigation: any,
-  route: any,
-  config: NavigationConfig
+function HeaderLeft({
+  navigation,
+  route,
+  config,
+}: {
+  navigation: any;
+  route: any;
+  config: NavigationConfig;
 }) {
   const isMobile = useIsMobile();
   const theme = useColorScheme();
   const windowType = useResizeContext();
-  const canGOBackScreen = [config.rootScreen.login, config.rootScreen.main].findIndex((v) => v === route.name) === -1;
+  const canGOBackScreen =
+    [config.rootScreen.login, config.rootScreen.main].findIndex((v) => v === route.name) === -1;
   const goBack = () => {
     if (navigation.canGoBack()) navigation.goBack();
     else if (canGOBackScreen) navigation.replace(config.rootScreen.main);
@@ -41,10 +60,18 @@ function HeaderLeft({navigation, route, config}:{
       <TouchableOpacity onPress={goBack} disabled={!isMobile}>
         <CommonButton
           title={''}
-          color={isMobile ? Colors[theme].buttonBackgroundColor : Colors[theme].hoverColor}
+          color={
+            isMobile
+              ? (StyleSheet.flatten(config.headerLeftButtonStyle)?.backgroundColor ??
+                Colors[theme].buttonBackgroundColor)
+              : (config.headerLeftButtonHoverColor ?? Colors[theme].hoverColor)
+          }
           onPress={goBack}
           disabled={isMobile}
-          style={{ width: 32, height: 32, margin: 16, paddingVertical: 1, paddingHorizontal: 4 }}
+          style={[
+            { width: 32, height: 32, margin: 16, paddingVertical: 1, paddingHorizontal: 4 },
+            config.headerLeftButtonStyle,
+          ]}
         >
           {config.headerLeftIcon}
         </CommonButton>
@@ -53,13 +80,16 @@ function HeaderLeft({navigation, route, config}:{
   return null;
 }
 
-const DefaultExtraProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
+const DefaultExtraProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <>{children}</>
+);
 
 export default ({ config }: { config: NavigationConfig }) => {
   const isMobile = useIsMobile();
+  const windowType = useResizeContext();
   const { auth } = useAuthContext();
   const theme = useColorScheme();
-  const {lang, locale} = useLangContext()
+  const { lang, locale } = useLangContext();
   const entries = useMemo(() => {
     if (auth.user === undefined) return [];
     console.log('current user: ', auth.user);
@@ -70,23 +100,34 @@ export default ({ config }: { config: NavigationConfig }) => {
     return !auth.isLogin ? [] : config.modals;
   }, [auth]);
   const backgroundStyle = theme === 'light' ? {} : { backgroundColor: '#010409' };
-  const ExtraProvider:React.ComponentType<any> = config.ExtraProvider || DefaultExtraProvider;
+  const headerStyle = StyleSheet.flatten([
+    config.headerStyle,
+    windowType === 'landscape' && config.headerCompactStyle,
+  ]);
+  const ExtraProvider: React.ComponentType<any> = config.ExtraProvider || DefaultExtraProvider;
   return auth.user !== undefined ? (
     <View style={{ flexDirection: 'row', flex: 1 }}>
       <ModalsProvider modals={modalValues}>
-        {auth.isLogin ? <Drawer auth={auth} children={config.drawer}/> : undefined}
+        {auth.isLogin ? (
+          <Drawer auth={auth} children={config.drawer} style={config.drawerStyle} />
+        ) : undefined}
         <View style={[{ flex: 1 }, backgroundStyle]}>
           <ExtraProvider>
             <Root.Navigator
               screenOptions={({ navigation, route }) => {
                 rootRef.current = navigation;
                 return {
-                  headerStyle: config.headerStyle ? { ...config.headerStyle, height: isMobile ? 50 : undefined } : {
-                    backgroundColor: Colors[theme].header,
-                    height: isMobile ? 50 : undefined,
-                  },
+                  headerStyle: config.headerStyle
+                    ? {
+                        ...headerStyle,
+                        height: headerStyle?.height ?? (isMobile ? 50 : undefined),
+                      }
+                    : {
+                        backgroundColor: Colors[theme].header,
+                        height: isMobile ? 50 : undefined,
+                      },
                   headerTitleStyle: config.headerTitleStyle || { color: Colors[theme].text },
-                  headerLeft: () => <HeaderLeft {...{navigation, route, config}}/>,
+                  headerLeft: () => <HeaderLeft {...{ navigation, route, config }} />,
                   headerRight: () => config.headerRight,
                   headerTitle: config.headerTitle,
                   headerLeftContainerStyle: config.headerLeftContainerStyle || {
@@ -97,7 +138,7 @@ export default ({ config }: { config: NavigationConfig }) => {
                   cardStyle: [{ flexShrink: 1 }, backgroundStyle],
                   animationEnabled: isMobile,
                   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-                }
+                };
               }}
             >
               {entries.map(([key, screen]) => (
@@ -105,7 +146,13 @@ export default ({ config }: { config: NavigationConfig }) => {
                   key={key}
                   name={key}
                   component={screen.component}
-                  options={{ title: lang( typeof screen.title === "string" ? screen.title as string: (screen.title as (auth: Auth)=>string)(auth) ) }}
+                  options={{
+                    title: lang(
+                      typeof screen.title === 'string'
+                        ? (screen.title as string)
+                        : (screen.title as (auth: Auth) => string)(auth)
+                    ),
+                  }}
                 />
               ))}
               <Root.Screen

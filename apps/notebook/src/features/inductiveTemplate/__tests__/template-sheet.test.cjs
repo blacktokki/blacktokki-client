@@ -243,8 +243,9 @@ test('missing intersections of two repeat axes are created in the same table', (
   ]);
 });
 
-function fixture(props) {
+function fixture(props, platform = 'web') {
   const slots = [];
+  let updates = 0;
   let cursor = 0;
   let effects = [];
   let windowSize = 'landscape';
@@ -259,7 +260,9 @@ function fixture(props) {
       return [
         slots[index],
         (value) => {
-          slots[index] = typeof value === 'function' ? value(slots[index]) : value;
+          const next = typeof value === 'function' ? value(slots[index]) : value;
+          if (!Object.is(next, slots[index])) updates++;
+          slots[index] = next;
         },
       ];
     },
@@ -298,7 +301,7 @@ function fixture(props) {
     react,
     'react-native': {
       ...native,
-      Platform: { OS: 'web' },
+      Platform: { OS: platform },
       StyleSheet: { create: (value) => value },
     },
     'react-native-paper': { Icon: 'Icon' },
@@ -355,11 +358,58 @@ function fixture(props) {
     render,
     all,
     style,
+    updates: () => updates,
     resize: (size) => {
       windowSize = size;
     },
     dispose: () => slots.forEach((slot) => slot?.cleanup?.()),
   };
+}
+
+for (const platform of ['web', 'ios']) {
+  test(`${platform} viewport changes within a virtual column preserve state and pending edits`, () => {
+    const template = '## G\n\n' + table(['A'], [['{{A}}']]);
+    const notes = Array.from({ length: 8 }, (_, index) =>
+      note(`Tasks/${index}`, '## G\n\n' + table(['A'], [['Original']]))
+    );
+    const ui = fixture({ markdown: template, notes, allNotes: notes }, platform);
+    const viewport = () =>
+      ui.all(ui.render(), (node) => node.props.onLayout && node.props.onScroll)[0];
+    const layout = (width) => {
+      const node = viewport();
+      const before = ui.updates();
+      node.props.onLayout({ nativeEvent: { layout: { width, height: 400 } } });
+      return ui.updates() - before;
+    };
+    try {
+      assert.equal(layout(701), 1);
+      for (const width of [701, 702, 750, 839.5, 840]) assert.equal(layout(width), 0);
+      assert.equal(layout(841), 1);
+      assert.equal(layout(842), 0);
+      ui.resize('portrait');
+      assert.equal(layout(601), 1);
+      assert.equal(layout(799), 0);
+      assert.equal(layout(801), 1);
+      if (platform === 'web') {
+        const findCell = () =>
+          ui.all(
+            ui.render(),
+            (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Tasks/0: A'
+          )[0];
+        findCell().props.onChangeText('Pending edit');
+        layout(1001);
+        assert.equal(findCell().props.value, 'Pending edit');
+        viewport().props.onScroll({ currentTarget: { scrollLeft: 600 } });
+        const headers = ui.all(
+          ui.render(),
+          (node) => node.props.role === 'columnheader' && node.props.key
+        );
+        assert(headers.some((node) => node.props.key === 'Tasks/7'));
+      }
+    } finally {
+      ui.dispose();
+    }
+  });
 }
 
 test('empty alignment cells render editable inputs and retain their identity after editing', () => {

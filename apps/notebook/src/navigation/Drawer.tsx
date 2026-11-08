@@ -17,6 +17,7 @@ import ContentGroupSection, {
   RenderIcon,
   ContentGroupSubType,
   CurrentTabSection,
+  ContentListItem,
 } from '../screens/main/home/ContentGroupSection';
 
 export default () => {
@@ -73,18 +74,28 @@ export default () => {
     return (
       <TouchableOpacity
         style={[styles.tabItem, tabStyles, disabled && { opacity: 0.33 }]}
+        accessibilityLabel={label}
         disabled={disabled}
         onPress={() => setCurrentView(type)}
       >
-        <Icon name={icon} size={16} color={tabStyles.color} style={{ marginBottom: 4 }} />
+        <Icon
+          name={icon}
+          size={16}
+          color={tabStyles.color}
+          style={[{ marginBottom: 4 }, commonStyles.tabIcon]}
+        />
         <Text
-          style={{
-            fontSize: 13,
-            textAlign: 'center',
-            fontWeight: isActive ? 'bold' : 'normal',
-            color: tabStyles.color,
-            fontFamily: commonStyles.text.fontFamily,
-          }}
+          numberOfLines={commonStyles.tabText?.flexShrink ? 1 : undefined}
+          style={[
+            {
+              fontSize: 13,
+              textAlign: 'center',
+              fontWeight: isActive ? 'bold' : 'normal',
+              color: tabStyles.color,
+              fontFamily: commonStyles.text.fontFamily,
+            },
+            commonStyles.tabText,
+          ]}
         >
           {label}
         </Text>
@@ -105,7 +116,7 @@ export default () => {
 
   return (
     <View style={commonStyles.backgroundView}>
-      <List.Item
+      <ContentListItem
         left={RenderIcon('home')}
         title={lang('Home')}
         titleStyle={{ fontFamily: commonStyles.text.fontFamily, color: commonStyles.text.color }}
@@ -141,7 +152,10 @@ export default () => {
         ) : (
           <List.Subheader
             selectable={false}
-            style={{ fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color }}
+            style={[
+              { fontFamily: commonStyles.title.fontFamily, color: commonStyles.title.color },
+              commonStyles.listSectionHeader,
+            ]}
           >
             {lang('All Notes')}
           </List.Subheader>
@@ -154,7 +168,7 @@ export default () => {
           </View>
         )}
         {usageMode === 'SIMPLE' || currentView === 'RECENT' ? (
-          <ContentGroupSection type={'RECENT'} noteCount={10} />
+          <ContentGroupSection type={'RECENT'} />
         ) : (
           <ContentGroupSection
             type={currentView === 'CURRENT_NOTE' ? currentSubView : currentView}

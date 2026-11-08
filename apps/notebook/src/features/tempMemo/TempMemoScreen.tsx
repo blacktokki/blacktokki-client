@@ -645,6 +645,9 @@ function MemoWorkspace({
           <Text style={commonStyles.text}>{lang('Could not load notes.')}</Text>
           <CommonButton
             title={lang('Retry')}
+            style={commonStyles.commonButton}
+            textStyle={commonStyles.commonButtonText}
+            color={commonStyles.commonButtonHover?.backgroundColor}
             onPress={() => {
               pages.refetch();
               refetchTabs();
@@ -751,7 +754,13 @@ export const TempMemoScreen: React.FC = () => {
       {storage.isError ? (
         <View>
           <Text style={commonStyles.text}>{lang('Could not restore temporary memos.')}</Text>
-          <CommonButton title={lang('Retry')} onPress={() => storage.refetch()} />
+          <CommonButton
+            title={lang('Retry')}
+            onPress={() => storage.refetch()}
+            style={commonStyles.commonButton}
+            textStyle={commonStyles.commonButtonText}
+            color={commonStyles.commonButtonHover?.backgroundColor}
+          />
         </View>
       ) : storage.data ? (
         <MemoWorkspace key={storage.scope} state={storage.data} update={storage.update} />

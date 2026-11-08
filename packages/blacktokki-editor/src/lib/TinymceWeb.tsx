@@ -58,6 +58,33 @@ export default (
     <Editor
       tinymceScriptSrc={path}
       onInit={(_e, editor) => {
+        const themeStyle = document.querySelector<HTMLStyleElement>('style[data-editor-style]');
+        if (themeStyle) {
+          const syncStyles = () => {
+            const roots: (HTMLElement | ShadowRoot)[] = [editor.getDoc().head];
+            editor
+              .getContainer()
+              .querySelectorAll('.supercode-body')
+              .forEach((host) => {
+                if (host.shadowRoot) roots.push(host.shadowRoot);
+              });
+            roots.forEach((root) => {
+              let style = root.querySelector<HTMLStyleElement>('style[data-editor-style]');
+              if (!style) {
+                style = themeStyle.cloneNode(true) as HTMLStyleElement;
+                root.appendChild(style);
+              }
+              if (style.textContent !== themeStyle.textContent) {
+                style.textContent = themeStyle.textContent;
+              }
+            });
+          };
+          syncStyles();
+          const observer = new MutationObserver(syncStyles);
+          observer.observe(themeStyle, { childList: true, subtree: true, characterData: true });
+          observer.observe(editor.getContainer(), { childList: true, subtree: true });
+          editor.on('remove', () => observer.disconnect());
+        }
         props.onReady?.();
         const toolbar = editor.getContainer().firstChild?.firstChild as HTMLElement;
         if (toolbar) {

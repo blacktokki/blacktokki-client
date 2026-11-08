@@ -35,7 +35,7 @@ export const SkinConfigSection = () => {
   const color = commonStyles.text.color;
 
   return (
-    <ConfigSection title={lang('* 스킨 설정')}>
+    <ConfigSection title={lang('* 스킨 설정')} titleStyle={commonStyles.settingsSectionTitle}>
       <View style={{ flexDirection: 'column', gap: 12 }}>
         <View style={{ flexDirection: 'row' }}>
           {[
@@ -46,12 +46,19 @@ export const SkinConfigSection = () => {
             <TextButton
               key={title as string}
               title={title as string}
-              textStyle={{
-                fontSize: 16,
-                color,
-                textDecorationLine: configTheme === scheme ? 'underline' : 'none',
-              }}
-              style={{ borderRadius: 20 }}
+              textStyle={[
+                {
+                  fontSize: 16,
+                  color,
+                  textDecorationLine: configTheme === scheme ? 'underline' : 'none',
+                },
+                commonStyles.optionText,
+              ]}
+              style={[
+                { borderRadius: 20 },
+                commonStyles.optionButton,
+                configTheme === scheme && commonStyles.selectedOption,
+              ]}
               onPress={() => setConfigTheme(scheme as ColorSchemeName)}
             />
           ))}
@@ -67,12 +74,19 @@ export const OptionButton = (props: { title: string; onPress: () => void; active
   return (
     <TextButton
       title={props.title}
-      textStyle={{
-        fontSize: 16,
-        color,
-        textDecorationLine: props.active ? 'underline' : 'none',
-      }}
-      style={{ borderRadius: 20 }}
+      textStyle={[
+        {
+          fontSize: 16,
+          color,
+          textDecorationLine: props.active ? 'underline' : 'none',
+        },
+        commonStyles.optionText,
+      ]}
+      style={[
+        { borderRadius: 20 },
+        commonStyles.optionButton,
+        props.active && commonStyles.selectedOption,
+      ]}
       onPress={props.onPress}
     />
   );
@@ -118,20 +132,29 @@ export default () => {
 
   return (
     <View>
-      <View style={commonStyles.card}>
+      <View style={[commonStyles.card, commonStyles.settingsSection]}>
         <ConfigSection
           title={lang('* Usage')}
+          titleStyle={commonStyles.settingsSectionTitle}
           onPress={() => navigation.push('NoteViewer', { key: 'Usage' })}
         />
       </View>
-      <View style={commonStyles.card}>
-        <LanguageConfigSection />
+      <View style={[commonStyles.card, commonStyles.settingsSection]}>
+        <LanguageConfigSection
+          titleStyle={commonStyles.settingsSectionTitle}
+          buttonStyle={commonStyles.optionButton}
+          buttonTextStyle={commonStyles.optionText}
+          activeButtonStyle={commonStyles.selectedOption}
+        />
       </View>
-      <View style={commonStyles.card}>
+      <View style={[commonStyles.card, commonStyles.settingsSection]}>
         <SkinConfigSection />
       </View>
-      <View style={commonStyles.card}>
-        <ConfigSection title={lang('* Note Settings')}>
+      <View style={[commonStyles.card, commonStyles.settingsSection]}>
+        <ConfigSection
+          title={lang('* Note Settings')}
+          titleStyle={commonStyles.settingsSectionTitle}
+        >
           <View style={{ flexDirection: 'row' }}>
             <OptionButton
               title={lang('Mode Settings')}
@@ -290,17 +313,21 @@ export default () => {
       {usageMode !== 'SIMPLE' && (
         <>
           {extension.feature.elements('config')}
-          <View style={commonStyles.card}>
+          <View style={[commonStyles.card, commonStyles.settingsSection]}>
             <ConfigSection
               title={lang('* Extension Settings')}
+              titleStyle={commonStyles.settingsSectionTitle}
               onPress={() => navigation.push('Extension')}
             />
           </View>
         </>
       )}
-      <View style={commonStyles.card}>
+      <View style={[commonStyles.card, commonStyles.settingsSection]}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <ConfigSection title={lang('* Account Settings')} />
+          <ConfigSection
+            title={lang('* Account Settings')}
+            titleStyle={commonStyles.settingsSectionTitle}
+          />
           {!auth.isLocal && (
             <Text numberOfLines={1} ellipsizeMode="tail" style={{ marginLeft: 4 }}>
               - {auth.user?.username}

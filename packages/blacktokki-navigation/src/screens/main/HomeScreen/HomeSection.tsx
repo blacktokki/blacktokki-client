@@ -48,12 +48,17 @@ export default function HomeSection({
   headerTitle,
   children,
   swipeEnabled,
+  tabBarOptions,
 }: {
   tabViews: TabViewOption[];
   homeView: { title: string; headerRight: () => React.JSX.Element };
   headerTitle?: string;
   children?: React.ReactNode;
   swipeEnabled?: boolean;
+  tabBarOptions?: Pick<
+    React.ComponentProps<typeof TabView>,
+    'indicatorStyle' | 'labelStyle' | 'activeTabStyle'
+  >;
 }) {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -88,6 +93,7 @@ export default function HomeSection({
     <>
       {homeView.headerRight()}
       <TabView
+        {...tabBarOptions}
         tabs={tabs}
         swipeEnabled={swipeEnabled}
         tabBarPosition="bottom"

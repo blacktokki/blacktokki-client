@@ -1,7 +1,7 @@
 import { useResizeContext } from '@blacktokki/core';
 import { RouteProp, useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 
 import {
@@ -36,9 +36,14 @@ export const NoteViewerScreen: React.FC = () => {
 
   const page = viewers?.find((v) => v.key === key);
 
-  const paragraphs = parseHtmlToParagraphs(page?.description || '');
-  const paragraphItem = paragraphs.find((v) =>
-    paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })
+  const paragraphs = useMemo(
+    () => parseHtmlToParagraphs(page?.description || ''),
+    [page?.description]
+  );
+  const paragraphItem = useMemo(
+    () =>
+      paragraphs.find((v) => paragraphByKey(v, paragraph ? { paragraph, section } : { paragraph })),
+    [paragraphs, paragraph, section]
   );
   const [description, setDescription] = useState<string>();
   useEffect(() => {

@@ -153,8 +153,8 @@ export const EditPageSection = ({
                   v.type === '_NOTELINK'
                     ? `(${titleFormat(v)})`
                     : v.type === '_CHILDNOTE'
-                    ? `(${v.title})`
-                    : '';
+                      ? `(${v.title})`
+                      : '';
                 const url = noteLinkToUrl(v, title);
                 return {
                   text: name + description,
@@ -192,7 +192,7 @@ export const EditPageSection = ({
 
       <View style={commonStyles.buttonContainer}>
         <TouchableOpacity style={[commonStyles.secondaryButton, { flex: 1 }]} onPress={onCancel}>
-          <Text style={commonStyles.buttonText}>{lang('cancel')}</Text>
+          <Text style={commonStyles.secondaryButtonText}>{lang('cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           disabled={onSave === undefined}
@@ -202,7 +202,9 @@ export const EditPageSection = ({
           ]}
           onPress={onSave}
         >
-          <Text style={commonStyles.buttonText}>{lang('save')}</Text>
+          <Text style={!onSave ? commonStyles.secondaryButtonText : commonStyles.buttonText}>
+            {lang('save')}
+          </Text>
         </TouchableOpacity>
       </View>
     </>

@@ -253,7 +253,19 @@ function fixture(props, platform = 'web') {
     a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
     Fragment: 'Fragment',
-    createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+    createElement: (type, props, ...children) => ({
+      type,
+      props: {
+        ...props,
+        children:
+          type === 'FlatList'
+            ? [
+                props.ListHeaderComponent,
+                ...props.data.map((item, index) => props.renderItem({ item, index })),
+              ]
+            : children,
+      },
+    }),
     useState: (initial) => {
       const index = cursor++;
       if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial;
@@ -366,7 +378,7 @@ function fixture(props, platform = 'web') {
   };
 }
 
-for (const platform of ['web', 'ios']) {
+for (const platform of ['web', 'ios', 'android']) {
   test(`${platform} viewport changes within a virtual column preserve state and pending edits`, () => {
     const template = '## G\n\n' + table(['A'], [['{{A}}']]);
     const notes = Array.from({ length: 8 }, (_, index) =>
@@ -390,27 +402,102 @@ for (const platform of ['web', 'ios']) {
       assert.equal(layout(601), 1);
       assert.equal(layout(799), 0);
       assert.equal(layout(801), 1);
-      if (platform === 'web') {
-        const findCell = () =>
-          ui.all(
-            ui.render(),
-            (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Tasks/0: A'
-          )[0];
-        findCell().props.onChangeText('Pending edit');
-        layout(1001);
-        assert.equal(findCell().props.value, 'Pending edit');
-        viewport().props.onScroll({ currentTarget: { scrollLeft: 600 } });
-        const headers = ui.all(
+      const findCell = () =>
+        ui.all(
           ui.render(),
-          (node) => node.props.role === 'columnheader' && node.props.key
-        );
-        assert(headers.some((node) => node.props.key === 'Tasks/7'));
-      }
+          (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Tasks/0: A'
+        )[0];
+      findCell().props.onChangeText('Pending edit');
+      layout(1001);
+      assert.equal(findCell().props.value, 'Pending edit');
+      viewport().props.onScroll({ nativeEvent: { contentOffset: { x: 600 } } });
+      const headers = ui.all(
+        ui.render(),
+        (node) => node.props.role === 'columnheader' && node.props.key
+      );
+      assert(headers.some((node) => node.props.key === 'Tasks/7'));
+    } finally {
+      ui.dispose();
+    }
+  });
+
+  test(`${platform} layout measurements grow and shrink cells without reading DOM nodes`, () => {
+    const template = '## Field\n\n{{Value}}';
+    const notes = [note('Tasks/One', '## Field\n\nShort')];
+    const ui = fixture({ markdown: template, notes, allNotes: notes }, platform);
+    const input = () =>
+      ui.all(
+        ui.render(),
+        (node) => node.type === 'TextInput' && node.props.accessibilityLabel === 'Tasks/One: Value'
+      )[0];
+    const measure = (value, height) => {
+      const probe = ui.all(
+        ui.render(),
+        (node) =>
+          node.type === 'Text' &&
+          node.props.numberOfLines === 10 &&
+          node.props.children[0] === value &&
+          ui.style(node).width === 262
+      )[0];
+      assert(probe, `missing measurement for ${value}`);
+      probe.props.onLayout({ nativeEvent: { layout: { height } } });
+    };
+    try {
+      measure('Short', 20);
+      assert.equal(ui.style(input()).height, 44);
+      input().props.onChangeText('Long text '.repeat(20).trim());
+      measure(input().props.value, 100);
+      assert.equal(ui.style(input()).height, 118);
+      input().props.onChangeText('Short');
+      assert.equal(ui.style(input()).height, 44);
+      input().props.onChangeText('Very long');
+      measure('Very long', 1000);
+      assert.equal(ui.style(input()).height, 218);
+    } finally {
+      ui.dispose();
+    }
+  });
+
+  test(`${platform} adding a note scrolls to the new column through ScrollView`, () => {
+    const notes = [note('Tasks/One', '## Field\n\nShort')];
+    const ui = fixture({ markdown: '## Field\n\n{{Value}}', notes, allNotes: notes }, platform);
+    const viewport = () =>
+      ui.all(ui.render(), (node) => node.props.onLayout && node.props.onScroll)[0];
+    const scrolls = [];
+    try {
+      viewport().props.ref.current = { scrollToEnd: (options) => scrolls.push(options) };
+      const add = ui.all(ui.render(), (node) => node.props.accessibilityLabel === 'New note')[0];
+      add.props.onPress();
+      viewport().props.onContentSizeChange();
+      assert.deepEqual(scrolls, [{ animated: true }]);
+      viewport().props.onContentSizeChange();
+      assert.equal(scrolls.length, 1);
     } finally {
       ui.dispose();
     }
   });
 }
+
+test('height measurements use bounded batches and cache repeated text at the same width', () => {
+  const template = '## Field\n\n{{Value}}';
+  const notes = Array.from({ length: 39 }, (_, index) =>
+    note(`Tasks/${index}`, `## Field\n\nValue ${index}`)
+  );
+  const ui = fixture({ markdown: template, notes, allNotes: notes });
+  const probes = () =>
+    ui.all(ui.render(), (node) => node.type === 'Text' && node.props.numberOfLines === 10);
+  try {
+    assert.equal(probes().length, 32);
+    for (const probe of probes()) probe.props.onLayout({ nativeEvent: { layout: { height: 20 } } });
+    assert.equal(probes().length, 8);
+    for (const probe of probes()) probe.props.onLayout({ nativeEvent: { layout: { height: 20 } } });
+    assert.equal(probes().length, 0);
+    ui.resize('portrait');
+    assert.equal(probes().length, 32);
+  } finally {
+    ui.dispose();
+  }
+});
 
 test('empty alignment cells render editable inputs and retain their identity after editing', () => {
   const notes = [
@@ -449,12 +536,12 @@ test('orientation changes cell widths and header limits, including the first hea
         ui.render(),
         (node) =>
           node.type === 'Text' &&
-          node.props.ref &&
+          node.props.onLayout &&
+          node.props.numberOfLines === 1 &&
           !node.props.role &&
           node.props.children[0] === text
       )[0];
-      label.props.ref({ scrollWidth: width });
-      label.props.onLayout();
+      label.props.onLayout({ nativeEvent: { layout: { width } } });
     };
     measure('Note title:', 240);
     const headerWidth = () =>

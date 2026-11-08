@@ -9,16 +9,16 @@
 ### expo / react-native / react-native-web
 1. PC 웹을 기준으로 우선 개발하되, 가능한 모바일 웹, 모바일 앱에 호환되는 코드를 작성해야 한다.
 ### react-navigation
-1. navigation 사용시 일반적인 화면 전환이나 메인 탭 이동 시에는 기존 스택 화면을 재사용하고 중복을 방지하는 `navigate()`를 사용한다.
-2. navigation 사용시 상세 페이지 내에서 또 다른 상세 페이지로 이동하는 등 동일한 구조의 화면을 중첩해서 쌓아야 할 때는 `push()`를 사용한다.
-3. navigation 사용시 사용자가 '뒤로 가기'를 통해 이전 탐색 이력을 순차적으로 확인해야 하는 '순환적 탐색' 구조에서는 반드시 `push()`를 적용해야 한다.
-4. navigation 사용시 불필요한 메모리 낭비와 스택 오버플로우를 막기 위해, 화면의 고유성이 보장되어야 하는 경우에는 `navigate()` 사용을 권장한다.
+2. navigation 사용시 일반적인 화면 전환이나 메인 탭 이동 시에는 기존 스택 화면을 재사용하고 중복을 방지하는 `navigate()`를 사용한다.
+3. navigation 사용시 상세 페이지 내에서 또 다른 상세 페이지로 이동하는 등 동일한 구조의 화면을 중첩해서 쌓아야 할 때는 `push()`를 사용한다.
+4. navigation 사용시 사용자가 '뒤로 가기'를 통해 이전 탐색 이력을 순차적으로 확인해야 하는 '순환적 탐색' 구조에서는 반드시 `push()`를 적용해야 한다.
+5. navigation 사용시 불필요한 메모리 낭비와 스택 오버플로우를 막기 위해, 화면의 고유성이 보장되어야 하는 경우에는 `navigate()` 사용을 권장한다.
 ### react-query
 1. `\service`의 기능들은 `react-query`를 포함한 커스텀 훅을 구현해서 사용한다.
 ### react-native-vector-icons
-1. 아이콘 종류는 `FontAwesome`, `MaterialCommunityIcons(MaterialDesignIcons)`만 사용한다.
+2. 아이콘 종류는 `FontAwesome`, `MaterialCommunityIcons(MaterialDesignIcons)`만 사용한다.
 ### react-native-render-html
-1. RenderHtml 컴포넌트를 사용할 경우 `useToCardPage` 또는 `DiffPreview`를 통해서 사용한다.
+3. RenderHtml 컴포넌트를 사용할 경우 `useToCardPage` 또는 `DiffPreview`를 통해서 사용한다.
 
 ## 내부 라이브러리
 ### @blacktokki/core
@@ -58,6 +58,8 @@
 ### features (`/src/features`)
 1. 이 서비스의 부가기능은 `/features`에 각 부가기능 별로 포함한다.
 2. `/services/notebook.ts`을 사용하면서 백엔드에서 해당 기능의 존재를 인지하는 경우 해당 기능을 `features`로 분리 할 수 없다.
+3. `features`에서는 `Platform.OS`, `Platform.select` 등 플랫폼 판별에 따른 코드 분기를 금지하고, 웹·모바일에 공통 컴포넌트·API·이벤트 처리 경로를 사용한다. 플랫폼 판별 별칭·헬퍼나 `.web`·`.native` 파일로 분기를 옮기는 우회도 금지한다.
+4. 기존 `features/pdf/exportPdf.ts`의 웹 인쇄·모바일 PDF 공유 분기만 예외로 유지한다.
 ### screens (`/src/screens`)
 1. 스크린은 `Screens.tsx`으로 끝나는 이름으로 지정한다.
 2. 여러 스크린에서 사용 가능한 공통 화면은 `Section.tsx` 또는 `Sections.tsx`로 끝나는 이름으로 지정한다.

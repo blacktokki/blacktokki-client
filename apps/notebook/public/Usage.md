@@ -239,7 +239,7 @@ If no templates appear, check that at least two notes have similar heading struc
 * Select **＋** to open a blank memo. Its first line becomes the tab title as you type.
 * Drag tabs left or right to reorder them. Use **‹ / ›** to reach tabs that do not fit on screen.
 * Drafts are automatically kept in the current browser, so you can switch tabs or return later and continue editing.
-* A **●** marks a tab with unsaved changes. Pause typing to reveal the **Save** button at the bottom-right of the editor; it hides when you resume typing.
+* A **●** marks a tab with unsaved changes. Pause typing to reveal the **Save** button over the bottom-right of the content; it hides when you edit the content.
 * Select **Save** to save the current tab to its note and continue editing. A brief confirmation appears on the button after saving.
 * Saving a new memo creates a note with the tab title and lets you continue editing. A number is added if that title is already in use.
 * Saving an existing note overwrites it with your edits. You can also select **×** to choose whether to save changes when closing a tab.

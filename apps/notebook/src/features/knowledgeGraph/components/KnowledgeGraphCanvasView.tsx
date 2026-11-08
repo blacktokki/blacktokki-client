@@ -847,6 +847,10 @@ const KnowledgeGraphCanvasView: React.FC<KnowledgeGraphCanvasViewProps> = ({
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
+        backgroundImage: isDark
+          ? 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px)'
+          : 'radial-gradient(circle, rgba(0, 0, 0, 0.10) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
         ...style,
       }}
     >

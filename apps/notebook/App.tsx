@@ -4,8 +4,10 @@ import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { QueryClient, QueryClientProvider } from 'react-query';
 
 import Navigation from './src/navigation';
@@ -15,13 +17,9 @@ const queryClient = new QueryClient();
 const ko = require('./src/lang/ko.json');
 
 const iconFonts = {
-  FontAwesome: require('react-native-vector-icons/Fonts/FontAwesome.ttf'),
-  [Platform.OS === 'ios'
-    ? 'Material Design Icons'
-    : 'MaterialCommunityIcons']: require('react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf'),
-  [Platform.OS === 'ios'
-    ? 'anticon'
-    : 'AntDesign']: require('react-native-vector-icons/Fonts/AntDesign.ttf'),
+  [FontAwesome.getFontFamily()]: require('react-native-vector-icons/Fonts/FontAwesome.ttf'),
+  [MaterialCommunityIcons.getFontFamily()]: require('react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf'),
+  [AntDesign.getFontFamily()]: require('react-native-vector-icons/Fonts/AntDesign.ttf'),
 };
 
 export default function App() {

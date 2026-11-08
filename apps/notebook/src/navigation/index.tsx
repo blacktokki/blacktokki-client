@@ -93,8 +93,8 @@ export default () => {
   return (
     <PaperProvider theme={theme}>
       {Platform.OS === 'web' && (
-        <style>{`
-          :root {
+        <style data-editor-style>{`
+          :root, :host {
             color-scheme: ${scheme};
             scrollbar-color: ${commonStyles.inactiveTab.color} ${commonStyles.container.backgroundColor};
           }

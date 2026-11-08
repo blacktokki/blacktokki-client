@@ -1,6 +1,6 @@
 import { Text } from '@blacktokki/core';
 import React, { useState } from 'react';
-import { Platform, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
@@ -51,7 +51,6 @@ export const KnowledgeGraphToggle: React.FC<KnowledgeGraphToggleProps> = ({
           backgroundColor: active ? activeBackgroundColor : commonStyles.card?.backgroundColor,
           borderColor: active ? activeBorderColor : inactiveBorderColor,
         },
-        Platform.OS === 'web' && styles.webButton,
         focused && commonStyles.focusedBorder,
       ]}
       activeOpacity={1}
@@ -59,15 +58,6 @@ export const KnowledgeGraphToggle: React.FC<KnowledgeGraphToggleProps> = ({
       onPress={disabled ? undefined : onToggle}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      {...(Platform.OS === 'web'
-        ? {
-            onClick: (event: any) => {
-              event.stopPropagation();
-              if (!disabled) onToggle();
-            },
-            onPointerDown: (event: any) => event.stopPropagation(),
-          }
-        : {})}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: active, busy: working, disabled }}

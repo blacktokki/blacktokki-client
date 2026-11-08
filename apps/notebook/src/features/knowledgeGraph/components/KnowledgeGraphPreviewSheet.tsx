@@ -1,6 +1,6 @@
 import { Text, useLangContext } from '@blacktokki/core';
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { parseHtmlToParagraphs } from '../../../components/HeaderSelectBar';
@@ -162,12 +162,6 @@ export const KnowledgeGraphPreviewSheet: React.FC<KnowledgeGraphPreviewSheetProp
             backgroundColor: isDark ? 'rgba(28, 32, 38, 0.94)' : 'rgba(255, 255, 255, 0.95)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
           },
-          Platform.OS === 'web'
-            ? ({
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-              } as any)
-            : {},
         ]}
       >
         <View style={styles.header}>

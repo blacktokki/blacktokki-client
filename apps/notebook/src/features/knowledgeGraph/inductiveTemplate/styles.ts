@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 export const templateGraphStyles = StyleSheet.create({
   toggle: {
+    pointerEvents: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 9.5,
@@ -20,7 +21,6 @@ export const templateGraphStyles = StyleSheet.create({
     bottom: 0,
     opacity: 0.45,
   },
-  webButton: { pointerEvents: 'auto', cursor: 'pointer' } as any,
   related: { gap: 8, marginVertical: 8 },
   label: { fontSize: 11, lineHeight: 16 },
   list: { flexDirection: 'row', gap: 6 },

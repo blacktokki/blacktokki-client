@@ -103,7 +103,7 @@ export const EditPageSection = ({
   title: string;
   content: string;
   setContent: (content: string) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   onSave?: () => void;
 }) => {
   const { commonStyles, colorScheme } = useNotebookTheme();
@@ -190,23 +190,19 @@ export const EditPageSection = ({
         ]}
       />
 
-      <View style={commonStyles.buttonContainer}>
-        <TouchableOpacity style={[commonStyles.secondaryButton, { flex: 1 }]} onPress={onCancel}>
-          <Text style={commonStyles.secondaryButtonText}>{lang('cancel')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          disabled={onSave === undefined}
-          style={[
-            onSave ? commonStyles.button : commonStyles.secondaryButton,
-            { flex: 1, marginLeft: 8 },
-          ]}
-          onPress={onSave}
-        >
-          <Text style={!onSave ? commonStyles.secondaryButtonText : commonStyles.buttonText}>
-            {lang('save')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {onSave && (
+        <View style={commonStyles.buttonContainer}>
+          <TouchableOpacity style={[commonStyles.secondaryButton, { flex: 1 }]} onPress={onCancel}>
+            <Text style={commonStyles.secondaryButtonText}>{lang('cancel')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[commonStyles.button, { flex: 1, marginLeft: 8 }]}
+            onPress={onSave}
+          >
+            <Text style={commonStyles.buttonText}>{lang('save')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </>
   );
 };

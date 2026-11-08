@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Animated,
   PanResponder,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -63,9 +62,7 @@ const SAVE_IDLE_DELAY_MS = 1000;
 const SAVE_FEEDBACK_MS = 1200;
 const SAVE_BUTTON_HEIGHT = 40;
 const SAVE_BUTTON_INSET = 18;
-const SAVE_BUTTON_CLEARANCE = SAVE_BUTTON_HEIGHT + SAVE_BUTTON_INSET * 2;
-type MemoEditActivity = { id: string; composing: boolean };
-type MemoEditListener = (id: string, composing?: boolean) => void;
+const EDITOR_READY_CHECK_MS = 50;
 
 function MemoWorkspace({
   state,
@@ -89,7 +86,6 @@ function MemoWorkspace({
   const mutation = useCreateOrUpdatePage();
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
-  const editActivityListener = useRef<MemoEditListener | undefined>(undefined);
   const [visitedEditorIds, setVisitedEditorIds] = useState<string[]>([]);
   const [readyEditorIds, setReadyEditorIds] = useState<string[]>([]);
   const [draggingId, setDraggingId] = useState<string>();
@@ -656,22 +652,14 @@ function MemoWorkspace({
         </View>
       )}
       {((!recent.isSuccess && !selectedEditorId) || (active && !selectedEditorId)) && (
-        <LoadingView />
+        <LoadingView style={[commonStyles.flex, styles.editorLoading]} />
       )}
-      <View
-        {...Platform.select({ web: { dataSet: { tempMemoEditor: true } } })}
-        style={selectedEditorId ? [commonStyles.flex, styles.editorArea] : styles.hiddenEditor}
-      >
-        {Platform.OS === 'web' && (
-          <style>{`
-            [data-temp-memo-editor] .tox-tinymce {
-              border-top-width: 0;
-              border-top-left-radius: 0;
-              border-top-right-radius: 0;
-            }
-          `}</style>
+      <View style={selectedEditorId ? [commonStyles.flex, styles.editorArea] : styles.hiddenEditor}>
+        {selectedEditorId && !visibleEditorId && (
+          <View style={StyleSheet.absoluteFill}>
+            <LoadingView style={[StyleSheet.absoluteFill, styles.editorLoading]} />
+          </View>
         )}
-        {selectedEditorId && !visibleEditorId && <LoadingView />}
         {editorIds.map((id) => {
           const tab = tabs.find((item) => item.id === id);
           if (!tab) return null;
@@ -679,12 +667,10 @@ function MemoWorkspace({
           return (
             <MemoEditorFrame
               key={id}
-              onEditActivity={(composing) => {
-                if (isVisible) editActivityListener.current?.(id, composing);
-              }}
               onReady={() =>
                 setReadyEditorIds((current) => (current.includes(id) ? current : [...current, id]))
               }
+              {...{ inert: !isVisible }}
               pointerEvents={isVisible ? 'auto' : 'none'}
               accessibilityElementsHidden={!isVisible}
               importantForAccessibility={isVisible ? 'auto' : 'no-hide-descendants'}
@@ -693,14 +679,13 @@ function MemoWorkspace({
                   ? commonStyles.flex
                   : readyEditorIds.includes(id)
                     ? styles.hiddenEditor
-                    : [StyleSheet.absoluteFill, styles.preparingEditor]
+                    : [StyleSheet.absoluteFill, styles.pendingEditor]
               }
             >
               <EditPageSection
                 title={tab.noteId === undefined ? '' : tab.title}
                 content={tab.content || ''}
                 setContent={(content) => {
-                  editActivityListener.current?.(id);
                   update((current) => {
                     const latest = current.tabs.find((item) => item.id === id);
                     if (!latest || latest.content === content) return current;
@@ -720,19 +705,12 @@ function MemoWorkspace({
                     };
                   });
                 }}
-                onCancel={() => handleClose(tab)}
               />
             </MemoEditorFrame>
           );
         })}
         {active && visibleEditorId === active.id && (
-          <MemoSaveButton
-            key={active.id}
-            tab={active}
-            activityListener={editActivityListener}
-            busy={isBusy}
-            onSave={handleSave}
-          />
+          <MemoSaveButton key={active.id} tab={active} busy={isBusy} onSave={handleSave} />
         )}
       </View>
     </>
@@ -765,42 +743,66 @@ export const TempMemoScreen: React.FC = () => {
       ) : storage.data ? (
         <MemoWorkspace key={storage.scope} state={storage.data} update={storage.update} />
       ) : (
-        <LoadingView />
+        <LoadingView style={[commonStyles.flex, styles.editorLoading]} />
       )}
     </View>
   );
 };
 
+/** Observe initialization only; editing and presentation remain owned by the editor. */
+function MemoEditorFrame({ onReady, ...props }: ViewProps & { onReady: () => void }) {
+  const host = useRef<React.ComponentRef<typeof View>>(null);
+  const ready = useRef(onReady);
+  ready.current = onReady;
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check = () => {
+      const element = host.current as unknown as HTMLElement | null;
+      if (element) {
+        const input = element.querySelector?.('textarea[id]');
+        const browser = input?.ownerDocument.defaultView as
+          | (Window & {
+              tinymce?: {
+                get: (id: string) => {
+                  initialized: boolean;
+                  getContainer: () => HTMLElement;
+                } | null;
+              };
+            })
+          | null;
+        const editor = input && browser?.tinymce?.get(input.id);
+        const container = editor?.initialized ? editor.getContainer() : undefined;
+        if (
+          !element.querySelector ||
+          (container && browser?.getComputedStyle(container).visibility !== 'hidden')
+        ) {
+          ready.current();
+          return;
+        }
+      }
+      timer = setTimeout(check, EDITOR_READY_CHECK_MS);
+    };
+    check();
+    return () => clearTimeout(timer);
+  }, []);
+  return <View {...props} ref={host} />;
+}
+
 function MemoSaveButton({
   tab,
-  activityListener,
   busy,
   onSave,
 }: {
   tab: MemoTab;
-  activityListener: React.RefObject<MemoEditListener | undefined>;
   busy: boolean;
   onSave: (tab: MemoTab) => Promise<number | false>;
 }) {
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
-  const [activity, setActivity] = useState<MemoEditActivity>();
-  const [settled, setSettled] = useState<{ content?: string; activity?: MemoEditActivity }>();
+  const [settled, setSettled] = useState<{ content?: string }>();
   const [saving, setSaving] = useState(false);
   const [savedContent, setSavedContent] = useState<string>();
   const mounted = useRef(true);
-
-  useLayoutEffect(() => {
-    // Input activity must not rerender the controlled editor before its value reaches the cache.
-    const onActivity: MemoEditListener = (id, composing) => {
-      if (id !== tab.id) return;
-      setActivity((current) => ({ id, composing: composing ?? current?.composing ?? false }));
-    };
-    activityListener.current = onActivity;
-    return () => {
-      if (activityListener.current === onActivity) activityListener.current = undefined;
-    };
-  }, [activityListener, tab.id]);
 
   useEffect(() => {
     mounted.current = true;
@@ -810,13 +812,9 @@ function MemoSaveButton({
   }, []);
 
   useEffect(() => {
-    if (activity?.composing) return;
-    const timer = setTimeout(
-      () => setSettled({ content: tab.content, activity }),
-      SAVE_IDLE_DELAY_MS
-    );
+    const timer = setTimeout(() => setSettled({ content: tab.content }), SAVE_IDLE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [tab.content, activity]);
+  }, [tab.content]);
 
   useEffect(() => {
     if (savedContent === undefined) return;
@@ -826,11 +824,7 @@ function MemoSaveButton({
 
   const dirty = memoHasChanges(tab);
   const saved = savedContent !== undefined && savedContent === tab.content && !dirty;
-  const idle =
-    settled &&
-    settled.content === tab.content &&
-    settled.activity === activity &&
-    !activity?.composing;
+  const idle = settled && settled.content === tab.content;
   const canSave = tab.noteId !== undefined || !!(tab.createdNoteTitle || tab.title.trim());
   if (!idle || !(saving || saved || (!busy && dirty && canSave))) return null;
   const disabled = saving || saved || busy;
@@ -871,129 +865,7 @@ function MemoSaveButton({
   );
 }
 
-type EditorWindow = Window & {
-  tinymce?: {
-    get: (id: string) => { initialized: boolean; getContainer: () => HTMLElement } | null;
-  };
-  ace?: {
-    edit: (element: HTMLElement) => {
-      renderer: {
-        setScrollMargin: (top: number, bottom: number, left: number, right: number) => void;
-      };
-    };
-  };
-};
-const EDITOR_READY_CHECK_MS = 50;
-const EDITOR_SWITCH_TIMEOUT_MS = 750;
-
-function MemoEditorFrame({
-  onReady,
-  onEditActivity,
-  ...props
-}: ViewProps & {
-  onReady: () => void;
-  onEditActivity: (composing: boolean) => void;
-}) {
-  const host = useRef<React.ComponentRef<typeof View>>(null);
-  const ready = useRef(onReady);
-  ready.current = onReady;
-  const activity = useRef(onEditActivity);
-  activity.current = onEditActivity;
-
-  useLayoutEffect(() => {
-    if (Platform.OS === 'web' && host.current) {
-      const element = host.current as unknown as HTMLElement;
-      element.inert = props.pointerEvents === 'none';
-      const editor = element.firstElementChild;
-      const footer = editor?.nextElementSibling;
-      // EditPageSection renders its standalone edit actions beside the editor.
-      if (editor?.querySelector('textarea') && footer instanceof HTMLElement) {
-        footer.style.display = 'none';
-      }
-    }
-  }, [props.pointerEvents]);
-
-  useEffect(() => {
-    const element = host.current as unknown as HTMLElement | null;
-    if (Platform.OS !== 'web' || !element) {
-      ready.current();
-      return;
-    }
-    const browser = element.ownerDocument.defaultView as EditorWindow | null;
-    const deadline = Date.now() + EDITOR_SWITCH_TIMEOUT_MS;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let composing = false;
-    let announcedReady = false;
-    let contentDocument: Document | undefined;
-    let originalPadding: string | undefined;
-    const inputEvents = [
-      'beforeinput',
-      'input',
-      'compositionstart',
-      'compositionend',
-      'paste',
-      'cut',
-      'drop',
-    ];
-    const onInput = (event: Event) => {
-      if (event.type === 'compositionstart') composing = true;
-      if (event.type === 'compositionend') composing = false;
-      activity.current(composing);
-    };
-    for (const name of inputEvents) element.addEventListener(name, onInput, true);
-
-    let paddedCode: HTMLElement | undefined;
-    const padCodeEditor = () => {
-      const code = element
-        .querySelector('.supercode-body')
-        ?.shadowRoot?.querySelector<HTMLElement>('.supercode-editor');
-      if (!code || code === paddedCode || !browser?.ace) return;
-      browser.ace.edit(code).renderer.setScrollMargin(0, SAVE_BUTTON_CLEARANCE, 0, 0);
-      paddedCode = code;
-    };
-    const checkReady = () => {
-      clearTimeout(timer);
-      const input = element.querySelector('textarea[id]');
-      const editor = input && browser?.tinymce?.get(input.id);
-      const container = editor?.initialized ? editor.getContainer() : undefined;
-      const doc = container?.querySelector('iframe')?.contentDocument;
-      if (doc?.body && !contentDocument) {
-        contentDocument = doc;
-        originalPadding = doc.body.style.paddingBottom;
-        doc.body.style.paddingBottom = `${SAVE_BUTTON_CLEARANCE}px`;
-        for (const name of inputEvents) doc.addEventListener(name, onInput, true);
-      }
-      if (
-        !announcedReady &&
-        ((container && container.style.visibility !== 'hidden') || Date.now() >= deadline)
-      ) {
-        announcedReady = true;
-        ready.current();
-      }
-      if (!announcedReady) timer = setTimeout(checkReady, EDITOR_READY_CHECK_MS);
-    };
-    const observer = new MutationObserver(() => {
-      padCodeEditor();
-      if (!contentDocument) checkReady();
-    });
-    observer.observe(element, { childList: true, subtree: true });
-    padCodeEditor();
-    checkReady();
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-      for (const name of inputEvents) {
-        element.removeEventListener(name, onInput, true);
-        contentDocument?.removeEventListener(name, onInput, true);
-      }
-      if (contentDocument?.body) contentDocument.body.style.paddingBottom = originalPadding || '';
-    };
-  }, []);
-
-  return <View {...props} ref={host} />;
-}
-
-const webDragStyle: ViewStyle & { touchAction: string } = { touchAction: 'pan-y' };
+const dragStyle: ViewStyle & { touchAction: string } = { touchAction: 'pan-y' };
 
 function MemoTabLabel({
   canReorder,
@@ -1043,10 +915,10 @@ function MemoTabLabel({
       <TouchableOpacity
         {...props}
         disabled={disabled}
-        style={[props.style, canReorder && Platform.OS === 'web' && webDragStyle]}
+        style={[props.style, canReorder && dragStyle]}
         onPress={(event) => {
-          const detail = (event.nativeEvent as unknown as UIEvent | undefined)?.detail;
-          if (Platform.OS === 'web' && detail) return;
+          const { detail } = event.nativeEvent as typeof event.nativeEvent & { detail?: number };
+          if (detail) return;
           onSelect();
         }}
       />
@@ -1088,7 +960,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 14,
     overflow: 'hidden',
-    ...Platform.select({ web: { textOverflow: 'clip' } }),
+    ...{ textOverflow: 'clip' },
   },
   draftTabText: { marginLeft: 3 },
   activeTabText: { fontWeight: '600' },
@@ -1120,5 +992,6 @@ const styles = StyleSheet.create({
   floatingSaveText: { marginLeft: 8, fontSize: 14, lineHeight: 20 },
   message: { marginBottom: 12 },
   hiddenEditor: { display: 'none' },
-  preparingEditor: { opacity: 0 },
+  pendingEditor: { opacity: 0 },
+  editorLoading: { marginBottom: 0 },
 });

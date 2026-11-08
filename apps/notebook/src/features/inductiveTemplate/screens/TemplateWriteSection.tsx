@@ -1,15 +1,7 @@
 import { useLangContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import React, { useMemo, useRef, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Icon } from 'react-native-paper';
 
 import { TemplateHeaderSection } from './TemplateHeaderSection';
@@ -67,23 +59,19 @@ export const TemplateWriteSection = ({
     setBodyView(view);
     if (view === 'preview') setPreviewOpened(true);
   };
-  // Web tabs use one Tab stop; arrow keys move selection and focus together.
-  const tabKeyboard =
-    Platform.OS === 'web'
-      ? {
-          onKeyDown: (event: React.KeyboardEvent) => {
-            let next: BodyView;
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
-              next = bodyView === 'form' ? 'preview' : 'form';
-            else if (event.key === 'Home') next = 'form';
-            else if (event.key === 'End') next = 'preview';
-            else return;
-            event.preventDefault();
-            selectBodyView(next);
-            tabRefs.current[next]?.focus();
-          },
-        }
-      : {};
+  const tabKeyboard = {
+    onKeyDown: (event: React.KeyboardEvent) => {
+      let next: BodyView;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+        next = bodyView === 'form' ? 'preview' : 'form';
+      else if (event.key === 'Home') next = 'form';
+      else if (event.key === 'End') next = 'preview';
+      else return;
+      event.preventDefault();
+      selectBodyView(next);
+      tabRefs.current[next]?.focus();
+    },
+  };
   // Keep the same embedded viewer mounted after its first visit. Visibility is handled by its
   // parent so tab changes cannot recreate it; only content or theme changes update this element.
   const contentPreview = useMemo(

@@ -1,9 +1,8 @@
 import { useLangContext, useResizeContext } from '@blacktokki/core';
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -39,6 +38,7 @@ import {
 
 const sheetStyles = StyleSheet.create({
   cell: {
+    flexShrink: 0,
     height: 44,
     maxHeight: 218,
     padding: 8,
@@ -47,9 +47,17 @@ const sheetStyles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  titleInput: { height: '100%', width: 'auto', flex: 1, minWidth: 0, borderWidth: 0 },
+  titleInput: {
+    height: '100%',
+    width: 'auto',
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    borderWidth: 0,
+  },
   titleFocus: { outlineOffset: -2 },
   heading: {
+    flexShrink: 0,
     height: 44,
     paddingHorizontal: 12,
     justifyContent: 'center',
@@ -64,26 +72,25 @@ const sheetStyles = StyleSheet.create({
     paddingHorizontal: 8,
     lineHeight: 20,
   },
-  fieldLabel: { width: 220, padding: 8, borderWidth: 1, fontSize: 14, lineHeight: 20 },
+  fieldLabel: {
+    width: 220,
+    flexShrink: 0,
+    padding: 8,
+    borderWidth: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   row: { flexDirection: 'row', alignItems: 'stretch' },
   columnNumber: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   deleteAction: { padding: 8 },
   append: { width: 56, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   viewport: { flexGrow: 1, alignItems: 'stretch' },
-  webViewport: {
-    flex: 1,
-    minHeight: 0,
-    minWidth: 0,
-    width: '100%',
-    overflow: 'auto',
-  } as unknown as ViewStyle,
-  stickyHeader: { position: 'sticky', top: 0, zIndex: 1 } as unknown as ViewStyle,
   save: { marginLeft: 8 },
-  repeatGroupLabel: { padding: 8, borderWidth: 1, fontSize: 14, lineHeight: 20 },
+  repeatGroupLabel: { flexShrink: 0, padding: 8, borderWidth: 1, fontSize: 14, lineHeight: 20 },
   repeatItemLabel: { borderWidth: 1 },
   repeatItemHeading: { flexDirection: 'row', alignItems: 'flex-start', paddingLeft: 8 },
   repeatItemText: { flex: 1, paddingVertical: 8, fontSize: 14, lineHeight: 20 },
-  repeatLabel: { padding: 8, fontSize: 14, lineHeight: 20, borderWidth: 1 },
+  repeatLabel: { flexShrink: 0, padding: 8, fontSize: 14, lineHeight: 20, borderWidth: 1 },
   repeatEmpty: { borderWidth: 1 },
   repeatAction: { height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   measurements: {
@@ -96,7 +103,8 @@ const sheetStyles = StyleSheet.create({
     alignItems: 'flex-start',
     pointerEvents: 'none',
   },
-  measurementLabel: { fontSize: 14, lineHeight: 20 },
+  measurementLabel: { fontSize: 14, lineHeight: 20, flexShrink: 0 },
+  heightMeasurement: { padding: 0, borderWidth: 0 },
   measurementTitle: { fontWeight: '600' },
 });
 
@@ -184,10 +192,8 @@ export const TemplateSheetSection = ({
   const running = useRef(false);
   const pendingScroll = useRef(false);
   const horizontal = useRef<ScrollView>(null);
-  const webScroll = useRef<View>(null);
   const [saving, setWorking] = useState(false);
-  const [measuring, setMeasuring] = useState(false);
-  const working = saving || preparing || measuring;
+  const working = saving || preparing;
   const [viewport, setViewport] = useState({ x: 0, width: 1200 });
   const updateViewportWidth = (width: number) => {
     /** Only virtual column visibility uses this width; round up to avoid per-pixel renders. */
@@ -196,23 +202,15 @@ export const TemplateSheetSection = ({
       current.width === visibleWidth ? current : { ...current, width: visibleWidth }
     );
   };
-  const [sizes, setSizes] = useState<Record<string, { value: string; height: number }>>({});
   const [labelSizes, setLabelSizes] = useState<Record<string, number>>({});
-  const [, setHeightRevision] = useState(0);
+  const [heightRevision, setHeightRevision] = useState(0);
   const heightCache = useMemo(
     () => ({ current: new Map<number, Map<string, number>>() }),
     [commonStyles.input.fontFamily]
   );
-  const heightProbe = useRef<TextInput>(null);
-  const inputs = useRef<Record<string, { node: unknown; value: string }>>({});
-  const pendingMeasurements = useRef(new Set<string>());
-  const measurementFrame = useRef<number | undefined>(undefined);
-  const measured = useRef(new WeakMap<HTMLElement, { value: string; width: number }>());
-  const labels = useRef<Record<string, Text | null>>({});
-  const textHeight = (text: string, width: number, size?: { value: string; height: number }) => {
+  const textHeight = (text: string, width: number) => {
     const cached = heightCache.current.get(width)?.get(text);
     if (cached !== undefined) return cached;
-    if (size?.value === text) return size.height;
     const available = Math.max(1, width - 18);
     if (
       !/[\r\n]/.test(text) &&
@@ -244,79 +242,6 @@ export const TemplateSheetSection = ({
       current[text] === rounded ? current : { ...current, [text]: rounded }
     );
   };
-  const measureWidth = (text: string) => {
-    if (Platform.OS !== 'web') return;
-    const node = labels.current[text] as unknown as HTMLElement | null;
-    if (node) rememberWidth(text, node.scrollWidth);
-  };
-  const rememberSize = (id: string, value: string, height: number) => {
-    const bounded = Math.max(44, Math.min(218, Math.ceil(height)));
-    setSizes((current) =>
-      current[id]?.value === value && current[id]?.height === bounded
-        ? current
-        : { ...current, [id]: { value, height: bounded } }
-    );
-  };
-  const flushMeasurements = () => {
-    measurementFrame.current = undefined;
-    const entries = [...pendingMeasurements.current].flatMap((id) => {
-      const input = inputs.current[id];
-      const node = input?.node as unknown as HTMLTextAreaElement | null;
-      if (!node?.style) return [];
-      const width = node.clientWidth;
-      const previous = measured.current.get(node);
-      if (previous?.value === input.value && previous.width === width) return [];
-      return [
-        {
-          id,
-          node,
-          value: input.value,
-          width,
-          styleHeight: node.style.height,
-          scrollTop: node.scrollTop,
-        },
-      ];
-    });
-    pendingMeasurements.current.clear();
-    entries.forEach(({ node }) => {
-      node.style.height = '0px';
-    });
-    const results = entries.map((entry) => ({
-      ...entry,
-      height: Math.max(44, Math.min(218, entry.node.scrollHeight + 2)),
-    }));
-    results.forEach(({ node, styleHeight, scrollTop, value, width }) => {
-      node.style.height = styleHeight;
-      node.scrollTop = scrollTop;
-      measured.current.set(node, { value, width });
-    });
-    if (results.length)
-      setSizes((current) => {
-        let next = current;
-        for (const { id, value, height } of results) {
-          if (current[id]?.value === value && current[id]?.height === height) continue;
-          if (next === current) next = { ...current };
-          next[id] = { value, height };
-        }
-        return next;
-      });
-  };
-  const measure = (id: string) => {
-    if (Platform.OS !== 'web') return;
-    pendingMeasurements.current.add(id);
-    if (typeof requestAnimationFrame !== 'function') flushMeasurements();
-    else if (measurementFrame.current === undefined)
-      measurementFrame.current = requestAnimationFrame(flushMeasurements);
-  };
-  useEffect(
-    () => () => {
-      if (measurementFrame.current !== undefined) cancelAnimationFrame(measurementFrame.current);
-    },
-    []
-  );
-  useLayoutEffect(() => {
-    Object.keys(inputs.current).forEach(measure);
-  }, [rows, labelSizes, noteColumnWidth]);
   const repeatViews = useMemo(
     () =>
       Object.fromEntries(
@@ -427,16 +352,6 @@ export const TemplateSheetSection = ({
   const input = (row: TemplateSheetRow, field: number) => (
     <TextInput
       key={row.id}
-      ref={
-        field === 0
-          ? undefined
-          : (node) => {
-              inputs.current[`${field}:${row.id}`] = {
-                node,
-                value: row.values[fields[field - 1] as string] || '',
-              };
-            }
-      }
       accessibilityLabel={`${row.title || row.id}: ${field === 0 ? lang('Note title:') : fields[field - 1]}`}
       value={field === 0 ? row.title : row.values[fields[field - 1] as string] || ''}
       placeholder={field === 0 ? lang('New note title') : undefined}
@@ -452,36 +367,19 @@ export const TemplateSheetSection = ({
         columnStyle,
         field !== 0 && { height: heights[field - 1] },
         field === 0 && sheetStyles.titleInput,
-        field === 0 && Platform.OS === 'web' && sheetStyles.titleFocus,
+        field === 0 && sheetStyles.titleFocus,
         row.deleted && styles.disabled,
       ]}
       onChangeText={(value) => edit(row.id, field, value)}
-      onLayout={field === 0 ? undefined : () => measure(`${field}:${row.id}`)}
-      onContentSizeChange={
-        field === 0
-          ? undefined
-          : (event) => {
-              const id = `${field}:${row.id}`;
-              if (Platform.OS === 'web') measure(id);
-              else
-                rememberSize(
-                  id,
-                  row.values[fields[field - 1] as string] || '',
-                  event.nativeEvent.contentSize.height + 2
-                );
-            }
-      }
-      {...(Platform.OS === 'web'
-        ? {
-            onPaste: (event: React.ClipboardEvent) => {
-              const text = event.clipboardData.getData('text/plain');
-              if (!working && text.includes('\t')) {
-                event.preventDefault();
-                paste(row.id, field, text);
-              }
-            },
+      {...{
+        onPaste: (event: React.ClipboardEvent) => {
+          const text = event.clipboardData.getData('text/plain');
+          if (!working && text.includes('\t')) {
+            event.preventDefault();
+            paste(row.id, field, text);
           }
-        : {})}
+        },
+      }}
     />
   );
   const border = { borderColor: commonStyles.input.borderColor };
@@ -507,7 +405,6 @@ export const TemplateSheetSection = ({
       });
     });
   };
-  const repeatCellId = (row: TemplateSheetRow, cell: { id: string }) => `${cell.id}:${row.id}`;
   const repeatLayout = (repeat: SheetRepeat) => {
     const views = repeatViews[repeat.group.id];
     return Array.from(
@@ -612,16 +509,12 @@ export const TemplateSheetSection = ({
   headerWidths[0] += targetWidth - headerWidths.reduce((sum, width) => sum + width, 0);
   const [groupWidth, itemWidth, fieldWidth] = headerWidths;
   const labelWidth = repeats.length ? groupWidth + itemWidth + fieldWidth : mergedWidth;
-  const heights = fields.map((name, field) =>
+  const heights = fields.map((name) =>
     typeof name !== 'string'
       ? 44
       : rows.reduce(
-          (height, row) =>
-            Math.max(
-              height,
-              textHeight(row.values[name] || '', noteColumnWidth, sizes[`${field + 1}:${row.id}`])
-            ),
-          textHeight(name, labelWidth, sizes[`label:${field}`])
+          (height, row) => Math.max(height, textHeight(row.values[name] || '', noteColumnWidth)),
+          textHeight(name, labelWidth)
         )
   );
   for (const repeat of repeats)
@@ -630,12 +523,9 @@ export const TemplateSheetSection = ({
         cell.height = rows.reduce(
           (height, row) => {
             const value = cell.values[row.id];
-            return Math.max(
-              height,
-              value ? textHeight(value.value, noteColumnWidth, sizes[repeatCellId(row, cell)]) : 44
-            );
+            return Math.max(height, value ? textHeight(value.value, noteColumnWidth) : 44);
           },
-          textHeight(cell.label, fieldWidth, sizes[cell.id])
+          textHeight(cell.label, fieldWidth)
         );
   const heightJobs = useMemo(() => {
     const jobs = new Map<number, Set<string>>();
@@ -656,42 +546,10 @@ export const TemplateSheetSection = ({
         }
     return [...jobs].flatMap(([width, values]) => [...values].map((value) => ({ width, value })));
   }, [rows, fields, repeats, repeatViews, labelWidth, fieldWidth, heightCache, noteColumnWidth]);
-  useLayoutEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const probe = heightProbe.current as unknown as HTMLTextAreaElement | null;
-    if (!probe?.style) return;
-    let stopped = false;
-    let position = 0;
-    let timer: ReturnType<typeof setTimeout>;
-    const step = () => {
-      if (stopped) return;
-      const until = Date.now() + 8;
-      let changed = false;
-      while (position < heightJobs.length) {
-        const { width, value } = heightJobs[position++];
-        if (heightCache.current.get(width)?.has(value)) continue;
-        probe.style.width = `${width}px`;
-        probe.style.height = '0px';
-        probe.style.overflowY = 'hidden';
-        probe.value = value;
-        const height = Math.max(44, Math.min(218, Math.ceil(probe.scrollHeight + 2)));
-        if (!heightCache.current.has(width)) heightCache.current.set(width, new Map());
-        heightCache.current.get(width)!.set(value, height);
-        changed = true;
-        if (Date.now() >= until) break;
-      }
-      if (changed) setHeightRevision((revision) => revision + 1);
-      if (position < heightJobs.length) {
-        setMeasuring(true);
-        timer = setTimeout(step, 0);
-      } else setMeasuring(false);
-    };
-    step();
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-    };
-  }, [heightJobs]);
+  const pendingHeightJobs = useMemo(
+    () => heightJobs.filter(({ width, value }) => !heightCache.current.get(width)?.has(value)),
+    [heightJobs, heightRevision]
+  );
   const firstColumn = Math.min(
     Math.max(0, rows.length - 1),
     Math.max(0, Math.floor((viewport.x - labelWidth) / noteColumnWidth) - 1)
@@ -713,16 +571,6 @@ export const TemplateSheetSection = ({
       )}
     </>
   );
-  useLayoutEffect(() => {
-    const node = webScroll.current as unknown as HTMLElement | null;
-    if (Platform.OS === 'web' && node && pendingScroll.current) {
-      pendingScroll.current = false;
-      node.scrollLeft = node.scrollWidth;
-    }
-  }, [rows.length]);
-  useLayoutEffect(() => {
-    allLabels.forEach(measureWidth);
-  });
   const repeatValue = (
     repeat: SheetRepeat,
     index: number,
@@ -731,14 +579,10 @@ export const TemplateSheetSection = ({
   ) => {
     const cell = shared.values[row.id];
     const value = cell?.value || '';
-    const id = repeatCellId(row, shared);
     return (
       <TextInput
         key={row.id}
         role="cell"
-        ref={(node) => {
-          inputs.current[id] = { node, value };
-        }}
         accessibilityLabel={`${row.title}: ${repeat.name} · ${index + 1} · ${shared.label}`}
         value={value}
         editable={!working && !row.deleted}
@@ -771,12 +615,6 @@ export const TemplateSheetSection = ({
             )
           );
         }}
-        onLayout={() => measure(id)}
-        onContentSizeChange={(event) =>
-          Platform.OS === 'web'
-            ? measure(id)
-            : rememberSize(id, value, event.nativeEvent.contentSize.height + 2)
-        }
       />
     );
   };
@@ -852,20 +690,6 @@ export const TemplateSheetSection = ({
                   <View key={cell.id} role="row" style={sheetStyles.row}>
                     <Text
                       role="rowheader"
-                      ref={(node) => {
-                        inputs.current[cell.id] = { node, value: cell.label };
-                      }}
-                      onLayout={() => measure(cell.id)}
-                      onTextLayout={
-                        Platform.OS === 'web'
-                          ? undefined
-                          : (event) =>
-                              rememberSize(
-                                cell.id,
-                                cell.label,
-                                event.nativeEvent.lines.length * 20 + 18
-                              )
-                      }
                       style={[
                         commonStyles.text,
                         sheetStyles.repeatLabel,
@@ -980,16 +804,6 @@ export const TemplateSheetSection = ({
       <View role="row" style={sheetStyles.row}>
         <Text
           role="rowheader"
-          ref={(node) => {
-            inputs.current[`label:${index}`] = { node, value: item };
-          }}
-          onLayout={() => measure(`label:${index}`)}
-          onTextLayout={
-            Platform.OS === 'web'
-              ? undefined
-              : (event) =>
-                  rememberSize(`label:${index}`, item, event.nativeEvent.lines.length * 20 + 18)
-          }
           style={[
             commonStyles.text,
             sheetStyles.fieldLabel,
@@ -1012,43 +826,47 @@ export const TemplateSheetSection = ({
         importantForAccessibility="no-hide-descendants"
         aria-hidden
       >
-        <TextInput
-          ref={heightProbe}
-          multiline
-          defaultValue=""
-          editable={false}
-          style={[commonStyles.input, sheetStyles.cell, columnStyle]}
-        />
-        {allLabels.map((text) => (
+        {/** Measure natural text sizes with the same layout events on every platform. */}
+        {pendingHeightJobs.slice(0, 32).map(({ width, value }) => (
           <Text
-            key={text}
-            ref={(node) => {
-              labels.current[text] = node;
-            }}
-            numberOfLines={1}
+            key={JSON.stringify([width, value])}
+            numberOfLines={10}
             style={[
-              commonStyles.text,
+              commonStyles.input,
               sheetStyles.measurementLabel,
-              text === lang('Note title:') && sheetStyles.measurementTitle,
+              sheetStyles.heightMeasurement,
+              { width: Math.max(1, width - 18) },
             ]}
-            onLayout={(event) =>
-              Platform.OS === 'web'
-                ? measureWidth(text)
-                : rememberWidth(text, event.nativeEvent.layout.width)
-            }
-            onTextLayout={
-              Platform.OS === 'web'
-                ? undefined
-                : (event) =>
-                    rememberWidth(
-                      text,
-                      Math.max(0, ...event.nativeEvent.lines.map((line) => line.width))
-                    )
-            }
+            onLayout={(event) => {
+              const height = Math.max(
+                44,
+                Math.min(218, Math.ceil(event.nativeEvent.layout.height + 18))
+              );
+              if (heightCache.current.get(width)?.get(value) === height) return;
+              if (!heightCache.current.has(width)) heightCache.current.set(width, new Map());
+              heightCache.current.get(width)!.set(value, height);
+              setHeightRevision((revision) => revision + 1);
+            }}
           >
-            {text}
+            {value || ' '}
           </Text>
         ))}
+        <ScrollView horizontal>
+          {allLabels.map((text) => (
+            <Text
+              key={text}
+              numberOfLines={1}
+              style={[
+                commonStyles.text,
+                sheetStyles.measurementLabel,
+                text === lang('Note title:') && sheetStyles.measurementTitle,
+              ]}
+              onLayout={(event) => rememberWidth(text, event.nativeEvent.layout.width)}
+            >
+              {text}
+            </Text>
+          ))}
+        </ScrollView>
       </View>
       <View style={inset}>
         <TemplateHeaderSection
@@ -1067,71 +885,43 @@ export const TemplateSheetSection = ({
         )}
         {working && <ActivityIndicator color={commonStyles.icon.color} />}
       </View>
-      {Platform.OS === 'web' ? (
-        <View
-          ref={webScroll}
-          style={sheetStyles.webViewport}
-          onLayout={(event) => updateViewportWidth(event.nativeEvent.layout.width)}
-          {...{
-            onScroll: (event: React.UIEvent<HTMLElement>) => {
-              const x =
-                Math.floor(Math.max(0, event.currentTarget.scrollLeft) / noteColumnWidth) *
-                noteColumnWidth;
-              setViewport((current) => (current.x === x ? current : { ...current, x }));
-            },
-          }}
-        >
-          <View
-            role="table"
-            accessibilityLabel={lang('Similar notes')}
-            style={{ width: labelWidth + rows.length * noteColumnWidth + 56 }}
-          >
-            <View style={sheetStyles.stickyHeader}>{header}</View>
-            {fields.map((field, index) => (
-              <React.Fragment key={typeof field === 'string' ? field : field.group.id}>
-                {renderField(field, index)}
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-      ) : (
-        <ScrollView
-          ref={horizontal}
-          horizontal
-          style={styles.sourceSection}
-          contentContainerStyle={sheetStyles.viewport}
-          keyboardShouldPersistTaps="handled"
-          scrollEventThrottle={16}
+      <ScrollView
+        ref={horizontal}
+        horizontal
+        style={styles.sourceSection}
+        contentContainerStyle={sheetStyles.viewport}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        nestedScrollEnabled
+        directionalLockEnabled={false}
+        onLayout={(event) => updateViewportWidth(event.nativeEvent.layout.width)}
+        onScroll={(event) => {
+          const x =
+            Math.floor(Math.max(0, event.nativeEvent.contentOffset.x) / noteColumnWidth) *
+            noteColumnWidth;
+          setViewport((current) => (current.x === x ? current : { ...current, x }));
+        }}
+        onContentSizeChange={() => {
+          if (pendingScroll.current) {
+            pendingScroll.current = false;
+            horizontal.current?.scrollToEnd({ animated: true });
+          }
+        }}
+      >
+        <FlatList
+          role="table"
+          accessibilityLabel={lang('Similar notes')}
+          style={{ width: labelWidth + rows.length * noteColumnWidth + 56 }}
+          data={fields}
+          keyExtractor={(item) => (typeof item === 'string' ? item : item.group.id)}
+          ListHeaderComponent={header}
+          stickyHeaderIndices={[0]}
           nestedScrollEnabled
-          directionalLockEnabled={false}
-          onLayout={(event) => updateViewportWidth(event.nativeEvent.layout.width)}
-          onScroll={(event) => {
-            const x =
-              Math.floor(Math.max(0, event.nativeEvent.contentOffset.x) / noteColumnWidth) *
-              noteColumnWidth;
-            setViewport((current) => (current.x === x ? current : { ...current, x }));
-          }}
-          onContentSizeChange={() => {
-            if (pendingScroll.current) {
-              pendingScroll.current = false;
-              horizontal.current?.scrollToEnd({ animated: true });
-            }
-          }}
-        >
-          <FlatList
-            role="table"
-            accessibilityLabel={lang('Similar notes')}
-            style={{ width: labelWidth + rows.length * noteColumnWidth + 56 }}
-            data={fields}
-            keyExtractor={(item) => (typeof item === 'string' ? item : item.group.id)}
-            ListHeaderComponent={header}
-            stickyHeaderIndices={[0]}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item, index }) => renderField(item, index)}
-          />
-        </ScrollView>
-      )}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item, index }) => renderField(item, index)}
+        />
+      </ScrollView>
+
       <View style={inset}>
         <View style={commonStyles.buttonContainer}>
           <TouchableOpacity

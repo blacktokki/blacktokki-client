@@ -1,6 +1,6 @@
 import { Text, useLangContext } from '@blacktokki/core';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import KnowledgeGraphCanvasView from './KnowledgeGraphCanvasView';
@@ -69,26 +69,6 @@ const countNodeKinds = (nodes: KnowledgeGraphNode[]) => {
   for (const node of nodes) counts[getKnowledgeGraphNodeKind(node)]++;
   return counts;
 };
-const isWeb = Platform.OS === 'web';
-const stopPointerDown = (event: any) => event.stopPropagation();
-const webCursor = isWeb ? ({ cursor: 'pointer' } as any) : {};
-const webButtonStyle = isWeb ? ({ pointerEvents: 'auto', cursor: 'pointer' } as any) : {};
-const webSurfaceProps = isWeb ? ({ onPointerDown: stopPointerDown } as any) : {};
-const webModalStyle = isWeb
-  ? ({ pointerEvents: 'auto', onPointerDown: stopPointerDown } as any)
-  : {};
-
-const webButtonEvents = (activate: () => void) =>
-  isWeb
-    ? ({
-        onClick: (event: any) => {
-          event.stopPropagation();
-          activate();
-        },
-        onPointerDown: stopPointerDown,
-      } as any)
-    : {};
-
 interface GraphToolbarToggleProps {
   active: boolean;
   label: string;
@@ -122,11 +102,9 @@ const GraphToolbarToggle: React.FC<GraphToolbarToggleProps> = ({
           backgroundColor: active ? activeBackgroundColor : commonStyles.card?.backgroundColor,
           borderColor: active ? activeBorderColor : inactiveBorderColor,
         },
-        webButtonStyle,
       ]}
       activeOpacity={1}
       onPress={onToggle}
-      {...webButtonEvents(onToggle)}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
@@ -153,9 +131,8 @@ const HudButton: React.FC<{
   value?: string;
 }> = ({ label, onPress, color, icon, iconSize = 11, value }) => (
   <TouchableOpacity
-    style={[value === undefined ? styles.hudButton : styles.hudValueButton, webCursor]}
+    style={value === undefined ? styles.hudButton : styles.hudValueButton}
     onPress={onPress}
-    {...webButtonEvents(onPress)}
     accessibilityLabel={label}
   >
     {icon ? (
@@ -298,19 +275,6 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     backgroundColor: isDark ? 'rgba(28, 32, 38, 0.94)' : 'rgba(255, 255, 255, 0.96)',
     borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.10)',
   };
-  const dotGridStyle = useMemo(
-    () =>
-      isWeb
-        ? {
-            backgroundImage: isDark
-              ? 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px)'
-              : 'radial-gradient(circle, rgba(0, 0, 0, 0.10) 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }
-        : {},
-    [isDark]
-  );
-
   const toolbarToggles: (Omit<GraphToolbarToggleProps, 'inactiveTextColor'> | false | undefined)[] =
     [
       nodeCounts.paragraph > 0 && {
@@ -343,7 +307,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     ];
 
   return (
-    <View style={[styles.container, isWeb ? ({ userSelect: 'none', ...dotGridStyle } as any) : {}]}>
+    <View style={styles.container}>
       <View style={StyleSheet.absoluteFill}>
         <KnowledgeGraphCanvasView
           nodes={activeNodes}
@@ -365,10 +329,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
         />
       </View>
 
-      <View
-        style={[styles.topHudContainer, isWeb ? ({ pointerEvents: 'box-none' } as any) : {}]}
-        pointerEvents="box-none"
-      >
+      <View style={styles.topHudContainer} pointerEvents="box-none">
         <View
           style={[styles.controlsContent, !showControls && styles.controlsHidden]}
           accessibilityElementsHidden={!showControls}
@@ -376,7 +337,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           pointerEvents="box-none"
         >
           <View style={styles.viewportControls} pointerEvents="box-none">
-            <View style={[styles.hudBar, hudSurfaceStyle]} {...webSurfaceProps}>
+            <View style={[styles.hudBar, hudSurfaceStyle]}>
               <View style={styles.hudLabelRow}>
                 <Icon
                   name="arrows-h"
@@ -411,7 +372,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               />
             </View>
 
-            <View style={[styles.hudBar, hudSurfaceStyle]} {...webSurfaceProps}>
+            <View style={[styles.hudBar, hudSurfaceStyle]}>
               <HudButton
                 label="Zoom out"
                 onPress={() => handleZoomCenter(0.83)}
@@ -455,10 +416,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                   backgroundColor: validationBackground,
                   borderColor: validationColor,
                 },
-                webButtonStyle,
               ]}
               onPress={() => setShowAxiomModal(true)}
-              {...webButtonEvents(() => setShowAxiomModal(true))}
               activeOpacity={0.8}
             >
               <Icon
@@ -491,11 +450,9 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
             styles.controlsToggle,
             hudSurfaceStyle,
             { backgroundColor: commonStyles.card?.backgroundColor },
-            webButtonStyle,
           ]}
           activeOpacity={1}
           onPress={toggleControls}
-          {...webButtonEvents(toggleControls)}
           accessibilityRole="button"
           accessibilityLabel={lang('Graph controls')}
           accessibilityState={{ expanded: showControls }}
@@ -518,15 +475,13 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           isLegendExpanded ? styles.legendPillExpanded : styles.legendPillCollapsed,
           hudSurfaceStyle,
         ]}
-        {...webSurfaceProps}
       >
         <TouchableOpacity
-          style={[styles.legendHeader, webCursor]}
+          style={styles.legendHeader}
           onPress={() => setIsLegendExpanded((previous) => !previous)}
           accessibilityRole="button"
           accessibilityState={{ expanded: isLegendExpanded }}
           accessibilityLabel={lang(isLegendExpanded ? 'Collapse Legend' : 'Expand Legend')}
-          {...webSurfaceProps}
         >
           <View style={styles.legendTitleRow}>
             <Icon name="list-ul" size={11} color={commonStyles.text?.color} />
@@ -610,12 +565,11 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       </View>
 
       {showAxiomModal && (
-        <View style={styles.modalOverlay} {...webSurfaceProps}>
+        <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
             onPress={() => setShowAxiomModal(false)}
-            {...webButtonEvents(() => setShowAxiomModal(false))}
           />
 
           <View
@@ -625,7 +579,6 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                 backgroundColor: isDark ? 'rgba(28, 32, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)',
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
               },
-              webModalStyle,
             ]}
           >
             <View style={styles.modalHeader}>
@@ -641,9 +594,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.modalCloseButton, webCursor]}
+                style={styles.modalCloseButton}
                 onPress={() => setShowAxiomModal(false)}
-                {...webButtonEvents(() => setShowAxiomModal(false))}
               >
                 <Icon name="times" size={14} color={commonStyles.text?.color} />
               </TouchableOpacity>
@@ -657,7 +609,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                 </Text>
               </View>
             ) : (
-              <ScrollView style={styles.violationList} {...webSurfaceProps}>
+              <ScrollView style={styles.violationList}>
                 {axioms.violations.map((v) => (
                   <View
                     key={v.id}
@@ -693,10 +645,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
                             style={[
                               styles.affectedNodeChip,
                               { backgroundColor: isDark ? '#34495E' : '#EBF5FB' },
-                              webCursor,
                             ]}
                             onPress={selectAffectedNode}
-                            {...webButtonEvents(selectAffectedNode)}
                           >
                             <Text style={styles.affectedNodeChipText}>
                               {targetNode?.name || nid}
@@ -740,6 +690,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   axiomBadge: {
+    pointerEvents: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -753,6 +704,7 @@ const styles = StyleSheet.create({
   },
 
   toolbarToggle: {
+    pointerEvents: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 9.5,
@@ -788,6 +740,7 @@ const styles = StyleSheet.create({
   controlsContent: { flex: 1, minWidth: 0, gap: 6 },
   controlsHidden: { display: 'none' },
   hudButton: {
+    pointerEvents: 'auto',
     width: 22,
     height: 22,
     justifyContent: 'center',
@@ -816,6 +769,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   hudValueButton: {
+    pointerEvents: 'auto',
     paddingHorizontal: 2,
     justifyContent: 'center',
     alignItems: 'center',
@@ -916,6 +870,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   axiomModal: {
+    pointerEvents: 'auto',
     width: '90%',
     maxWidth: 520,
     maxHeight: '80%',

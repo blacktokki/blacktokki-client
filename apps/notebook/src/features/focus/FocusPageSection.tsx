@@ -1,4 +1,4 @@
-import { useLangContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { setDrawerVisible } from '@blacktokki/navigation';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
@@ -12,7 +12,11 @@ import { Paragraph } from '../../components/HeaderSelectBar';
 import { onLink, toNoteParams } from '../../components/SearchBar';
 import { NotePageSectionProps } from '../../hooks/useExtension';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
-import { HeaderIconButton, NoteBottomSection } from '../../screens/main/NoteItemSections';
+import {
+  getPageContainerStyle,
+  HeaderIconButton,
+  NoteBottomSection,
+} from '../../screens/main/NoteItemSections';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
 
@@ -23,6 +27,8 @@ export const focusStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingRight: 16,
   },
+  presentationContainerPortrait: { paddingHorizontal: 0, paddingRight: 0 },
+  presentationBottomPortrait: { paddingHorizontal: 16 },
   presentationContent: {
     flexGrow: 1,
     width: '100%',
@@ -64,6 +70,7 @@ export const FocusPageSection = ({
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { lang } = useLangContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
+  const isPortrait = useResizeContext() === 'portrait';
   const queryClient = useQueryClient();
   const scrollViewRef = useRef<ScrollView>(null);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -82,10 +89,10 @@ export const FocusPageSection = ({
     paragraphs && isRoot
       ? firstParagraph
       : paragraphs && idx > 0
-      ? paragraphs.find(
-          (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
-        )
-      : undefined;
+        ? paragraphs.find(
+            (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
+          )
+        : undefined;
 
   const handlePress = useCallback(
     (targetParagraph: Paragraph) => {
@@ -203,6 +210,8 @@ export const FocusPageSection = ({
         style={[
           commonStyles.container,
           focusStyles.presentationContainer,
+          isPortrait && focusStyles.presentationContainerPortrait,
+          getPageContainerStyle(isPortrait),
           !isScrollable && { overflow: 'hidden' },
         ]}
         contentContainerStyle={[
@@ -277,7 +286,10 @@ export const FocusPageSection = ({
               paragraphs={paragraphs}
               root={title}
               onPress={handlePress}
-              style={focusStyles.presentationBottom}
+              style={[
+                focusStyles.presentationBottom,
+                isPortrait && focusStyles.presentationBottomPortrait,
+              ]}
               hideTitle
               preventRoot
             />

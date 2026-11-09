@@ -1,4 +1,4 @@
-import { useLangContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -6,6 +6,7 @@ import { Icon } from 'react-native-paper';
 
 import { TemplateHeaderSection } from './TemplateHeaderSection';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
+import { getPageSectionStyle } from '../../../screens/main/NoteItemSections';
 import { TemplateChoice } from '../components/TemplateChoice';
 import { TemplateTableForm } from '../components/TemplateTableForm';
 import { templateStyles as styles } from '../styles';
@@ -51,6 +52,8 @@ export const TemplateWriteSection = ({
 }) => {
   const { lang } = useLangContext();
   const { commonStyles, colorScheme } = useNotebookTheme();
+  const isPortrait = useResizeContext() === 'portrait';
+  const bodyStyle = getPageSectionStyle(isPortrait, commonStyles.container.paddingHorizontal);
   const [bodyView, setBodyView] = useState<BodyView>('form');
   const [previewOpened, setPreviewOpened] = useState(false);
   const [focusedTab, setFocusedTab] = useState<BodyView | null>(null);
@@ -167,7 +170,7 @@ export const TemplateWriteSection = ({
         onTitlePress={onPreview}
         onCatalog={onCatalog}
       />
-      <View style={[styles.workspace, styles.stack]}>
+      <View style={[styles.workspace, styles.stack, bodyStyle]}>
         <View style={[commonStyles.card, styles.panel, styles.fields]}>
           <Text accessibilityRole="header" style={[commonStyles.title, styles.title]}>
             {lang('Title template')}

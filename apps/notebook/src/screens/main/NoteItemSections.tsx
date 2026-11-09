@@ -1,3 +1,4 @@
+import { useResizeContext } from '@blacktokki/core';
 import { EditorViewer } from '@blacktokki/editor';
 import { push } from '@blacktokki/navigation';
 import { useNavigation } from '@react-navigation/core';
@@ -23,6 +24,22 @@ import { getSplitTitle } from '../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../hooks/useNotebookTheme';
 import { createCommonStyles } from '../../styles';
 import { NavigationParamList } from '../../types';
+
+export const getPageContainerStyle = (isPortrait: boolean): ViewStyle | undefined =>
+  isPortrait ? pageStyles.portraitBottom : undefined;
+
+export const getPageSectionStyle = (
+  isPortrait: boolean,
+  paddingHorizontal: number
+): ViewStyle | undefined =>
+  isPortrait
+    ? {
+        marginHorizontal: -paddingHorizontal,
+        width: 'auto',
+        alignSelf: 'stretch',
+        paddingHorizontal: 16,
+      }
+    : undefined;
 
 export const diffToSnapshot = (original: string, delta: string) => {
   const dmp = new DiffMatchPatch();
@@ -154,26 +171,35 @@ export const NotePageSection = ({
 }) => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles, colorScheme } = useNotebookTheme();
+  const bodyStyle = getPageSectionStyle(
+    useResizeContext() === 'portrait',
+    commonStyles.container.paddingHorizontal
+  );
   return (
     <View
       style={
-        active && description
+        active && (description || children)
           ? [
               commonStyles.card,
-              {
+              pageStyles.body,
+              !!description && {
                 backgroundColor: createCommonStyles(colorScheme).card.backgroundColor,
               },
+              bodyStyle,
+              !description && commonStyles.centerContent,
             ]
           : { flex: 1, position: 'absolute' }
       }
     >
-      <EditorViewer
-        active
-        value={description || ''}
-        theme={colorScheme}
-        onLink={(url) => onLink(url, navigation, title)}
-        autoResize
-      />
+      {(description || !children) && (
+        <EditorViewer
+          active
+          value={description || ''}
+          theme={colorScheme}
+          onLink={(url) => onLink(url, navigation, title)}
+          autoResize
+        />
+      )}
       {children}
     </View>
   );
@@ -216,10 +242,10 @@ export const NoteBottomSection = ({
   const nextParagraph = isRoot
     ? firstParagraph
     : idx > 0
-    ? paragraphs.find(
-        (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
-      )
-    : undefined;
+      ? paragraphs.find(
+          (v, i) => i > idx && (fullParagraph ? paragraphs[idx]?.level >= v.level : true)
+        )
+      : undefined;
 
   const moveParagraphs = [
     {
@@ -301,13 +327,13 @@ const styles = StyleSheet.create({
 });
 
 export const pageStyles = StyleSheet.create({
+  portraitBottom: { marginBottom: 0, paddingBottom: 0 },
+  body: { marginBottom: 0 },
   header: { zIndex: 1, alignItems: 'flex-start' },
   title: {
     flex: 1,
     fontSize: 20,
   },
-  //@ts-ignore
-  container: { paddingRight: 12, scrollbarGutter: 'stable' },
   contentContainer: { flexGrow: 1 },
   actionButtons: {
     flexDirection: 'row',

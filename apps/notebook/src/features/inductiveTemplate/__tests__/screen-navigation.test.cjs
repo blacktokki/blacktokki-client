@@ -316,7 +316,7 @@ async function screens({
     './TemplateSourceGroupCard': { TemplateSourceGroupCard: 'TemplateSourceGroupCard' },
     '../../../screens/main/home/ConfigSection': { OptionButton: 'OptionButton' },
   };
-  notePageHeader = loadTs('../../screens/main/NoteItemSections.tsx', {
+  const noteItemSections = loadTs('../../screens/main/NoteItemSections.tsx', {
     ...dependencies,
     '@react-navigation/core': { useNavigation: () => ({}) },
     'react-native-vector-icons/FontAwesome': 'FontAwesomeIcon',
@@ -331,8 +331,13 @@ async function screens({
     },
     '../../hooks/useNotebookTheme': dependencies['../../../hooks/useNotebookTheme'],
     '../../styles': {},
-  }).NotePageHeader;
+  });
+  notePageHeader = noteItemSections.NotePageHeader;
   dependencies['../../../screens/main/NoteItemSections'].NotePageHeader = notePageHeader;
+  dependencies['../../../screens/main/NoteItemSections'].getPageContainerStyle =
+    noteItemSections.getPageContainerStyle;
+  dependencies['../../../screens/main/NoteItemSections'].getPageSectionStyle =
+    noteItemSections.getPageSectionStyle;
   const load = (file, overrides = {}) => loadTs(file, { ...dependencies, ...overrides });
   const workspace = (screen) => {
     const node = find(render(screen), (item) => typeof item.type === 'function');

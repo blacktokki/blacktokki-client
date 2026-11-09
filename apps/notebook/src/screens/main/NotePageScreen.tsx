@@ -7,6 +7,8 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 
 import {
   diffToSnapshot,
+  getPageContainerStyle,
+  getPageSectionStyle,
   HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
@@ -39,6 +41,10 @@ export const NotePageScreen: React.FC = () => {
   const { auth } = useAuthContext();
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
+  const headerStyle = getPageSectionStyle(
+    _window === 'portrait',
+    commonStyles.container.paddingHorizontal
+  );
   const [_toc, toggleToc] = useState(false);
   const toc = _window === 'portrait' ? _toc : false;
   const [fullParagraph, toggleFullParagraph] = useState(!!(paragraph && board));
@@ -143,11 +149,10 @@ export const NotePageScreen: React.FC = () => {
       <>
         <ResponsiveSearchBar />
         <ScrollView
-          //@ts-ignore
-          style={[commonStyles.container, pageStyles.container]}
+          style={[commonStyles.container, getPageContainerStyle(_window === 'portrait')]}
           contentContainerStyle={pageStyles.contentContainer}
         >
-          <View style={[commonStyles.header, pageStyles.header, { marginBottom: 0 }]}>
+          <View style={[commonStyles.header, pageStyles.header, headerStyle, { marginBottom: 0 }]}>
             <NotePageHeader
               title={title}
               paragraph={paragraph}
@@ -208,7 +213,7 @@ export const NotePageScreen: React.FC = () => {
           <View style={commonStyles.flex}>
             {isEmptyParagraph ? (
               !toc && (
-                <View style={[commonStyles.card, commonStyles.centerContent]}>
+                <NotePageSection active>
                   <Text style={commonStyles.text}>
                     {lang('There is no direct content in this paragraph.')}
                   </Text>
@@ -218,7 +223,7 @@ export const NotePageScreen: React.FC = () => {
                   >
                     <Text style={commonStyles.buttonText}>{lang('View subparagraph')}</Text>
                   </TouchableOpacity>
-                </View>
+                </NotePageSection>
               )
             ) : (
               <NotePageSection active={!toc} title={title} description={description} />

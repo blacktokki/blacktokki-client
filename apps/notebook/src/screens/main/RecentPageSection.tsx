@@ -6,7 +6,12 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { renderCardPage, Scale, useToCardPage } from './CardPageSection';
-import { NotePageHeader, HeaderIconButton, pageStyles } from './NoteItemSections';
+import {
+  getPageSectionStyle,
+  NotePageHeader,
+  HeaderIconButton,
+  pageStyles,
+} from './NoteItemSections';
 import { RecentBoardSection } from './RecentBoardSection';
 import { OptionButton } from './home/ConfigSection';
 import LoadingView from '../../components/LoadingView';
@@ -43,10 +48,14 @@ export const TitleHeader = ({
   children?: React.ReactNode;
 }) => {
   const { commonStyles } = useNotebookTheme();
+  const headerStyle = getPageSectionStyle(
+    useResizeContext() === 'portrait',
+    commonStyles.container.paddingHorizontal
+  );
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   return (
     title && (
-      <View style={[commonStyles.header, pageStyles.header]}>
+      <View style={[commonStyles.header, pageStyles.header, headerStyle]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           {setTitle && (
             <TouchableOpacity

@@ -5,6 +5,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 
 import {
+  getPageContainerStyle,
+  getPageSectionStyle,
   HeaderIconButton,
   NoteBottomSection,
   NotePageHeader,
@@ -30,6 +32,10 @@ export const NoteViewerScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const _window = useResizeContext();
   const { commonStyles } = useNotebookTheme();
+  const headerStyle = getPageSectionStyle(
+    _window === 'portrait',
+    commonStyles.container.paddingHorizontal
+  );
   const [toc, toggleToc] = useState(false);
   const [fullParagraph, toggleFullParagraph] = useState(false);
   const { data: viewers } = useNoteViewers();
@@ -64,11 +70,10 @@ export const NoteViewerScreen: React.FC = () => {
       <>
         <ResponsiveSearchBar />
         <ScrollView
-          //@ts-ignore
-          style={[commonStyles.container, pageStyles.container]}
+          style={[commonStyles.container, getPageContainerStyle(_window === 'portrait')]}
           contentContainerStyle={pageStyles.contentContainer}
         >
-          <View style={[commonStyles.header, pageStyles.header]}>
+          <View style={[commonStyles.header, pageStyles.header, headerStyle]}>
             <NotePageHeader
               title={key}
               paragraph={paragraph}

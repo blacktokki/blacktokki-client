@@ -1,4 +1,4 @@
-import { useLangContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import { toHtml } from '@blacktokki/editor';
 import { navigate, push } from '@blacktokki/navigation';
 import { RouteProp, useNavigationState, useRoute } from '@react-navigation/native';
@@ -17,7 +17,7 @@ import StatusCard from '../../../components/StatusCard';
 import { useEffectExtensionScreen } from '../../../hooks/useExtension';
 import { useCreateOrUpdatePage } from '../../../hooks/useNoteStorage';
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
-import { pageStyles } from '../../../screens/main/NoteItemSections';
+import { getPageContainerStyle, pageStyles } from '../../../screens/main/NoteItemSections';
 import { discoverTemplates, templateNotes } from '../discovery';
 import { templateStyles as styles } from '../styles';
 import {
@@ -56,11 +56,15 @@ const TemplateWorkspace = ({
 }: TemplateWorkspaceProps) => {
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
+  const isPortrait = useResizeContext() === 'portrait';
   const contentStyle = useMemo(() => {
-    const style: ViewStyle = { ...StyleSheet.flatten(commonStyles.container) };
+    const style: ViewStyle = {
+      ...StyleSheet.flatten(commonStyles.container),
+      ...StyleSheet.flatten(getPageContainerStyle(isPortrait)),
+    };
     delete style.flex;
     return style;
-  }, [commonStyles]);
+  }, [commonStyles, isPortrait]);
   const sourceInset = {
     paddingHorizontal: commonStyles.container.paddingHorizontal,
   };

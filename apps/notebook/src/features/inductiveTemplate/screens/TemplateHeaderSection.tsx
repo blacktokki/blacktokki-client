@@ -1,10 +1,11 @@
-import { useLangContext } from '@blacktokki/core';
+import { useLangContext, useResizeContext } from '@blacktokki/core';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useNotebookTheme } from '../../../hooks/useNotebookTheme';
 import {
+  getPageSectionStyle,
   HeaderIconButton,
   NotePageHeader,
   pageStyles,
@@ -37,12 +38,16 @@ export const TemplateHeaderSection = ({
 }) => {
   const { lang } = useLangContext();
   const { commonStyles } = useNotebookTheme();
+  const headerStyle = getPageSectionStyle(
+    useResizeContext() === 'portrait',
+    commonStyles.container.paddingHorizontal
+  );
   const [catalogHovered, setCatalogHovered] = useState(false);
   const [catalogFocused, setCatalogFocused] = useState(false);
   const groups = groupPath.split('/').filter(Boolean);
   const title = [templateName + (titleSuffix ? ' - ' + titleSuffix : ''), ...groups].join('/');
   return (
-    <View style={[commonStyles.header, pageStyles.header]}>
+    <View style={[commonStyles.header, pageStyles.header, headerStyle]}>
       <View style={[styles.grow, styles.headerPath]}>
         {onCatalog && (
           <Pressable

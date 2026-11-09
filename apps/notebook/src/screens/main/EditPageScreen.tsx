@@ -1,12 +1,13 @@
-import { useLangContext, useModalsContext } from '@blacktokki/core';
+import { useLangContext, useModalsContext, useResizeContext } from '@blacktokki/core';
 import { Editor } from '@blacktokki/editor';
 import { push } from '@blacktokki/navigation';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleProp, ViewStyle } from 'react-native';
 import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import { getPageContainerStyle, getPageSectionStyle } from './NoteItemSections';
 import {
   paragraphByKey,
   paragraphDescription,
@@ -99,12 +100,14 @@ export const EditPageSection = ({
   setContent,
   onCancel,
   onSave,
+  contentStyle,
 }: {
   title: string;
   content: string;
   setContent: (content: string) => void;
   onCancel?: () => void;
   onSave?: () => void;
+  contentStyle?: StyleProp<ViewStyle>;
 }) => {
   const { commonStyles, colorScheme } = useNotebookTheme();
   const { lang } = useLangContext();
@@ -121,74 +124,76 @@ export const EditPageSection = ({
 
   return (
     <>
-      <Editor
-        active
-        value={content}
-        setValue={setContent}
-        theme={colorScheme}
-        pasteAutocomplete={(text) => {
-          try {
-            const noteLink = urlToNoteLink(text, title);
-            if (noteLink) {
-              return `<a href="${noteLinkToUrl(noteLink, title)}">${
-                noteLink.title + (noteLink.paragraph ? ` > ${noteLink.paragraph}` : '')
-              }</a>`;
-            }
-          } catch {}
-        }}
-        autoComplete={[
-          {
-            trigger: '[',
-            getMatchedChars: async (pattern) => {
-              const childrenPages = getChildrenPages(pattern);
-              return [
-                { type: '_NOTELINK', name: pattern, title, paragraph: pattern },
-                ...(childrenPages.length
-                  ? childrenPages
-                  : [{ type: '_CHILDNOTE', name: pattern, title: title + '/' + pattern }]),
-                ...getFilteredPages(pages, pattern).filter((v) => v.type !== '_LINK'),
-              ].map((v) => {
-                const name = v.type === '_NOTELINK' || v.type === '_CHILDNOTE' ? v.name : v.title;
-                const description =
-                  v.type === '_NOTELINK'
-                    ? `(${titleFormat(v)})`
-                    : v.type === '_CHILDNOTE'
-                      ? `(${v.title})`
-                      : '';
-                const url = noteLinkToUrl(v, title);
-                return {
-                  text: name + description,
-                  value: `<a href="${url}">${name}</a>`,
-                };
-              });
-            },
-          },
-          {
-            trigger: 'http',
-            getMatchedChars: async (pattern) => {
-              const query = 'http' + pattern;
-              const url = new URL(query);
-              if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                return [];
+      <View style={[commonStyles.flex, contentStyle]}>
+        <Editor
+          active
+          value={content}
+          setValue={setContent}
+          theme={colorScheme}
+          pasteAutocomplete={(text) => {
+            try {
+              const noteLink = urlToNoteLink(text, title);
+              if (noteLink) {
+                return `<a href="${noteLinkToUrl(noteLink, title)}">${
+                  noteLink.title + (noteLink.paragraph ? ` > ${noteLink.paragraph}` : '')
+                }</a>`;
               }
-              const preview = await previewUrl({ query });
-              if (!preview.title) {
-                return [];
-              }
-              return [
-                {
-                  text: preview.title,
-                  value: `<a href=${preview.url}>${preview.title}</a>`,
-                },
-                // {
-                //   text:preview.title + '...',
-                //   value:`<a href=${preview.url}>${preview.title}</a><p>${preview.description}...</p>`,
-                // }
-              ];
+            } catch {}
+          }}
+          autoComplete={[
+            {
+              trigger: '[',
+              getMatchedChars: async (pattern) => {
+                const childrenPages = getChildrenPages(pattern);
+                return [
+                  { type: '_NOTELINK', name: pattern, title, paragraph: pattern },
+                  ...(childrenPages.length
+                    ? childrenPages
+                    : [{ type: '_CHILDNOTE', name: pattern, title: title + '/' + pattern }]),
+                  ...getFilteredPages(pages, pattern).filter((v) => v.type !== '_LINK'),
+                ].map((v) => {
+                  const name = v.type === '_NOTELINK' || v.type === '_CHILDNOTE' ? v.name : v.title;
+                  const description =
+                    v.type === '_NOTELINK'
+                      ? `(${titleFormat(v)})`
+                      : v.type === '_CHILDNOTE'
+                        ? `(${v.title})`
+                        : '';
+                  const url = noteLinkToUrl(v, title);
+                  return {
+                    text: name + description,
+                    value: `<a href="${url}">${name}</a>`,
+                  };
+                });
+              },
             },
-          },
-        ]}
-      />
+            {
+              trigger: 'http',
+              getMatchedChars: async (pattern) => {
+                const query = 'http' + pattern;
+                const url = new URL(query);
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                  return [];
+                }
+                const preview = await previewUrl({ query });
+                if (!preview.title) {
+                  return [];
+                }
+                return [
+                  {
+                    text: preview.title,
+                    value: `<a href=${preview.url}>${preview.title}</a>`,
+                  },
+                  // {
+                  //   text:preview.title + '...',
+                  //   value:`<a href=${preview.url}>${preview.title}</a><p>${preview.description}...</p>`,
+                  // }
+                ];
+              },
+            },
+          ]}
+        />
+      </View>
 
       {onSave && (
         <View style={commonStyles.buttonContainer}>
@@ -213,6 +218,8 @@ export const EditPageScreen: React.FC = () => {
   const { title, paragraph, section, board } = route.params;
   const navigation = useNavigation<StackNavigationProp<NavigationParamList>>();
   const { commonStyles } = useNotebookTheme();
+  const isPortrait = useResizeContext() === 'portrait';
+  const bodyStyle = getPageSectionStyle(isPortrait, commonStyles.container.paddingHorizontal);
   const { lang } = useLangContext();
 
   const { data: page, isLoading } = useNotePage(title);
@@ -342,7 +349,7 @@ export const EditPageScreen: React.FC = () => {
   );
   return (
     isFocused && (
-      <View style={commonStyles.container}>
+      <View style={[commonStyles.container, getPageContainerStyle(isPortrait)]}>
         <View style={commonStyles.header}>
           {board && (
             <TouchableOpacity
@@ -357,6 +364,7 @@ export const EditPageScreen: React.FC = () => {
           </Text>
         </View>
         <EditPageSection
+          contentStyle={bodyStyle}
           content={content}
           setContent={setContent}
           title={title}

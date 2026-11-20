@@ -29,6 +29,7 @@ export default function Login({ lang }: { lang: (text: string) => string }) {
           style={Styles.form_input}
           value={username}
           placeholder={lang('Username')}
+          placeholderTextColor="#666666"
           onChangeText={(text) => setUsername(text)}
           autoCapitalize={'none'}
           keyboardType={'email-address'}
@@ -38,6 +39,7 @@ export default function Login({ lang }: { lang: (text: string) => string }) {
           style={Styles.form_input}
           value={password}
           placeholder={lang('Password')}
+          placeholderTextColor="#666666"
           secureTextEntry
           onChangeText={(text) => setPassword(text)}
           onSubmitEditing={_login}
@@ -157,6 +159,7 @@ const Styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
     backgroundColor: '#EDF0F7',
+    color: '#333333',
     borderRadius: 50,
   },
   button: {
